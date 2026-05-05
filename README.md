@@ -100,7 +100,7 @@ cmake --build . --config Release
 ### Kernel Optimization (256x256)
 
 - Baseline: 21.98 ms
-- Optimized (tiled): 8.68 ms
+- Optimized (tiled, i-k-j): 8.68 ms
 - Speedup: **2.53×**
 - Correctness: PASSED
 
@@ -119,6 +119,58 @@ Observations:
 - Threading introduces overhead at low parallelism
 - Scaling improves with larger workloads
 - Performance is bounded by CPU scheduling and memory bandwidth
+
+---
+
+##  Memory Access Optimization Insights
+
+During optimization, multiple tiled loop orderings were evaluated.
+
+Two key variants were tested:
+
+- **i-k-j ordering (optimized)**
+- **i-j-k ordering (degraded performance)**
+
+### i-k-j (selected)
+
+`
+for i
+  for k
+    load A[i, k]
+    for j
+      C[i, j] += A[i, k] * B[k, j]
+`
+
+Advantages:
+- Sequential access on B (row-major)
+- Sequential writes on C
+- High reuse of A[i,k]
+- Cache-friendly and SIMD-friendly
+
+### i-j-k (rejected)
+
+`
+for i
+  for j
+    for k
+      C[i, j] += A[i, k] * B[k, j]
+`
+
+Problems:
+- B is accessed with large strides (poor locality)
+- Cache miss rate increases significantly
+- Prefetching and vectorization are less effective
+
+### Result
+
+`
+i-k-j tiled: 8.68 ms
+i-j-k tiled: 13.96 ms
+`
+
+Conclusion:
+Loop ordering has a major impact on cache locality and kernel performance.
+The i-k-j schedule was selected based on empirical benchmarking.
 
 ---
 
@@ -169,4 +221,3 @@ This project explores these challenges by implementing a simplified but realisti
 - Python API for model loading and execution
 
 ---
-
