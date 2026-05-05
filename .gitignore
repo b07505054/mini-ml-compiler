@@ -1,0 +1,37 @@
+# Build folders
+build/
+cmake-build-*/
+out/
+Release/
+Debug/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+*.user
+*.filters
+*.log
+
+# Executables
+*.exe
+*.dll
+*.lib
+*.pdb
+
+# Object files
+*.obj
+*.o
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

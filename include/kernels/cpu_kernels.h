@@ -1,0 +1,17 @@
+#pragma once
+
+#include "ir/tensor.h"
+
+void matmul(const Tensor& A, const Tensor& B, Tensor& C);
+void matmul_tiled(const Tensor& A, const Tensor& B, Tensor& C, int tile_size = 32);
+
+void add(const Tensor& A, const Tensor& B, Tensor& C);
+void relu(const Tensor& A, Tensor& B);
+
+void fused_matmul_add_relu_baseline(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);
+void fused_matmul_add_relu_optimized(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);
+
+// default fused op uses optimized kernel
+void fused_matmul_add_relu(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);
+void matmul_tiled_threaded(const Tensor& A, const Tensor& B, Tensor& C, int tile_size = 32, int num_threads = 4);
+void fused_matmul_add_relu_threaded(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out, int num_threads = 4);
