@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <thread>
+#include <immintrin.h>
 
 void matmul(const Tensor& A, const Tensor& B, Tensor& C) {
     int M = A.shape[0];
@@ -123,6 +124,31 @@ void relu(const Tensor& A, Tensor& B) {
     }
 
     for (size_t i = 0; i < A.data.size(); ++i) {
+        B.data[i] = std::max(0.0f, A.data[i]);
+    }
+}
+
+void relu_avx2(const Tensor& A, Tensor& B) {
+
+    int N = static_cast<int>(A.data.size());
+
+    B.data.resize(N);
+
+    __m256 zero = _mm256_setzero_ps();
+
+    int i = 0;
+
+    for (; i + 8 <= N; i += 8) {
+
+        __m256 x = _mm256_loadu_ps(&A.data[i]);
+
+        __m256 y = _mm256_max_ps(x, zero);
+
+        _mm256_storeu_ps(&B.data[i], y);
+    }
+
+    // tail
+    for (; i < N; ++i) {
         B.data[i] = std::max(0.0f, A.data[i]);
     }
 }
@@ -366,5 +392,25 @@ void decode_attention(const Tensor& Q, const Tensor& K_cache, const Tensor& V_ca
         }
 
         Out.data[d] = sum;
+    }
+}
+
+void add_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
+    int N = static_cast<int>(A.data.size());
+
+    C.data.resize(N);
+
+    int i = 0;
+
+    for (; i + 8 <= N; i += 8) {
+        __m256 a = _mm256_loadu_ps(&A.data[i]);
+        __m256 b = _mm256_loadu_ps(&B.data[i]);
+        __m256 c = _mm256_add_ps(a, b);
+
+        _mm256_storeu_ps(&C.data[i], c);
+    }
+
+    for (; i < N; ++i) {
+        C.data[i] = A.data[i] + B.data[i];
     }
 }

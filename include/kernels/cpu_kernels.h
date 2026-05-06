@@ -37,3 +37,5 @@ void fused_matmul_add_relu_threaded_pool(
     int num_tasks = 8
 );
 void decode_attention(const Tensor& Q, const Tensor& K_cache, const Tensor& V_cache, Tensor& Out);
+void relu_avx2(const Tensor& A, Tensor& B);
+void add_avx2(const Tensor& A, const Tensor& B, Tensor& C);

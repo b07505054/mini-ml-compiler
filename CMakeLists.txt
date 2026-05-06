@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(mini_ml_compiler)
 
+if (MSVC)
+    add_compile_options(/arch:AVX2)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -44,3 +48,9 @@ target_link_libraries(run_causal_attention_demo mlcompiler)
 
 add_executable(run_kv_cache_demo apps/run_kv_cache_demo.cpp)
 target_link_libraries(run_kv_cache_demo mlcompiler)
+
+add_executable(benchmark_simd_relu apps/benchmark_simd_relu.cpp)
+target_link_libraries(benchmark_simd_relu mlcompiler)
+
+add_executable(benchmark_simd_add apps/benchmark_simd_add.cpp)
+target_link_libraries(benchmark_simd_add mlcompiler)

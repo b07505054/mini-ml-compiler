@@ -17,11 +17,14 @@
 @- Execution plan abstraction for runtime decoupling
 @- Operator registry and runtime dispatch system
 @- CPU kernel implementations (baseline, tiled, threaded)
+@- AVX2 SIMD vectorized kernels
+@- Hardware-aware kernel optimization
 @- Memory planning (arena-style allocation)
 @- End-to-end and kernel-level benchmarking tools
 @- PyTorch → ONNX → custom IR model ingestion pipeline
 @- Transformer-style scaled dot-product attention operator
 @- Attention correctness validation against NumPy reference implementation
+
 ---
 
 @##  System Architecture
@@ -259,6 +262,21 @@
 @- KV cache simulation for incremental Transformer inference
 @- Tensor lifetime analysis and memory reuse
 
+@### SIMD Vectorized Kernels
+
+@#### AVX2 ReLU (16M elements)
+
+@- Scalar baseline: 12.92 ms
+@- AVX2 optimized: 9.71 ms
+@- Speedup: **1.33×**
+@- Correctness: PASSED
+
+@#### AVX2 Add (16M elements)
+
+@- Scalar baseline: 26.42 ms
+@- AVX2 optimized: 15.66 ms
+@- Speedup: **1.69×**
+@- Correctness: PASSED
 
 @### Conclusion
 
@@ -389,6 +407,9 @@
 
 @### 9. KV Cache Simulation
 @Simulates decoder-style incremental inference by caching previous K/V tensors and reusing them across decode steps.
+
+@### 10. SIMD / Vectorized Kernels
+@Implemented AVX2 vectorized kernels using 256-bit SIMD intrinsics for elementwise operators, improving throughput through hardware-aware parallel execution.
 ---
 
 @##  Motivation
@@ -421,5 +442,7 @@
 @- Dynamic shape execution
 @- ONNX graph-level optimization passes
 @- Real GPU backend integration (CUDA/Metal)
-
+@- AVX2 / SIMD optimized MatMul kernels
+@- Vectorized Transformer kernels
+@- FlashAttention-style fused attention kernels
 ---
