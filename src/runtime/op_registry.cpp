@@ -36,5 +36,22 @@ OpRegistry create_default_registry() {
         fused_matmul_add_relu(A, B, Bias, Out);
     });
 
+    registry.register_op(OpType::Attention, [](Graph& graph, const Node& node) {
+        auto& Q = graph.get_tensor(node.inputs[0]);
+        auto& K = graph.get_tensor(node.inputs[1]);
+        auto& V = graph.get_tensor(node.inputs[2]);
+        auto& Out = graph.get_tensor(node.outputs[0]);
+
+        attention(Q, K, V, Out);
+    });
+    
+    registry.register_op(OpType::CausalAttention, [](Graph& graph, const Node& node) {
+        auto& Q = graph.get_tensor(node.inputs[0]);
+        auto& K = graph.get_tensor(node.inputs[1]);
+        auto& V = graph.get_tensor(node.inputs[2]);
+        auto& Out = graph.get_tensor(node.outputs[0]);
+
+        causal_attention(Q, K, V, Out);
+    });
     return registry;
 }

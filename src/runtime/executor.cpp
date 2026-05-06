@@ -11,6 +11,7 @@ void Executor::run(Graph& graph, const ExecutionPlan& plan, bool verbose) {
     }
 
     for (const auto& node : plan.ordered_nodes) {
+        std::cout << "[Executor] Dispatching node: " << node.name << "\n";
         registry.dispatch(node.op, graph, node);
     }
 }

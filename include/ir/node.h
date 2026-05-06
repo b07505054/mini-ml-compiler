@@ -8,7 +8,9 @@ enum class OpType {
     MatMul,
     Add,
     ReLU,
-    FusedMatMulAddReLU
+    FusedMatMulAddReLU,
+    Attention,
+    CausalAttention
 };
 
 struct Node {

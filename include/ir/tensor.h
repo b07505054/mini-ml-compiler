@@ -12,7 +12,10 @@ struct Tensor {
     std::vector<int> shape;
     DType dtype;
     std::vector<float> data;
-
+    int first_use = -1;
+    int last_use = -1;
+    int memory_offset = -1;
+    bool persistent = false;
     Tensor() = default;
 
     Tensor(const std::string& name, std::vector<int> shape)

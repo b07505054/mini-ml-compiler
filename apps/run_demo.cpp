@@ -40,7 +40,10 @@ int main() {
     graph.add_node(Node("matmul", OpType::MatMul, {input, weight}, {matmul_out}));
     graph.add_node(Node("add", OpType::Add, {matmul_out, bias}, {add_out}));
     graph.add_node(Node("relu", OpType::ReLU, {add_out}, {output}));
-
+    graph.get_tensor(input).persistent = true;
+    graph.get_tensor(weight).persistent = true;
+    graph.get_tensor(bias).persistent = true;
+    
     std::cout << "Before optimization:\n";
     graph.dump();
 

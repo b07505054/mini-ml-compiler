@@ -21,3 +21,26 @@ target_link_libraries(benchmark_kernels mlcompiler)
 
 add_executable(benchmark_threads apps/benchmark_threads.cpp)
 target_link_libraries(benchmark_threads mlcompiler)
+
+add_executable(benchmark_gpu_sim apps/benchmark_gpu_sim.cpp)
+target_link_libraries(benchmark_gpu_sim mlcompiler)
+
+add_executable(benchmark_gpu_tiled_sim apps/benchmark_gpu_tiled_sim.cpp)
+target_link_libraries(benchmark_gpu_tiled_sim mlcompiler)
+
+target_sources(mlcompiler PRIVATE src/runtime/thread_pool.cpp)
+
+add_executable(benchmark_thread_pool apps/benchmark_thread_pool.cpp)
+target_link_libraries(benchmark_thread_pool mlcompiler)
+
+add_executable(run_mlir_model apps/run_mlir_model.cpp)
+target_link_libraries(run_mlir_model mlcompiler)
+
+add_executable(run_attention_demo apps/run_attention_demo.cpp)
+target_link_libraries(run_attention_demo mlcompiler)
+
+add_executable(run_causal_attention_demo apps/run_causal_attention_demo.cpp)
+target_link_libraries(run_causal_attention_demo mlcompiler)
+
+add_executable(run_kv_cache_demo apps/run_kv_cache_demo.cpp)
+target_link_libraries(run_kv_cache_demo mlcompiler)
