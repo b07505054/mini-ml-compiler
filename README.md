@@ -21,6 +21,12 @@
 @- Hardware-aware kernel optimization
 @- Memory planning (arena-style allocation)
 @- End-to-end and kernel-level benchmarking tools
+@- Runtime profiling and execution tracing
+@- Per-operator latency analysis
+@- AVX2 SIMD vectorized kernels
+@- Transformer KV cache simulation
+@- Causal attention masking
+@- Tensor lifetime analysis and memory reuse
 @- PyTorch → ONNX → custom IR model ingestion pipeline
 @- Transformer-style scaled dot-product attention operator
 @- Attention correctness validation against NumPy reference implementation
@@ -277,7 +283,29 @@
 @- AVX2 optimized: 15.66 ms
 @- Speedup: **1.69×**
 @- Correctness: PASSED
+@### Runtime Profiling Example
 
+@```text
+@=== Runtime Profiling Summary ===
+@fused_matmul_add_relu : 0.0008 ms (100%)
+@Total latency: 0.0008 ms
+@```
+
+@### SIMD Vectorized Kernels
+
+@#### AVX2 ReLU (16M elements)
+
+@- Scalar baseline: 12.92 ms
+@- AVX2 optimized: 9.71 ms
+@- Speedup: **1.33×**
+@- Correctness: PASSED
+
+@#### AVX2 Add (16M elements)
+
+@- Scalar baseline: 26.42 ms
+@- AVX2 optimized: 15.66 ms
+@- Speedup: **1.69×**
+@- Correctness: PASSED
 @### Conclusion
 
 @Efficient parallel execution requires balancing:
@@ -410,6 +438,18 @@
 
 @### 10. SIMD / Vectorized Kernels
 @Implemented AVX2 vectorized kernels using 256-bit SIMD intrinsics for elementwise operators, improving throughput through hardware-aware parallel execution.
+
+@### 11. SIMD / Vectorized Kernels
+@Implemented AVX2 vectorized kernels using 256-bit SIMD intrinsics for hardware-aware acceleration of elementwise operators.
+
+@### 12. KV Cache Simulation
+@Implemented decoder-style KV cache reuse for incremental Transformer inference workloads.
+
+@### 13. Tensor Lifetime Analysis
+@Tracked tensor first/last usage intervals and reused arena memory for tensors with non-overlapping lifetimes.
+
+@### 14. Runtime Profiling
+@Implemented per-operator latency tracing and execution summaries for runtime debugging and performance analysis.
 ---
 
 @##  Motivation

@@ -72,20 +72,20 @@ int main() {
     Executor executor;
 
     // Run once with log
-    executor.run(graph, plan, true);
+    executor.run(graph, plan, true, true);
 
     const int runs = 1000;
 
     // Warmup
     for (int i = 0; i < 10; ++i) {
-        executor.run(graph, plan, false);
+        executor.run(graph, plan, false, false);
     }
 
     Timer timer;
     timer.start();
 
     for (int i = 0; i < runs; ++i) {
-        executor.run(graph, plan, false);
+        executor.run(graph, plan, false, false);
     }
 
     double total_ms = timer.stop_ms();
