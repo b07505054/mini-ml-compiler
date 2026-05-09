@@ -54,3 +54,12 @@ target_link_libraries(benchmark_simd_relu mlcompiler)
 
 add_executable(benchmark_simd_add apps/benchmark_simd_add.cpp)
 target_link_libraries(benchmark_simd_add mlcompiler)
+
+add_executable(run_backend_demo apps/run_backend_demo.cpp)
+target_link_libraries(run_backend_demo mlcompiler)
+
+add_executable(run_scheduled_backend_demo apps/run_scheduled_backend_demo.cpp)
+target_link_libraries(run_scheduled_backend_demo mlcompiler)
+
+add_executable(run_partition_demo apps/run_partition_demo.cpp)
+target_link_libraries(run_partition_demo mlcompiler)

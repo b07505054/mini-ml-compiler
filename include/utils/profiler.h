@@ -14,6 +14,8 @@ public:
 
     void print_summary() const;
 
+    void reset();
+
 private:
     std::vector<ProfileEvent> events;
 };

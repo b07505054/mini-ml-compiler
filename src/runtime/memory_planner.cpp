@@ -2,22 +2,30 @@
 
 #include <iostream>
 #include <algorithm>
+#include <vector>
+
+struct ReuseEvent {
+    std::string current;
+    std::string reused_from;
+    int offset;
+};
+
+static int tensor_size(const Tensor& tensor) {
+    int size = tensor.numel();
+    return size > 0 ? size : 1;
+}
 
 void MemoryPlanner::plan(Graph& graph) {
-
-    // initialize
     for (auto& tensor : graph.tensors) {
         tensor.first_use = -1;
         tensor.last_use = -1;
+        tensor.memory_offset = -1;
     }
 
-    // lifetime analysis
-    for (int node_idx = 0; node_idx < graph.nodes.size(); ++node_idx) {
-
+    for (int node_idx = 0; node_idx < static_cast<int>(graph.nodes.size()); ++node_idx) {
         const auto& node = graph.nodes[node_idx];
 
         for (int tid : node.inputs) {
-
             auto& tensor = graph.get_tensor(tid);
 
             if (tensor.first_use == -1) {
@@ -28,7 +36,6 @@ void MemoryPlanner::plan(Graph& graph) {
         }
 
         for (int tid : node.outputs) {
-
             auto& tensor = graph.get_tensor(tid);
 
             if (tensor.first_use == -1) {
@@ -39,10 +46,16 @@ void MemoryPlanner::plan(Graph& graph) {
         }
     }
 
-    // simple memory reuse
     int next_offset = 0;
+    int naive_memory = 0;
 
-    for (int i = 0; i < graph.tensors.size(); ++i) {
+    std::vector<ReuseEvent> reuse_events;
+
+    for (auto& tensor : graph.tensors) {
+        naive_memory += tensor_size(tensor);
+    }
+
+    for (int i = 0; i < static_cast<int>(graph.tensors.size()); ++i) {
         auto& current = graph.tensors[i];
 
         bool reused = false;
@@ -50,23 +63,29 @@ void MemoryPlanner::plan(Graph& graph) {
         for (int j = 0; j < i; ++j) {
             auto& previous = graph.tensors[j];
 
-            if (!previous.persistent &&
+            bool can_reuse =
+                !previous.persistent &&
                 !current.persistent &&
-                previous.last_use < current.first_use) {
+                previous.last_use < current.first_use &&
+                tensor_size(previous) >= tensor_size(current);
 
+            if (can_reuse) {
                 current.memory_offset = previous.memory_offset;
                 reused = true;
+
+                reuse_events.push_back({
+                    current.name,
+                    previous.name,
+                    current.memory_offset
+                });
+
                 break;
             }
         }
 
         if (!reused) {
             current.memory_offset = next_offset;
-
-            int size = current.numel();
-            if (size == 0) size = 1;
-
-            next_offset += size;
+            next_offset += tensor_size(current);
         }
 
         if (current.data.empty() && current.numel() > 0) {
@@ -74,10 +93,12 @@ void MemoryPlanner::plan(Graph& graph) {
         }
     }
 
+    int planned_memory = next_offset;
+    int saved_memory = naive_memory - planned_memory;
+
     std::cout << "[MemoryPlanner] Tensor lifetime analysis\n";
 
     for (const auto& tensor : graph.tensors) {
-
         std::cout
             << "  "
             << tensor.name
@@ -87,11 +108,42 @@ void MemoryPlanner::plan(Graph& graph) {
             << tensor.last_use
             << " offset="
             << tensor.memory_offset
+            << " persistent="
+            << (tensor.persistent ? "true" : "false")
+            << " size="
+            << tensor_size(tensor)
             << "\n";
     }
 
+    std::cout << "[MemoryPlanner] Reuse events\n";
+
+    if (reuse_events.empty()) {
+        std::cout << "  none\n";
+    } else {
+        for (const auto& event : reuse_events) {
+            std::cout
+                << "  "
+                << event.current
+                << " reuses buffer from "
+                << event.reused_from
+                << " at offset "
+                << event.offset
+                << "\n";
+        }
+    }
+
     std::cout
-        << "[MemoryPlanner] Planned arena memory: "
-        << next_offset
+        << "[MemoryPlanner] Naive memory: "
+        << naive_memory
+        << " float elements\n";
+
+    std::cout
+        << "[MemoryPlanner] Planned peak memory: "
+        << planned_memory
+        << " float elements\n";
+
+    std::cout
+        << "[MemoryPlanner] Saved memory: "
+        << saved_memory
         << " float elements\n";
 }

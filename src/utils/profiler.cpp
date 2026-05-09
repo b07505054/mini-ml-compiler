@@ -40,3 +40,7 @@ void Profiler::print_summary() const {
         << total
         << " ms\n";
 }
+
+void Profiler::reset() {
+    events.clear();
+}

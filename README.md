@@ -6,31 +6,79 @@ This project is designed to simulate core components of modern ML infrastructure
 
 ---
 
-##  Features
+## Features
 
 - Graph-based Intermediate Representation (IR) for ML models
 - Tensor metadata system (shape, dtype, memory layout)
 - Pass-based compiler optimization pipeline
-- Operator fusion (MatMul + Add + ReLU)
 - Shape inference and graph verification
 - DAG-based graph lowering and topological scheduling
 - Execution plan abstraction for runtime decoupling
 - Operator registry and runtime dispatch system
-- CPU kernel implementations (baseline, tiled, threaded)
-- AVX2 SIMD vectorized kernels
-- Hardware-aware kernel optimization
-- Memory planning (arena-style allocation)
-- End-to-end and kernel-level benchmarking tools
+
+### Compiler and Runtime Infrastructure
+
+- ONNX → custom MLIR-style IR → Graph IR ingestion pipeline
+- Graph lowering into execution plans
+- Backend-aware execution scheduler
+- Heterogeneous runtime execution
+- Graph partitioning across execution backends
+- Execution planner and dispatch abstraction
 - Runtime profiling and execution tracing
 - Per-operator latency analysis
-- AVX2 SIMD vectorized kernels
-- Transformer KV cache simulation
-- Causal attention masking
-- Tensor lifetime analysis and memory reuse
-- PyTorch → ONNX → custom IR model ingestion pipeline
-- Transformer-style scaled dot-product attention operator
-- Attention correctness validation against NumPy reference implementation
 
+### Backend System
+
+- Backend abstraction layer
+- CPU backend implementation
+- Mock GPU backend simulation
+- Backend-aware operator dispatch
+- Simulated heterogeneous execution
+- Backend-level profiling and scheduling
+
+### Compiler Optimizations
+
+- Operator fusion (MatMul + Add + ReLU)
+- Tensor lifetime analysis
+- Arena-style memory planning
+- Memory reuse analysis
+- Peak memory reporting
+- Compiler-style graph optimization passes
+
+### CPU and SIMD Optimization
+
+- Cache-aware tiled matrix multiplication
+- Thread pool based parallel execution
+- Persistent worker scheduling
+- Task granularity optimization
+- AVX2 SIMD vectorized ReLU
+- AVX2 SIMD vectorized Add
+- Hardware-aware kernel optimization
+
+### Transformer Runtime Features
+
+- Transformer scaled dot-product attention operator
+- Numerically stable Softmax implementation
+- Causal attention masking
+- KV cache simulation
+- Incremental autoregressive decoding simulation
+- Attention correctness validation against NumPy reference
+
+### MLIR / Compiler Ecosystem
+
+- MLIR-style intermediate representation
+- MLIR optimization workflow experimentation
+- Affine loop transformation experiments
+- Compiler-oriented runtime architecture
+
+### Benchmarking and Analysis
+
+- End-to-end runtime benchmarking
+- Kernel-level microbenchmarking
+- Thread scaling analysis
+- GPU-style tiled execution simulation
+- Runtime profiling summaries
+- Memory optimization analysis
 ---
 
 ##  System Architecture
