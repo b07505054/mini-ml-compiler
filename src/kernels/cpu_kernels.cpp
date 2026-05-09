@@ -7,7 +7,10 @@
 #include <stdexcept>
 #include <thread>
 #include <immintrin.h>
-
+#include <cstdint>
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
 void matmul(const Tensor& A, const Tensor& B, Tensor& C) {
     int M = A.shape[0];
     int K = A.shape[1];
@@ -413,4 +416,128 @@ void add_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
     for (; i < N; ++i) {
         C.data[i] = A.data[i] + B.data[i];
     }
+}
+void matmul_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
+    int M = A.shape[0];
+    int K = A.shape[1];
+    int N = B.shape[1];
+
+    C.shape = {M, N};
+    C.data.assign(M * N, 0.0f);
+
+    int vecN = (N / 8) * 8;
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < vecN; j += 8) {
+            __m256 acc = _mm256_setzero_ps();
+
+            for (int k = 0; k < K; ++k) {
+                __m256 a = _mm256_set1_ps(A.data[i * K + k]);
+                __m256 b = _mm256_loadu_ps(&B.data[k * N + j]);
+                acc = _mm256_add_ps(_mm256_mul_ps(a, b), acc);
+            }
+
+            _mm256_storeu_ps(&C.data[i * N + j], acc);
+        }
+
+        // tail columns
+        for (int j = vecN; j < N; ++j) {
+            float sum = 0.0f;
+
+            for (int k = 0; k < K; ++k) {
+                sum += A.data[i * K + k] * B.data[k * N + j];
+            }
+
+            C.data[i * N + j] = sum;
+        }
+    }
+}
+QuantTensor quantize_tensor_symmetric(
+    const Tensor& input,
+    float scale
+) {
+    QuantTensor q(input.name + "_int8", input.shape, scale, 0);
+
+    for (int i = 0; i < input.numel(); ++i) {
+        int qvalue = static_cast<int>(std::round(input.data[i] / scale));
+
+        qvalue = std::max(-128, std::min(127, qvalue));
+
+        q.data[i] = static_cast<int8_t>(qvalue);
+    }
+
+    return q;
+}
+
+void matmul_int8(
+    const QuantTensor& A,
+    const QuantTensor& B,
+    Tensor& C
+) {
+    int M = A.shape[0];
+    int K = A.shape[1];
+    int N = B.shape[1];
+
+    C.shape = {M, N};
+    C.data.assign(M * N, 0.0f);
+
+    float output_scale = A.scale * B.scale;
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            int32_t acc = 0;
+
+            for (int k = 0; k < K; ++k) {
+                int32_t a =
+                    static_cast<int32_t>(A.data[i * K + k]) - A.zero_point;
+
+                int32_t b =
+                    static_cast<int32_t>(B.data[k * N + j]) - B.zero_point;
+
+                acc += a * b;
+            }
+
+            C.data[i * N + j] =
+                static_cast<float>(acc) * output_scale;
+        }
+    }
+}
+void add_neon(
+    const Tensor& A,
+    const Tensor& B,
+    Tensor& C
+) {
+
+    C.shape = A.shape;
+    C.data.resize(A.numel());
+
+#ifdef __ARM_NEON
+
+    int i = 0;
+
+    for (; i + 4 <= A.numel(); i += 4) {
+
+        float32x4_t va =
+            vld1q_f32(&A.data[i]);
+
+        float32x4_t vb =
+            vld1q_f32(&B.data[i]);
+
+        float32x4_t vc =
+            vaddq_f32(va, vb);
+
+        vst1q_f32(&C.data[i], vc);
+    }
+
+    for (; i < A.numel(); ++i) {
+        C.data[i] = A.data[i] + B.data[i];
+    }
+
+#else
+
+    // fallback on non-ARM systems
+
+    add(A, B, C);
+
+#endif
 }

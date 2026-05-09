@@ -1,7 +1,18 @@
 #pragma once
 
 #include "ir/tensor.h"
+#include "ir/quant_tensor.h"
 
+QuantTensor quantize_tensor_symmetric(
+    const Tensor& input,
+    float scale
+);
+
+void matmul_int8(
+    const QuantTensor& A,
+    const QuantTensor& B,
+    Tensor& C
+);
 void matmul(const Tensor& A, const Tensor& B, Tensor& C);
 void matmul_tiled(const Tensor& A, const Tensor& B, Tensor& C, int tile_size = 32);
 
@@ -39,3 +50,11 @@ void fused_matmul_add_relu_threaded_pool(
 void decode_attention(const Tensor& Q, const Tensor& K_cache, const Tensor& V_cache, Tensor& Out);
 void relu_avx2(const Tensor& A, Tensor& B);
 void add_avx2(const Tensor& A, const Tensor& B, Tensor& C);
+void matmul_avx2(const Tensor& A,
+                 const Tensor& B,
+                 Tensor& C);
+void add_neon(
+    const Tensor& A,
+    const Tensor& B,
+    Tensor& C
+);

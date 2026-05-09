@@ -63,3 +63,15 @@ target_link_libraries(run_scheduled_backend_demo mlcompiler)
 
 add_executable(run_partition_demo apps/run_partition_demo.cpp)
 target_link_libraries(run_partition_demo mlcompiler)
+
+add_executable(benchmark_avx2_matmul apps/benchmark_avx2_matmul.cpp)
+target_link_libraries(benchmark_avx2_matmul mlcompiler)
+
+add_executable(benchmark_int8_matmul apps/benchmark_int8_matmul.cpp)
+target_link_libraries(benchmark_int8_matmul mlcompiler)
+
+add_executable(run_dynamic_shape_demo apps/run_dynamic_shape_demo.cpp)
+target_link_libraries(run_dynamic_shape_demo mlcompiler)
+
+add_executable(benchmark_neon_add apps/benchmark_neon_add.cpp)
+target_link_libraries(benchmark_neon_add mlcompiler)

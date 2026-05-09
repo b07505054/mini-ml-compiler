@@ -1,9 +1,8 @@
-# mini-ml-compiler
+# Heterogeneous ML Compiler and Runtime System
 
-A C++ mini ML compiler and on-device inference runtime that implements graph IR, compiler-style optimizations, execution planning, and performance-optimized CPU kernels.
+A C++ heterogeneous ML compiler and runtime system that implements graph IR, compiler-style optimizations, backend-aware execution scheduling, dynamic-shape execution, quantized inference, and performance-optimized CPU kernels for edge-oriented machine learning workloads.
 
-This project is designed to simulate core components of modern ML infrastructure systems such as Core ML Runtime, MLIR, and TVM, focusing on graph compilation, runtime execution, and performance optimization for on-device environments.
-
+This project simulates core components of modern ML infrastructure systems such as Core ML Runtime, TensorRT, MLIR, and TVM, focusing on graph compilation, heterogeneous runtime execution, memory optimization, and hardware-aware inference for on-device and edge environments.
 ---
 
 ## Features
@@ -15,6 +14,12 @@ This project is designed to simulate core components of modern ML infrastructure
 - DAG-based graph lowering and topological scheduling
 - Execution plan abstraction for runtime decoupling
 - Operator registry and runtime dispatch system
+- Dynamic-shape runtime execution
+- INT8 quantized runtime path
+- AVX2 SIMD vectorized GEMM kernels
+- ARM NEON-aware execution path
+- Heterogeneous backend scheduling
+- Graph partitioning across execution backends
 
 ### Compiler and Runtime Infrastructure
 
@@ -53,6 +58,7 @@ This project is designed to simulate core components of modern ML infrastructure
 - Task granularity optimization
 - AVX2 SIMD vectorized ReLU
 - AVX2 SIMD vectorized Add
+- AVX2 SIMD vectorized MatMul
 - Hardware-aware kernel optimization
 
 ### Transformer Runtime Features
@@ -79,14 +85,14 @@ This project is designed to simulate core components of modern ML infrastructure
 - GPU-style tiled execution simulation
 - Runtime profiling summaries
 - Memory optimization analysis
+
 ---
 
-##  System Architecture
+## System Architecture
 
 The system follows a compiler-style pipeline:
 
-```
-
+```text
 PyTorch Model
 → ONNX Export
 → Custom .mlir IR
@@ -97,23 +103,61 @@ PyTorch Model
 → Memory Planning
 → Lowering (DAG Scheduling)
 → Execution Plan
+→ Backend Scheduler
 → Operator Dispatch
-→ CPU Kernel Execution
-The runtime also includes Transformer-oriented execution components such as causal attention masking, KV cache reuse, and incremental decoding simulation for autoregressive inference workloads.
+→ CPU / MockGPU Backend
+→ Kernel Execution
 ```
 
+The runtime also includes Transformer-oriented execution components such as causal attention masking, KV cache reuse, and incremental decoding simulation for autoregressive inference workloads.
 
-This design separates model representation, optimization, and execution, enabling flexible and extensible runtime behavior.
+This design separates model representation, optimization, scheduling, and execution, enabling flexible and extensible runtime behavior.
 
 ---
 
-##  Project Structure
+## Heterogeneous Runtime Architecture
 
+The runtime supports heterogeneous execution through a backend abstraction layer inspired by modern ML runtimes such as TensorRT, TVM, and Core ML Runtime.
+
+Execution flow:
+
+```text
+Graph IR
+→ Execution Planner
+→ Backend Scheduler
+→ Backend Dispatcher
+→ CPU Backend / Mock GPU Backend
 ```
+
+Implemented runtime systems include:
+
+- Backend abstraction interface
+- CPU backend execution
+- Mock GPU backend simulation
+- Backend-aware operator scheduling
+- Graph partitioning across execution backends
+- Runtime dispatch abstraction
+- Backend-level profiling
+
+Example heterogeneous scheduling:
+
+```text
+MatMul → MockGPU
+Add    → CPU
+ReLU   → CPU
+```
+
+This architecture simulates heterogeneous compute execution commonly used in modern edge inference systems.
+
+---
+
+## Project Structure
+
+```text
 include/
   ir/              # Graph, Node, Tensor definitions
   pass/            # Pass interface and optimization passes
-  runtime/         # Execution plan, executor, operator registry
+  runtime/         # Execution plan, executor, backend system
   kernels/         # CPU kernels (MatMul, fused ops)
   analysis/        # Shape inference and graph verification
   utils/           # Benchmark utilities
@@ -126,20 +170,30 @@ src/
   analysis/
 
 apps/
-  run_demo.cpp           # End-to-end pipeline demo
-  benchmark_matmul.cpp   # End-to-end runtime benchmark
-  benchmark_kernels.cpp  # Kernel-level benchmark
-  benchmark_threads.cpp  # Thread scaling benchmark
-  run_attention_demo.cpp          # Transformer attention demo
-  run_causal_attention_demo.cpp   # Causal masked attention
-  run_kv_cache_demo.cpp           # Incremental decoding with KV cache
+  run_demo.cpp
+  run_backend_demo.cpp
+  run_partition_demo.cpp
+  run_scheduled_backend_demo.cpp
+  run_dynamic_shape_demo.cpp
+  benchmark_matmul.cpp
+  benchmark_kernels.cpp
+  benchmark_threads.cpp
+  benchmark_simd_relu.cpp
+  benchmark_simd_add.cpp
+  benchmark_avx2_matmul.cpp
+  benchmark_int8_matmul.cpp
+  benchmark_neon_add.cpp
+  run_attention_demo.cpp
+  run_causal_attention_demo.cpp
+  run_kv_cache_demo.cpp
 ```
 
 ---
 
-##  Build Instructions
+## Build Instructions
 
 ### Requirements
+
 - C++17 compatible compiler
 - CMake >= 3.16
 
@@ -156,151 +210,131 @@ cmake --build . --config Release
 
 ```bash
 ./Release/run_demo.exe
-./Release/benchmark_matmul.exe
-./Release/benchmark_kernels.exe
-./Release/benchmark_threads.exe
+./Release/run_backend_demo.exe
+./Release/run_partition_demo.exe
+./Release/run_scheduled_backend_demo.exe
+./Release/run_dynamic_shape_demo.exe
+./Release/benchmark_avx2_matmul.exe
+./Release/benchmark_int8_matmul.exe
 ```
 
 ---
 
-##  Benchmark Results
+## Benchmark Results
 
-### Kernel Optimization (256x256)
+### AVX2 SIMD MatMul (128×128)
 
-- Baseline: 21.98 ms
-- Optimized (tiled, i-k-j): 8.68 ms
-- Speedup: **2.53×**
-- Correctness: PASSED
+| Kernel | Latency |
+|---|---|
+| Scalar MatMul | 2.20 ms |
+| AVX2 Vectorized MatMul | 0.325 ms |
+
+Speedup: **6.77×**
+
+Correctness: PASSED
 
 ---
 
-### Thread Scaling (512x512)
+### INT8 Quantized MatMul (128×128)
+
+| Runtime | Latency |
+|---|---|
+| FP32 Scalar MatMul | 2.43 ms |
+| INT8 Quantized MatMul | 1.60 ms |
+
+Speedup: **1.53×**
+
+Maximum absolute error:
+
+```text
+4.89e-09
+```
+
+---
+
+### AVX2 ReLU (16M elements)
+
+| Kernel | Latency |
+|---|---|
+| Scalar ReLU | 12.92 ms |
+| AVX2 Vectorized ReLU | 9.71 ms |
+
+Speedup: **1.33×**
+
+---
+
+### AVX2 Add (16M elements)
+
+| Kernel | Latency |
+|---|---|
+| Scalar Add | 26.42 ms |
+| AVX2 Vectorized Add | 15.66 ms |
+
+Speedup: **1.69×**
+
+---
+
+### Thread Scaling (512×512)
 
 | Threads | Latency (ms) | Speedup |
-|--------|-------------|--------|
-| 1      | 74.55       | 1.0×   |
-| 2      | 71.77       | 1.04×  |
-| 4      | 48.47       | 1.54×  |
-| 8      | 35.83       | 2.08×  |
+|---|---|---|
+| 1 | 74.55 | 1.0× |
+| 2 | 71.77 | 1.04× |
+| 4 | 48.47 | 1.54× |
+| 8 | 35.83 | 2.08× |
 
 Observations:
-- Threading introduces overhead at low parallelism
+
 - Scaling improves with larger workloads
-- Performance is bounded by CPU scheduling and memory bandwidth
----
-
-##  GPU-style Execution Simulation
-
-To better understand GPU execution models, a CPU-based simulator was implemented to mimic:
-
-- Grid / Block / Thread hierarchy
-- Per-thread computation mapping
-- Tiled execution patterns (simulated shared memory)
-
-### Naive GPU-style Execution
-
-Each thread computes one output element:
-
-- Average latency: 17.83 ms
-- Output correctness: PASSED
-
-This approach introduces overhead due to sequential CPU execution of all simulated threads.
+- Performance is bounded by scheduling overhead and memory bandwidth
+- Persistent worker pools reduce thread creation overhead
 
 ---
 
-### Tiled GPU-style Execution (Simulated)
+## Dynamic Shape Runtime
 
-A tiled execution model was implemented to simulate shared memory behavior:
+The runtime supports dynamic-shape execution with runtime shape propagation and dynamic tensor allocation.
 
-- Tile size: 16 × 16
-- Average latency: 178.49 ms
-- Output correctness: PASSED
+Execution correctness was validated across multiple batch sizes:
+
+```text
+Batch=1 → Output shape [1,2]
+Batch=2 → Output shape [2,2]
+Batch=4 → Output shape [4,2]
+```
+
+Memory planning dynamically adapts to tensor sizes during execution:
+
+```text
+Batch=1 → Peak memory: 15 floats
+Batch=2 → Peak memory: 24 floats
+Batch=4 → Peak memory: 42 floats
+```
+
+This simulates real-world inference workloads with variable input sizes and dynamic execution requirements.
 
 ---
 
-##  Thread Pool and Task Scheduling
+## Transformer Attention Runtime
 
-To improve parallel execution efficiency, a persistent thread pool was implemented to replace per-run thread creation.
+The runtime was extended with Transformer-style scaled dot-product attention:
 
-### Motivation
-
-Initial implementation used `std::thread` per execution, which introduced significant overhead:
-
-- Thread creation and destruction cost
-- Poor scalability at low thread counts
-
-### Persistent Thread Pool
-
-A worker pool with task queue was introduced:
-
-- Fixed number of worker threads
-- Task queue with condition variable synchronization
-- Reused threads across multiple executions
-
-### Performance Observations
-
-Persistent thread pool reduced overhead compared to per-run thread spawning, but performance depended heavily on task granularity.
-
-### Task Granularity Sweep
-
-Different row block sizes were evaluated:
-
-| Row Block | 8 Workers Latency (ms) | Speedup |
-|----------|----------------------|--------|
-| 32       | 47.63               | 1.52×  |
-| 64       | 49.40               | 1.47×  |
-| 128      | 66.74               | 1.08×  |
-| 256      | 99.82               | 0.73×  |
-
-
----
-
-## PyTorch / ONNX Model Ingestion
-
-This project implements a minimal end-to-end model ingestion pipeline:
-
-```
-PyTorch model
-→ ONNX export
-→ Custom .mlir text IR
-→ C++ Graph IR
-→ Optimization passes
-→ Execution runtime
-```
-
-A tiny MLP exported from PyTorch was converted into the internal IR and executed through the C++ runtime.
-
-Runtime correctness was validated against PyTorch reference outputs:
-
-```
-PyTorch output:
-0 0 0 0.6
-
-Runtime output:
-0 0 0 0.6
-```
-
-This demonstrates end-to-end model import, graph lowering, optimization, and runtime execution correctness.
-
----
-
-## Transformer Attention Operator
-
-The runtime was extended with a Transformer-style scaled dot-product attention operator:
-
-```
+```text
 Attention(Q, K, V) = softmax(QKᵀ / √D)V
 ```
 
 Implemented components include:
 
-- QKᵀ attention score computation
-- Numerically stable row-wise Softmax
+- Attention score computation
+- Numerically stable Softmax
 - Attention-weighted value aggregation
+- Causal attention masking
+- KV cache reuse
+- Incremental autoregressive decoding simulation
 
-Attention correctness was validated against a NumPy reference implementation:
+Attention correctness was validated against a NumPy reference:
 
-```
+```text
 Python reference:
 6.224593 7.550813
 3.775407 12.449187
@@ -310,197 +344,85 @@ C++ runtime:
 3.77541 12.4492
 ```
 
-This extends the runtime to support modern Transformer-style workloads and demonstrates understanding of contemporary ML operator execution.
+KV cache simulation example:
 
-- Causal attention for autoregressive decoding
-- KV cache simulation for incremental Transformer inference
-- Tensor lifetime analysis and memory reuse
+```text
+Step 0 output:
+10 0 0 0
 
-### SIMD Vectorized Kernels
+Step 1 output using KV cache:
+3.77541 12.4492 0 0
+```
 
-#### AVX2 ReLU (16M elements)
+---
 
-- Scalar baseline: 12.92 ms
-- AVX2 optimized: 9.71 ms
-- Speedup: **1.33×**
-- Correctness: PASSED
-
-#### AVX2 Add (16M elements)
-
-- Scalar baseline: 26.42 ms
-- AVX2 optimized: 15.66 ms
-- Speedup: **1.69×**
-- Correctness: PASSED
-### Runtime Profiling Example
+## Runtime Profiling Example
 
 ```text
 === Runtime Profiling Summary ===
-fused_matmul_add_relu : 0.0008 ms (100%)
-Total latency: 0.0008 ms
+matmul [MockGPU] : 0.0778 ms
+add [CPU]        : 0.0006 ms
+relu [CPU]       : 0.0005 ms
+
+Total latency: 0.0789 ms
 ```
 
-### SIMD Vectorized Kernels
+The profiling infrastructure supports:
 
-#### AVX2 ReLU (16M elements)
-
-- Scalar baseline: 12.92 ms
-- AVX2 optimized: 9.71 ms
-- Speedup: **1.33×**
-- Correctness: PASSED
-
-#### AVX2 Add (16M elements)
-
-- Scalar baseline: 26.42 ms
-- AVX2 optimized: 15.66 ms
-- Speedup: **1.69×**
-- Correctness: PASSED
-### Conclusion
-
-Efficient parallel execution requires balancing:
-
-- Task granularity (load balancing)
-- Scheduling overhead (queue, locks)
-- Hardware parallelism
-
-The best configuration was row block size 32 with 8 workers, achieving 47.63 ms latency and 1.52× speedup over the single-thread tiled baseline.
-
-### Key Insight
-- Small row blocks improve load balancing across workers
-- Large row blocks reduce scheduling overhead but underutilize parallelism
-- Fine-grained scheduling increases queue and synchronization overhead
-
-Although tiling is a critical optimization on real GPUs, the CPU-based simulation shows degraded performance.
-
-Reasons:
-
-- Each simulated thread performs dynamic memory allocation (`std::vector`)
-- No true shared memory or warp-level execution exists
-- All threads are executed sequentially on CPU
-- Memory loading overhead dominates computation
-
-### Conclusion
-
-### Engineering Takeaways
-
-- GPU execution models cannot be directly mapped to CPU without considering hardware differences
-- Shared memory and parallel execution are essential for GPU performance
-- CPU simulation introduces overheads that do not reflect real GPU behavior
-
-This reinforces the importance of hardware-aware optimization in ML runtime design.
+- Per-operator latency tracing
+- Backend-aware profiling
+- Runtime execution summaries
+- Scheduling analysis
+- Memory optimization analysis
 
 ---
 
+## Memory Planning and Optimization
 
+The runtime includes compiler-style memory planning and tensor lifetime analysis.
 
-##  Memory Access Optimization Insights
+Implemented systems include:
 
-During optimization, multiple tiled loop orderings were evaluated.
+- Tensor first/last-use analysis
+- Arena-style memory allocation
+- Buffer reuse optimization
+- Peak memory analysis
 
-Two key variants were tested:
+Example memory reuse:
 
-- **i-k-j ordering (optimized)**
-- **i-j-k ordering (degraded performance)**
-
-### i-k-j (selected)
-
-```
-for i
-  for k
-    load A[i, k]
-    for j
-      C[i, j] += A[i, k] * B[k, j]
+```text
+output reuses buffer from matmul_out
 ```
 
-Advantages:
-- Sequential access on B (row-major)
-- Sequential writes on C
-- High reuse of A[i,k]
-- Cache-friendly and SIMD-friendly
+Example memory optimization:
 
-### i-j-k (rejected)
-
+```text
+Naive memory: 50 float elements
+Planned peak memory: 42 float elements
+Saved memory: 8 float elements
 ```
 
-for i
-  for j
-    for k
-      C[i, j] += A[i, k] * B[k, j]
-```
-
-
-Problems:
-- B is accessed with large strides (poor locality)
-- Cache miss rate increases significantly
-- Prefetching and vectorization are less effective
-
-### Result
-
-```
-
-i-k-j tiled: 8.68 ms
-i-j-k tiled: 13.96 ms
-```
-
-
-### Conclusion
-
-This experiment highlights the gap between conceptual execution models and hardware-aware implementations:
-
-- GPU execution models rely on true parallelism and fast on-chip shared memory
-- CPU simulation executes threads sequentially and incurs allocation overhead
-- As a result, GPU-style tiling cannot be directly translated to CPU performance
-
-This reinforces that performance optimization must be co-designed with hardware architecture.
-This experiment was designed to bridge the gap between high-level execution abstractions and hardware-specific optimizations in ML runtime systems.
-Compared to the optimized CPU tiled kernel (8.68 ms), the GPU-style simulation highlights that performance gains depend on real hardware support for parallel execution and memory hierarchy, not just execution abstraction.
 ---
 
-##  Key Techniques
+## ARM NEON Runtime Portability
 
-### 1. Operator Fusion
-Combines multiple operators into a single kernel to reduce dispatch overhead and improve cache locality.
+To support mobile and edge-oriented runtime portability, ARM NEON-aware execution paths were added.
 
-### 2. Tiled Matrix Multiplication
-Improves cache efficiency by blocking memory access patterns.
+Implemented components include:
 
-### 3. DAG Scheduling
-Ensures correct execution order using topological sorting based on tensor dependencies.
+- ARM NEON vectorized Add kernel
+- Compile-time backend selection
+- Scalar fallback on non-ARM platforms
 
-### 4. Operator Registry
-Decouples execution logic from kernel implementations, enabling modular runtime design.
+```cpp
+#ifdef __ARM_NEON
+```
 
-### 5. Shape Inference
-Propagates tensor shapes through the graph for validation and memory planning.
+This enables runtime portability across ARM-based edge devices commonly used in Qualcomm and mobile inference environments.
 
-### 6. Memory Planning
-Uses an arena-style allocation strategy to reduce dynamic memory overhead.
-
-### 7. Tensor Lifetime Analysis and Memory Reuse
-Tracks tensor first/last usage and reuses arena memory for tensors with non-overlapping lifetimes.
-
-### 8. Causal Attention
-Implements autoregressive masking so tokens only attend to current and previous positions.
-
-### 9. KV Cache Simulation
-Simulates decoder-style incremental inference by caching previous K/V tensors and reusing them across decode steps.
-
-### 10. SIMD / Vectorized Kernels
-Implemented AVX2 vectorized kernels using 256-bit SIMD intrinsics for elementwise operators, improving throughput through hardware-aware parallel execution.
-
-### 11. SIMD / Vectorized Kernels
-Implemented AVX2 vectorized kernels using 256-bit SIMD intrinsics for hardware-aware acceleration of elementwise operators.
-
-### 12. KV Cache Simulation
-Implemented decoder-style KV cache reuse for incremental Transformer inference workloads.
-
-### 13. Tensor Lifetime Analysis
-Tracked tensor first/last usage intervals and reused arena memory for tensors with non-overlapping lifetimes.
-
-### 14. Runtime Profiling
-Implemented per-operator latency tracing and execution summaries for runtime debugging and performance analysis.
 ---
 
-##  Motivation
+## Motivation
 
 Modern ML systems on edge devices require:
 
@@ -508,29 +430,24 @@ Modern ML systems on edge devices require:
 - Compiler-style optimizations for performance
 - Modular runtime systems for flexibility
 - Fine-grained control over memory and execution
+- Hardware-aware inference scheduling
+- Heterogeneous compute support
 
 This project explores these challenges by implementing a simplified but realistic ML compiler and runtime system in C++.
 
 ---
 
-##  Future Work
+## Future Work
 
-- SIMD / vectorized kernels
-- Memory reuse and lifetime analysis
-- Quantization (INT8 / FP16)
-- Multi-head attention
-- KV cache optimization
-- Flash-attention style tiling
-- SIMD/vectorized attention kernels
-- Profiling and latency breakdown tools
-- Python API for model loading and execution
-- Multi-head attention
-- FlashAttention-style kernel optimization
-- SIMD/vectorized Transformer kernels
-- Dynamic shape execution
-- ONNX graph-level optimization passes
-- Real GPU backend integration (CUDA/Metal)
-- AVX2 / SIMD optimized MatMul kernels
-- Vectorized Transformer kernels
+- Multi-head attention kernels
 - FlashAttention-style fused attention kernels
+- Real GPU backend integration (CUDA / Metal)
+- Async execution scheduling
+- Runtime memory fragmentation analysis
+- ONNX graph-level optimization passes
+- MLIR dialect lowering
+- Vectorized Transformer kernels
+- Operator autotuning
+- Mixed backend execution optimization
+
 ---
