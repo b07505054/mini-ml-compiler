@@ -24,6 +24,12 @@ This project simulates core components of modern ML infrastructure systems such 
 - Algebraic simplification compiler pass
 - Dead node elimination compiler pass
 - MLIR affine and linalg dialect workflow integration
+- HuggingFace Transformer ONNX ingestion workflow
+- ONNX graph inspection and operator coverage analysis
+- Runtime trace export tooling
+- FlashAttention-style fused attention kernel
+- LayerNorm runtime operator onboarding
+- CoreML conversion workflow experimentation
 
 ### Compiler and Runtime Infrastructure
 
@@ -35,6 +41,7 @@ This project simulates core components of modern ML infrastructure systems such 
 - Execution planner and dispatch abstraction
 - Runtime profiling and execution tracing
 - Per-operator latency analysis
+- Runtime trace JSON export
 
 ### Backend System
 
@@ -65,12 +72,15 @@ This project simulates core components of modern ML infrastructure systems such 
 - AVX2 SIMD vectorized ReLU
 - AVX2 SIMD vectorized Add
 - AVX2 SIMD vectorized MatMul
+- INT8 quantized MatMul
 - Hardware-aware kernel optimization
 
 ### Transformer Runtime Features
 
 - Transformer scaled dot-product attention operator
+- FlashAttention-style fused attention kernel
 - Numerically stable Softmax implementation
+- LayerNorm runtime kernel
 - Causal attention masking
 - KV cache simulation
 - Incremental autoregressive decoding simulation
@@ -85,6 +95,14 @@ This project simulates core components of modern ML infrastructure systems such 
 - Affine loop tiling
 - Linalg-to-affine lowering
 - Compiler-oriented runtime architecture
+
+### HuggingFace / ONNX Integration
+
+- HuggingFace Transformer model export workflow
+- PyTorch → ONNX export
+- ONNX graph inspection tooling
+- ONNX operator coverage analysis
+- Runtime operator onboarding workflow
 
 ### Benchmarking and Analysis
 
@@ -125,6 +143,34 @@ affine.for %arg5 = 0 to 128 step 32
 ```
 
 This demonstrates interaction with real MLIR dialects including `affine` and `linalg`, connecting the custom runtime project to modern compiler infrastructure.
+
+---
+
+## HuggingFace / ONNX Model Integration
+
+Exported a HuggingFace tiny BERT model from PyTorch to ONNX and implemented ONNX graph inspection tooling.
+
+Example graph statistics:
+
+- Nodes: 273
+- Initializers: 59
+- MatMul: 40
+- Add: 52
+- Softmax: 5
+- LayerNormalization: 11
+- Transpose: 25
+
+Example ONNX operator coverage report:
+
+- Total nodes: 273
+- Supported nodes: 98
+- Partially supported nodes: 80
+- Unsupported nodes: 95
+- Approx operator coverage: 65.2%
+
+This validates real Transformer model ingestion and provides debugging visibility into exported inference graphs.
+
+Attempted PyTorch-to-CoreML conversion workflows using coremltools and HuggingFace Transformer models, identifying compatibility limitations across Windows environments, Torch versions, and SDPA-based attention implementations.
 
 ---
 
@@ -188,6 +234,36 @@ ReLU   → CPU
 ```
 
 This architecture simulates heterogeneous compute execution commonly used in modern edge inference systems.
+
+---
+
+## Runtime Trace Export
+
+The runtime profiler can export backend-aware execution traces to JSON.
+
+Example:
+
+```json
+[
+  {
+    "op_name": "matmul",
+    "backend": "MockGPU",
+    "latency_ms": 0.1093
+  },
+  {
+    "op_name": "add",
+    "backend": "CPU",
+    "latency_ms": 0.0006
+  },
+  {
+    "op_name": "relu",
+    "backend": "CPU",
+    "latency_ms": 0.0005
+  }
+]
+```
+
+This enables debugging and visualization of heterogeneous runtime execution.
 
 ---
 
@@ -257,6 +333,8 @@ apps/
   run_dynamic_shape_demo.cpp
   run_dce_demo.cpp
   run_algebraic_simplification_demo.cpp
+  run_layernorm_demo.cpp
+  run_fused_attention_demo.cpp
   benchmark_matmul.cpp
   benchmark_kernels.cpp
   benchmark_threads.cpp
@@ -272,39 +350,6 @@ apps/
 mlir/
   matmul_affine.mlir
   matmul_linalg.mlir
-```
-
----
-
-## Build Instructions
-
-### Requirements
-
-- C++17 compatible compiler
-- CMake >= 3.16
-- LLVM / MLIR toolchain
-
-### Build
-
-```bash
-mkdir build
-cd build
-cmake ..
-cmake --build . --config Release
-```
-
-### Run
-
-```bash
-./Release/run_demo.exe
-./Release/run_backend_demo.exe
-./Release/run_partition_demo.exe
-./Release/run_scheduled_backend_demo.exe
-./Release/run_dynamic_shape_demo.exe
-./Release/run_dce_demo.exe
-./Release/run_algebraic_simplification_demo.exe
-./Release/benchmark_avx2_matmul.exe
-./Release/benchmark_int8_matmul.exe
 ```
 
 ---
@@ -363,6 +408,22 @@ Speedup: **1.69×**
 
 ---
 
+### FlashAttention-style Fused Attention
+
+| Operator | Latency |
+|---|---|
+| fused_attention | 0.0574 ms |
+
+Implemented a memory-aware fused attention operator that combines:
+
+- QKᵀ score computation
+- Numerically stable Softmax
+- Attention-weighted value aggregation
+
+into a single runtime operator to reduce intermediate tensor materialization and memory bandwidth overhead.
+
+---
+
 ## Motivation
 
 Modern ML systems on edge devices require:
@@ -381,7 +442,6 @@ This project explores these challenges by implementing a simplified but realisti
 ## Future Work
 
 - Multi-head attention kernels
-- FlashAttention-style fused attention kernels
 - Real GPU backend integration (CUDA / Metal)
 - Async execution scheduling
 - Runtime memory fragmentation analysis
@@ -390,5 +450,7 @@ This project explores these challenges by implementing a simplified but realisti
 - Vectorized Transformer kernels
 - Operator autotuning
 - Mixed backend execution optimization
-
----
+- Apple MLX benchmarking on Apple Silicon
+- CoreML runtime execution on macOS
+- Metal compute backend
+```

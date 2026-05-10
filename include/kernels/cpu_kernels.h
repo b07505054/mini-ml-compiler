@@ -58,3 +58,15 @@ void add_neon(
     const Tensor& B,
     Tensor& C
 );
+
+void layernorm(
+    const Tensor& input,
+    Tensor& output,
+    float eps = 1e-5f
+);
+void fused_attention(
+    const Tensor& Q,
+    const Tensor& K,
+    const Tensor& V,
+    Tensor& output
+);

@@ -10,7 +10,9 @@ enum class OpType {
     ReLU,
     FusedMatMulAddReLU,
     Attention,
-    CausalAttention
+    CausalAttention,
+    LayerNorm,
+    FusedAttention,
 };
 
 struct Node {

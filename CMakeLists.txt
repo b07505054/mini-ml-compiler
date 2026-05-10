@@ -81,3 +81,9 @@ target_link_libraries(run_dce_demo mlcompiler)
 
 add_executable(run_algebraic_simplification_demo apps/run_algebraic_simplification_demo.cpp)
 target_link_libraries(run_algebraic_simplification_demo mlcompiler)
+
+add_executable(run_layernorm_demo apps/run_layernorm_demo.cpp)
+target_link_libraries(run_layernorm_demo mlcompiler)
+
+add_executable(run_fused_attention_demo apps/run_fused_attention_demo.cpp)
+target_link_libraries(run_fused_attention_demo mlcompiler)

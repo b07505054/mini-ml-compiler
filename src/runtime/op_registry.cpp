@@ -53,5 +53,21 @@ OpRegistry create_default_registry() {
 
         causal_attention(Q, K, V, Out);
     });
+
+    registry.register_op(OpType::LayerNorm, [](Graph& graph, const Node& node) {
+        auto& A = graph.get_tensor(node.inputs[0]);
+        auto& B = graph.get_tensor(node.outputs[0]);
+
+        layernorm(A, B);
+    });
+
+    registry.register_op(OpType::FusedAttention, [](Graph& graph, const Node& node) {
+        auto& Q = graph.get_tensor(node.inputs[0]);
+        auto& K = graph.get_tensor(node.inputs[1]);
+        auto& V = graph.get_tensor(node.inputs[2]);
+        auto& Out = graph.get_tensor(node.outputs[0]);
+
+        fused_attention(Q, K, V, Out);
+    });
     return registry;
 }

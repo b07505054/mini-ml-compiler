@@ -541,3 +541,105 @@ void add_neon(
 
 #endif
 }
+
+void layernorm(
+    const Tensor& input,
+    Tensor& output,
+    float eps
+) {
+    output.shape = input.shape;
+    output.data.resize(input.data.size());
+
+    int rows = input.shape[0];
+    int cols = input.shape[1];
+
+    for (int i = 0; i < rows; ++i) {
+        float mean = 0.0f;
+
+        for (int j = 0; j < cols; ++j) {
+            mean += input.data[i * cols + j];
+        }
+
+        mean /= cols;
+
+        float var = 0.0f;
+
+        for (int j = 0; j < cols; ++j) {
+            float diff = input.data[i * cols + j] - mean;
+            var += diff * diff;
+        }
+
+        var /= cols;
+
+        float inv_std = 1.0f / std::sqrt(var + eps);
+
+        for (int j = 0; j < cols; ++j) {
+            float x = input.data[i * cols + j];
+            output.data[i * cols + j] =
+                (x - mean) * inv_std;
+        }
+    }
+}
+
+void fused_attention(
+    const Tensor& Q,
+    const Tensor& K,
+    const Tensor& V,
+    Tensor& output
+) {
+    int seq = Q.shape[0];
+    int dim = Q.shape[1];
+
+    output.shape = {seq, dim};
+    output.data.assign(seq * dim, 0.0f);
+
+    std::vector<float> scores(seq);
+
+    for (int i = 0; i < seq; ++i) {
+
+        float max_score = -1e9f;
+
+        for (int j = 0; j < seq; ++j) {
+
+            float score = 0.0f;
+
+            for (int d = 0; d < dim; ++d) {
+                score +=
+                    Q.data[i * dim + d] *
+                    K.data[j * dim + d];
+            }
+
+            score /= std::sqrt(static_cast<float>(dim));
+
+            scores[j] = score;
+
+            if (score > max_score) {
+                max_score = score;
+            }
+        }
+
+        float sum = 0.0f;
+
+        for (int j = 0; j < seq; ++j) {
+            scores[j] = std::exp(scores[j] - max_score);
+            sum += scores[j];
+        }
+
+        for (int j = 0; j < seq; ++j) {
+            scores[j] /= sum;
+        }
+
+        for (int d = 0; d < dim; ++d) {
+
+            float value = 0.0f;
+
+            for (int j = 0; j < seq; ++j) {
+                value +=
+                    scores[j] *
+                    V.data[j * dim + d];
+            }
+
+            output.data[i * dim + d] = value;
+        }
+    }
+}

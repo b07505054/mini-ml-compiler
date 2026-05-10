@@ -54,7 +54,7 @@ void Executor::run(
             double ms =
                 std::chrono::duration<double, std::milli>(t2 - t1).count();
 
-            profiler.record(node.name, ms);
+            profiler.record(node.name, backend.name(), ms);
         } else {
             backend.execute(graph, node);
         }
@@ -101,7 +101,7 @@ void Executor::run_scheduled(
             double ms =
                 std::chrono::duration<double, std::milli>(t2 - t1).count();
 
-            profiler.record(std::string(node.name) + " [" + backend.name() + "]", ms);
+            profiler.record(node.name, backend.name(), ms);
         } else {
             backend.execute(graph, node);
         }
@@ -109,5 +109,6 @@ void Executor::run_scheduled(
 
     if (profile) {
         profiler.print_summary();
+        profiler.export_json("../trace/runtime_trace.json");
     }
 }
