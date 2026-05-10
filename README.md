@@ -3,6 +3,7 @@
 A C++ heterogeneous ML compiler and runtime system that implements graph IR, compiler-style optimizations, backend-aware execution scheduling, dynamic-shape execution, quantized inference, and performance-optimized CPU kernels for edge-oriented machine learning workloads.
 
 This project simulates core components of modern ML infrastructure systems such as Core ML Runtime, TensorRT, MLIR, and TVM, focusing on graph compilation, heterogeneous runtime execution, memory optimization, and hardware-aware inference for on-device and edge environments.
+
 ---
 
 ## Features
@@ -20,6 +21,9 @@ This project simulates core components of modern ML infrastructure systems such 
 - ARM NEON-aware execution path
 - Heterogeneous backend scheduling
 - Graph partitioning across execution backends
+- Algebraic simplification compiler pass
+- Dead node elimination compiler pass
+- MLIR affine and linalg dialect workflow integration
 
 ### Compiler and Runtime Infrastructure
 
@@ -48,6 +52,8 @@ This project simulates core components of modern ML infrastructure systems such 
 - Arena-style memory planning
 - Memory reuse analysis
 - Peak memory reporting
+- Dead node elimination
+- Algebraic simplification
 - Compiler-style graph optimization passes
 
 ### CPU and SIMD Optimization
@@ -72,9 +78,12 @@ This project simulates core components of modern ML infrastructure systems such 
 
 ### MLIR / Compiler Ecosystem
 
-- MLIR-style intermediate representation
-- MLIR optimization workflow experimentation
-- Affine loop transformation experiments
+- MLIR affine dialect workflow
+- MLIR linalg dialect workflow
+- Real MLIR pass pipeline using mlir-opt
+- Canonicalization and CSE passes
+- Affine loop tiling
+- Linalg-to-affine lowering
 - Compiler-oriented runtime architecture
 
 ### Benchmarking and Analysis
@@ -85,6 +94,37 @@ This project simulates core components of modern ML infrastructure systems such 
 - GPU-style tiled execution simulation
 - Runtime profiling summaries
 - Memory optimization analysis
+
+---
+
+## MLIR Compiler Workflow
+
+This project includes real MLIR compiler workflow experiments using `mlir-opt`.
+
+Implemented MLIR passes:
+
+- Canonicalization
+- Common subexpression elimination (CSE)
+- Affine loop tiling
+- Linalg-to-affine lowering
+
+Example commands:
+
+```bash
+mlir-opt mlir/matmul_affine.mlir --canonicalize --cse
+mlir-opt mlir/matmul_affine.mlir --affine-loop-tile="tile-sizes=32,32,32"
+mlir-opt mlir/matmul_linalg.mlir --convert-linalg-to-affine-loops
+```
+
+Example affine loop tiling output:
+
+```mlir
+affine.for %arg3 = 0 to 128 step 32
+affine.for %arg4 = 0 to 128 step 32
+affine.for %arg5 = 0 to 128 step 32
+```
+
+This demonstrates interaction with real MLIR dialects including `affine` and `linalg`, connecting the custom runtime project to modern compiler infrastructure.
 
 ---
 
@@ -99,7 +139,7 @@ PyTorch Model
 → Graph IR
 → Shape Inference
 → Graph Verification
-→ Optimization Passes (Fusion)
+→ Optimization Passes
 → Memory Planning
 → Lowering (DAG Scheduling)
 → Execution Plan
@@ -151,16 +191,56 @@ This architecture simulates heterogeneous compute execution commonly used in mod
 
 ---
 
+## Custom Compiler Passes
+
+The project includes custom graph compiler optimization passes operating directly on the internal Graph IR.
+
+Implemented compiler passes include:
+
+- Operator fusion
+- Dead node elimination
+- Algebraic simplification
+- Tensor lifetime analysis
+- Memory reuse optimization
+
+Example algebraic simplification:
+
+```text
+ReLU(ReLU(x)) → ReLU(x)
+```
+
+Example dead node elimination:
+
+Before:
+
+```text
+live_matmul
+live_add
+dead_matmul
+dead_relu
+```
+
+After:
+
+```text
+live_matmul
+live_add
+```
+
+These passes simulate real compiler IR transformation workflows used in modern ML compiler systems.
+
+---
+
 ## Project Structure
 
 ```text
 include/
-  ir/              # Graph, Node, Tensor definitions
-  pass/            # Pass interface and optimization passes
-  runtime/         # Execution plan, executor, backend system
-  kernels/         # CPU kernels (MatMul, fused ops)
-  analysis/        # Shape inference and graph verification
-  utils/           # Benchmark utilities
+  ir/
+  pass/
+  runtime/
+  kernels/
+  analysis/
+  utils/
 
 src/
   ir/
@@ -175,6 +255,8 @@ apps/
   run_partition_demo.cpp
   run_scheduled_backend_demo.cpp
   run_dynamic_shape_demo.cpp
+  run_dce_demo.cpp
+  run_algebraic_simplification_demo.cpp
   benchmark_matmul.cpp
   benchmark_kernels.cpp
   benchmark_threads.cpp
@@ -186,6 +268,10 @@ apps/
   run_attention_demo.cpp
   run_causal_attention_demo.cpp
   run_kv_cache_demo.cpp
+
+mlir/
+  matmul_affine.mlir
+  matmul_linalg.mlir
 ```
 
 ---
@@ -196,6 +282,7 @@ apps/
 
 - C++17 compatible compiler
 - CMake >= 3.16
+- LLVM / MLIR toolchain
 
 ### Build
 
@@ -214,6 +301,8 @@ cmake --build . --config Release
 ./Release/run_partition_demo.exe
 ./Release/run_scheduled_backend_demo.exe
 ./Release/run_dynamic_shape_demo.exe
+./Release/run_dce_demo.exe
+./Release/run_algebraic_simplification_demo.exe
 ./Release/benchmark_avx2_matmul.exe
 ./Release/benchmark_int8_matmul.exe
 ```
@@ -271,154 +360,6 @@ Speedup: **1.33×**
 | AVX2 Vectorized Add | 15.66 ms |
 
 Speedup: **1.69×**
-
----
-
-### Thread Scaling (512×512)
-
-| Threads | Latency (ms) | Speedup |
-|---|---|---|
-| 1 | 74.55 | 1.0× |
-| 2 | 71.77 | 1.04× |
-| 4 | 48.47 | 1.54× |
-| 8 | 35.83 | 2.08× |
-
-Observations:
-
-- Scaling improves with larger workloads
-- Performance is bounded by scheduling overhead and memory bandwidth
-- Persistent worker pools reduce thread creation overhead
-
----
-
-## Dynamic Shape Runtime
-
-The runtime supports dynamic-shape execution with runtime shape propagation and dynamic tensor allocation.
-
-Execution correctness was validated across multiple batch sizes:
-
-```text
-Batch=1 → Output shape [1,2]
-Batch=2 → Output shape [2,2]
-Batch=4 → Output shape [4,2]
-```
-
-Memory planning dynamically adapts to tensor sizes during execution:
-
-```text
-Batch=1 → Peak memory: 15 floats
-Batch=2 → Peak memory: 24 floats
-Batch=4 → Peak memory: 42 floats
-```
-
-This simulates real-world inference workloads with variable input sizes and dynamic execution requirements.
-
----
-
-## Transformer Attention Runtime
-
-The runtime was extended with Transformer-style scaled dot-product attention:
-
-```text
-Attention(Q, K, V) = softmax(QKᵀ / √D)V
-```
-
-Implemented components include:
-
-- Attention score computation
-- Numerically stable Softmax
-- Attention-weighted value aggregation
-- Causal attention masking
-- KV cache reuse
-- Incremental autoregressive decoding simulation
-
-Attention correctness was validated against a NumPy reference:
-
-```text
-Python reference:
-6.224593 7.550813
-3.775407 12.449187
-
-C++ runtime:
-6.22459 7.55081
-3.77541 12.4492
-```
-
-KV cache simulation example:
-
-```text
-Step 0 output:
-10 0 0 0
-
-Step 1 output using KV cache:
-3.77541 12.4492 0 0
-```
-
----
-
-## Runtime Profiling Example
-
-```text
-=== Runtime Profiling Summary ===
-matmul [MockGPU] : 0.0778 ms
-add [CPU]        : 0.0006 ms
-relu [CPU]       : 0.0005 ms
-
-Total latency: 0.0789 ms
-```
-
-The profiling infrastructure supports:
-
-- Per-operator latency tracing
-- Backend-aware profiling
-- Runtime execution summaries
-- Scheduling analysis
-- Memory optimization analysis
-
----
-
-## Memory Planning and Optimization
-
-The runtime includes compiler-style memory planning and tensor lifetime analysis.
-
-Implemented systems include:
-
-- Tensor first/last-use analysis
-- Arena-style memory allocation
-- Buffer reuse optimization
-- Peak memory analysis
-
-Example memory reuse:
-
-```text
-output reuses buffer from matmul_out
-```
-
-Example memory optimization:
-
-```text
-Naive memory: 50 float elements
-Planned peak memory: 42 float elements
-Saved memory: 8 float elements
-```
-
----
-
-## ARM NEON Runtime Portability
-
-To support mobile and edge-oriented runtime portability, ARM NEON-aware execution paths were added.
-
-Implemented components include:
-
-- ARM NEON vectorized Add kernel
-- Compile-time backend selection
-- Scalar fallback on non-ARM platforms
-
-```cpp
-#ifdef __ARM_NEON
-```
-
-This enables runtime portability across ARM-based edge devices commonly used in Qualcomm and mobile inference environments.
 
 ---
 

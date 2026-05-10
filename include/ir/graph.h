@@ -38,7 +38,29 @@ public:
 
         std::cout << "Nodes:\n";
         for (const auto& node : nodes) {
-            std::cout << "  " << node.name << "\n";
+            std::cout << "  " << node.name << " | inputs=[";
+
+            for (size_t i = 0; i < node.inputs.size(); ++i) {
+                int tid = node.inputs[i];
+                std::cout << tensors[tid].name;
+
+                if (i + 1 < node.inputs.size()) {
+                    std::cout << ", ";
+                }
+            }
+
+            std::cout << "] outputs=[";
+
+            for (size_t i = 0; i < node.outputs.size(); ++i) {
+                int tid = node.outputs[i];
+                std::cout << tensors[tid].name;
+
+                if (i + 1 < node.outputs.size()) {
+                    std::cout << ", ";
+                }
+            }
+
+            std::cout << "]\n";
         }
     }
 };

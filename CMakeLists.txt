@@ -75,3 +75,9 @@ target_link_libraries(run_dynamic_shape_demo mlcompiler)
 
 add_executable(benchmark_neon_add apps/benchmark_neon_add.cpp)
 target_link_libraries(benchmark_neon_add mlcompiler)
+
+add_executable(run_dce_demo apps/run_dce_demo.cpp)
+target_link_libraries(run_dce_demo mlcompiler)
+
+add_executable(run_algebraic_simplification_demo apps/run_algebraic_simplification_demo.cpp)
+target_link_libraries(run_algebraic_simplification_demo mlcompiler)
