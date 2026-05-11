@@ -93,3 +93,9 @@ target_link_libraries(run_async_demo mlcompiler)
 
 add_executable(run_execution_provider_demo apps/run_execution_provider_demo.cpp)
 target_link_libraries(run_execution_provider_demo mlcompiler)
+
+add_executable(run_parallel_demo apps/run_parallel_demo.cpp)
+target_link_libraries(run_parallel_demo mlcompiler)
+
+add_executable(run_mlir_emitter_demo apps/run_mlir_emitter_demo.cpp)
+target_link_libraries(run_mlir_emitter_demo mlcompiler)

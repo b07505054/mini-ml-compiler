@@ -35,6 +35,12 @@ This project simulates core components of modern ML infrastructure systems such 
 - FlashAttention-style fused attention kernel
 - LayerNorm runtime operator onboarding
 - CoreML conversion workflow experimentation
+- Arena-based runtime tensor allocator
+- Async execution runtime
+- Dependency-aware parallel execution engine
+- Execution-provider capability query architecture
+- CPU fallback execution
+- Graph IR to MLIR emission pipeline
 
 ### Compiler and Runtime Infrastructure
 
@@ -201,7 +207,59 @@ This enables scalable onboarding workflows for unsupported ONNX operators identi
 This validates real Transformer model ingestion and provides debugging visibility into exported inference graphs.
 
 Attempted PyTorch-to-CoreML conversion workflows using coremltools and HuggingFace Transformer models, identifying compatibility limitations across Windows environments, Torch versions, and SDPA-based attention implementations.
+---
+### Dependency-Aware Parallel Execution
 
+The runtime includes a dependency-aware parallel executor that identifies ready nodes from the execution graph and launches independent operations asynchronously.
+
+Example graph:
+
+```text
+matmul1 ─┐
+         ├─ add → relu
+matmul2 ─┘
+```
+
+Example execution:
+
+```text
+[ParallelExecutor] Launching ready node: matmul1 -> MockGPU
+[ParallelExecutor] Launching ready node: matmul2 -> MockGPU
+[ParallelExecutor] Launching ready node: add -> CPU
+[ParallelExecutor] Launching ready node: relu -> CPU
+```
+
+This simulates dependency-aware execution engines used in production ML runtimes.
+---
+### Graph IR to MLIR Emission
+
+The compiler can emit MLIR from the internal Graph IR and validate the generated IR through real MLIR tooling.
+
+Pipeline:
+
+```text
+Graph IR
+→ linalg.matmul MLIR emission
+→ mlir-opt canonicalization / CSE
+→ linalg-to-affine lowering
+```
+
+Example generated MLIR:
+
+```mlir
+linalg.matmul ins(%A, %B : memref<128x128xf32>, memref<128x128xf32>) outs(%C : memref<128x128xf32>)
+```
+
+Example affine lowering output includes:
+
+```mlir
+affine.for %arg3 = 0 to 128
+affine.load
+arith.mulf
+affine.store
+```
+
+This connects the custom C++ compiler pipeline to the MLIR ecosystem.
 ---
 
 ## System Architecture
@@ -472,4 +530,5 @@ This project explores these challenges by implementing a simplified but realisti
 - Apple MLX benchmarking on Apple Silicon
 - CoreML runtime execution on macOS
 - Metal compute backend
+
 ```

@@ -1,0 +1,22 @@
+[
+  {
+    "op_name": "matmul1",
+    "backend": "MockGPU",
+    "latency_ms": 0.1901
+  },
+  {
+    "op_name": "matmul2",
+    "backend": "MockGPU",
+    "latency_ms": 0.1312
+  },
+  {
+    "op_name": "add",
+    "backend": "CPU",
+    "latency_ms": 0.0009
+  },
+  {
+    "op_name": "relu",
+    "backend": "CPU",
+    "latency_ms": 0.0006
+  }
+]
