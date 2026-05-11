@@ -87,3 +87,9 @@ target_link_libraries(run_layernorm_demo mlcompiler)
 
 add_executable(run_fused_attention_demo apps/run_fused_attention_demo.cpp)
 target_link_libraries(run_fused_attention_demo mlcompiler)
+
+add_executable(run_async_demo apps/run_async_demo.cpp)
+target_link_libraries(run_async_demo mlcompiler)
+
+add_executable(run_execution_provider_demo apps/run_execution_provider_demo.cpp)
+target_link_libraries(run_execution_provider_demo mlcompiler)

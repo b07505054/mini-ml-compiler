@@ -2,7 +2,30 @@
 
 #include <iostream>
 #include <chrono>
+#include <algorithm>
+static void bind_arena(Graph& graph, ArenaAllocator& arena) {
+    size_t peak_memory = 0;
 
+    for (const auto& tensor : graph.tensors) {
+        size_t size = tensor.numel() > 0 ? tensor.numel() : 1;
+
+        peak_memory = std::max(
+            peak_memory,
+            static_cast<size_t>(tensor.memory_offset) + size
+        );
+    }
+
+    arena.allocate(peak_memory);
+
+    for (auto& tensor : graph.tensors) {
+        tensor.runtime_data =
+            arena.get_ptr(static_cast<size_t>(tensor.memory_offset));
+    }
+
+    // std::cout << "[ArenaAllocator] Allocated "
+    //           << peak_memory
+    //           << " float elements\n";
+}
 Executor::Executor() = default;
 
 Backend& Executor::select_backend(BackendType backend_type) {
@@ -25,6 +48,7 @@ void Executor::run(
     bool profile,
     BackendType backend_type
 ) {
+    bind_arena(graph, arena);
     Backend& backend = select_backend(backend_type);
     if (profile) {
         profiler.reset();
@@ -71,6 +95,7 @@ void Executor::run_scheduled(
     bool verbose,
     bool profile
 ) {
+    bind_arena(graph, arena);
     if (profile) {
         profiler.reset();
     }

@@ -15,6 +15,7 @@ struct Tensor {
     int first_use = -1;
     int last_use = -1;
     int memory_offset = -1;
+    float* runtime_data = nullptr;
     bool persistent = false;
     Tensor() = default;
 
