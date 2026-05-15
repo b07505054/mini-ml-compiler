@@ -643,3 +643,78 @@ void fused_attention(
         }
     }
 }
+
+void tiled_attention(
+    const Tensor& Q,
+    const Tensor& K,
+    const Tensor& V,
+    Tensor& output,
+    int tile_size
+) {
+    int seq = Q.shape[0];
+    int dim = Q.shape[1];
+
+    output.shape = {seq, dim};
+    output.data.assign(seq * dim, 0.0f);
+
+    std::vector<float> scores(seq, 0.0f);
+
+    for (int i = 0; i < seq; ++i) {
+        float max_score = -1e9f;
+
+        // Phase 1: compute QK scores using tiled K traversal
+        for (int tile = 0; tile < seq; tile += tile_size) {
+            int tile_end = std::min(tile + tile_size, seq);
+
+            for (int j = tile; j < tile_end; ++j) {
+                float score = 0.0f;
+
+                for (int d = 0; d < dim; ++d) {
+                    score += Q.data[i * dim + d] * K.data[j * dim + d];
+                }
+
+                score /= std::sqrt(static_cast<float>(dim));
+
+                scores[j] = score;
+
+                if (score > max_score) {
+                    max_score = score;
+                }
+            }
+        }
+
+        // Phase 2: numerically stable softmax
+        float sum = 0.0f;
+
+        for (int tile = 0; tile < seq; tile += tile_size) {
+            int tile_end = std::min(tile + tile_size, seq);
+
+            for (int j = tile; j < tile_end; ++j) {
+                scores[j] = std::exp(scores[j] - max_score);
+                sum += scores[j];
+            }
+        }
+
+        for (int tile = 0; tile < seq; tile += tile_size) {
+            int tile_end = std::min(tile + tile_size, seq);
+
+            for (int j = tile; j < tile_end; ++j) {
+                scores[j] /= sum;
+            }
+        }
+
+        // Phase 3: tiled weighted V accumulation
+        for (int tile = 0; tile < seq; tile += tile_size) {
+            int tile_end = std::min(tile + tile_size, seq);
+
+            for (int j = tile; j < tile_end; ++j) {
+                float w = scores[j];
+
+                for (int d = 0; d < dim; ++d) {
+                    output.data[i * dim + d] +=
+                        w * V.data[j * dim + d];
+                }
+            }
+        }
+    }
+}

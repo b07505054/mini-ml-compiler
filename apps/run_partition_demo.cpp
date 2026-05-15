@@ -56,7 +56,7 @@ int main() {
     ExecutionPlan plan = lower_to_execution_plan(graph);
 
     GraphPartitioner partitioner;
-    auto partitions = partitioner.partition(plan);
+    auto partitions = partitioner.partition(graph);
 
     std::cout << "\n=== Graph Partitions ===\n";
 

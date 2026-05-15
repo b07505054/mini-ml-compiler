@@ -127,6 +127,21 @@ bool GraphVerifier::verify(const Graph& graph) const {
                 ok = false;
             }
         }
+
+        if (node.op == OpType::TiledAttention) {
+            const auto& Q = graph.get_tensor(node.inputs[0]);
+            const auto& K = graph.get_tensor(node.inputs[1]);
+            const auto& V = graph.get_tensor(node.inputs[2]);
+            const auto& Out = graph.get_tensor(node.outputs[0]);
+
+            if (Q.shape.size() != 2 || K.shape.size() != 2 || V.shape.size() != 2 || Out.shape.size() != 2) {
+                std::cerr << "[Verifier] TiledAttention expects 2D tensors\n";
+                ok = false;
+            } else if (Q.shape != K.shape || Q.shape != V.shape || Q.shape != Out.shape) {
+                std::cerr << "[Verifier] TiledAttention expects Q, K, V, Out to have same shape\n";
+                ok = false;
+            }
+        }
     }
 
     if (ok) {

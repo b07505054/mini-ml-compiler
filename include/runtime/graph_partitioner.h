@@ -1,20 +1,17 @@
 #pragma once
 
-#include "runtime/execution_plan.h"
-#include "runtime/backend_scheduler.h"
-#include "runtime/backend_type.h"
+#include "ir/graph.h"
+#include "runtime/subgraph.h"
+#include "runtime/provider_scheduler.h"
 
 #include <vector>
 
-struct GraphPartition {
-    BackendType backend;
-    std::vector<Node> nodes;
-};
-
 class GraphPartitioner {
 public:
-    std::vector<GraphPartition> partition(const ExecutionPlan& plan) const;
+    std::vector<Subgraph> partition(
+        const Graph& graph
+    ) const;
 
 private:
-    BackendScheduler scheduler;
+    ProviderScheduler scheduler;
 };

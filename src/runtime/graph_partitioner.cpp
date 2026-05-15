@@ -1,20 +1,37 @@
 #include "runtime/graph_partitioner.h"
 
-std::vector<GraphPartition> GraphPartitioner::partition(const ExecutionPlan& plan) const {
-    std::vector<GraphPartition> partitions;
+std::vector<Subgraph> GraphPartitioner::partition(
+    const Graph& graph
+) const {
+    std::vector<Subgraph> subgraphs;
 
-    for (const auto& node : plan.ordered_nodes) {
-        BackendType backend = scheduler.select_backend(node);
-
-        if (partitions.empty() || partitions.back().backend != backend) {
-            GraphPartition p;
-            p.backend = backend;
-            p.nodes.push_back(node);
-            partitions.push_back(p);
-        } else {
-            partitions.back().nodes.push_back(node);
-        }
+    if (graph.nodes.empty()) {
+        return subgraphs;
     }
 
-    return partitions;
+    Subgraph current;
+
+    current.backend =
+        scheduler.select_backend(graph.nodes[0]);
+
+    for (const auto& node : graph.nodes) {
+        BackendType backend =
+            scheduler.select_backend(node);
+
+        if (backend != current.backend) {
+            subgraphs.push_back(current);
+
+            current = {};
+
+            current.backend = backend;
+        }
+
+        current.nodes.push_back(node);
+    }
+
+    if (!current.nodes.empty()) {
+        subgraphs.push_back(current);
+    }
+
+    return subgraphs;
 }

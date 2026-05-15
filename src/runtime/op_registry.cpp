@@ -69,5 +69,14 @@ OpRegistry create_default_registry() {
 
         fused_attention(Q, K, V, Out);
     });
+
+    registry.register_op(OpType::TiledAttention, [](Graph& graph, const Node& node) {
+        auto& Q = graph.get_tensor(node.inputs[0]);
+        auto& K = graph.get_tensor(node.inputs[1]);
+        auto& V = graph.get_tensor(node.inputs[2]);
+        auto& Out = graph.get_tensor(node.outputs[0]);
+
+        tiled_attention(Q, K, V, Out, 16);
+    });
     return registry;
 }

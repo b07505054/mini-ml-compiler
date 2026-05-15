@@ -99,3 +99,12 @@ target_link_libraries(run_parallel_demo mlcompiler)
 
 add_executable(run_mlir_emitter_demo apps/run_mlir_emitter_demo.cpp)
 target_link_libraries(run_mlir_emitter_demo mlcompiler)
+
+add_executable(run_subgraph_partition_demo apps/run_subgraph_partition_demo.cpp)
+target_link_libraries(run_subgraph_partition_demo mlcompiler)
+
+add_executable(run_allocator_v2_demo apps/run_allocator_v2_demo.cpp)
+target_link_libraries(run_allocator_v2_demo mlcompiler)
+
+add_executable(run_tiled_attention_demo apps/run_tiled_attention_demo.cpp)
+target_link_libraries(run_tiled_attention_demo mlcompiler)

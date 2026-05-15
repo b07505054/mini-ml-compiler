@@ -62,5 +62,11 @@ void ShapeInference::run(Graph& graph) {
 
             Out.shape = Q.shape;
         }
+
+        if (node.op == OpType::TiledAttention) {
+            auto& Q = graph.get_tensor(node.inputs[0]);
+            auto& Out = graph.get_tensor(node.outputs[0]);
+            Out.shape = Q.shape;
+        }
     }
 }

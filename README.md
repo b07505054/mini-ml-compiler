@@ -1,8 +1,8 @@
 # Heterogeneous ML Compiler and Runtime System
 
-A C++ heterogeneous ML compiler and runtime system that implements graph IR, compiler-style optimizations, backend-aware execution scheduling, execution-provider architectures, dynamic-shape execution, quantized inference, async runtime execution, and performance-optimized CPU kernels for edge-oriented machine learning workloads.
+A C++ heterogeneous ML compiler and runtime system that implements graph IR, compiler-style optimizations, backend-aware execution scheduling, subgraph delegation, memory reuse allocation, dynamic-shape execution, quantized inference, and hardware-aware Transformer kernels for edge-oriented machine learning workloads.
 
-This project simulates core components of modern ML infrastructure systems such as Core ML Runtime, TensorRT, ONNX Runtime, MLIR, and TVM, focusing on graph compilation, heterogeneous runtime execution, memory optimization, execution-provider scheduling, and hardware-aware inference for on-device and edge environments.
+This project simulates core components of modern ML infrastructure systems such as Core ML Runtime, TensorRT, ONNX Runtime, MLIR, TVM, and ExecuTorch, focusing on graph compilation, heterogeneous runtime execution, memory optimization, compiler lowering, and hardware-aware inference for on-device and edge environments.
 
 ---
 
@@ -13,52 +13,54 @@ This project simulates core components of modern ML infrastructure systems such 
 - Pass-based compiler optimization pipeline
 - Shape inference and graph verification
 - DAG-based graph lowering and topological scheduling
+- Dependency-aware parallel execution engine
 - Execution plan abstraction for runtime decoupling
 - Operator registry and runtime dispatch system
-- Execution-provider capability query architecture
-- CPU fallback execution
 - Dynamic-shape runtime execution
-- Arena-based runtime tensor allocator
-- Async execution runtime
 - INT8 quantized runtime path
 - AVX2 SIMD vectorized GEMM kernels
 - ARM NEON-aware execution path
 - Heterogeneous backend scheduling
-- Graph partitioning across execution backends
+- Subgraph-level delegation and partitioning
+- Execution-provider capability query system
+- CPU fallback execution
 - Algebraic simplification compiler pass
 - Dead node elimination compiler pass
 - MLIR affine and linalg dialect workflow integration
+- Graph IR → MLIR emission pipeline
 - HuggingFace Transformer ONNX ingestion workflow
 - ONNX graph inspection and operator coverage analysis
-- Operator onboarding tooling
 - Runtime trace export tooling
 - FlashAttention-style fused attention kernel
+- SIMD tiled attention kernel
 - LayerNorm runtime operator onboarding
+- Arena allocator and free-list allocator v2
+- Best-fit memory reuse policy
+- Fragmentation analysis and block coalescing
+- Async runtime execution
+- Runtime profiling and execution tracing
 - CoreML conversion workflow experimentation
-- Arena-based runtime tensor allocator
-- Async execution runtime
-- Dependency-aware parallel execution engine
-- Execution-provider capability query architecture
-- CPU fallback execution
-- Graph IR to MLIR emission pipeline
 
-### Compiler and Runtime Infrastructure
+---
+
+## Compiler and Runtime Infrastructure
 
 - ONNX → custom MLIR-style IR → Graph IR ingestion pipeline
 - Graph lowering into execution plans
 - Backend-aware execution scheduler
-- Execution-provider capability query system
-- CPU fallback execution
+- Dependency-aware execution engine
 - Heterogeneous runtime execution
-- Async task dispatch runtime
-- Arena-based runtime memory allocation
-- Graph partitioning across execution backends
-- Execution planner and dispatch abstraction
+- Subgraph partitioning across execution backends
+- Execution-provider abstraction
 - Runtime profiling and execution tracing
 - Per-operator latency analysis
 - Runtime trace JSON export
+- Graph IR → MLIR emission pipeline
+- MLIR affine/linalg lowering workflow
 
-### Backend System
+---
+
+## Backend System
 
 - Backend abstraction layer
 - CPU backend implementation
@@ -66,364 +68,35 @@ This project simulates core components of modern ML infrastructure systems such 
 - Backend-aware operator dispatch
 - Simulated heterogeneous execution
 - Backend-level profiling and scheduling
-- Execution-provider architecture inspired by ONNX Runtime and TensorRT delegates
+- Subgraph delegation
+- CPU fallback execution path
 
-### Compiler Optimizations
+Example delegated execution:
+
+```text
+Subgraph 0 -> MockGPU
+  matmul1
+  matmul2
+
+Subgraph 1 -> CPU
+  add
+  relu
+```
+
+This simulates execution-provider delegation architectures used in systems such as ONNX Runtime, TensorRT delegate execution, CoreML delegation, and mobile inference runtimes.
+
+---
+
+## Compiler Optimizations
 
 - Operator fusion (MatMul + Add + ReLU)
 - Tensor lifetime analysis
 - Arena-style memory planning
-- Runtime tensor arena allocator
 - Memory reuse analysis
 - Peak memory reporting
 - Dead node elimination
 - Algebraic simplification
 - Compiler-style graph optimization passes
-
-### CPU and SIMD Optimization
-
-- Cache-aware tiled matrix multiplication
-- Thread pool based parallel execution
-- Persistent worker scheduling
-- Task granularity optimization
-- AVX2 SIMD vectorized ReLU
-- AVX2 SIMD vectorized Add
-- AVX2 SIMD vectorized MatMul
-- INT8 quantized MatMul
-- Hardware-aware kernel optimization
-
-### Transformer Runtime Features
-
-- Transformer scaled dot-product attention operator
-- FlashAttention-style fused attention kernel
-- Numerically stable Softmax implementation
-- LayerNorm runtime kernel
-- Causal attention masking
-- KV cache simulation
-- Incremental autoregressive decoding simulation
-- Attention correctness validation against NumPy reference
-
-### MLIR / Compiler Ecosystem
-
-- MLIR affine dialect workflow
-- MLIR linalg dialect workflow
-- Real MLIR pass pipeline using mlir-opt
-- Canonicalization and CSE passes
-- Affine loop tiling
-- Linalg-to-affine lowering
-- Compiler-oriented runtime architecture
-
-### HuggingFace / ONNX Integration
-
-- HuggingFace Transformer model export workflow
-- PyTorch → ONNX export
-- ONNX graph inspection tooling
-- ONNX operator coverage analysis
-- Runtime operator onboarding workflow
-- Operator stub generator for unsupported ONNX operators
-- Integration report generation for Transformer inference graphs
-
-### Benchmarking and Analysis
-
-- End-to-end runtime benchmarking
-- Kernel-level microbenchmarking
-- Thread scaling analysis
-- GPU-style tiled execution simulation
-- Runtime profiling summaries
-- Memory optimization analysis
-
----
-
-## MLIR Compiler Workflow
-
-This project includes real MLIR compiler workflow experiments using `mlir-opt`.
-
-Implemented MLIR passes:
-
-- Canonicalization
-- Common subexpression elimination (CSE)
-- Affine loop tiling
-- Linalg-to-affine lowering
-
-Example commands:
-
-```bash
-mlir-opt mlir/matmul_affine.mlir --canonicalize --cse
-mlir-opt mlir/matmul_affine.mlir --affine-loop-tile="tile-sizes=32,32,32"
-mlir-opt mlir/matmul_linalg.mlir --convert-linalg-to-affine-loops
-```
-
-Example affine loop tiling output:
-
-```mlir
-affine.for %arg3 = 0 to 128 step 32
-affine.for %arg4 = 0 to 128 step 32
-affine.for %arg5 = 0 to 128 step 32
-```
-
-This demonstrates interaction with real MLIR dialects including `affine` and `linalg`, connecting the custom runtime project to modern compiler infrastructure.
-
----
-
-## HuggingFace / ONNX Model Integration
-
-Exported a HuggingFace tiny BERT model from PyTorch to ONNX and implemented ONNX graph inspection tooling.
-
-Example graph statistics:
-
-- Nodes: 273
-- Initializers: 59
-- MatMul: 40
-- Add: 52
-- Softmax: 5
-- LayerNormalization: 11
-- Transpose: 25
-
-Example ONNX operator coverage report:
-
-- Total nodes: 273
-- Supported nodes: 98
-- Partially supported nodes: 80
-- Unsupported nodes: 95
-- Approx operator coverage: 69.23%
-
-Implemented operator onboarding tooling for unsupported ONNX operators.
-
-Example:
-
-```bash
-python tools/generate_operator_stub.py Slice
-```
-
-Generated artifacts:
-
-- Runtime kernel stub
-- Shape inference stub
-- Verifier stub
-- Runtime registration checklist
-
-This enables scalable onboarding workflows for unsupported ONNX operators identified through integration reports.
-
-This validates real Transformer model ingestion and provides debugging visibility into exported inference graphs.
-
-Attempted PyTorch-to-CoreML conversion workflows using coremltools and HuggingFace Transformer models, identifying compatibility limitations across Windows environments, Torch versions, and SDPA-based attention implementations.
----
-### Dependency-Aware Parallel Execution
-
-The runtime includes a dependency-aware parallel executor that identifies ready nodes from the execution graph and launches independent operations asynchronously.
-
-Example graph:
-
-```text
-matmul1 ─┐
-         ├─ add → relu
-matmul2 ─┘
-```
-
-Example execution:
-
-```text
-[ParallelExecutor] Launching ready node: matmul1 -> MockGPU
-[ParallelExecutor] Launching ready node: matmul2 -> MockGPU
-[ParallelExecutor] Launching ready node: add -> CPU
-[ParallelExecutor] Launching ready node: relu -> CPU
-```
-
-This simulates dependency-aware execution engines used in production ML runtimes.
----
-### Graph IR to MLIR Emission
-
-The compiler can emit MLIR from the internal Graph IR and validate the generated IR through real MLIR tooling.
-
-Pipeline:
-
-```text
-Graph IR
-→ linalg.matmul MLIR emission
-→ mlir-opt canonicalization / CSE
-→ linalg-to-affine lowering
-```
-
-Example generated MLIR:
-
-```mlir
-linalg.matmul ins(%A, %B : memref<128x128xf32>, memref<128x128xf32>) outs(%C : memref<128x128xf32>)
-```
-
-Example affine lowering output includes:
-
-```mlir
-affine.for %arg3 = 0 to 128
-affine.load
-arith.mulf
-affine.store
-```
-
-This connects the custom C++ compiler pipeline to the MLIR ecosystem.
----
-
-## System Architecture
-
-The system follows a compiler-style pipeline:
-
-```text
-PyTorch Model
-→ ONNX Export
-→ Custom .mlir IR
-→ Graph IR
-→ Shape Inference
-→ Graph Verification
-→ Optimization Passes
-→ Memory Planning
-→ Arena Allocation
-→ Lowering (DAG Scheduling)
-→ Execution Plan
-→ Execution Provider Selection
-→ Backend Scheduler
-→ Operator Dispatch
-→ Async Runtime Execution
-→ CPU / MockGPU Backend
-→ Kernel Execution
-```
-
-The runtime also includes Transformer-oriented execution components such as causal attention masking, KV cache reuse, and incremental decoding simulation for autoregressive inference workloads.
-
-This design separates model representation, optimization, scheduling, execution-provider negotiation, and execution, enabling flexible and extensible runtime behavior.
-
----
-
-## Execution Provider Architecture
-
-The runtime implements an execution-provider architecture inspired by ONNX Runtime execution providers and TensorRT delegate systems.
-
-Implemented providers:
-
-- CPUExecutionProvider
-- MockGPUExecutionProvider
-
-Provider responsibilities include:
-
-- Capability query (`can_execute`)
-- Backend selection
-- Fallback execution
-- Backend dispatch
-
-Example capability report:
-
-```text
-matmul → MockGPUExecutionProvider
-add    → CPUExecutionProvider
-relu   → CPUExecutionProvider
-```
-
-This architecture enables backend-aware operator placement and fallback execution for heterogeneous inference workloads.
-
----
-
-## Arena Runtime Allocator
-
-The runtime includes an arena-based tensor allocator for inference-time memory management.
-
-Implemented functionality:
-
-- Shared inference memory arena
-- Tensor-to-arena memory binding
-- Lifetime-aware memory reuse
-- Offset-based tensor placement
-- Reduced per-tensor allocation overhead
-
-Example runtime allocation:
-
-```text
-[ArenaAllocator] Allocated 24 float elements
-```
-
-This architecture simulates memory-aware inference runtimes used in modern edge ML systems such as TFLite, TensorRT, and CoreML Runtime.
-
----
-
-## Async Runtime Execution
-
-The runtime includes an async task-dispatch execution engine using `std::async`.
-
-Implemented functionality:
-
-- Async node dispatch
-- Future-based execution synchronization
-- Backend-aware async execution
-- Runtime trace export
-- Per-operator async profiling
-
-Example async execution trace:
-
-```text
-[AsyncExecutor] Launching async node: matmul -> MockGPU
-[AsyncExecutor] Launching async node: add -> CPU
-[AsyncExecutor] Launching async node: relu -> CPU
-```
-
-Example exported trace:
-
-```json
-[
-  {
-    "op_name": "matmul",
-    "backend": "MockGPU",
-    "latency_ms": 0.2764
-  },
-  {
-    "op_name": "add",
-    "backend": "CPU",
-    "latency_ms": 0.0315
-  }
-]
-```
-
-This simulates dependency-aware execution engines used in production inference runtimes.
-
----
-
-## Runtime Trace Export
-
-The runtime profiler can export backend-aware execution traces to JSON.
-
-Example:
-
-```json
-[
-  {
-    "op_name": "matmul",
-    "backend": "MockGPU",
-    "latency_ms": 0.1093
-  },
-  {
-    "op_name": "add",
-    "backend": "CPU",
-    "latency_ms": 0.0006
-  },
-  {
-    "op_name": "relu",
-    "backend": "CPU",
-    "latency_ms": 0.0005
-  }
-]
-```
-
-This enables debugging and visualization of heterogeneous runtime execution.
-
----
-
-## Custom Compiler Passes
-
-The project includes custom graph compiler optimization passes operating directly on the internal Graph IR.
-
-Implemented compiler passes include:
-
-- Operator fusion
-- Dead node elimination
-- Algebraic simplification
-- Tensor lifetime analysis
-- Memory reuse optimization
 
 Example algebraic simplification:
 
@@ -449,11 +122,190 @@ live_matmul
 live_add
 ```
 
-These passes simulate real compiler IR transformation workflows used in modern ML compiler systems.
+---
+
+## Memory Runtime System
+
+Implemented multiple runtime allocation systems inspired by modern inference runtimes.
+
+### Arena Allocator
+
+- Offset-based tensor memory binding
+- Lifetime-aware tensor placement
+- Peak memory analysis
+
+### Free-List Allocator v2
+
+- Best-fit allocation policy
+- Block splitting
+- Block coalescing
+- Fragmentation reporting
+- Reuse-aware allocation strategy
+
+Example reuse behavior:
+
+```text
+After freeing B:
+offset=16 size=8 free=true
+
+After allocating D=6:
+D offset: 16
+```
+
+This simulates memory reuse strategies used in production inference runtimes.
 
 ---
 
-## Benchmark Results
+## Transformer Runtime Features
+
+- Transformer scaled dot-product attention operator
+- FlashAttention-style fused attention kernel
+- SIMD tiled attention kernel
+- Numerically stable Softmax implementation
+- LayerNorm runtime kernel
+- Causal attention masking
+- KV cache simulation
+- Incremental autoregressive decoding simulation
+- Attention correctness validation against NumPy reference
+
+### Tiled Attention Kernel
+
+Implemented a tile-aware attention kernel that traverses Key/Value tensors block-by-block to reduce intermediate memory pressure and improve cache locality.
+
+Pipeline:
+
+```text
+QKᵀ tiled score computation
+→ numerically stable Softmax
+→ tiled weighted Value accumulation
+```
+
+This simulates hardware-aware Transformer execution strategies commonly used in modern inference systems.
+
+---
+
+## MLIR / Compiler Ecosystem
+
+This project integrates real MLIR compiler workflows using `mlir-opt`.
+
+Implemented MLIR passes:
+
+- Canonicalization
+- Common subexpression elimination (CSE)
+- Affine loop tiling
+- Linalg-to-affine lowering
+
+Example commands:
+
+```bash
+mlir-opt generated_graph.mlir --canonicalize --cse
+mlir-opt generated_graph.mlir --convert-linalg-to-affine-loops
+```
+
+Example generated MLIR:
+
+```mlir
+linalg.matmul ins(%A, %B : memref<128x128xf32>, memref<128x128xf32>) outs(%C : memref<128x128xf32>)
+```
+
+Generated affine lowering:
+
+```mlir
+affine.for %arg3 = 0 to 128 {
+  affine.load
+  arith.mulf
+  affine.store
+}
+```
+
+This connects the custom compiler pipeline to the MLIR ecosystem and modern compiler infrastructure.
+
+---
+
+## HuggingFace / ONNX Integration
+
+Exported HuggingFace Transformer models from PyTorch to ONNX and implemented ONNX graph inspection and operator onboarding tooling.
+
+Implemented tooling:
+
+- HuggingFace Transformer export workflow
+- PyTorch → ONNX export
+- ONNX graph inspection
+- ONNX operator coverage analysis
+- Runtime operator onboarding report generation
+- Operator onboarding stub generation
+
+Example graph statistics:
+
+- Nodes: 273
+- Initializers: 59
+- MatMul: 40
+- Add: 52
+- Softmax: 5
+- LayerNormalization: 11
+
+Example operator coverage:
+
+- Supported nodes: 98
+- Partially supported nodes: 80
+- Unsupported nodes: 95
+- Approx operator coverage: 69.23%
+
+This validates real Transformer model ingestion and runtime operator onboarding workflows.
+
+---
+
+## Parallel Runtime Execution
+
+Implemented a dependency-aware parallel execution engine that identifies ready nodes from the execution graph and launches independent operations asynchronously.
+
+Example graph:
+
+```text
+matmul1 ─┐
+         ├─ add → relu
+matmul2 ─┘
+```
+
+Example execution:
+
+```text
+[ParallelExecutor] Launching ready node: matmul1 -> MockGPU
+[ParallelExecutor] Launching ready node: matmul2 -> MockGPU
+[ParallelExecutor] Launching ready node: add -> CPU
+[ParallelExecutor] Launching ready node: relu -> CPU
+```
+
+This simulates dependency-aware execution engines used in production ML runtimes.
+
+---
+
+## System Architecture
+
+The system follows a compiler-style ML execution pipeline:
+
+```text
+PyTorch Model
+→ ONNX Export
+→ Graph IR
+→ Shape Inference
+→ Graph Verification
+→ Compiler Optimization Passes
+→ Memory Planning
+→ Graph Partitioning
+→ Execution Plan
+→ Backend Scheduler
+→ Subgraph Delegation
+→ Operator Dispatch
+→ CPU / MockGPU Backend
+→ Kernel Execution
+```
+
+The runtime also includes Transformer-oriented execution systems such as causal attention masking, KV cache reuse, tiled attention execution, and incremental decoding simulation.
+
+---
+
+## Benchmarking and Analysis
 
 ### AVX2 SIMD MatMul (128×128)
 
@@ -463,8 +315,6 @@ These passes simulate real compiler IR transformation workflows used in modern M
 | AVX2 Vectorized MatMul | 0.325 ms |
 
 Speedup: **6.77×**
-
-Correctness: PASSED
 
 ---
 
@@ -477,12 +327,6 @@ Correctness: PASSED
 
 Speedup: **1.53×**
 
-Maximum absolute error:
-
-```text
-4.89e-09
-```
-
 ---
 
 ### FlashAttention-style Fused Attention
@@ -491,44 +335,24 @@ Maximum absolute error:
 |---|---|
 | fused_attention | 0.0574 ms |
 
-Implemented a memory-aware fused attention operator that combines:
-
-- QKᵀ score computation
-- Numerically stable Softmax
-- Attention-weighted value aggregation
-
-into a single runtime operator to reduce intermediate tensor materialization and memory bandwidth overhead.
-
 ---
 
-## Motivation
+### SIMD Tiled Attention
 
-Modern ML systems on edge devices require:
-
-- Efficient execution under resource constraints
-- Compiler-style optimizations for performance
-- Modular runtime systems for flexibility
-- Fine-grained control over memory and execution
-- Hardware-aware inference scheduling
-- Heterogeneous compute support
-
-This project explores these challenges by implementing a simplified but realistic ML compiler and runtime system in C++.
+| Operator | Latency |
+|---|---|
+| tiled_attention | 0.0116 ms |
 
 ---
 
 ## Future Work
 
-- Multi-head attention kernels
-- Real GPU backend integration (CUDA / Metal)
-- Runtime dependency graph parallelism
-- Runtime memory fragmentation analysis
-- ONNX graph-level optimization passes
-- MLIR dialect lowering
+- Metal backend integration
+- CUDA backend integration
 - Vectorized Transformer kernels
 - Operator autotuning
-- Mixed backend execution optimization
+- Multi-head attention kernels
+- MLIR dialect lowering expansion
 - Apple MLX benchmarking on Apple Silicon
 - CoreML runtime execution on macOS
-- Metal compute backend
-
-```
+- Runtime memory fragmentation visualization

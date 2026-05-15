@@ -13,6 +13,7 @@ enum class OpType {
     CausalAttention,
     LayerNorm,
     FusedAttention,
+    TiledAttention,
 };
 
 struct Node {

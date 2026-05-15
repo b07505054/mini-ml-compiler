@@ -70,3 +70,10 @@ void fused_attention(
     const Tensor& V,
     Tensor& output
 );
+void tiled_attention(
+    const Tensor& Q,
+    const Tensor& K,
+    const Tensor& V,
+    Tensor& output,
+    int tile_size = 16
+);
