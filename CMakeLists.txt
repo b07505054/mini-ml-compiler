@@ -108,3 +108,9 @@ target_link_libraries(run_allocator_v2_demo mlcompiler)
 
 add_executable(run_tiled_attention_demo apps/run_tiled_attention_demo.cpp)
 target_link_libraries(run_tiled_attention_demo mlcompiler)
+
+add_executable(run_llm_scheduler_demo apps/run_llm_scheduler_demo.cpp)
+target_link_libraries(run_llm_scheduler_demo mlcompiler)
+
+add_executable(run_paged_kv_demo apps/run_paged_kv_demo.cpp)
+target_link_libraries(run_paged_kv_demo mlcompiler)

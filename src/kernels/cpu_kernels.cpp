@@ -6,9 +6,12 @@
 #include <algorithm>
 #include <stdexcept>
 #include <thread>
+#if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
+#endif
 #include <cstdint>
-#ifdef __ARM_NEON
+
+#if defined(__ARM_NEON) || defined(__aarch64__)
 #include <arm_neon.h>
 #endif
 void matmul(const Tensor& A, const Tensor& B, Tensor& C) {
@@ -132,7 +135,7 @@ void relu(const Tensor& A, Tensor& B) {
 }
 
 void relu_avx2(const Tensor& A, Tensor& B) {
-
+#if defined(__x86_64__) || defined(_M_X64)
     int N = static_cast<int>(A.data.size());
 
     B.data.resize(N);
@@ -154,6 +157,10 @@ void relu_avx2(const Tensor& A, Tensor& B) {
     for (; i < N; ++i) {
         B.data[i] = std::max(0.0f, A.data[i]);
     }
+#else
+    relu(A, B);
+#endif
+    
 }
 
 void fused_matmul_add_relu_baseline(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out) {
@@ -399,6 +406,7 @@ void decode_attention(const Tensor& Q, const Tensor& K_cache, const Tensor& V_ca
 }
 
 void add_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
+#if defined(__x86_64__) || defined(_M_X64)
     int N = static_cast<int>(A.data.size());
 
     C.data.resize(N);
@@ -416,8 +424,12 @@ void add_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
     for (; i < N; ++i) {
         C.data[i] = A.data[i] + B.data[i];
     }
+#else
+    add(A, B, C);
+#endif
 }
 void matmul_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
+#if defined(__x86_64__) || defined(_M_X64)
     int M = A.shape[0];
     int K = A.shape[1];
     int N = B.shape[1];
@@ -451,6 +463,9 @@ void matmul_avx2(const Tensor& A, const Tensor& B, Tensor& C) {
             C.data[i * N + j] = sum;
         }
     }
+#else
+    matmul(A, B, C);
+#endif
 }
 QuantTensor quantize_tensor_symmetric(
     const Tensor& input,
