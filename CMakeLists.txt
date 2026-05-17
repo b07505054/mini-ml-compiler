@@ -10,9 +10,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
-file(GLOB_RECURSE SOURCES src/*.cpp)
+file(GLOB_RECURSE SOURCES
+    src/*.cpp
+    src/*.mm
+)
 
 add_library(mlcompiler ${SOURCES})
+if(APPLE)
+    target_link_libraries(mlcompiler
+        PUBLIC
+        "-framework Foundation"
+        "-framework Metal"
+        objc
+    )
+endif()
 
 add_executable(run_demo apps/run_demo.cpp)
 target_link_libraries(run_demo mlcompiler)
@@ -114,3 +125,32 @@ target_link_libraries(run_llm_scheduler_demo mlcompiler)
 
 add_executable(run_paged_kv_demo apps/run_paged_kv_demo.cpp)
 target_link_libraries(run_paged_kv_demo mlcompiler)
+
+if(APPLE)
+    add_executable(run_metal_vector_add apps/run_metal_vector_add.mm)
+    find_library(FOUNDATION_FRAMEWORK Foundation)
+    find_library(METAL_FRAMEWORK Metal)
+    target_link_libraries(run_metal_vector_add "-framework Foundation" "-framework Metal")
+endif()
+
+if(APPLE)
+    add_executable(run_metal_backend_demo
+        apps/run_metal_backend_demo.cpp
+    )
+
+    target_link_libraries(
+        run_metal_backend_demo
+        mlcompiler
+    )
+endif()
+
+if(APPLE)
+    add_executable(run_metal_matmul apps/run_metal_matmul.mm)
+
+    target_link_libraries(
+        run_metal_matmul
+        "-framework Foundation"
+        "-framework Metal"
+        objc
+    )
+endif()

@@ -35,6 +35,9 @@ Backend& Executor::select_backend(BackendType backend_type) {
 
         case BackendType::MockGPU:
             return mock_gpu_backend;
+        
+        case BackendType::Metal:
+            return metal_backend;
 
         default:
             return cpu_backend;

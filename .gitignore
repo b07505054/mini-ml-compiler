@@ -42,3 +42,13 @@ __pycache__/
 *.pyc
 build/
 dist/
+
+build/
+.venv/
+
+*.png
+*.json
+
+models/*.mlpackage/
+
+.python-version

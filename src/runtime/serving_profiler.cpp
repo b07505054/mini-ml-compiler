@@ -1,5 +1,5 @@
 #include "runtime/serving_profiler.h"
-
+#include <fstream>
 #include <iostream>
 
 void ServingProfiler::add_finished_request(
@@ -56,4 +56,51 @@ void ServingProfiler::print_metrics() const {
     std::cout << "Average request latency: "
               << avg_latency
               << " ms\n";
+}
+void ServingProfiler::add_trace_event(
+    int request_id,
+    const std::string& phase,
+    int step,
+    double timestamp_ms
+) {
+    trace_events.push_back({
+        request_id,
+        phase,
+        step,
+        timestamp_ms
+    });
+}
+void ServingProfiler::export_trace_json(
+    const std::string& path
+) const {
+    std::ofstream out(path);
+
+    out << "[\n";
+
+    for (size_t i = 0; i < trace_events.size(); ++i) {
+        const auto& e = trace_events[i];
+
+        out << "  {\n";
+        out << "    \"request_id\": "
+            << e.request_id << ",\n";
+
+        out << "    \"phase\": \""
+            << e.phase << "\",\n";
+
+        out << "    \"step\": "
+            << e.step << ",\n";
+
+        out << "    \"timestamp_ms\": "
+            << e.timestamp_ms << "\n";
+
+        out << "  }";
+
+        if (i + 1 < trace_events.size()) {
+            out << ",";
+        }
+
+        out << "\n";
+    }
+
+    out << "]\n";
 }

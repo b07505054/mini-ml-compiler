@@ -2,5 +2,6 @@
 
 enum class BackendType {
     CPU,
-    MockGPU
+    MockGPU,
+    Metal,
 };

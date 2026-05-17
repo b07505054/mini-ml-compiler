@@ -8,6 +8,7 @@
 #include "utils/profiler.h"
 #include "runtime/backend_scheduler.h"
 #include "runtime/arena_allocator.h"
+#include "runtime/metal_backend.h"
 class Executor {
 public:
     Executor();
@@ -26,6 +27,7 @@ public:
         bool profile = false
     );
 private:
+    MetalBackend metal_backend;
     CPUBackend cpu_backend;
     MockGPUBackend mock_gpu_backend;
     BackendScheduler scheduler;

@@ -1,4 +1,5 @@
 #include "runtime/llm_scheduler.h"
+
 #include <chrono>
 #include <iostream>
 
@@ -22,6 +23,13 @@ void LLMScheduler::schedule_prefill() {
 
         req.state = RequestState::Prefill;
         req.start_time_ms = now_ms();
+
+        profiler.add_trace_event(
+            req.request_id,
+            "prefill",
+            0,
+            req.start_time_ms
+        );
         req.kv_blocks =
             kv_cache.allocate_blocks(
                 req.request_id,
@@ -39,10 +47,10 @@ void LLMScheduler::schedule_prefill() {
         executor.run_prefill(req);
 
         std::cout << "[Scheduler] PREFILL request "
-                << req.request_id
-                << " prompt_tokens="
-                << req.prompt_tokens.size()
-                << "\n";
+                  << req.request_id
+                  << " prompt_tokens="
+                  << req.prompt_tokens.size()
+                  << "\n";
 
         active_prefill.push_back(req);
     }
@@ -58,9 +66,10 @@ void LLMScheduler::schedule_prefill() {
 
 void LLMScheduler::schedule_decode() {
     auto batch =
-    batcher.build_decode_batch(
-        active_decode
-    );
+        batcher.build_decode_batch(
+            active_decode
+        );
+
     std::vector<LLMRequest> next_decode;
 
     for (auto req : batch) {
@@ -68,28 +77,47 @@ void LLMScheduler::schedule_decode() {
             req.state = RequestState::Finished;
             req.finish_time_ms = now_ms();
 
+            profiler.add_trace_event(
+            req.request_id,
+            "finish",
+            req.generated_count + 1,
+            req.finish_time_ms
+        );
+
             profiler.add_finished_request(req);
 
             std::cout << "[Scheduler] FINISHED request "
                       << req.request_id
                       << "\n";
+
             kv_cache.free_request(req.request_id);
 
             std::cout << "[Scheduler] Freed KV cache for request "
-                    << req.request_id
-                    << "\n";
+                      << req.request_id
+                      << "\n";
+
             continue;
         }
 
         req.state = RequestState::Decode;
 
+        profiler.add_trace_event(
+            req.request_id,
+            "decode",
+            req.generated_count,
+            now_ms()
+        );
+
         executor.run_decode_step(req);
+
         std::cout << "[Scheduler] Reusing KV blocks: ";
+
         for (int b : req.kv_blocks) {
             std::cout << b << " ";
         }
 
         std::cout << "\n";
+
         next_decode.push_back(req);
     }
 
@@ -114,7 +142,12 @@ void LLMScheduler::run() {
     }
 
     profiler.print_metrics();
+
+    profiler.export_trace_json(
+        "../trace/serving_trace.json"
+    );
 }
+
 double LLMScheduler::now_ms() const {
     auto t =
         Clock::now().time_since_epoch();
