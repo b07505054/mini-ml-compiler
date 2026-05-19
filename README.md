@@ -183,6 +183,10 @@ SchedulingPass
     →
 ExecutionPlan
     →
+StaticExecutionSchedule
+    →
+ScheduleExecutor
+    →
 Runtime Execution
 ```
 
@@ -258,7 +262,7 @@ This simulates heterogeneous execution planning across CPU/GPU runtimes.
 
 #### SchedulingPass
 
-Implemented static topological execution scheduling.
+Implemented dependency-aware static execution scheduling.
 
 Example:
 
@@ -269,6 +273,86 @@ Example:
   [2] relu
 ```
 
+### Static Execution Schedule
+
+Implemented compiled execution schedule generation including:
+
+- operator execution order
+- backend-aware dispatch metadata
+- tensor dependency tracking
+- memory-offset tracking
+- execution schedule export
+
+Example schedule artifact:
+
+```text
+[0] matmul | MatMul | backend=Metal | mem_offset=16
+[1] add | Add | backend=CPU | mem_offset=20
+[2] relu | ReLU | backend=CPU | mem_offset=16
+```
+
+Implemented JSON schedule export:
+
+```text
+static_schedule.json
+```
+
+Implemented schedule visualization tooling:
+
+```text
+static_schedule_table.png
+```
+
+### ScheduleExecutor
+
+Implemented a compiled-schedule executor that consumes static execution schedules and performs backend-aware runtime dispatch.
+
+Features:
+
+- schedule-driven execution
+- backend-aware dispatch
+- runtime trace generation
+- execution observability
+- runtime latency tracking
+
+Example runtime execution:
+
+```text
+[ScheduleExecutor] order=0 op=matmul backend=Metal mem_offset=16
+[MetalBackend] Executing node: matmul
+```
+
+### Runtime Execution Trace
+
+Implemented runtime execution trace infrastructure including:
+
+- runtime event tracing
+- operator latency tracking
+- backend execution profiling
+- runtime trace export
+- runtime visualization tooling
+
+Example runtime trace:
+
+```text
+matmul | Metal | latency=20.4745 ms
+add | CPU | latency=0.001042 ms
+relu | CPU | latency=0.000459 ms
+```
+
+Implemented runtime trace export:
+
+```text
+runtime_trace.json
+scheduled_runtime_trace.json
+```
+
+Implemented runtime visualization tooling:
+
+```text
+runtime_execution_trace.png
+```
+
 ### Compiler Runtime Features
 
 - compiler-style pass infrastructure
@@ -277,8 +361,13 @@ Example:
 - tensor lifetime analysis
 - memory reuse planning
 - backend-aware placement analysis
-- static execution scheduling
+- dependency-aware static scheduling
+- compiled execution schedule generation
+- schedule-driven runtime execution
+- runtime execution tracing
+- backend-aware heterogeneous dispatch
+- execution observability tooling
 - lowering to execution plans
 - compiler-runtime orchestration
 
-This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, scheduling, and backend-aware execution planning.
+This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, scheduling, backend-aware dispatch, runtime tracing, and serving-oriented inference execution.

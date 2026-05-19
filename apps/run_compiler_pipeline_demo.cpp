@@ -3,9 +3,10 @@
 #include "pass/compiler_pipeline_passes.h"
 #include "runtime/lowering.h"
 #include "runtime/executor.h"
-
+#include "runtime/static_scheduler.h"
 #include <iostream>
 #include <memory>
+#include "runtime/schedule_executor.h"
 
 int main() {
     Graph graph;
@@ -97,7 +98,21 @@ int main() {
 
     ExecutionPlan plan =
         lower_to_execution_plan(graph);
+    ExecutionSchedule sched =
+        build_static_schedule(graph);
 
+    sched.dump();
+    sched.export_json(
+        "../trace/static_schedule.json"
+    );
+    ScheduleExecutor schedule_executor;
+
+    schedule_executor.run(
+        graph,
+        sched,
+        true,
+        true
+    );
     std::cout << "Compiler pipeline demo complete.\n";
 
     return 0;
