@@ -2,9 +2,11 @@
 
 #include "ir/graph.h"
 
-class Pass {
+#include <string>
+
+class CompilerPass {
 public:
-    virtual ~Pass() = default;
+    virtual ~CompilerPass() = default;
 
     virtual const char* name() const = 0;
 

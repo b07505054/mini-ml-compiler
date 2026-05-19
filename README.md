@@ -157,3 +157,128 @@ Average request latency: 0.155958 ms
 - serving-oriented runtime orchestration
 
 This extends the compiler/runtime system from single-execution graph inference into a serving-oriented Transformer inference runtime.
+
+## Compiler Pass Pipeline
+
+Implemented a compiler-style optimization pipeline transforming Graph IR into backend-aware execution plans.
+
+The compiler pipeline simulates lightweight ML compiler infrastructure inspired by systems such as XLA, TensorRT, TVM, and MLIR-based runtimes.
+
+### Compiler Pipeline Architecture
+
+```text
+Graph IR
+    →
+ShapeInferencePass
+    →
+DTypePropagationPass
+    →
+FusionCandidatePass
+    →
+MemoryPlanningPass
+    →
+BackendPlacementPass
+    →
+SchedulingPass
+    →
+ExecutionPlan
+    →
+Runtime Execution
+```
+
+### Implemented Compiler Passes
+
+#### ShapeInferencePass
+
+Implemented graph-level shape propagation across operators.
+
+Example:
+
+```text
+[ShapeInference] Running shape inference
+```
+
+#### DTypePropagationPass
+
+Implemented dtype propagation infrastructure for graph tensors.
+
+Example:
+
+```text
+[DTypePropagationPass] Propagating tensor dtypes: default float32
+```
+
+#### FusionCandidatePass
+
+Implemented lightweight fusion-candidate analysis for identifying optimization opportunities.
+
+Example:
+
+```text
+[FusionCandidatePass] Searching fusion candidates
+  candidate: matmul + add + relu
+```
+
+This simulates operator-fusion analysis used in modern ML compilers and inference runtimes.
+
+#### MemoryPlanningPass
+
+Implemented tensor lifetime analysis and memory reuse planning.
+
+Features:
+
+- tensor lifetime tracking
+- persistent tensor analysis
+- activation reuse
+- buffer offset assignment
+- peak memory estimation
+
+Example:
+
+```text
+[MemoryPlanner] Reuse events
+  output reuses buffer from matmul_out at offset 16
+```
+
+This simulates memory planning systems used in production compiler-runtime infrastructures.
+
+#### BackendPlacementPass
+
+Implemented backend-aware operator placement analysis.
+
+Example:
+
+```text
+matmul -> MockGPU/Metal candidate
+add -> CPU fallback
+relu -> CPU fallback
+```
+
+This simulates heterogeneous execution planning across CPU/GPU runtimes.
+
+#### SchedulingPass
+
+Implemented static topological execution scheduling.
+
+Example:
+
+```text
+[SchedulingPass] Building static topological execution schedule
+  [0] matmul
+  [1] add
+  [2] relu
+```
+
+### Compiler Runtime Features
+
+- compiler-style pass infrastructure
+- graph-level analysis passes
+- fusion candidate analysis
+- tensor lifetime analysis
+- memory reuse planning
+- backend-aware placement analysis
+- static execution scheduling
+- lowering to execution plans
+- compiler-runtime orchestration
+
+This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, scheduling, and backend-aware execution planning.

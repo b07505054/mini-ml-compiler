@@ -126,6 +126,9 @@ target_link_libraries(run_llm_scheduler_demo mlcompiler)
 add_executable(run_paged_kv_demo apps/run_paged_kv_demo.cpp)
 target_link_libraries(run_paged_kv_demo mlcompiler)
 
+add_executable(run_compiler_pipeline_demo apps/run_compiler_pipeline_demo.cpp)
+target_link_libraries(run_compiler_pipeline_demo mlcompiler)
+
 if(APPLE)
     add_executable(run_metal_vector_add apps/run_metal_vector_add.mm)
     find_library(FOUNDATION_FRAMEWORK Foundation)
