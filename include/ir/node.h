@@ -8,6 +8,7 @@ enum class OpType {
     MatMul,
     Add,
     ReLU,
+    FusedMatMulBias,
     FusedMatMulAddReLU,
     Attention,
     CausalAttention,

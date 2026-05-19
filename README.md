@@ -214,16 +214,27 @@ Example:
 
 #### FusionCandidatePass
 
-Implemented lightweight fusion-candidate analysis for identifying optimization opportunities.
+Implemented fusion-candidate analysis and graph rewrite infrastructure for common inference subgraphs.
 
-Example:
+Implemented fusion patterns:
+
+- MatMul + Add → FusedMatMulBias
+- MatMul + Add + ReLU → FusedMatMulAddReLU
+
+Example fusion rewrite:
 
 ```text
 [FusionCandidatePass] Searching fusion candidates
-  candidate: matmul + add + relu
+  rewriting: MatMul + Add + ReLU -> FusedMatMulAddReLU
 ```
 
-This simulates operator-fusion analysis used in modern ML compilers and inference runtimes.
+Example fused execution schedule:
+
+```text
+[0] matmul | FusedMatMulAddReLU | backend=Metal | mem_offset=16
+```
+
+This simulates compiler-side fusion analysis and graph rewrite passes used in TensorRT-style inference compilers.
 
 #### MemoryPlanningPass
 
@@ -254,8 +265,6 @@ Example:
 
 ```text
 matmul -> MockGPU/Metal candidate
-add -> CPU fallback
-relu -> CPU fallback
 ```
 
 This simulates heterogeneous execution planning across CPU/GPU runtimes.
@@ -268,9 +277,7 @@ Example:
 
 ```text
 [SchedulingPass] Building static topological execution schedule
-  [0] matmul
-  [1] add
-  [2] relu
+  [0] matmul | FusedMatMulAddReLU
 ```
 
 ### Static Execution Schedule
@@ -286,15 +293,14 @@ Implemented compiled execution schedule generation including:
 Example schedule artifact:
 
 ```text
-[0] matmul | MatMul | backend=Metal | mem_offset=16
-[1] add | Add | backend=CPU | mem_offset=20
-[2] relu | ReLU | backend=CPU | mem_offset=16
+[0] matmul | FusedMatMulAddReLU | backend=Metal | mem_offset=16
 ```
 
 Implemented JSON schedule export:
 
 ```text
 static_schedule.json
+fusion_bias_schedule.json
 ```
 
 Implemented schedule visualization tooling:
@@ -335,9 +341,7 @@ Implemented runtime execution trace infrastructure including:
 Example runtime trace:
 
 ```text
-matmul | Metal | latency=20.4745 ms
-add | CPU | latency=0.001042 ms
-relu | CPU | latency=0.000459 ms
+matmul | Metal | latency=30.6868 ms
 ```
 
 Implemented runtime trace export:
@@ -358,6 +362,8 @@ runtime_execution_trace.png
 - compiler-style pass infrastructure
 - graph-level analysis passes
 - fusion candidate analysis
+- compiler-side graph rewrites
+- fused execution schedule generation
 - tensor lifetime analysis
 - memory reuse planning
 - backend-aware placement analysis
@@ -370,4 +376,4 @@ runtime_execution_trace.png
 - lowering to execution plans
 - compiler-runtime orchestration
 
-This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, scheduling, backend-aware dispatch, runtime tracing, and serving-oriented inference execution.
+This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, fusion rewrites, scheduling, backend-aware dispatch, runtime tracing, and serving-oriented inference execution.

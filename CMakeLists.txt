@@ -132,6 +132,9 @@ target_link_libraries(run_compiler_pipeline_demo mlcompiler)
 add_executable(run_runtime_trace_demo apps/run_runtime_trace_demo.cpp)
 target_link_libraries(run_runtime_trace_demo mlcompiler)
 
+add_executable(run_fusion_bias_demo apps/run_fusion_bias_demo.cpp)
+target_link_libraries(run_fusion_bias_demo mlcompiler)
+
 if(APPLE)
     add_executable(run_metal_vector_add apps/run_metal_vector_add.mm)
     find_library(FOUNDATION_FRAMEWORK Foundation)

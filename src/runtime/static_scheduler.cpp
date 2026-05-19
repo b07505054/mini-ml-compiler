@@ -35,6 +35,16 @@ ExecutionSchedule build_static_schedule(
                 entry.backend = "CPU";
                 break;
 
+            case OpType::FusedMatMulBias:
+                entry.op_type = "FusedMatMulBias";
+                entry.backend = "Metal";
+                break;
+
+            case OpType::FusedMatMulAddReLU:
+                entry.op_type = "FusedMatMulAddReLU";
+                entry.backend = "Metal";
+                break;
+
             default:
                 entry.op_type = "Unknown";
                 entry.backend = "CPU";
