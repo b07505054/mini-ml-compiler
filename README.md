@@ -1,173 +1,15 @@
-## LLM Serving Runtime
+## Compiler Runtime Infrastructure
 
-Implemented a mini vLLM-style serving runtime layer on top of the compiler/runtime system.
+Implemented a compiler-runtime infrastructure for heterogeneous inference execution, graph-level optimization, backend-aware scheduling, runtime tracing, and serving-oriented Transformer inference simulation.
 
-The serving stack simulates modern Transformer inference serving systems such as vLLM, TensorRT-LLM, SGLang, and production on-device inference runtimes.
+The system simulates lightweight ML compiler/runtime architectures inspired by TensorRT, XLA, TVM, MLIR-based runtimes, vLLM, TensorRT-LLM, and modern inference-serving systems.
 
-### Serving Runtime Architecture
-
-```text
-LLM Requests
-    →
-LLMScheduler
-    →
-ContinuousBatcher
-    →
-PrefillDecodeExecutor
-    →
-PagedKVCache
-    →
-Execution Plan
-    →
-Subgraph Delegation
-    →
-CPU / MockGPU Backend
-    →
-ServingProfiler
-```
-
-### Implemented Serving Components
-
-#### LLMRequest
-
-Implemented request-level serving metadata including:
-
-- request lifecycle state
-- prompt tokens
-- generated tokens
-- KV cache block table
-- latency timestamps
-- token generation statistics
-
-Request lifecycle:
-
-```text
-Waiting
-→ Prefill
-→ Decode
-→ Finished
-```
-
-#### LLMScheduler
-
-Implemented a serving-oriented request scheduler supporting:
-
-- prefill/decode phase separation
-- request lifecycle orchestration
-- decode queue management
-- finished-request cleanup
-- KV-cache-aware request handling
-
-#### ContinuousBatcher
-
-Implemented a continuous batching system that dynamically constructs decode batches from active requests.
-
-Example batching:
-
-```text
-[ContinuousBatcher] Building decode batch
-  request 1
-  request 2
-
-[ContinuousBatcher] Batch size: 2
-```
-
-This simulates continuous batching systems used in modern LLM inference runtimes.
-
-#### PrefillDecodeExecutor
-
-Implemented separated prefill/decode execution paths.
-
-Execution flow:
-
-```text
-prefill
-→ KV allocation
-→ decode execution
-→ token generation
-→ request completion
-```
-
-Example execution:
-
-```text
-[Executor] PREFILL request 1
-
-[Executor] DECODE request 1 generated token 100
-```
-
-#### Paged KV Cache
-
-Implemented a paged KV-cache manager inspired by vLLM-style memory systems.
-
-Features:
-
-- block-based KV allocation
-- request-level block tables
-- KV block reuse
-- request-aware memory freeing
-- serving-side memory tracking
-
-Example reuse behavior:
-
-```text
-Request 1 blocks: 0 1
-
-free request 1
-
-Request 3 blocks: 0 1
-```
-
-This simulates paged attention memory management used in production Transformer serving runtimes.
-
-#### ServingProfiler
-
-Implemented serving-side runtime profiling including:
-
-- request latency tracking
-- generated token counting
-- tokens/sec analysis
-- average request latency
-- serving throughput statistics
-
-Example metrics:
-
-```text
-=== Serving Metrics ===
-
-Request 1
-  latency_ms: 0.181708
-  generated_tokens: 3
-  tokens/sec: 16510
-
-Total generated tokens: 5
-Average request latency: 0.155958 ms
-```
-
-### Serving Runtime Features
-
-- prefill/decode execution separation
-- continuous batching
-- paged KV-cache allocation
-- KV block reuse
-- request lifecycle management
-- serving-side throughput profiling
-- request latency analysis
-- token generation tracking
-- serving-oriented runtime orchestration
-
-This extends the compiler/runtime system from single-execution graph inference into a serving-oriented Transformer inference runtime.
-
-## Compiler Pass Pipeline
-
-Implemented a compiler-style optimization pipeline transforming Graph IR into backend-aware execution plans.
-
-The compiler pipeline simulates lightweight ML compiler infrastructure inspired by systems such as XLA, TensorRT, TVM, and MLIR-based runtimes.
-
-### Compiler Pipeline Architecture
+### Compiler Runtime Architecture
 
 ```text
 Graph IR
+    →
+CanonicalizationPass
     →
 ShapeInferencePass
     →
@@ -187,274 +29,236 @@ StaticExecutionSchedule
     →
 ScheduleExecutor
     →
-Runtime Execution
+Runtime Tracing
+    →
+Compiler Cost Analysis
+    →
+Serving Runtime
 ```
 
 ### Implemented Compiler Passes
 
+#### CanonicalizationPass
+
+Implemented graph canonicalization analysis for common inference simplification opportunities.
+
+Implemented canonicalization candidates including:
+
+- ReLU(ReLU(x)) → ReLU(x)
+- Add(x, 0) → x
+- MatMul(x, Identity) → x
+
+This simulates compiler-side canonicalization infrastructure used in graph optimization systems.
+
 #### ShapeInferencePass
 
-Implemented graph-level shape propagation across operators.
-
-Example:
-
-```text
-[ShapeInference] Running shape inference
-```
+Implemented graph-level tensor shape propagation across operators.
 
 #### DTypePropagationPass
 
-Implemented dtype propagation infrastructure for graph tensors.
-
-Example:
-
-```text
-[DTypePropagationPass] Propagating tensor dtypes: default float32
-```
+Implemented graph-level dtype propagation infrastructure.
 
 #### FusionCandidatePass
 
-Implemented fusion-candidate analysis and graph rewrite infrastructure for common inference subgraphs.
+Implemented fusion-candidate analysis and lightweight graph rewrite infrastructure for common inference subgraphs.
 
-Implemented fusion patterns:
+Implemented fusion rewrites:
 
 - MatMul + Add → FusedMatMulBias
 - MatMul + Add + ReLU → FusedMatMulAddReLU
 
-Example fusion rewrite:
+Implemented fusion-aware execution schedule generation.
 
-```text
-[FusionCandidatePass] Searching fusion candidates
-  rewriting: MatMul + Add + ReLU -> FusedMatMulAddReLU
-```
-
-Example fused execution schedule:
-
-```text
-[0] matmul | FusedMatMulAddReLU | backend=Metal | mem_offset=16
-```
-
-This simulates compiler-side fusion analysis and graph rewrite passes used in TensorRT-style inference compilers.
+This simulates TensorRT-style compiler-side fusion analysis and backend-oriented graph rewrites.
 
 #### MemoryPlanningPass
 
 Implemented tensor lifetime analysis and memory reuse planning.
 
-Features:
+Implemented:
 
-- tensor lifetime tracking
+- activation lifetime tracking
 - persistent tensor analysis
-- activation reuse
-- buffer offset assignment
+- buffer reuse planning
+- memory-offset assignment
 - peak memory estimation
+- activation reuse analysis
 
-Example:
+Example reuse behavior:
 
 ```text
-[MemoryPlanner] Reuse events
-  output reuses buffer from matmul_out at offset 16
+output reuses buffer from matmul_out at offset 16
 ```
 
-This simulates memory planning systems used in production compiler-runtime infrastructures.
+This simulates memory-planning systems used in production compiler-runtime infrastructures.
 
 #### BackendPlacementPass
 
-Implemented backend-aware operator placement analysis.
+Implemented backend-aware operator placement analysis for heterogeneous execution.
 
-Example:
+Implemented backend dispatch candidates including:
 
-```text
-matmul -> MockGPU/Metal candidate
-```
+- CPU execution
+- MockGPU execution
+- Metal backend execution
 
-This simulates heterogeneous execution planning across CPU/GPU runtimes.
+This simulates heterogeneous backend placement systems used in inference runtimes.
 
 #### SchedulingPass
 
 Implemented dependency-aware static execution scheduling.
 
-Example:
+Implemented:
 
-```text
-[SchedulingPass] Building static topological execution schedule
-  [0] matmul | FusedMatMulAddReLU
-```
-
-### Static Execution Schedule
-
-Implemented compiled execution schedule generation including:
-
-- operator execution order
-- backend-aware dispatch metadata
+- topological execution ordering
+- backend-aware scheduling
 - tensor dependency tracking
-- memory-offset tracking
-- execution schedule export
+- memory-offset propagation
+- compiled execution schedule generation
 
-Example schedule artifact:
+Example execution schedule:
 
 ```text
 [0] matmul | FusedMatMulAddReLU | backend=Metal | mem_offset=16
 ```
 
-Implemented JSON schedule export:
+### Static Execution Schedule
 
-```text
-static_schedule.json
-fusion_bias_schedule.json
-```
+Implemented execution-schedule export infrastructure including:
 
-Implemented schedule visualization tooling:
+- execution order
+- backend placement metadata
+- tensor dependency metadata
+- memory-offset metadata
+- schedule visualization tooling
 
-```text
-static_schedule_table.png
-```
+Generated artifacts:
+
+- static_schedule.json
+- fusion_bias_schedule.json
+- static_schedule_table.png
 
 ### ScheduleExecutor
 
 Implemented a compiled-schedule executor that consumes static execution schedules and performs backend-aware runtime dispatch.
 
-Features:
+Implemented:
 
 - schedule-driven execution
-- backend-aware dispatch
+- backend-aware runtime dispatch
 - runtime trace generation
-- execution observability
 - runtime latency tracking
-
-Example runtime execution:
-
-```text
-[ScheduleExecutor] order=0 op=matmul backend=Metal mem_offset=16
-[MetalBackend] Executing node: matmul
-```
-
-### Runtime Execution Trace
-
-Implemented runtime execution trace infrastructure including:
-
-- runtime event tracing
-- operator latency tracking
-- backend execution profiling
-- runtime trace export
-- runtime visualization tooling
-
-Example runtime trace:
-
-```text
-matmul | Metal | latency=30.6868 ms
-```
-
-Implemented runtime trace export:
-
-```text
-runtime_trace.json
-scheduled_runtime_trace.json
-```
-
-Implemented runtime visualization tooling:
-
-```text
-runtime_execution_trace.png
-```
-
-### Compiler Runtime Features
-
-- compiler-style pass infrastructure
-- graph-level analysis passes
-- fusion candidate analysis
-- compiler-side graph rewrites
-- fused execution schedule generation
-- tensor lifetime analysis
-- memory reuse planning
-- backend-aware placement analysis
-- dependency-aware static scheduling
-- compiled execution schedule generation
-- schedule-driven runtime execution
-- runtime execution tracing
-- backend-aware heterogeneous dispatch
 - execution observability tooling
-- lowering to execution plans
-- compiler-runtime orchestration
 
-This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, fusion rewrites, scheduling, backend-aware dispatch, runtime tracing, and serving-oriented inference execution.
+### Runtime Tracing
 
-### Compiler Cost Report
+Implemented runtime tracing infrastructure including:
 
-Implemented compiler cost-report analysis for backend-aware scheduling decisions.
+- operator-level latency tracing
+- backend execution tracing
+- runtime event export
+- runtime visualization tooling
+- schedule-aware runtime tracing
 
-The cost report estimates:
+Generated artifacts:
 
-- memory read volume
-- memory write volume
+- runtime_trace.json
+- scheduled_runtime_trace.json
+- runtime_execution_trace.png
+
+### Compiler Cost Analysis
+
+Implemented compiler-side cost analysis with runtime-feedback integration.
+
+The compiler cost system estimates:
+
+- estimated memory read bytes
+- estimated memory write bytes
+- estimated FLOPs
+- arithmetic intensity
 - kernel launch overhead
-- backend transfer cost
-- fusion opportunities
+- backend-switch overhead
+- fusion-aware execution cost
 
-Example cost report:
+The runtime system additionally merges measured backend execution latency into compiler-side cost reports.
 
-```text
-matmul | FusedMatMulAddReLU | backend=Metal | mem_read=8 | mem_write=4 | launch_cost=0.08 | transfer_cost=0.02
-fusion: MatMul+Add+ReLU fused
-```
-
-Implemented JSON cost report export:
+Example runtime-aware cost report:
 
 ```text
-compiler_cost_report.json
+matmul | FusedMatMulAddReLU
+backend=Metal
+read_bytes=48
+write_bytes=16
+flops=24
+actual_latency_ms=27.6419
 ```
 
-Implemented cost report visualization tooling:
+Generated artifacts:
+
+- compiler_cost_report.json
+- compiler_cost_report.png
+
+This simulates lightweight cost-model analysis and runtime-feedback integration used in modern ML compiler/runtime systems.
+
+## LLM Serving Runtime
+
+Implemented a mini vLLM-style serving runtime layer on top of the compiler-runtime infrastructure.
+
+The serving runtime simulates modern Transformer inference-serving systems such as vLLM, TensorRT-LLM, and SGLang.
+
+Implemented:
+
+- prefill/decode execution separation
+- continuous batching
+- paged KV-cache allocation
+- KV block reuse
+- request lifecycle management
+- serving-side throughput profiling
+- token-generation tracking
+- serving-oriented runtime orchestration
+
+### Serving Runtime Architecture
 
 ```text
-compiler_cost_report.png
+LLM Requests
+    →
+LLMScheduler
+    →
+ContinuousBatcher
+    →
+PrefillDecodeExecutor
+    →
+PagedKVCache
+    →
+ExecutionPlan
+    →
+Subgraph Delegation
+    →
+CPU / MockGPU / Metal Backend
+    →
+ServingProfiler
 ```
-
-This simulates lightweight cost-model analysis used by ML compilers and inference runtimes to guide fusion, backend placement, scheduling, and memory movement decisions.
 
 ## Metal Runtime Profiling
 
 Implemented real Metal compute-kernel profiling on Apple Silicon using repeated GPU dispatch benchmarking and latency-distribution analysis.
 
-The profiling pipeline measures real Metal compute execution instead of command-buffer-only overhead.
+The profiling pipeline measures real Metal compute-kernel execution instead of command-buffer-only overhead.
 
-### Metal Kernel Profiling Flow
-
-```text
-Metal Compute Kernel
-    →
-Repeated GPU Dispatch
-    →
-Warmup Phase
-    →
-Steady-State Measurement
-    →
-Latency Distribution Analysis
-    →
-JSON Trace Export
-    →
-Visualization
-```
-
-### Implemented Profiling Features
+Implemented profiling features including:
 
 - real Metal compute-kernel execution
 - repeated GPU dispatch benchmarking
-- warmup vs steady-state measurement
+- warmup vs steady-state profiling
 - p50 / p95 / p99 latency analysis
 - runtime latency-distribution export
-- profiling visualization pipeline
 - Apple Silicon backend profiling
-- correctness validation for GPU execution
+- GPU execution correctness validation
 
-### Profiled Kernel
+Profiled Metal kernels including:
 
-Implemented Metal vector-add compute-kernel profiling using:
-
-```text
-1,048,576 elements
-100 measured runs
-Apple M5 GPU backend
-```
+- vector_add
+- Metal backend dispatch infrastructure
 
 Example profiling metrics:
 
@@ -465,9 +269,7 @@ p95_ms: 0.489541
 p99_ms: 0.566416
 ```
 
-### Profiling Outputs
-
-Generated profiling artifacts including:
+Generated profiling artifacts:
 
 - metal_vector_add_profile.json
 - metal_vector_add_profile.png
