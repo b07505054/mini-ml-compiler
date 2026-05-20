@@ -163,3 +163,25 @@ if(APPLE)
         objc
     )
 endif()
+
+add_executable(
+    run_metal_kernel_profile
+    apps/run_metal_kernel_profile.mm
+)
+
+target_link_libraries(
+    run_metal_kernel_profile
+    "-framework Metal"
+    "-framework Foundation"
+)
+
+add_executable(
+    run_metal_vector_add_profile
+    apps/run_metal_vector_add_profile.mm
+)
+
+target_link_libraries(
+    run_metal_vector_add_profile
+    "-framework Metal"
+    "-framework Foundation"
+)

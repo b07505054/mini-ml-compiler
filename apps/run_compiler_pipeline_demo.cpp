@@ -7,6 +7,9 @@
 #include <iostream>
 #include <memory>
 #include "runtime/schedule_executor.h"
+#include "pass/cost_report_pass.h"
+#include "pass/cost_report_runtime_merge.h"
+#include "pass/canonicalization_pass.h"
 
 int main() {
     Graph graph;
@@ -73,6 +76,10 @@ int main() {
     );
 
     pm.add_pass(
+        std::make_unique<CanonicalizationPass>()
+    );
+
+    pm.add_pass(
         std::make_unique<DTypePropagationPass>()
     );
 
@@ -105,6 +112,11 @@ int main() {
     sched.export_json(
         "../trace/static_schedule.json"
     );
+    CostReportPass cost_pass;
+
+    CostReport report =
+    cost_pass.run(graph);
+
     ScheduleExecutor schedule_executor;
 
     schedule_executor.run(
@@ -112,6 +124,17 @@ int main() {
         sched,
         true,
         true
+    );
+
+    merge_runtime_trace_into_cost_report(
+        report,
+        "../trace/scheduled_runtime_trace.json"
+    );
+
+    report.dump();
+
+    report.export_json(
+        "../trace/compiler_cost_report.json"
     );
     std::cout << "Compiler pipeline demo complete.\n";
 

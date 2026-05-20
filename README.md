@@ -377,3 +377,99 @@ runtime_execution_trace.png
 - compiler-runtime orchestration
 
 This extends the system from a graph execution runtime into a compiler-runtime infrastructure supporting analysis, optimization, fusion rewrites, scheduling, backend-aware dispatch, runtime tracing, and serving-oriented inference execution.
+
+### Compiler Cost Report
+
+Implemented compiler cost-report analysis for backend-aware scheduling decisions.
+
+The cost report estimates:
+
+- memory read volume
+- memory write volume
+- kernel launch overhead
+- backend transfer cost
+- fusion opportunities
+
+Example cost report:
+
+```text
+matmul | FusedMatMulAddReLU | backend=Metal | mem_read=8 | mem_write=4 | launch_cost=0.08 | transfer_cost=0.02
+fusion: MatMul+Add+ReLU fused
+```
+
+Implemented JSON cost report export:
+
+```text
+compiler_cost_report.json
+```
+
+Implemented cost report visualization tooling:
+
+```text
+compiler_cost_report.png
+```
+
+This simulates lightweight cost-model analysis used by ML compilers and inference runtimes to guide fusion, backend placement, scheduling, and memory movement decisions.
+
+## Metal Runtime Profiling
+
+Implemented real Metal compute-kernel profiling on Apple Silicon using repeated GPU dispatch benchmarking and latency-distribution analysis.
+
+The profiling pipeline measures real Metal compute execution instead of command-buffer-only overhead.
+
+### Metal Kernel Profiling Flow
+
+```text
+Metal Compute Kernel
+    →
+Repeated GPU Dispatch
+    →
+Warmup Phase
+    →
+Steady-State Measurement
+    →
+Latency Distribution Analysis
+    →
+JSON Trace Export
+    →
+Visualization
+```
+
+### Implemented Profiling Features
+
+- real Metal compute-kernel execution
+- repeated GPU dispatch benchmarking
+- warmup vs steady-state measurement
+- p50 / p95 / p99 latency analysis
+- runtime latency-distribution export
+- profiling visualization pipeline
+- Apple Silicon backend profiling
+- correctness validation for GPU execution
+
+### Profiled Kernel
+
+Implemented Metal vector-add compute-kernel profiling using:
+
+```text
+1,048,576 elements
+100 measured runs
+Apple M5 GPU backend
+```
+
+Example profiling metrics:
+
+```text
+avg_ms: 0.426669
+p50_ms: 0.404792
+p95_ms: 0.489541
+p99_ms: 0.566416
+```
+
+### Profiling Outputs
+
+Generated profiling artifacts including:
+
+- metal_vector_add_profile.json
+- metal_vector_add_profile.png
+
+This extends the runtime system from compiler-side static cost estimation into measured GPU runtime profiling with latency-distribution analysis on Apple Silicon Metal backends.
