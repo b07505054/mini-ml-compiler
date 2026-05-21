@@ -1,0 +1,15 @@
+.venv
+build
+.git
+__pycache__
+*.pyc
+.cache
+models
+data
+outputs
+wandb
+*.onnx
+*.engine
+*.pt
+*.pth
+*.ckpt

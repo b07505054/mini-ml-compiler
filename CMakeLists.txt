@@ -1,21 +1,39 @@
 cmake_minimum_required(VERSION 3.16)
-project(mini_ml_compiler)
-
-if (MSVC)
-    add_compile_options(/arch:AVX2)
-endif()
+project(mini_ml_compiler LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_ARCHITECTURES 75)
 
 include_directories(include)
 
 file(GLOB_RECURSE SOURCES
     src/*.cpp
-    src/*.mm
 )
+if(NOT APPLE)
+    list(APPEND SOURCES
+        src/runtime/metal_backend_stub.cpp
+    )
+endif()
+
+if(APPLE)
+    file(GLOB_RECURSE METAL_SOURCES
+        src/*.mm
+    )
+    list(APPEND SOURCES ${METAL_SOURCES})
+endif()
 
 add_library(mlcompiler ${SOURCES})
+
+if(MSVC)
+    target_compile_options(mlcompiler PRIVATE /arch:AVX2)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    target_compile_options(mlcompiler PRIVATE -mavx2)
+endif()
+
 if(APPLE)
     target_link_libraries(mlcompiler
         PUBLIC
@@ -42,8 +60,6 @@ target_link_libraries(benchmark_gpu_sim mlcompiler)
 
 add_executable(benchmark_gpu_tiled_sim apps/benchmark_gpu_tiled_sim.cpp)
 target_link_libraries(benchmark_gpu_tiled_sim mlcompiler)
-
-target_sources(mlcompiler PRIVATE src/runtime/thread_pool.cpp)
 
 add_executable(benchmark_thread_pool apps/benchmark_thread_pool.cpp)
 target_link_libraries(benchmark_thread_pool mlcompiler)
@@ -137,51 +153,26 @@ target_link_libraries(run_fusion_bias_demo mlcompiler)
 
 if(APPLE)
     add_executable(run_metal_vector_add apps/run_metal_vector_add.mm)
-    find_library(FOUNDATION_FRAMEWORK Foundation)
-    find_library(METAL_FRAMEWORK Metal)
     target_link_libraries(run_metal_vector_add "-framework Foundation" "-framework Metal")
-endif()
 
-if(APPLE)
-    add_executable(run_metal_backend_demo
-        apps/run_metal_backend_demo.cpp
-    )
+    add_executable(run_metal_backend_demo apps/run_metal_backend_demo.cpp)
+    target_link_libraries(run_metal_backend_demo mlcompiler)
 
-    target_link_libraries(
-        run_metal_backend_demo
-        mlcompiler
-    )
-endif()
-
-if(APPLE)
     add_executable(run_metal_matmul apps/run_metal_matmul.mm)
+    target_link_libraries(run_metal_matmul "-framework Foundation" "-framework Metal" objc)
 
-    target_link_libraries(
-        run_metal_matmul
-        "-framework Foundation"
-        "-framework Metal"
-        objc
-    )
+    add_executable(run_metal_kernel_profile apps/run_metal_kernel_profile.mm)
+    target_link_libraries(run_metal_kernel_profile "-framework Metal" "-framework Foundation")
+
+    add_executable(run_metal_vector_add_profile apps/run_metal_vector_add_profile.mm)
+    target_link_libraries(run_metal_vector_add_profile "-framework Metal" "-framework Foundation")
 endif()
 
-add_executable(
-    run_metal_kernel_profile
-    apps/run_metal_kernel_profile.mm
-)
+add_executable(run_cuda_vector_add_profile apps/run_cuda_vector_add_profile.cu)
 
-target_link_libraries(
-    run_metal_kernel_profile
-    "-framework Metal"
-    "-framework Foundation"
-)
-
-add_executable(
-    run_metal_vector_add_profile
-    apps/run_metal_vector_add_profile.mm
-)
-
-target_link_libraries(
-    run_metal_vector_add_profile
-    "-framework Metal"
-    "-framework Foundation"
+set_target_properties(
+    run_cuda_vector_add_profile
+    PROPERTIES
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
 )
