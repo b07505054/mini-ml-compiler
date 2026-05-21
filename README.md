@@ -1,6 +1,6 @@
 ## Compiler Runtime Infrastructure
 
-Implemented a compiler-runtime infrastructure for heterogeneous inference execution, graph-level optimization, backend-aware scheduling, runtime tracing, and serving-oriented Transformer inference simulation.
+Implemented a compiler-runtime infrastructure for heterogeneous inference execution, graph-level optimization, backend-aware scheduling, graph lowering, runtime tracing, and serving-oriented Transformer inference simulation.
 
 The system simulates lightweight ML compiler/runtime architectures inspired by TensorRT, XLA, TVM, MLIR-based runtimes, vLLM, TensorRT-LLM, and modern inference-serving systems.
 
@@ -23,7 +23,9 @@ BackendPlacementPass
     →
 SchedulingPass
     →
-ExecutionPlan
+LoweredGraph IR
+    →
+ExecutionPlan IR
     →
 StaticExecutionSchedule
     →
@@ -122,6 +124,80 @@ Example execution schedule:
 [0] matmul | FusedMatMulAddReLU | backend=Metal | mem_offset=16
 ```
 
+### LoweredGraph IR
+
+Implemented backend-aware graph lowering from optimized Graph IR into LoweredOp IR.
+
+Implemented lowering paths including:
+
+- MatMul → LoweredMatMul
+- Add → LoweredElementwiseAdd
+- ReLU → LoweredElementwiseReLU
+- FusedMatMulBias → LoweredFusedMatMulBias
+- FusedMatMulAddReLU → LoweredFusedMatMulAddReLU
+- Attention → LoweredAttention
+
+Implemented lowering metadata propagation including:
+
+- fused-op metadata
+- backend placement
+- tensor dependency metadata
+- memory offsets
+- lowered operator typing
+
+Example lowered IR:
+
+```text
+[0] matmul
+→ LoweredFusedMatMulAddReLU
+backend=Metal
+mem_offset=16
+```
+
+Generated artifacts:
+
+- lowered_graph.json
+- lowered_graph.png
+
+This simulates backend-aware graph lowering infrastructure used in production inference compilers and runtime systems.
+
+### ExecutionPlan IR
+
+Implemented ExecutionPlan IR generation from LoweredGraph IR.
+
+Implemented execution-step metadata including:
+
+- step_id
+- lowered operator metadata
+- backend placement
+- dependency steps
+- memory offsets
+- launch configuration
+- tensor dependency propagation
+
+Implemented launch configuration generation including:
+
+```text
+threadgroup=256
+```
+
+Example execution plan step:
+
+```text
+[step 0]
+LoweredFusedMatMulAddReLU
+backend=Metal
+deps=[]
+launch=threadgroup=256
+```
+
+Generated artifacts:
+
+- execution_plan_v2.json
+- execution_plan_v2.png
+
+This simulates executable-plan generation infrastructure used in compiler-runtime systems such as TensorRT, XLA, and MLIR-based runtimes.
+
 ### Static Execution Schedule
 
 Implemented execution-schedule export infrastructure including:
@@ -140,7 +216,7 @@ Generated artifacts:
 
 ### ScheduleExecutor
 
-Implemented a compiled-schedule executor that consumes static execution schedules and performs backend-aware runtime dispatch.
+Implemented a compiled-schedule executor that consumes static execution schedules and execution-plan metadata for backend-aware runtime dispatch.
 
 Implemented:
 
@@ -190,7 +266,7 @@ backend=Metal
 read_bytes=48
 write_bytes=16
 flops=24
-actual_latency_ms=27.6419
+actual_latency_ms=31.1692
 ```
 
 Generated artifacts:

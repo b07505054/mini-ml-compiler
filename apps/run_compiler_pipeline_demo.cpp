@@ -10,6 +10,9 @@
 #include "pass/cost_report_pass.h"
 #include "pass/cost_report_runtime_merge.h"
 #include "pass/canonicalization_pass.h"
+#include "runtime/graph_lowerer.h"
+#include "runtime/execution_plan_builder.h"
+
 
 int main() {
     Graph graph;
@@ -101,6 +104,28 @@ int main() {
 
     pm.run(graph);
 
+    GraphLowerer graph_lowerer;
+
+    LoweredGraph lowered =
+        graph_lowerer.lower(graph);
+
+    lowered.dump();
+
+    lowered.export_json(
+        "../trace/lowered_graph.json"
+    );
+
+    ExecutionPlanBuilder plan_builder;
+
+    ExecutionPlanV2 plan_v2 =
+        plan_builder.build(lowered);
+
+    plan_v2.dump();
+
+    plan_v2.export_json(
+        "../trace/execution_plan_v2.json"
+    );
+    
     std::cout << "\n=== Lowering After Compiler Pipeline ===\n";
 
     ExecutionPlan plan =
