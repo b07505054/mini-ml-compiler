@@ -351,3 +351,19 @@ Generated profiling artifacts:
 - metal_vector_add_profile.png
 
 This extends the runtime system from compiler-side static cost estimation into measured GPU runtime profiling with latency-distribution analysis on Apple Silicon Metal backends.
+
+## CUDA Vector Add Profiling
+
+Built and profiled CUDA vector addition inside a reproducible Docker CUDA 13.1 environment.
+
+Results on GTX 1650 Ti:
+
+- Elements: 16,777,216
+- Runs: 100
+- Correct: true
+- Average latency: 2.06 ms
+- p50 latency: 2.07 ms
+- p95 latency: 2.08 ms
+- p99 latency: 2.08 ms
+- Effective bandwidth: 97.62 GB/s
+- Profile exported to: `trace/cuda_vector_add_profile.json`
