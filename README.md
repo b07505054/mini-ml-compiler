@@ -52,7 +52,7 @@ Metal linear
 
 Generated artifacts:
 
-- cv_timeline_optimization.png
+![Timeline Optimization](cv_timeline_optimization.png)
 
 This simulates lightweight runtime-planning analysis and heterogeneous execution optimization used in production ML runtimes.
 
@@ -92,9 +92,7 @@ BEST
 ```
 
 Generated artifacts:
-
-- cv_cost_based_planner.png
-
+![Timeline Optimization](cv_cost_based_planner.png)
 This simulates lightweight cost-based runtime scheduling infrastructure used in modern inference runtimes and compiler-runtime systems.
 
 ### Runtime Adaptive Replanning
@@ -126,8 +124,7 @@ latency=2.10 ms
 ```
 
 Generated artifacts:
-
-- cv_runtime_replan.png
+![Timeline Optimization](cv_runtime_replan.png)
 
 This simulates runtime-feedback orchestration and adaptive heterogeneous backend migration systems used in serving runtimes and edge inference systems.
 
@@ -169,7 +166,6 @@ RESTORE_GPU_PLAN
 ```
 
 Generated artifacts:
-
-- cv_runtime_state_machine.png
+![Timeline Optimization](cv_runtime_state_machine.png)
 
 This simulates adaptive runtime orchestration systems used in heterogeneous inference runtimes, edge inference systems, and serving-oriented runtime infrastructures.
