@@ -46,8 +46,6 @@ dist/
 build/
 .venv/
 
-*.png
-*.json
 
 models/*.mlpackage/
 
