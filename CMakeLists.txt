@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
-project(mini_ml_compiler LANGUAGES CXX CUDA)
+project(mini_ml_compiler LANGUAGES CXX)
+
+option(ENABLE_CUDA "Build CUDA targets" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_ARCHITECTURES 75)
+if(ENABLE_CUDA)
+    enable_language(CUDA)
+
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    set(CMAKE_CUDA_ARCHITECTURES 75)
+endif()
 
 include_directories(include)
 
@@ -169,26 +175,33 @@ if(APPLE)
     target_link_libraries(run_metal_vector_add_profile "-framework Metal" "-framework Foundation")
 endif()
 
-add_executable(run_cuda_vector_add_profile apps/run_cuda_vector_add_profile.cu)
+if(ENABLE_CUDA)
 
-set_target_properties(
-    run_cuda_vector_add_profile
-    PROPERTIES
-    CUDA_STANDARD 17
-    CUDA_STANDARD_REQUIRED ON
-)
+    add_executable(
+        run_cuda_vector_add_profile
+        apps/run_cuda_vector_add_profile.cu
+    )
 
-add_executable(
-    run_cuda_matmul_profile
-    apps/run_cuda_matmul_profile.cu
-)
+    set_target_properties(
+        run_cuda_vector_add_profile
+        PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+    )
 
-set_target_properties(
-    run_cuda_matmul_profile
-    PROPERTIES
-    CUDA_STANDARD 17
-    CUDA_STANDARD_REQUIRED ON
-)
+    add_executable(
+        run_cuda_matmul_profile
+        apps/run_cuda_matmul_profile.cu
+    )
+
+    set_target_properties(
+        run_cuda_matmul_profile
+        PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+    )
+
+endif()
 
 add_executable(run_cv_graph_demo apps/run_cv_graph_demo.cpp)
 target_link_libraries(run_cv_graph_demo mlcompiler)

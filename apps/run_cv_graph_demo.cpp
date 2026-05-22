@@ -13,6 +13,8 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include "compiler/cost_based_planner.hpp"
+#include "runtime/runtime_replanner.hpp"
 
 int main() {
     Graph graph;
@@ -232,6 +234,28 @@ int main() {
     report.export_json(
         "../trace/cv_cost_report.json"
     );
+    CostBasedPlanner planner;
+
+    PlannerCandidate best =
+    planner.choose_best_plan(
+        graph,
+        report
+    );
+    std::vector<RuntimeObservation> observations;
+
+    observations.push_back({
+        "Metal",
+        2.84f,
+        true
+    });
+
+    RuntimeReplanner replanner;
+
+    PlannerCandidate replanned =
+        replanner.replan(
+            best,
+            observations
+        );
     std::ofstream rt(
         "../trace/cv_runtime_timeline.json"
     );
