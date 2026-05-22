@@ -44,6 +44,36 @@ ExecutionSchedule build_static_schedule(
                 entry.op_type = "FusedMatMulAddReLU";
                 entry.backend = "Metal";
                 break;
+            
+            case OpType::Conv2D:
+                entry.op_type = "Conv2D";
+                entry.backend = "Metal";
+                break;
+
+            case OpType::BatchNorm:
+                entry.op_type = "BatchNorm";
+                entry.backend = "CPU";
+                break;
+
+            case OpType::MaxPool:
+                entry.op_type = "MaxPool";
+                entry.backend = "CPU";
+                break;
+
+            case OpType::Flatten:
+                entry.op_type = "Flatten";
+                entry.backend = "CPU";
+                break;
+
+            case OpType::Linear:
+                entry.op_type = "Linear";
+                entry.backend = "Metal";
+                break;
+
+            case OpType::FusedConvBatchNormReLU:
+                entry.op_type = "FusedConvBatchNormReLU";
+                entry.backend = "Metal";
+                break;
 
             default:
                 entry.op_type = "Unknown";

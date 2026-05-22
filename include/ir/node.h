@@ -15,7 +15,13 @@ enum class OpType {
     LayerNorm,
     FusedAttention,
     TiledAttention,
-};
+    Conv2D, 
+    BatchNorm,
+    MaxPool,
+    Flatten,
+    Linear,
+    FusedConvBatchNormReLU,
+    };
 
 struct Node {
     std::string name;

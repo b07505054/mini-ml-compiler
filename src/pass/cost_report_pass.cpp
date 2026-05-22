@@ -5,7 +5,94 @@
 #include <numeric>
 
 namespace {
+size_t estimate_linear_flops(
+    const Graph& graph,
+    const Node& node
+) {
+    if (node.inputs.size() < 2) {
+        return 0;
+    }
 
+    const auto& X =
+        graph.tensors.at(
+            static_cast<size_t>(node.inputs[0])
+        );
+
+    const auto& W =
+        graph.tensors.at(
+            static_cast<size_t>(node.inputs[1])
+        );
+
+    if (
+        X.shape.size() != 2 ||
+        W.shape.size() != 2
+    ) {
+        return 0;
+    }
+
+    size_t B =
+        static_cast<size_t>(X.shape[0]);
+
+    size_t K =
+        static_cast<size_t>(X.shape[1]);
+
+    size_t N =
+        static_cast<size_t>(W.shape[1]);
+
+    return 2 * B * K * N;
+}
+
+size_t estimate_conv2d_flops(
+    const Graph& graph,
+    const Node& node
+) {
+    if (
+        node.inputs.size() < 2 ||
+        node.outputs.empty()
+    ) {
+        return 0;
+    }
+
+    const auto& W =
+        graph.tensors.at(
+            static_cast<size_t>(node.inputs[1])
+        );
+
+    const auto& Y =
+        graph.tensors.at(
+            static_cast<size_t>(node.outputs[0])
+        );
+
+    if (
+        W.shape.size() != 4 ||
+        Y.shape.size() != 4
+    ) {
+        return 0;
+    }
+
+    size_t N =
+        static_cast<size_t>(Y.shape[0]);
+
+    size_t Cout =
+        static_cast<size_t>(Y.shape[1]);
+
+    size_t Hout =
+        static_cast<size_t>(Y.shape[2]);
+
+    size_t Wout =
+        static_cast<size_t>(Y.shape[3]);
+
+    size_t Cin =
+        static_cast<size_t>(W.shape[1]);
+
+    size_t Kh =
+        static_cast<size_t>(W.shape[2]);
+
+    size_t Kw =
+        static_cast<size_t>(W.shape[3]);
+
+    return 2 * N * Cout * Hout * Wout * Cin * Kh * Kw;
+}
 size_t num_elements_from_shape(
     const std::vector<int>& shape
 ) {
@@ -108,7 +195,10 @@ std::string backend_for_op(
         op == OpType::FusedMatMulBias ||
         op == OpType::FusedMatMulAddReLU ||
         op == OpType::FusedAttention ||
-        op == OpType::TiledAttention
+        op == OpType::TiledAttention ||
+        op == OpType::Linear ||
+        op == OpType::Conv2D ||
+        op == OpType::FusedConvBatchNormReLU 
     ) {
         return "Metal";
     }
@@ -176,6 +266,24 @@ CostReport CostReportPass::run(
                     node
                 );
         }
+        if (node.op == OpType::Linear) {
+            e.estimated_flops =
+                estimate_linear_flops(
+                    graph,
+                    node
+                );
+        }
+
+        if (
+            node.op == OpType::Conv2D ||
+            node.op == OpType::FusedConvBatchNormReLU
+        ) {
+            e.estimated_flops =
+                estimate_conv2d_flops(
+                    graph,
+                    node
+                );
+        }
 
         size_t total_bytes =
             e.estimated_read_bytes
@@ -227,6 +335,14 @@ CostReport CostReportPass::run(
             e.fusion_note =
                 "MatMul+Add+ReLU fused";
         }
+        if (
+            node.op ==
+                OpType::FusedConvBatchNormReLU
+        ) {
+            e.fusion_note =
+                "Conv2D+BatchNorm+ReLU fused";
+        }
+        
 
         report.entries.push_back(e);
     }

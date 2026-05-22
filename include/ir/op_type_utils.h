@@ -38,6 +38,23 @@ inline std::string op_type_to_string(OpType t) {
 
         case OpType::TiledAttention:
             return "TiledAttention";
+        case OpType::Conv2D:
+            return "Conv2D";
+
+        case OpType::BatchNorm:
+            return "BatchNorm";
+
+        case OpType::MaxPool:
+            return "MaxPool";
+
+        case OpType::Flatten:
+            return "Flatten";
+
+        case OpType::Linear:
+            return "Linear";
+
+        case OpType::FusedConvBatchNormReLU:
+            return "FusedConvBatchNormReLU";
     }
 
     return "Unknown";

@@ -13,7 +13,7 @@ RUN rm -rf build && mkdir build
 WORKDIR /workspace/build
 
 RUN cmake .. -DCMAKE_CUDA_ARCHITECTURES=75
+RUN cmake --build . --target run_dynamic_cv_planning_demo -j
+RUN cmake --build . --target run_cv_graph_demo -j
 
-RUN cmake --build . --target run_cuda_vector_add_profile -j
-
-CMD ["./run_cuda_vector_add_profile"]
+CMD ["./run_dynamic_cv_planning_demo"]

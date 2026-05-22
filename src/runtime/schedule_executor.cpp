@@ -7,7 +7,15 @@ Backend& ScheduleExecutor::select_backend(
     const std::string& backend_name
 ) {
     if (backend_name == "Metal") {
+    #ifdef __APPLE__
         return metal_backend;
+    #else
+        std::cout
+            << "[ScheduleExecutor] Metal unavailable on this platform; "
+            << "falling back to MockGPU\n";
+
+        return mock_gpu_backend;
+    #endif
     }
 
     if (backend_name == "MockGPU") {

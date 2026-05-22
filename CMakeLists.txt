@@ -13,6 +13,7 @@ include_directories(include)
 file(GLOB_RECURSE SOURCES
     src/*.cpp
 )
+
 if(NOT APPLE)
     list(APPEND SOURCES
         src/runtime/metal_backend_stub.cpp
@@ -175,4 +176,29 @@ set_target_properties(
     PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
+)
+
+add_executable(
+    run_cuda_matmul_profile
+    apps/run_cuda_matmul_profile.cu
+)
+
+set_target_properties(
+    run_cuda_matmul_profile
+    PROPERTIES
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
+)
+
+add_executable(run_cv_graph_demo apps/run_cv_graph_demo.cpp)
+target_link_libraries(run_cv_graph_demo mlcompiler)
+
+add_executable(
+    run_dynamic_cv_planning_demo
+    apps/run_dynamic_cv_planning_demo.cpp
+)
+
+target_link_libraries(
+    run_dynamic_cv_planning_demo
+    mlcompiler
 )

@@ -28,7 +28,27 @@ const char* FusionCandidatePass::name() const {
 
 void FusionCandidatePass::run(Graph& graph) {
     std::cout << "[FusionCandidatePass] Searching fusion candidates\n";
+    for (size_t i = 0; i + 2 < graph.nodes.size(); ++i) {
+        auto& n0 = graph.nodes[i];
+        auto& n1 = graph.nodes[i + 1];
+        auto& n2 = graph.nodes[i + 2];
 
+        if (
+            n0.op == OpType::Conv2D &&
+            n1.op == OpType::BatchNorm &&
+            n2.op == OpType::ReLU
+        ) {
+            std::cout
+                << "  rewriting: Conv2D + BatchNorm + ReLU -> FusedConvBatchNormReLU\n";
+
+            n0.op = OpType::FusedConvBatchNormReLU;
+
+            n0.outputs = n2.outputs;
+
+            n1.name = "__fused__";
+            n2.name = "__fused__";
+        }
+    }
     for (size_t i = 0; i + 2 < graph.nodes.size(); ++i) {
         auto& n0 = graph.nodes[i];
         auto& n1 = graph.nodes[i + 1];
@@ -100,8 +120,11 @@ void BackendPlacementPass::run(Graph& graph) {
     for (const auto& node : graph.nodes) {
         if (
             node.op == OpType::MatMul ||
+            node.op == OpType::Linear ||
+            node.op == OpType::Conv2D ||
             node.op == OpType::FusedMatMulBias ||
-            node.op == OpType::FusedMatMulAddReLU
+            node.op == OpType::FusedMatMulAddReLU ||
+            node.op == OpType::FusedConvBatchNormReLU
         ){
             std::cout << "  "
                       << node.name

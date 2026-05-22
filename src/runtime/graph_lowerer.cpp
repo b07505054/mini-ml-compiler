@@ -33,6 +33,24 @@ std::string GraphLowerer::lowered_type_for_op(
         case OpType::TiledAttention:
             return "LoweredTiledAttention";
 
+        case OpType::Conv2D:
+            return "LoweredConv2D";
+
+        case OpType::BatchNorm:
+            return "LoweredBatchNorm";
+
+        case OpType::MaxPool:
+            return "LoweredMaxPool";
+
+        case OpType::Flatten:
+            return "LoweredFlatten";
+
+        case OpType::Linear:
+            return "LoweredLinear";
+
+        case OpType::FusedConvBatchNormReLU:
+            return "LoweredFusedConvBatchNormReLU";
+            
         default:
             return "LoweredGenericOp";
     }
@@ -43,8 +61,11 @@ std::string GraphLowerer::backend_for_op(
 ) const {
     if (
         op == OpType::MatMul ||
+        op == OpType::Linear ||
+        op == OpType::Conv2D ||
         op == OpType::FusedMatMulBias ||
         op == OpType::FusedMatMulAddReLU ||
+        op == OpType::FusedConvBatchNormReLU ||
         op == OpType::FusedAttention ||
         op == OpType::TiledAttention
     ) {
