@@ -48,9 +48,9 @@ Implemented backend-aware graph lowering into:
 
 Generated artifacts:
 
-- cv_lowered_graph.json
-- cv_execution_plan_v2.json
-- cv_static_schedule.json
+- [cv_lowered_graph.json](trace/cv_lowered_graph.json)
+- [cv_execution_plan_v2.json](trace/cv_execution_plan_v2.json)
+- [cv_static_schedule.json](trace/cv_static_schedule.json)
 
 ### CV Graph Fusion Analysis
 
@@ -121,7 +121,7 @@ Saved memory:
 
 Generated artifacts:
 
-- cv_memory_plan.json
+- [cv_memory_plan.json](trace/cv_memory_plan.json)
 
 This simulates lightweight runtime-memory planning infrastructure used in heterogeneous inference runtimes and serving systems.
 
@@ -155,8 +155,8 @@ Example execution schedule:
 
 Generated artifacts:
 
-- cv_static_schedule.json
-- cv_runtime_timeline.json
+- [cv_static_schedule.json](trace/cv_static_schedule.json)
+- [cv_runtime_timeline.json](trace/cv_runtime_timeline.json)
 
 ### Subgraph Partitioning
 
@@ -179,8 +179,7 @@ subgraph 2 | backend=Metal | ops=linear
 
 Generated artifacts:
 
-- cv_subgraph_partition.json
-- cv_subgraph_partition.png
+- [cv_subgraph_partition.json](trace/cv_subgraph_partition.json)
 
 This simulates heterogeneous execution partitioning used in production inference runtimes and compiler-runtime systems.
 
@@ -211,7 +210,7 @@ intensity=11.3308
 
 Generated artifacts:
 
-- cv_cost_report.json
+- [cv_cost_report.json](trace/cv_cost_report.json)
 
 This simulates lightweight compiler-side cost modeling and runtime execution analysis used in ML compiler/runtime systems.
 
@@ -424,8 +423,8 @@ Implemented:
 
 Generated artifacts:
 
-- kv_cache_trace.json
-- paged_kv_runtime.json
+- [kv_cache_trace.json](trace/kv_cache_trace.json)
+- [paged_kv_runtime.json](trace/paged_kv_runtime.json)
 
 This simulates lightweight KV-cache memory-management infrastructure used in modern LLM serving runtimes.
 

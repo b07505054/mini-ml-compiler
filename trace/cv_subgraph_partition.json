@@ -1,0 +1,26 @@
+{
+  "subgraphs": [
+    {
+      "id": 0,
+      "backend": "Metal",
+      "ops": [
+        "conv1"
+      ]
+    },
+    {
+      "id": 1,
+      "backend": "CPU",
+      "ops": [
+        "pool1",
+        "flatten"
+      ]
+    },
+    {
+      "id": 2,
+      "backend": "Metal",
+      "ops": [
+        "linear"
+      ]
+    }
+  ]
+}

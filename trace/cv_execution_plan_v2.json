@@ -1,0 +1,42 @@
+{
+  "plan": [
+    {
+      "step": 0,
+      "lowered_op": "LoweredFusedConvBatchNormReLU",
+      "backend": "Metal",
+      "mem_offset": 150976,
+      "dependencies": [],
+      "launch_config": "threadgroup=256"
+    },
+    {
+      "step": 1,
+      "lowered_op": "LoweredMaxPool",
+      "backend": "CPU",
+      "mem_offset": 150976,
+      "dependencies": [
+        0
+      ],
+      "launch_config": "host-call"
+    },
+    {
+      "step": 2,
+      "lowered_op": "LoweredFlatten",
+      "backend": "CPU",
+      "mem_offset": 150976,
+      "dependencies": [
+        1
+      ],
+      "launch_config": "host-call"
+    },
+    {
+      "step": 3,
+      "lowered_op": "LoweredLinear",
+      "backend": "Metal",
+      "mem_offset": 150976,
+      "dependencies": [
+        2
+      ],
+      "launch_config": "threadgroup=256"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "block_size_tokens": 16,
+  "total_blocks": 8,
+  "final_requests": [
+    {
+      "request_id": 2,
+      "blocks": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "request_id": 3,
+      "blocks": [
+        0,
+        1
+      ]
+    }
+  ],
+  "used_blocks": 5
+}

@@ -1,0 +1,42 @@
+{
+  "events": [
+    {
+      "event": "allocate",
+      "request_id": 1,
+      "blocks": [
+        0,
+        1
+      ],
+      "used_blocks": 2
+    },
+    {
+      "event": "allocate",
+      "request_id": 2,
+      "blocks": [
+        2,
+        3,
+        4
+      ],
+      "used_blocks": 5
+    },
+    {
+      "event": "free",
+      "request_id": 1,
+      "freed_blocks": [
+        0,
+        1
+      ],
+      "used_blocks": 3
+    },
+    {
+      "event": "allocate",
+      "request_id": 3,
+      "blocks": [
+        0,
+        1
+      ],
+      "used_blocks": 5
+    }
+  ],
+  "capacity_blocks": 8
+}

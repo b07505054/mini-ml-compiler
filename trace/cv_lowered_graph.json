@@ -1,0 +1,33 @@
+{
+  "graph": "cv_inference_graph",
+  "nodes": [
+    {
+      "id": 0,
+      "name": "conv1",
+      "lowered_op": "LoweredFusedConvBatchNormReLU",
+      "backend": "Metal",
+      "mem_offset": 150976
+    },
+    {
+      "id": 1,
+      "name": "pool1",
+      "lowered_op": "LoweredMaxPool",
+      "backend": "CPU",
+      "mem_offset": 150976
+    },
+    {
+      "id": 2,
+      "name": "flatten",
+      "lowered_op": "LoweredFlatten",
+      "backend": "CPU",
+      "mem_offset": 150976
+    },
+    {
+      "id": 3,
+      "name": "linear",
+      "lowered_op": "LoweredLinear",
+      "backend": "Metal",
+      "mem_offset": 150976
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schedule": [
+    {
+      "order": 0,
+      "op_id": 0,
+      "name": "conv1",
+      "op": "FusedConvBatchNormReLU",
+      "backend": "Metal",
+      "mem_offset": 150976
+    },
+    {
+      "order": 1,
+      "op_id": 1,
+      "name": "pool1",
+      "op": "MaxPool",
+      "backend": "CPU",
+      "mem_offset": 150976
+    },
+    {
+      "order": 2,
+      "op_id": 2,
+      "name": "flatten",
+      "op": "Flatten",
+      "backend": "CPU",
+      "mem_offset": 150976
+    },
+    {
+      "order": 3,
+      "op_id": 3,
+      "name": "linear",
+      "op": "Linear",
+      "backend": "Metal",
+      "mem_offset": 150976
+    }
+  ]
+}

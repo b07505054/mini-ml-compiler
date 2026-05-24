@@ -1,0 +1,27 @@
+{
+  "naive_float_elements": 4882250,
+  "planned_peak_float_elements": 3699424,
+  "saved_float_elements": 1182826,
+  "reuse_events": [
+    {
+      "tensor": "relu_out",
+      "reuses": "conv_out",
+      "offset": 150976
+    },
+    {
+      "tensor": "pool_out",
+      "reuses": "conv_out",
+      "offset": 150976
+    },
+    {
+      "tensor": "flat_out",
+      "reuses": "conv_out",
+      "offset": 150976
+    },
+    {
+      "tensor": "logits",
+      "reuses": "conv_out",
+      "offset": 150976
+    }
+  ]
+}

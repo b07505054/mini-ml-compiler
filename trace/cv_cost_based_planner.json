@@ -1,0 +1,46 @@
+{
+  "candidates": [
+    {
+      "name": "current",
+      "total_latency_ms": 1.49,
+      "switch_cost_ms": 0.04,
+      "gpu_occupancy": 0.355705,
+      "memory_pressure_mb": 18,
+      "chosen": false,
+      "assignments": [
+        "conv1 -> Metal",
+        "pool1 -> CPU",
+        "flatten -> CPU",
+        "linear -> Metal"
+      ]
+    },
+    {
+      "name": "all_metal",
+      "total_latency_ms": 0.76,
+      "switch_cost_ms": 0,
+      "gpu_occupancy": 1,
+      "memory_pressure_mb": 18,
+      "chosen": true,
+      "assignments": [
+        "conv1 -> Metal",
+        "pool1 -> Metal",
+        "flatten -> Metal",
+        "linear -> Metal"
+      ]
+    },
+    {
+      "name": "metal_pool_only",
+      "total_latency_ms": 0.95,
+      "switch_cost_ms": 0.04,
+      "gpu_occupancy": 0.747368,
+      "memory_pressure_mb": 18,
+      "chosen": false,
+      "assignments": [
+        "conv1 -> Metal",
+        "pool1 -> Metal",
+        "flatten -> CPU",
+        "linear -> Metal"
+      ]
+    }
+  ]
+}
