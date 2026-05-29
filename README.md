@@ -484,3 +484,43 @@ ServingProfiler
 ```
 
 This simulates serving-runtime orchestration used in modern LLM serving systems and inference-serving runtimes.
+
+### MLIR Compiler Pass Pipeline
+
+This project now includes a real MLIR C++ pass plugin under `mlir_passes/`.
+The pass detects a tensor-level MatMul + Bias Add + ReLU pattern:
+
+```text
+linalg.matmul
+  -> linalg.map arith.addf
+  -> linalg.map arith.maximumf
+```
+
+The pass annotates fusion candidates and assigns fusion metadata:
+
+```mlir
+linalg.matmul {
+  fusion.candidate = "matmul_bias_relu",
+  fusion.group = "matmul_bias_relu_0",
+  fusion.role = "producer"
+}
+```
+
+The MLIR pipeline is connected to runtime-facing artifacts:
+
+```text
+trace/mlir_fused_graph.mlir
+trace/mlir_lowered_graph.json
+trace/mlir_execution_plan.json
+```
+
+Run the pipeline and tests:
+
+```bash
+cmake --build build-mlir
+tools/run_mlir_pass_tests.sh
+tools/run_mlir_fusion_pipeline.sh
+```
+
+This adds a real MLIR frontend pass stage before the existing custom
+LoweredGraph / ExecutionPlan / heterogeneous runtime planning flow.
