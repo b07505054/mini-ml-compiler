@@ -9,7 +9,7 @@ from pathlib import Path
 def detect_fused_matmul(text):
     pattern = re.compile(
         r"(?P<result>%[\w\d_]+)\s*=\s*linalg\.matmul\s*"
-        r"\{fusion\.candidate\s*=\s*\"matmul_bias_relu\"\}",
+        r"\{[^}]*fusion\.candidate\s*=\s*\"matmul_bias_relu\"[^}]*\}",
         re.MULTILINE,
     )
     return list(pattern.finditer(text))
@@ -54,6 +54,7 @@ def build_lowered_graph(matches, source_path):
             "lowered_op_type": "hir.fused_matmul_bias_relu",
             "backend": "Metal",
             "fusion_candidate": "matmul_bias_relu",
+            "fusion_group": "matmul_bias_relu_0",
             "inputs": ["A", "B", "bias"],
             "outputs": [result_name],
             "cost_model": cost,
@@ -82,6 +83,7 @@ def build_execution_plan(lowered_graph):
             "lowered_op_type": op["lowered_op_type"],
             "backend": op["backend"],
             "fusion_candidate": op["fusion_candidate"],
+            "fusion_group": op["fusion_group"],
             "runtime_action": "dispatch_fused_kernel",
             "estimated_launch_overhead_us": 80,
             "estimated_flops": op["cost_model"]["estimated_flops"],

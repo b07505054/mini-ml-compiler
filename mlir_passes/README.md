@@ -106,6 +106,14 @@ grep 'FusedMatMulBiasReLU' trace/mlir_lowered_graph.json
 grep 'dispatch_fused_kernel' trace/mlir_execution_plan.json
 ```
 
+The JSON bridge also attaches a lightweight cost model with estimated FLOPs,
+memory traffic, and arithmetic intensity so the fused op can be consumed by
+backend placement or scheduling heuristics.
+
+The pass also assigns a `fusion.group` and per-op `fusion.role` metadata to
+the MatMul, bias-add, and ReLU operations, making the detected producer and
+consumer chain explicit before runtime lowering.
+
 ## Resume Bullet
 
 Added an MLIR C++ pass pipeline that detects MatMul-Bias-ReLU patterns,

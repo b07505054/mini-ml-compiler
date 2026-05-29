@@ -13,6 +13,14 @@ func.func @main(
 
   // CHECK: linalg.matmul
   // CHECK-SAME: fusion.candidate = "matmul_bias_relu"
+  // CHECK-SAME: fusion.group = "matmul_bias_relu_0"
+  // CHECK-SAME: fusion.role = "producer"
+  // CHECK: linalg.map
+  // CHECK-SAME: fusion.group = "matmul_bias_relu_0"
+  // CHECK-SAME: fusion.role = "bias_add"
+  // CHECK: linalg.map
+  // CHECK-SAME: fusion.group = "matmul_bias_relu_0"
+  // CHECK-SAME: fusion.role = "activation"
 
   %add = linalg.map
       ins(%mm, %bias : tensor<1x64xf32>, tensor<1x64xf32>)

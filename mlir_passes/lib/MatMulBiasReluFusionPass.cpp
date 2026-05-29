@@ -73,9 +73,20 @@ struct MatMulBiasReluFusionPass
             continue;
           }
 
+          auto *context = matmul.getContext();
+          auto group = StringAttr::get(context, "matmul_bias_relu_0");
+
           matmul->setAttr(
               "fusion.candidate",
-              StringAttr::get(matmul.getContext(), "matmul_bias_relu"));
+              StringAttr::get(context, "matmul_bias_relu"));
+          matmul->setAttr("fusion.group", group);
+          matmul->setAttr("fusion.role", StringAttr::get(context, "producer"));
+
+          addMap->setAttr("fusion.group", group);
+          addMap->setAttr("fusion.role", StringAttr::get(context, "bias_add"));
+
+          reluMap->setAttr("fusion.group", group);
+          reluMap->setAttr("fusion.role", StringAttr::get(context, "activation"));
         }
       }
     });
