@@ -1,11 +1,10 @@
-# MLIR Fusion Passes
+## Run the Fusion Pipeline
 
-This directory contains real MLIR C++ pass infrastructure, separate from the
-project's custom toy graph IR.
+This plugin is registered as an MLIR pass pipeline. Use the same `mlir-opt`
+binary from the LLVM/MLIR build used by CMake.
 
-The first pass detects a tensor-level MatMul + Bias Add + ReLU pattern:
-
-```text
-linalg.matmul
-  -> linalg.map arith.addf
-  -> linalg.map arith.maximumf with zero
+```bash
+/Users/allen/Developer/llvm-build/bin/mlir-opt \
+  --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
+  mlir_passes/test/matmul_bias_relu.mlir \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'

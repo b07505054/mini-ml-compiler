@@ -9,7 +9,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/Config/llvm-config.h"
 
