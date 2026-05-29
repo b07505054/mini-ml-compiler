@@ -17,3 +17,7 @@ mkdir -p "$REPO_ROOT/trace"
   > "$OUTPUT"
 
 echo "Wrote $OUTPUT"
+"$REPO_ROOT/tools/mlir_fusion_to_runtime_json.py" \
+  --input "$OUTPUT" \
+  --lowered-output "$REPO_ROOT/trace/mlir_lowered_graph.json" \
+  --plan-output "$REPO_ROOT/trace/mlir_execution_plan.json"
