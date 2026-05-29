@@ -66,3 +66,5 @@ trace/*
 !trace/kv_cache_trace.json
 !trace/paged_kv_runtime.json
 !trace/serving_trace.json
+
+build-mlir/
