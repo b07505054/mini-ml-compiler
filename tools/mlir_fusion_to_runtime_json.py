@@ -14,12 +14,38 @@ def detect_fused_matmul(text):
     )
     return list(pattern.finditer(text))
 
+def estimate_matmul_bias_relu_cost(m=1, k=128, n=64, dtype_bytes=4):
+    matmul_flops = 2 * m * k * n
+    bias_add_flops = m * n
+    relu_flops = m * n
+    total_flops = matmul_flops + bias_add_flops + relu_flops
+
+    bytes_a = m * k * dtype_bytes
+    bytes_b = k * n * dtype_bytes
+    bytes_bias = m * n * dtype_bytes
+    bytes_out = m * n * dtype_bytes
+
+    bytes_read = bytes_a + bytes_b + bytes_bias
+    bytes_written = bytes_out
+    arithmetic_intensity = total_flops / max(bytes_read + bytes_written, 1)
+
+    return {
+        "m": m,
+        "k": k,
+        "n": n,
+        "dtype": "f32",
+        "estimated_flops": total_flops,
+        "estimated_bytes_read": bytes_read,
+        "estimated_bytes_written": bytes_written,
+        "arithmetic_intensity_flops_per_byte": arithmetic_intensity,
+    }
 
 def build_lowered_graph(matches, source_path):
     ops = []
 
     for index, match in enumerate(matches):
         result_name = match.group("result")
+        cost = estimate_matmul_bias_relu_cost()
         ops.append({
             "id": index,
             "name": f"fused_matmul_bias_relu_{index}",
@@ -30,6 +56,7 @@ def build_lowered_graph(matches, source_path):
             "fusion_candidate": "matmul_bias_relu",
             "inputs": ["A", "B", "bias"],
             "outputs": [result_name],
+            "cost_model": cost,
             "notes": [
                 "Detected from MLIR linalg.matmul annotated by MatMulBiasReluFusionPass",
                 "Mapped to the existing heterogeneous runtime planner as a fused accelerator candidate",
@@ -57,6 +84,8 @@ def build_execution_plan(lowered_graph):
             "fusion_candidate": op["fusion_candidate"],
             "runtime_action": "dispatch_fused_kernel",
             "estimated_launch_overhead_us": 80,
+            "estimated_flops": op["cost_model"]["estimated_flops"],
+            "arithmetic_intensity_flops_per_byte": op["cost_model"]["arithmetic_intensity_flops_per_byte"],
         })
 
     return {
