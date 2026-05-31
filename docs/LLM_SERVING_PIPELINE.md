@@ -1,9 +1,9 @@
-# LLM Serving Compiler/Runtime Planning Pipeline
+# LLM Compiler/Runtime Planning Pipeline
 
 This project contains a small LLM inference serving compiler/runtime planning
-pipeline. It is not a vLLM clone and it is not a full production compiler.
-Instead, it demonstrates how a compiler/runtime layer can analyze a tiny LLM
-graph and emit serving-runtime artifacts for validation and dashboard demos.
+pipeline. It demonstrates how a compiler/runtime layer can analyze a tiny LLM
+graph and emit execution, KV-cache layout, memory, scheduling, and validation
+artifacts for downstream runtime demos.
 
 ## Pipeline
 
@@ -256,7 +256,7 @@ It is not responsible for:
 full model inference
 tokenization
 sampling
-OpenAI-compatible chat API
-production vLLM serving
+request-serving APIs
+dynamic KV-cache allocation or eviction
 distributed inference
 ```

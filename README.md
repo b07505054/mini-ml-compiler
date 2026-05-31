@@ -486,7 +486,7 @@ Apple Demo Bundle
 ```
 
 This keeps the project positioned as an LLM compiler/runtime planning demo
-rather than a production serving engine.
+rather than a full request-serving runtime implementation.
 
 ### MLIR Compiler Pass Pipeline
 

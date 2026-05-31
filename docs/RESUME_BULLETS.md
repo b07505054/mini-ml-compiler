@@ -19,7 +19,7 @@
 
 ## Interview Talking Points
 
-- The LLM pipeline is positioned as compiler/runtime planning, not a production serving engine: it emits execution, memory, KV-cache layout, scheduling, and validation contracts consumed by downstream demos.
+- The LLM pipeline is positioned as compiler/runtime planning, not a full request-serving runtime: it emits execution, memory, KV-cache layout, scheduling, and validation contracts consumed by downstream demos.
 - The lightweight analysis pass separates frontend graph analysis from artifact lowering, mirroring a compiler pipeline where analysis results feed runtime planning.
 - KV-cache work is scoped to layout and memory planning metadata, while dynamic allocation, eviction, token sampling, and request serving remain runtime responsibilities.
 - The validation report turns generated JSON into a testable contract, checking phase structure, KV-cache capacity, memory budget, scheduling queues, and manifest completeness.
