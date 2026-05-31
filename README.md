@@ -8,9 +8,8 @@ Implemented compiler-runtime infrastructure inspired by:
 - XLA
 - TVM
 - MLIR-based runtimes
-- TensorRT-LLM
-- vLLM
-- heterogeneous inference-serving systems
+- heterogeneous inference runtimes
+- LLM compiler/runtime planning systems
 
 ### CV Graph Pipeline
 
@@ -390,55 +389,57 @@ Generated artifacts:
 
 This simulates adaptive runtime orchestration systems used in heterogeneous inference runtimes, edge inference systems, and serving-oriented runtime infrastructures.
 
-## LLM Serving Runtime Infrastructure
+## LLM Compiler/Runtime Planning Infrastructure
 
-Implemented a lightweight serving-oriented Transformer runtime inspired by:
-
-- vLLM
-- TensorRT-LLM
-- SGLang
-- serving-oriented inference runtimes
+Implemented a lightweight LLM compiler/runtime planning path that turns a tiny
+LLM graph into runtime-facing artifacts for prefill/decode execution, KV-cache
+layout, memory planning, scheduling metadata, validation, and Apple dashboard
+integration.
 
 Implemented:
 
-- prefill/decode execution separation
-- continuous batching simulation
-- serving-oriented request scheduling
-- token-generation orchestration
-- runtime serving profiler
-- serving-side execution tracing
+- MLIR-style tiny LLM graph input
+- serving-aware compiler analysis
+- prefill/decode execution planning
+- KV-cache layout and memory planning
+- scheduler metadata generation
+- artifact validation and integration bundle generation
 
 ### KV Cache Infrastructure
 
-Implemented paged KV-cache infrastructure for Transformer serving runtime simulation.
+Implemented KV-cache layout and memory-planning infrastructure for Transformer
+compiler/runtime planning.
 
 Implemented:
 
-- KV block allocation
-- paged KV-cache simulation
-- KV block reuse
-- token append simulation
-- serving-oriented cache lifecycle management
-- runtime cache memory tracking
+- KV block-size planning
+- KV token-capacity estimation
+- bytes-per-token and bytes-per-block estimation
+- paged-attention metadata
+- block-table metadata
+- runtime memory contract generation
 
 Generated artifacts:
 
 - [kv_cache_trace.json](trace/kv_cache_trace.json)
 - [paged_kv_runtime.json](trace/paged_kv_runtime.json)
+- [kv_cache_plan.json](artifacts/apple_demo/kv_cache_plan.json)
 
-This simulates lightweight KV-cache memory-management infrastructure used in modern LLM serving runtimes.
+This is not a full KV-cache manager. It emits a compiler/runtime planning
+contract that a serving runtime or dashboard can consume.
 
-### Transformer Attention Runtime
+### Transformer Attention Planning
 
-Implemented serving-oriented attention runtime infrastructure.
+Implemented Transformer attention planning and runtime-facing metadata for
+prefill/decode execution.
 
 Implemented:
 
 - fused attention simulation
 - tiled attention execution
 - causal attention execution
-- paged-attention scheduling simulation
-- attention runtime orchestration
+- paged-attention planning metadata
+- attention execution metadata
 - backend-aware attention execution
 
 Implemented demos including:
@@ -448,42 +449,44 @@ Implemented demos including:
 - run_tiled_attention_demo
 - run_causal_attention_demo
 
-This simulates lightweight Transformer runtime execution infrastructure used in modern LLM inference systems.
+This provides attention-oriented compiler/runtime context for the LLM artifact
+pipeline.
 
-### Serving Runtime Scheduling
+### LLM Scheduling Metadata
 
-Implemented serving-oriented runtime scheduling and orchestration infrastructure.
+Implemented scheduling metadata generation for LLM compiler/runtime planning.
 
 Implemented:
 
-- request lifecycle management
-- serving-side execution scheduling
-- runtime batching simulation
-- serving-oriented execution orchestration
-- runtime timeline analysis
-- serving execution profiling
+- prefill/decode queue metadata
+- continuous-batching scheduler metadata
+- decode-step token metadata
+- workload-shape metadata
+- dashboard signal definitions
+- validation checks for scheduling artifacts
 
-Implemented runtime orchestration including:
+Implemented planning flow including:
 
 ```text
-LLM Requests
+Tiny LLM MLIR Graph
     →
-LLMScheduler
+Serving Analysis
     →
-ContinuousBatcher
+Execution Plan
     →
-PrefillDecodeExecutor
+KV-Cache Layout Plan
     →
-PagedKVCache
+Memory Plan
     →
-ExecutionPlan
+Scheduling Plan
     →
-CPU / Metal Backend
+Validation Report
     →
-ServingProfiler
+Apple Demo Bundle
 ```
 
-This simulates serving-runtime orchestration used in modern LLM serving systems and inference-serving runtimes.
+This keeps the project positioned as an LLM compiler/runtime planning demo
+rather than a production serving engine.
 
 ### MLIR Compiler Pass Pipeline
 
@@ -524,3 +527,95 @@ tools/run_mlir_fusion_pipeline.sh
 
 This adds a real MLIR frontend pass stage before the existing custom
 LoweredGraph / ExecutionPlan / heterogeneous runtime planning flow.
+
+### LLM Compiler Artifact Generation
+
+This project emits Apple-demo-ready LLM compiler/runtime planning artifacts:
+
+```text
+LLM MLIR graph / request workload
+    ->
+compiler analysis extracts prefill/decode and KV-cache roles
+    ->
+runtime planner emits execution, memory, scheduling, and KV-cache layout artifacts
+    ->
+validation checks artifact correctness and planning consistency
+    ->
+dashboard visualizes compiler/runtime planning behavior
+```
+
+Generate the artifacts:
+
+```bash
+python3 src/ml_graph_compiler_runtime/generate_llm_artifacts.py \
+  --config configs/tiny_gpt_llm_config.json \
+  --out artifacts/apple_demo
+```
+
+Generated outputs:
+
+- `artifacts/apple_demo/llm_graph_ir.json`
+- `artifacts/apple_demo/serving_execution_plan.json`
+- `artifacts/apple_demo/kv_cache_plan.json`
+- `artifacts/apple_demo/memory_plan.json`
+- `artifacts/apple_demo/scheduling_plan.json`
+- `artifacts/apple_demo/validation_manifest.json`
+
+The Apple-side demo should consume these JSON files directly so changes to
+model dimensions, workload shape, KV-cache block sizing, memory budget, or
+scheduler settings are reflected in the dashboard after regeneration.
+
+### MLIR LLM Frontend Bridge
+
+Generate Apple-demo-facing LLM compiler/runtime artifacts from a tiny MLIR-style
+LLM graph:
+
+```bash
+python3 tools/emit_llm_artifacts_from_mlir.py \
+  --mlir mlir/tiny_gpt_serving.mlir \
+  --config configs/tiny_gpt_llm_config.json \
+  --out artifacts/apple_demo \
+  --analysis-out trace/mlir_llm_serving_analysis.json
+```
+
+### LLM Compiler Analysis Pass
+
+A lightweight Python analysis pass extracts LLM compiler/runtime metadata from
+the tiny MLIR graph:
+
+```bash
+python3 tools/analyze_llm_serving_mlir.py \
+  --mlir mlir/tiny_gpt_serving.mlir \
+  --out trace/llm_serving_compiler_analysis.json
+```
+
+### Emit Artifacts From Analysis
+
+After the MLIR analysis pass runs, lower the analysis result into
+Apple-demo-facing compiler/runtime artifacts:
+
+```bash
+python3 tools/emit_llm_artifacts_from_analysis.py \
+  --analysis trace/llm_serving_compiler_analysis.json \
+  --config configs/tiny_gpt_llm_config.json \
+  --out artifacts/apple_demo
+```
+
+### Validate LLM Compiler Artifacts
+
+Validate the generated compiler/runtime artifacts before handing them to the
+Apple demo:
+
+```bash
+python3 tools/validate_llm_serving_artifacts.py \
+  --artifacts artifacts/apple_demo \
+  --out trace/llm_artifact_validation_report.json
+```
+
+### Run The Full LLM Compiler Artifact Pipeline
+
+Run the full MLIR-to-artifacts pipeline:
+
+```bash
+tools/run_llm_serving_artifact_pipeline.sh
+```

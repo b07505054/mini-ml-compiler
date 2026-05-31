@@ -1,0 +1,80 @@
+{
+  "schema_version": "0.1",
+  "model": {
+    "name": "tiny-gpt",
+    "num_layers": 12,
+    "hidden_size": 768,
+    "num_heads": 12,
+    "intermediate_size": 3072,
+    "vocab_size": 50257,
+    "operators": [
+      "rmsnorm",
+      "qkv_projection",
+      "attention",
+      "mlp"
+    ]
+  },
+  "request_workload": {
+    "batch_size": 8,
+    "prefill_tokens_per_request": 512,
+    "decode_tokens_per_request": 128,
+    "target_concurrent_requests": 32
+  },
+  "execution": {
+    "phases": [
+      {
+        "name": "prefill",
+        "ops": [
+          "embed",
+          "attention_prefill",
+          "mlp"
+        ],
+        "preferred_backend": "gpu"
+      },
+      {
+        "name": "decode",
+        "ops": [
+          "attention_decode",
+          "kv_cache_read",
+          "mlp"
+        ],
+        "preferred_backend": "cpu_or_gpu"
+      }
+    ]
+  },
+  "kv_cache": {
+    "block_size_tokens": 16,
+    "num_blocks": 1024,
+    "max_context_tokens": 4096,
+    "kv_dtype": "fp16",
+    "eviction_policy": "none",
+    "allocation_strategy": "block_based",
+    "paged_attention_enabled": true,
+    "block_table_enabled": true,
+    "prefix_cache_enabled": false,
+    "sliding_window_enabled": false
+  },
+  "memory": {
+    "reuse_enabled": true,
+    "temporary_buffer_mb": 96,
+    "activation_safety_factor": 1.35,
+    "kv_cache_reference_tokens": 2048,
+    "memory_budget_mb": 8192
+  },
+  "scheduling": {
+    "scheduler": "continuous_batching",
+    "max_batch_size": 8,
+    "decode_step_tokens": 1,
+    "preemption_enabled": false,
+    "queues": [
+      {
+        "name": "prefill_queue",
+        "policy": "fcfs"
+      },
+      {
+        "name": "decode_queue",
+        "policy": "round_robin"
+      }
+    ]
+  }
+}
