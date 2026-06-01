@@ -7,6 +7,8 @@
 - MatMul + Bias Add + ReLU fusion candidate detection
 - Fusion group and role annotations across producer and consumer ops
 - FileCheck tests for canonicalization, positive fusion, and negative fusion cases
+- A canonicalization-enables-fusion test where `add(x, 0.0)` cleanup exposes
+  the MatMul -> BiasAdd -> ReLU chain to the fusion detector
 - MLIR Affine loop tiling test
 - MLIR Affine vectorization test
 - Pipeline script for generating runtime-facing artifacts
@@ -37,6 +39,7 @@ Expected signals:
 ```text
 add(x, 0.0) canonicalized away
 relu(relu(x)) canonicalized to relu(x)
+canonicalization_enables_fusion.mlir gains fusion.candidate after cleanup
 fusion.candidate = "matmul_bias_relu"
 fusion.group = "matmul_bias_relu_0"
 FusedMatMulBiasReLU

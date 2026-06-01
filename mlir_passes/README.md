@@ -34,6 +34,11 @@ The initial implementation is detect-and-annotate:
 linalg.matmul {fusion.candidate = "matmul_bias_relu"}
 ```
 
+The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
+in that order: the input graph contains an identity `add(x, 0.0)` between
+MatMul and BiasAdd. `hir-canonicalize` removes the identity map first, then
+`matmul-bias-relu-fusion` can see and annotate the cleaned fusion chain.
+
 ## Requirements
 
 Tested target: LLVM/MLIR built from `/Users/allen/Developer/llvm-build`.

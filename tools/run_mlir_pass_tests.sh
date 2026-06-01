@@ -37,6 +37,12 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
 
 run_filecheck \
+  "canonicalization enables fusion" \
+  "$REPO_ROOT/mlir_passes/test/canonicalization_enables_fusion.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
+
+run_filecheck \
   "no fusion without relu" \
   "$REPO_ROOT/mlir_passes/test/no_fusion_without_relu.mlir" \
   --load-pass-plugin="$PLUGIN" \
