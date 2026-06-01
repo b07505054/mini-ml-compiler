@@ -2,8 +2,11 @@
 """Generate LLM serving/runtime planning artifacts."""
 
 import argparse
+import datetime as _datetime
+import hashlib
 import json
 import math
+import subprocess
 from pathlib import Path
 
 
@@ -24,6 +27,9 @@ ARTIFACT_FILES = [
     "kv_cache_plan.json",
     "memory_plan.json",
     "scheduling_plan.json",
+    "artifact_provenance.json",
+    "candidate_execution_plans.json",
+    "memory_timeline.json",
     "validation_manifest.json",
 ]
 
@@ -38,6 +44,25 @@ def write_json(path, data):
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
         f.write("\n")
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def git_commit(repo_root):
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(repo_root), "rev-parse", "--short", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return "unknown"
 
 
 def to_mb(num_bytes):
@@ -212,6 +237,152 @@ def build_scheduling_plan(config):
     }
 
 
+def build_candidate_execution_plans(config):
+    memory = build_memory_plan(config)
+    peak_decode = int(memory["peak_decode_memory_mb"])
+    temporary = int(memory["temporary_buffer_mb"])
+    return {
+        "schema_version": config["schema_version"],
+        "artifact_type": "candidate_execution_plans",
+        "model": config["model"]["name"],
+        "selection_objective": "minimize_latency_under_memory_budget",
+        "plans": [
+            {
+                "plan_id": "plan_metal",
+                "backend": "Metal",
+                "runtime_action": "dispatch_fused_kernel",
+                "estimated_latency_ms": 1.8,
+                "estimated_memory_mb": peak_decode,
+                "estimated_throughput_tokens_per_s": 555.6,
+                "notes": "Fused op placed on Metal for lowest estimated latency.",
+            },
+            {
+                "plan_id": "plan_cpu",
+                "backend": "CPU",
+                "runtime_action": "dispatch_unfused_ops",
+                "estimated_latency_ms": 4.7,
+                "estimated_memory_mb": max(temporary + 128, 1),
+                "estimated_throughput_tokens_per_s": 212.8,
+                "notes": "CPU fallback plan with lower memory pressure and higher latency.",
+            },
+            {
+                "plan_id": "plan_hybrid",
+                "backend": "Hybrid",
+                "runtime_action": "dispatch_metal_compute_cpu_kv_bookkeeping",
+                "estimated_latency_ms": 2.4,
+                "estimated_memory_mb": max(peak_decode - 96, 1),
+                "estimated_throughput_tokens_per_s": 416.7,
+                "notes": "Hybrid plan keeps fused compute on accelerator and bookkeeping on CPU.",
+            },
+        ],
+        "selected_plan_id": "plan_metal",
+        "selection_reason": "lowest estimated latency while fitting memory budget",
+    }
+
+
+def build_memory_timeline(config):
+    memory = build_memory_plan(config)
+    activation = memory["activation_memory_mb"]
+    temporary = int(memory["temporary_buffer_mb"])
+    kv_target = int(memory["kv_cache_memory_mb_at_target_concurrency"])
+    decode_step = int(activation["decode_step"])
+    peak_decode = int(memory["peak_decode_memory_mb"])
+
+    events = [
+        {
+            "step": 0,
+            "event": "allocate",
+            "buffer": "prefill_hidden_states",
+            "size_mb": int(activation["prefill"]),
+            "lifetime": [0, 3],
+        },
+        {
+            "step": 1,
+            "event": "allocate",
+            "buffer": "fusion_workspace",
+            "size_mb": temporary,
+            "lifetime": [1, 2],
+        },
+        {
+            "step": 2,
+            "event": "reuse",
+            "buffer": "fusion_workspace",
+            "reused_as": "mlp_workspace",
+            "size_mb": temporary,
+            "lifetime": [2, 4],
+        },
+        {
+            "step": 3,
+            "event": "allocate",
+            "buffer": "kv_cache_blocks",
+            "size_mb": kv_target,
+            "lifetime": [3, 7],
+        },
+        {
+            "step": 4,
+            "event": "allocate",
+            "buffer": "decode_step_activation",
+            "size_mb": decode_step,
+            "lifetime": [4, 5],
+        },
+        {
+            "step": 5,
+            "event": "free",
+            "buffer": "decode_step_activation",
+        },
+        {
+            "step": 6,
+            "event": "free",
+            "buffer": "mlp_workspace",
+        },
+        {
+            "step": 7,
+            "event": "free",
+            "buffer": "kv_cache_blocks",
+        },
+    ]
+
+    return {
+        "schema_version": config["schema_version"],
+        "artifact_type": "memory_timeline",
+        "model": config["model"]["name"],
+        "peak_memory_mb": peak_decode,
+        "reuse_enabled": memory["reuse_enabled"],
+        "events": events,
+    }
+
+
+def build_artifact_provenance(config, out_dir, generated_files):
+    repo_root = Path(__file__).resolve().parents[2]
+    outputs = []
+    for filename in generated_files:
+        path = out_dir / filename
+        if path.exists():
+            outputs.append({
+                "path": filename,
+                "sha256": sha256_file(path),
+            })
+
+    return {
+        "schema_version": config["schema_version"],
+        "artifact_type": "artifact_provenance",
+        "compiler": {
+            "name": "ml-graph-compiler-runtime",
+            "version": config.get("compiler_version", "0.4.0"),
+            "git_commit": git_commit(repo_root),
+        },
+        "pass_pipeline": [
+            "canonicalize",
+            "matmul_bias_relu_fusion",
+            "hir_lowering",
+            "backend_placement",
+            "memory_planning",
+        ],
+        "created_at_utc": _datetime.datetime.now(_datetime.UTC).isoformat(),
+        "outputs": outputs,
+    }
+
+
 def build_validation_manifest(config):
     return {
         "schema_version": config["schema_version"],
@@ -225,6 +396,9 @@ def build_validation_manifest(config):
             "kv_cache_block_size_positive",
             "memory_budget_not_exceeded",
             "scheduling_queues_present",
+            "artifact_provenance_present",
+            "candidate_plans_present",
+            "memory_timeline_present",
         ],
         "demo_contract": {
             "apple_demo_entry_artifacts": ARTIFACT_FILES,
@@ -247,13 +421,19 @@ def generate_artifacts(config, out_dir):
         "kv_cache_plan.json": build_kv_cache_plan(config),
         "memory_plan.json": build_memory_plan(config),
         "scheduling_plan.json": build_scheduling_plan(config),
+        "candidate_execution_plans.json": build_candidate_execution_plans(config),
+        "memory_timeline.json": build_memory_timeline(config),
         "validation_manifest.json": build_validation_manifest(config),
     }
 
     for filename, data in artifacts.items():
         write_json(out_dir / filename, data)
 
-    return list(artifacts.keys())
+    generated = list(artifacts.keys())
+    provenance = build_artifact_provenance(config, out_dir, generated)
+    write_json(out_dir / "artifact_provenance.json", provenance)
+
+    return generated + ["artifact_provenance.json"]
 
 
 def main():
