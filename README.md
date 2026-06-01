@@ -517,6 +517,49 @@ trace/mlir_lowered_graph.json
 trace/mlir_execution_plan.json
 ```
 
+### Demo Integration Artifacts
+
+This repo is the compiler producer for the external demo project. It does not
+host the dashboard itself; it emits compiler artifacts that a runtime workbench
+can consume.
+
+Current demo artifact directory:
+
+```text
+integration_bundle/apple_demo_artifacts/
+```
+
+Key outputs:
+
+- `artifact_provenance.json`: compiler version, pass pipeline, source artifact
+  hashes, and emitted artifact hashes
+- `tiny_gpt_serving.mlir`: LLM-shaped MLIR workload used to exercise the pass
+  pipeline
+- `mlir_fused_graph.mlir`: annotated MLIR after fusion-candidate detection
+- `mlir_lowered_graph.json`: runtime-facing HIR JSON
+- `serving_execution_plan.json`: compiler-produced prefill/decode execution
+  contract
+- `candidate_execution_plans.json`: Metal, CPU, and hybrid plan candidates
+- `memory_timeline.json`: allocation, reuse, and free events for memory-planning
+  inspection
+- `validation_manifest.json`: artifact-level validation and integration
+  manifest
+
+The intended integration path is:
+
+```text
+MLIR source
+  -> fusion annotation
+  -> HIR JSON
+  -> execution-plan JSON
+  -> runtime planner
+  -> validation/dashboard artifacts
+```
+
+This makes the compiler the source of truth for the demo. The dashboard should
+show the emitted compiler contract, not invent optimization claims inside the
+frontend.
+
 Run the pipeline and tests:
 
 ```bash
