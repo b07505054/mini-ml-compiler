@@ -132,6 +132,14 @@ def build_serving_execution_plan(config):
             "scheduler_plan": "scheduling_plan.json",
             "kv_cache_plan": "kv_cache_plan.json",
             "memory_plan": "memory_plan.json",
+            "kv_policy_contract": {
+                "prefix_cache_enabled": config["kv_cache"]["prefix_cache_enabled"],
+                "eviction_policy": config["kv_cache"]["eviction_policy"],
+                "admission_policy": config["kv_cache"].get(
+                    "admission_policy",
+                    "capacity_only",
+                ),
+            },
         },
     }
 
@@ -139,10 +147,12 @@ def build_serving_execution_plan(config):
 def build_kv_cache_plan(config):
     model = config["model"]
     kv_cache = config["kv_cache"]
+    prefix_cache = kv_cache.get("prefix_cache", {})
     block_size_tokens = int(kv_cache["block_size_tokens"])
     num_blocks = int(kv_cache["num_blocks"])
     bytes_per_token = kv_cache_bytes(model, kv_cache, 1)
     bytes_per_block = kv_cache_bytes(model, kv_cache, block_size_tokens)
+    prefix_cache_enabled = bool(kv_cache["prefix_cache_enabled"])
 
     return {
         "schema_version": config["schema_version"],
@@ -157,10 +167,33 @@ def build_kv_cache_plan(config):
         "bytes_per_block": bytes_per_block,
         "memory_mb_at_full_capacity": to_mb(bytes_per_block * num_blocks),
         "eviction_policy": kv_cache["eviction_policy"],
+        "admission_policy": kv_cache.get("admission_policy", "capacity_only"),
         "allocation_strategy": kv_cache["allocation_strategy"],
         "paged_attention_enabled": kv_cache["paged_attention_enabled"],
         "block_table_enabled": kv_cache["block_table_enabled"],
-        "prefix_cache_enabled": kv_cache["prefix_cache_enabled"],
+        "prefix_cache_enabled": prefix_cache_enabled,
+        "prefix_cache_policy": {
+            "enabled": prefix_cache_enabled,
+            "hash_algorithm": prefix_cache.get("hash_algorithm", "sha256"),
+            "model_version": prefix_cache.get("model_version", model["name"]),
+            "min_prefix_tokens": int(prefix_cache.get("min_prefix_tokens", block_size_tokens)),
+            "max_prefix_entries": int(prefix_cache.get("max_prefix_entries", 128)),
+            "evictable_state": prefix_cache.get("evictable_state", "finished"),
+            "track_ref_count": bool(prefix_cache.get("track_ref_count", True)),
+            "runtime_events": [
+                "prefix_cache_hit",
+                "prefix_cache_miss",
+                "kv_blocks_evicted",
+                "admission_rejected",
+            ],
+            "runtime_metrics": [
+                "prefix_cache_hit_rate",
+                "kv_blocks_reused",
+                "kv_blocks_evicted",
+                "admission_rejection_rate",
+                "prefill_latency_saved_ms",
+            ],
+        },
         "sliding_window_enabled": kv_cache["sliding_window_enabled"],
     }
 
@@ -233,6 +266,10 @@ def build_scheduling_plan(config):
             "active_sequences",
             "tokens_scheduled_per_step",
             "kv_blocks_allocated",
+            "prefix_cache_hit_rate",
+            "kv_blocks_reused",
+            "kv_blocks_evicted",
+            "admission_rejection_rate",
         ],
     }
 
@@ -394,6 +431,7 @@ def build_validation_manifest(config):
             "prefill_decode_phase_present",
             "kv_cache_capacity_valid",
             "kv_cache_block_size_positive",
+            "kv_cache_policy_present",
             "memory_budget_not_exceeded",
             "scheduling_queues_present",
             "artifact_provenance_present",

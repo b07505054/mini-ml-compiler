@@ -47,11 +47,20 @@
     "num_blocks": 1024,
     "max_context_tokens": 4096,
     "kv_dtype": "fp16",
-    "eviction_policy": "none",
+    "eviction_policy": "lru_finished_prefix",
+    "admission_policy": "prefix_aware_capacity",
     "allocation_strategy": "block_based",
     "paged_attention_enabled": true,
     "block_table_enabled": true,
-    "prefix_cache_enabled": false,
+    "prefix_cache_enabled": true,
+    "prefix_cache": {
+      "hash_algorithm": "sha256",
+      "model_version": "tiny-gpt-v0.1",
+      "min_prefix_tokens": 64,
+      "max_prefix_entries": 128,
+      "evictable_state": "finished",
+      "track_ref_count": true
+    },
     "sliding_window_enabled": false
   },
   "memory": {

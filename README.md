@@ -417,6 +417,9 @@ Implemented:
 - bytes-per-token and bytes-per-block estimation
 - paged-attention metadata
 - block-table metadata
+- prefix-cache policy contract
+- capacity-aware admission policy metadata
+- LRU finished-prefix eviction policy metadata
 - runtime memory contract generation
 
 Generated artifacts:
@@ -426,7 +429,9 @@ Generated artifacts:
 - [kv_cache_plan.json](artifacts/apple_demo/kv_cache_plan.json)
 
 This is not a full KV-cache manager. It emits a compiler/runtime planning
-contract that a serving runtime or dashboard can consume.
+contract that a serving runtime or dashboard can consume. The
+`kv_cache_plan.json` contract now includes prefix-cache, eviction, and admission
+policy fields that downstream serving demos can enforce at request time.
 
 ### Transformer Attention Planning
 
