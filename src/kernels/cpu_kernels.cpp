@@ -173,11 +173,37 @@ void fused_matmul_add_relu_baseline(const Tensor& A, const Tensor& B, const Tens
 }
 
 void fused_matmul_add_relu_optimized(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out) {
-    matmul_tiled(A, B, Out, 32);
+    int M = A.shape[0];
+    int K = A.shape[1];
+    int N = B.shape[1];
+    const int tile = 32;
 
-    for (size_t i = 0; i < Out.data.size(); ++i) {
-        Out.data[i] += Bias.data[i];
-        Out.data[i] = std::max(0.0f, Out.data[i]);
+    std::fill(Out.data.begin(), Out.data.end(), 0.0f);
+
+    for (int ii = 0; ii < M; ii += tile) {
+        for (int jj = 0; jj < N; jj += tile) {
+            for (int kk = 0; kk < K; kk += tile) {
+                int i_end = std::min(ii + tile, M);
+                int j_end = std::min(jj + tile, N);
+                int k_end = std::min(kk + tile, K);
+
+                for (int i = ii; i < i_end; ++i) {
+                    for (int k = kk; k < k_end; ++k) {
+                        float a = A.data[i * K + k];
+                        for (int j = jj; j < j_end; ++j) {
+                            Out.data[i * N + j] += a * B.data[k * N + j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            int index = i * N + j;
+            Out.data[index] = std::max(0.0f, Out.data[index] + Bias.data[index]);
+        }
     }
 }
 

@@ -52,6 +52,9 @@ def build_lowered_graph(matches, source_path):
             "source_result": result_name,
             "op_type": "FusedMatMulBiasReLU",
             "lowered_op_type": "hir.fused_matmul_bias_relu",
+            "runtime_op_type": "FusedMatMulAddReLU",
+            "runtime_kernel": "fused_matmul_add_relu",
+            "runtime_kernel_backend": "CPU",
             "backend": "Metal",
             "fusion_candidate": "matmul_bias_relu",
             "fusion_group": "matmul_bias_relu_0",
@@ -61,6 +64,7 @@ def build_lowered_graph(matches, source_path):
             "notes": [
                 "Detected from MLIR linalg.matmul annotated by MatMulBiasReluFusionPass",
                 "Mapped to the existing heterogeneous runtime planner as a fused accelerator candidate",
+                "Runtime-compatible custom kernel path uses OpType::FusedMatMulAddReLU",
             ],
         })
 
@@ -81,6 +85,9 @@ def build_execution_plan(lowered_graph):
             "op_name": op["name"],
             "op_type": op["op_type"],
             "lowered_op_type": op["lowered_op_type"],
+            "runtime_op_type": op["runtime_op_type"],
+            "runtime_kernel": op["runtime_kernel"],
+            "runtime_kernel_backend": op["runtime_kernel_backend"],
             "backend": op["backend"],
             "fusion_candidate": op["fusion_candidate"],
             "fusion_group": op["fusion_group"],

@@ -126,6 +126,7 @@ Quick verification:
 grep 'fusion.candidate = "matmul_bias_relu"' trace/mlir_fused_graph.mlir
 grep 'FusedMatMulBiasReLU' trace/mlir_lowered_graph.json
 grep 'dispatch_fused_kernel' trace/mlir_execution_plan.json
+grep 'fused_matmul_add_relu' trace/mlir_execution_plan.json
 ```
 
 The JSON bridge also attaches a lightweight cost model with estimated FLOPs,
@@ -135,6 +136,20 @@ backend placement or scheduling heuristics.
 The pass also assigns a `fusion.group` and per-op `fusion.role` metadata to
 the MatMul, bias-add, and ReLU operations, making the detected producer and
 consumer chain explicit before runtime lowering.
+
+The runtime bridge records the concrete C++ dispatch path:
+
+```text
+hir.fused_matmul_bias_relu
+  -> OpType::FusedMatMulAddReLU
+  -> fused_matmul_add_relu
+```
+
+`run_mlir_fused_kernel_benchmark` verifies that the emitted execution plan names
+that custom fused kernel path, dispatches the fused op through `OpRegistry`, and
+checks fused-vs-unfused numerical correctness. The benchmark is used as a
+compiler/runtime integration check; CPU speedup depends on shape and local
+microarchitecture.
 
 ## Resume Bullet
 

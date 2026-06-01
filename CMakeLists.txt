@@ -74,6 +74,9 @@ target_link_libraries(benchmark_thread_pool mlcompiler)
 add_executable(run_mlir_model apps/run_mlir_model.cpp)
 target_link_libraries(run_mlir_model mlcompiler)
 
+add_executable(run_mlir_fused_kernel_benchmark apps/run_mlir_fused_kernel_benchmark.cpp)
+target_link_libraries(run_mlir_fused_kernel_benchmark mlcompiler)
+
 add_executable(run_attention_demo apps/run_attention_demo.cpp)
 target_link_libraries(run_attention_demo mlcompiler)
 

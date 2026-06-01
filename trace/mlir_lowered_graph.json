@@ -9,6 +9,9 @@
       "source_result": "%1",
       "op_type": "FusedMatMulBiasReLU",
       "lowered_op_type": "hir.fused_matmul_bias_relu",
+      "runtime_op_type": "FusedMatMulAddReLU",
+      "runtime_kernel": "fused_matmul_add_relu",
+      "runtime_kernel_backend": "CPU",
       "backend": "Metal",
       "fusion_candidate": "matmul_bias_relu",
       "fusion_group": "matmul_bias_relu_0",
@@ -32,7 +35,8 @@
       },
       "notes": [
         "Detected from MLIR linalg.matmul annotated by MatMulBiasReluFusionPass",
-        "Mapped to the existing heterogeneous runtime planner as a fused accelerator candidate"
+        "Mapped to the existing heterogeneous runtime planner as a fused accelerator candidate",
+        "Runtime-compatible custom kernel path uses OpType::FusedMatMulAddReLU"
       ]
     }
   ]

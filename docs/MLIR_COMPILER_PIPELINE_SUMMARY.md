@@ -13,6 +13,10 @@
 - MLIR Affine vectorization test
 - Pipeline script for generating runtime-facing artifacts
 - JSON bridge from annotated MLIR to lowered graph and execution plan artifacts
+- Runtime execution plan metadata that maps the lowered fused op to
+  `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
+- A C++ benchmark that checks the MLIR execution plan and dispatches the fused
+  op through the runtime registry for correctness and latency comparison
 
 ## Pipeline
 
@@ -24,6 +28,7 @@ MLIR input
   -> tools/mlir_fusion_to_runtime_json.py
   -> trace/mlir_lowered_graph.json
   -> trace/mlir_execution_plan.json
+  -> OpRegistry dispatch to fused_matmul_add_relu
 ```
 
 ## Verification
@@ -44,6 +49,8 @@ fusion.candidate = "matmul_bias_relu"
 fusion.group = "matmul_bias_relu_0"
 FusedMatMulBiasReLU
 dispatch_fused_kernel
+runtime_kernel = fused_matmul_add_relu
+runtime_op_type = FusedMatMulAddReLU
 ```
 
 ## Engineering Relevance
@@ -59,3 +66,4 @@ This demonstrates:
 - Affine vectorization
 - Runtime lowering bridge
 - Cost-model metadata for backend scheduling
+- Custom fused-kernel dispatch path from MLIR lowering metadata to C++ runtime
