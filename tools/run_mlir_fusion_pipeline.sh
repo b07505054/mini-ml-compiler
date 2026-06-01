@@ -13,7 +13,7 @@ mkdir -p "$REPO_ROOT/trace"
 "$MLIR_OPT" \
   --load-pass-plugin="$PLUGIN" \
   "$INPUT" \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)' \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)' \
   > "$OUTPUT"
 
 echo "Wrote $OUTPUT"

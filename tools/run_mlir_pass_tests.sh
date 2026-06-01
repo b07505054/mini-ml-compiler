@@ -19,16 +19,28 @@ run_filecheck() {
 }
 
 run_filecheck \
+  "canonicalize add zero" \
+  "$REPO_ROOT/mlir_passes/test/canonicalize_add_zero.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize)'
+
+run_filecheck \
+  "canonicalize nested relu" \
+  "$REPO_ROOT/mlir_passes/test/canonicalize_relu_relu.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize)'
+
+run_filecheck \
   "matmul-bias-relu fusion annotation" \
   "$REPO_ROOT/mlir_passes/test/matmul_bias_relu.mlir" \
   --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
 
 run_filecheck \
   "no fusion without relu" \
   "$REPO_ROOT/mlir_passes/test/no_fusion_without_relu.mlir" \
   --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
 
 run_filecheck \
   "affine loop tiling" \

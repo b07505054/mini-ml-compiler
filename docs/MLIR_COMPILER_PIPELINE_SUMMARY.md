@@ -3,9 +3,10 @@
 ## What Was Added
 
 - Real MLIR C++ pass plugin infrastructure in `mlir_passes/`
+- HIR-focused canonicalization pass for tensor-level cleanup
 - MatMul + Bias Add + ReLU fusion candidate detection
 - Fusion group and role annotations across producer and consumer ops
-- FileCheck tests for positive and negative fusion cases
+- FileCheck tests for canonicalization, positive fusion, and negative fusion cases
 - MLIR Affine loop tiling test
 - MLIR Affine vectorization test
 - Pipeline script for generating runtime-facing artifacts
@@ -15,6 +16,7 @@
 
 ```text
 MLIR input
+  -> HIRCanonicalizationPass
   -> MatMulBiasReluFusionPass
   -> trace/mlir_fused_graph.mlir
   -> tools/mlir_fusion_to_runtime_json.py
@@ -33,6 +35,8 @@ tools/run_mlir_fusion_pipeline.sh
 Expected signals:
 
 ```text
+add(x, 0.0) canonicalized away
+relu(relu(x)) canonicalized to relu(x)
 fusion.candidate = "matmul_bias_relu"
 fusion.group = "matmul_bias_relu_0"
 FusedMatMulBiasReLU
@@ -44,6 +48,7 @@ dispatch_fused_kernel
 This demonstrates:
 
 - MLIR C++ pass/plugin development
+- Canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection
 - False-positive prevention with negative tests

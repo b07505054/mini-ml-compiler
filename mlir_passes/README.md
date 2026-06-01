@@ -1,9 +1,26 @@
-# MLIR Fusion Passes
+# MLIR Compiler Passes
 
 This directory contains real MLIR C++ pass infrastructure, separate from the
 project's custom toy graph IR.
 
-The first pass detects a tensor-level MatMul + Bias Add + ReLU pattern:
+The plugin currently contains two compiler passes:
+
+- `hir-canonicalize`: rewrites small tensor-level canonical forms before
+  optimization.
+- `matmul-bias-relu-fusion`: detects a tensor-level MatMul + Bias Add + ReLU
+  fusion candidate.
+
+The canonicalization pass performs real IR rewrites:
+
+```text
+linalg.map addf(x, 0.0)
+  -> x
+
+linalg.map maximumf(linalg.map maximumf(x, 0.0), 0.0)
+  -> linalg.map maximumf(x, 0.0)
+```
+
+The fusion pass then detects:
 
 ```text
 linalg.matmul
@@ -59,7 +76,7 @@ binary from the LLVM/MLIR build used by CMake.
 /Users/allen/Developer/llvm-build/bin/mlir-opt \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
 ```
 
 Expected output includes:
@@ -74,7 +91,7 @@ linalg.matmul {fusion.candidate = "matmul_bias_relu"}
 /Users/allen/Developer/llvm-build/bin/mlir-opt \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)' \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)' \
   | /Users/allen/Developer/llvm-build/bin/FileCheck mlir_passes/test/matmul_bias_relu.mlir
 ```
 
@@ -116,6 +133,6 @@ consumer chain explicit before runtime lowering.
 
 ## Resume Bullet
 
-Added an MLIR C++ pass pipeline that detects MatMul-Bias-ReLU patterns,
-annotates `linalg.matmul` fusion candidates, and exports lowered runtime
-planning artifacts for a heterogeneous C++ execution planner.
+Added an MLIR C++ compiler pipeline with canonicalization rewrites, MatMul-Bias-ReLU
+fusion detection, FileCheck coverage, and runtime-facing lowering artifacts for
+a heterogeneous C++ execution planner.

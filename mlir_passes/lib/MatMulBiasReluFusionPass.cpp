@@ -10,11 +10,13 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 
 namespace mlir::hir {
 namespace {
 
+#define GEN_PASS_DEF_HIRCANONICALIZATION
 #define GEN_PASS_DEF_MATMULBIASRELUFUSION
 #include "FusionPasses.h.inc"
 
@@ -46,6 +48,78 @@ bool isReluMap(linalg::MapOp mapOp) {
 
   return foundRelu;
 }
+
+bool isAddZeroMap(linalg::MapOp mapOp) {
+  bool foundAddZero = false;
+
+  mapOp.getBody()->walk([&](arith::AddFOp add) {
+    if (isZeroConstant(add.getLhs()) ||
+        isZeroConstant(add.getRhs())) {
+      foundAddZero = true;
+    }
+  });
+
+  return foundAddZero;
+}
+
+Value passthroughInputForAddZero(linalg::MapOp mapOp) {
+  if (mapOp.getInputs().empty()) {
+    return {};
+  }
+
+  return mapOp.getInputs().front();
+}
+
+struct HIRCanonicalizationPass
+    : impl::HIRCanonicalizationBase<HIRCanonicalizationPass> {
+  void runOnOperation() override {
+    func::FuncOp func = getOperation();
+    SmallVector<Operation *> toErase;
+
+    func.walk([&](linalg::MapOp mapOp) {
+      if (mapOp->getNumResults() != 1) {
+        return;
+      }
+
+      if (isAddZeroMap(mapOp)) {
+        Value replacement = passthroughInputForAddZero(mapOp);
+        if (!replacement || replacement.getType() != mapOp->getResult(0).getType()) {
+          return;
+        }
+
+        mapOp->getResult(0).replaceAllUsesWith(replacement);
+        toErase.push_back(mapOp.getOperation());
+      }
+    });
+
+    for (Operation *op : llvm::reverse(toErase)) {
+      op->erase();
+    }
+
+    toErase.clear();
+    func.walk([&](linalg::MapOp outerRelu) {
+      if (!isReluMap(outerRelu) || outerRelu->getNumResults() != 1 ||
+          outerRelu.getInputs().empty()) {
+        return;
+      }
+
+      Value input = outerRelu.getInputs().front();
+      auto innerRelu = input.getDefiningOp<linalg::MapOp>();
+      if (!innerRelu || !isReluMap(innerRelu) ||
+          innerRelu->getNumResults() != 1 ||
+          innerRelu->getResult(0).getType() != outerRelu->getResult(0).getType()) {
+        return;
+      }
+
+      outerRelu->getResult(0).replaceAllUsesWith(innerRelu->getResult(0));
+      toErase.push_back(outerRelu.getOperation());
+    });
+
+    for (Operation *op : llvm::reverse(toErase)) {
+      op->erase();
+    }
+  }
+};
 
 struct MatMulBiasReluFusionPass
     : impl::MatMulBiasReluFusionBase<MatMulBiasReluFusionPass> {
@@ -95,16 +169,29 @@ struct MatMulBiasReluFusionPass
 
 } // namespace
 
+std::unique_ptr<Pass> createHIRCanonicalizationPass() {
+  return std::make_unique<HIRCanonicalizationPass>();
+}
+
 std::unique_ptr<Pass> createMatMulBiasReluFusionPass() {
   return std::make_unique<MatMulBiasReluFusionPass>();
 }
 
 void registerFusionPasses() {
+  PassRegistration<HIRCanonicalizationPass>();
+
   static PassPipelineRegistration<> pipeline(
       "matmul-bias-relu-fusion",
       "Detect MatMul + bias add + ReLU fusion candidates",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createMatMulBiasReluFusionPass());
+      });
+
+  static PassPipelineRegistration<> canonicalizePipeline(
+      "hir-canonicalize",
+      "Canonicalize HIR-friendly tensor MLIR patterns",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createHIRCanonicalizationPass());
       });
 }
 
