@@ -70,6 +70,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering)'
 
 run_filecheck \
+  "rmsnorm conversion and verifier" \
+  "$REPO_ROOT/mlir_passes/test/rmsnorm_conversion_verifier.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

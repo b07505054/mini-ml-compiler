@@ -8,7 +8,7 @@ PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
 INPUT="${INPUT:-$REPO_ROOT/mlir_passes/test/matmul_bias_relu.mlir}"
 OUTPUT="$REPO_ROOT/trace/mlir_fused_graph.mlir"
 KERNEL_PROFILE="${KERNEL_PROFILE:-}"
-PASS_PIPELINE="${PASS_PIPELINE:-builtin.module(hir-canonicalize,matmul-bias-relu-fusion,rmsnorm-kernel-selection,hir-fusion-lowering)}"
+PASS_PIPELINE="${PASS_PIPELINE:-builtin.module(hir-canonicalize,matmul-bias-relu-fusion,rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)}"
 
 mkdir -p "$REPO_ROOT/trace"
 

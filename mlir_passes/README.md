@@ -3,14 +3,22 @@
 This directory contains real MLIR C++ pass infrastructure, separate from the
 project's custom toy graph IR.
 
-The plugin currently contains two compiler passes:
+The plugin currently contains MLIR compiler passes for canonicalization,
+fusion detection, lowering, and verification:
 
 - `hir-canonicalize`: rewrites small tensor-level canonical forms before
   optimization.
 - `matmul-bias-relu-fusion`: detects a tensor-level MatMul + Bias Add + ReLU
   fusion candidate.
+- `rmsnorm-kernel-selection`: marks `llm.rmsnorm` ops for runtime-aware HIR
+  lowering.
+- `hir-fusion-lowering`: lowers annotated fusion candidates into generic HIR
+  ops.
+- `hir-verify-fused-ops`: verifies invariants on emitted generic HIR fused ops.
 
-The canonicalization pass performs real IR rewrites:
+The canonicalization pass performs real IR rewrites with MLIR
+`OpRewritePattern`, `PatternRewriter`, `RewritePatternSet`, and the greedy
+rewrite driver:
 
 ```text
 linalg.map addf(x, 0.0)
@@ -32,6 +40,15 @@ The initial implementation is detect-and-annotate:
 
 ```mlir
 linalg.matmul {fusion.candidate = "matmul_bias_relu"}
+```
+
+RMSNorm lowering uses MLIR dialect-conversion infrastructure:
+
+```text
+ConversionTarget marks "llm.rmsnorm" illegal
+TypeConverter provides the HIR result-type conversion hook
+ConversionPattern rewrites "llm.rmsnorm" -> "hir.fused_rmsnorm"
+hir-verify-fused-ops checks the emitted HIR generic op invariants
 ```
 
 The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
@@ -121,6 +138,16 @@ runtime planning story by first lowering an annotated `linalg.matmul` chain into
 the generic MLIR op `"hir.fused_matmul_bias_relu"`, then exporting that HIR op
 to runtime-facing JSON.
 
+The default bridge pipeline runs:
+
+```text
+hir-canonicalize
+  -> matmul-bias-relu-fusion
+  -> rmsnorm-kernel-selection
+  -> hir-fusion-lowering
+  -> hir-verify-fused-ops
+```
+
 Quick verification:
 
 ```bash
@@ -154,6 +181,7 @@ microarchitecture.
 
 ## Resume Bullet
 
-Added an MLIR C++ compiler pipeline with canonicalization rewrites, MatMul-Bias-ReLU
-fusion detection, FileCheck coverage, and runtime-facing lowering artifacts for
-a heterogeneous C++ execution planner.
+Added an MLIR C++ compiler pipeline with `RewritePattern` canonicalization,
+MatMul-Bias-ReLU fusion detection, `ConversionTarget`/`TypeConverter`-aware
+RMSNorm lowering, fused-op verification, FileCheck coverage, and
+runtime-facing lowering artifacts for a heterogeneous C++ execution planner.

@@ -4,6 +4,8 @@
 
 - Real MLIR C++ pass plugin infrastructure in `mlir_passes/`
 - HIR-focused canonicalization pass for tensor-level cleanup
+- Canonicalization implemented with MLIR `RewritePattern`,
+  `PatternRewriter`, `RewritePatternSet`, and the greedy rewrite driver
 - MatMul + Bias Add + ReLU fusion candidate detection
 - Fusion group and role annotations across producer and consumer ops
 - FileCheck tests for canonicalization, positive fusion, and negative fusion cases
@@ -14,6 +16,10 @@
 - Pipeline script for generating runtime-facing artifacts
 - MLIR HIR lowering pass that rewrites fusion candidates to generic HIR ops:
   `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`
+- RMSNorm lowering implemented with MLIR `ConversionPattern`,
+  `ConversionTarget`, and `TypeConverter`
+- HIR fused-op verifier pass for generic HIR op invariants before artifact
+  export
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Runtime execution plan metadata that maps the lowered fused op to
   `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
@@ -35,6 +41,7 @@ MLIR input
   -> MatMulBiasReluFusionPass
   -> RMSNormKernelSelectionPass
   -> HIRFusionLoweringPass
+  -> HIRFusedOpVerifierPass
   -> trace/mlir_fused_graph.mlir
   -> tools/mlir_fusion_to_runtime_json.py
   -> trace/mlir_lowered_graph.json
@@ -80,10 +87,13 @@ hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fa
 This demonstrates:
 
 - MLIR C++ pass/plugin development
-- Canonicalization rewrites before fusion
+- Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection
 - MLIR lowering from source/fusion dialect patterns into HIR-stage generic ops
+- MLIR dialect-conversion infrastructure through `ConversionTarget`,
+  `TypeConverter`, and conversion patterns
+- Verifier-style invariant checks for emitted HIR fused ops
 - False-positive prevention with negative tests
 - Affine loop tiling
 - Affine vectorization

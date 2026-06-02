@@ -3,13 +3,17 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -23,6 +27,7 @@ namespace {
 #define GEN_PASS_DEF_MATMULBIASRELUFUSION
 #define GEN_PASS_DEF_RMSNORMKERNELSELECTION
 #define GEN_PASS_DEF_HIRFUSIONLOWERING
+#define GEN_PASS_DEF_HIRFUSEDOPVERIFIER
 #include "FusionPasses.h.inc"
 
 bool isAddMap(linalg::MapOp mapOp) {
@@ -84,53 +89,57 @@ Value biasInputForAdd(linalg::MapOp addMap, Value matmulResult) {
   return {};
 }
 
+struct AddZeroCanonicalizationPattern : OpRewritePattern<linalg::MapOp> {
+  using OpRewritePattern<linalg::MapOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::MapOp mapOp,
+                                PatternRewriter &rewriter) const override {
+    if (mapOp->getNumResults() != 1 || !isAddZeroMap(mapOp)) {
+      return failure();
+    }
+
+    Value replacement = passthroughInputForAddZero(mapOp);
+    if (!replacement || replacement.getType() != mapOp->getResult(0).getType()) {
+      return failure();
+    }
+
+    rewriter.replaceOp(mapOp, replacement);
+    return success();
+  }
+};
+
+struct NestedReluCanonicalizationPattern : OpRewritePattern<linalg::MapOp> {
+  using OpRewritePattern<linalg::MapOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::MapOp outerRelu,
+                                PatternRewriter &rewriter) const override {
+    if (!isReluMap(outerRelu) || outerRelu->getNumResults() != 1 ||
+        outerRelu.getInputs().empty()) {
+      return failure();
+    }
+
+    Value input = outerRelu.getInputs().front();
+    auto innerRelu = input.getDefiningOp<linalg::MapOp>();
+    if (!innerRelu || !isReluMap(innerRelu) ||
+        innerRelu->getNumResults() != 1 ||
+        innerRelu->getResult(0).getType() != outerRelu->getResult(0).getType()) {
+      return failure();
+    }
+
+    rewriter.replaceOp(outerRelu, innerRelu->getResult(0));
+    return success();
+  }
+};
+
 struct HIRCanonicalizationPass
     : impl::HIRCanonicalizationBase<HIRCanonicalizationPass> {
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    SmallVector<Operation *> toErase;
+    RewritePatternSet patterns(&getContext());
+    patterns.add<AddZeroCanonicalizationPattern,
+                 NestedReluCanonicalizationPattern>(&getContext());
 
-    func.walk([&](linalg::MapOp mapOp) {
-      if (mapOp->getNumResults() != 1) {
-        return;
-      }
-
-      if (isAddZeroMap(mapOp)) {
-        Value replacement = passthroughInputForAddZero(mapOp);
-        if (!replacement || replacement.getType() != mapOp->getResult(0).getType()) {
-          return;
-        }
-
-        mapOp->getResult(0).replaceAllUsesWith(replacement);
-        toErase.push_back(mapOp.getOperation());
-      }
-    });
-
-    for (Operation *op : llvm::reverse(toErase)) {
-      op->erase();
-    }
-
-    toErase.clear();
-    func.walk([&](linalg::MapOp outerRelu) {
-      if (!isReluMap(outerRelu) || outerRelu->getNumResults() != 1 ||
-          outerRelu.getInputs().empty()) {
-        return;
-      }
-
-      Value input = outerRelu.getInputs().front();
-      auto innerRelu = input.getDefiningOp<linalg::MapOp>();
-      if (!innerRelu || !isReluMap(innerRelu) ||
-          innerRelu->getNumResults() != 1 ||
-          innerRelu->getResult(0).getType() != outerRelu->getResult(0).getType()) {
-        return;
-      }
-
-      outerRelu->getResult(0).replaceAllUsesWith(innerRelu->getResult(0));
-      toErase.push_back(outerRelu.getOperation());
-    });
-
-    for (Operation *op : llvm::reverse(toErase)) {
-      op->erase();
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
     }
   }
 };
@@ -206,6 +215,49 @@ struct RMSNormKernelSelectionPass
   }
 };
 
+struct HIRTypeConverter : TypeConverter {
+  HIRTypeConverter() {
+    addConversion([](Type type) { return type; });
+  }
+};
+
+struct RMSNormToHIRConversionPattern : ConversionPattern {
+  RMSNormToHIRConversionPattern(TypeConverter &typeConverter,
+                                MLIRContext *context)
+      : ConversionPattern(typeConverter, "llm.rmsnorm", 1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                                ConversionPatternRewriter &rewriter) const override {
+    if (op->getNumResults() != 1) {
+      return rewriter.notifyMatchFailure(op, "expected one RMSNorm result");
+    }
+
+    auto candidate = op->getAttrOfType<StringAttr>("fusion.candidate");
+    if (!candidate || candidate.getValue() != "rmsnorm") {
+      return rewriter.notifyMatchFailure(op, "missing RMSNorm fusion marker");
+    }
+
+    Type loweredType = getTypeConverter()->convertType(op->getResult(0).getType());
+    if (!loweredType) {
+      return rewriter.notifyMatchFailure(op, "failed to convert RMSNorm result type");
+    }
+
+    OperationState state(op->getLoc(), "hir.fused_rmsnorm");
+    state.addOperands(operands);
+    state.addTypes(loweredType);
+    state.addAttribute("fusion.candidate", candidate);
+    state.addAttribute("fusion.group", op->getAttr("fusion.group"));
+    state.addAttribute("kernel.selection",
+                       StringAttr::get(op->getContext(), "runtime_profile"));
+    state.addAttribute("lowering.source",
+                       StringAttr::get(op->getContext(), "llm.rmsnorm"));
+
+    Operation *lowered = rewriter.create(state);
+    rewriter.replaceOp(op, lowered->getResults());
+    return success();
+  }
+};
+
 struct HIRFusionLoweringPass
     : impl::HIRFusionLoweringBase<HIRFusionLoweringPass> {
   void runOnOperation() override {
@@ -264,39 +316,89 @@ struct HIRFusionLoweringPass
       }
     });
 
-    func.walk([&](Operation *op) {
-      if (op->getName().getStringRef() != "llm.rmsnorm" ||
-          op->getNumResults() == 0 ||
-          !op->hasAttr("fusion.candidate")) {
-        return;
-      }
-
-      auto candidate = op->getAttrOfType<StringAttr>("fusion.candidate");
-      if (!candidate || candidate.getValue() != "rmsnorm") {
-        return;
-      }
-
-      OpBuilder builder(op);
-      OperationState state(op->getLoc(), "hir.fused_rmsnorm");
-      state.addOperands(op->getOperands());
-      state.addTypes(op->getResult(0).getType());
-      state.addAttribute("fusion.candidate", candidate);
-      state.addAttribute("fusion.group", op->getAttr("fusion.group"));
-      state.addAttribute("kernel.selection",
-                         StringAttr::get(op->getContext(), "runtime_profile"));
-      state.addAttribute("lowering.source",
-                         StringAttr::get(op->getContext(), "llm.rmsnorm"));
-
-      Operation *lowered = builder.create(state);
-      op->getResult(0).replaceAllUsesWith(lowered->getResult(0));
-      toErase.push_back(op);
-    });
-
     for (Operation *op : toErase) {
       if (!op->use_empty()) {
         continue;
       }
       op->erase();
+    }
+
+    HIRTypeConverter typeConverter;
+    RewritePatternSet patterns(func.getContext());
+    patterns.add<RMSNormToHIRConversionPattern>(typeConverter, func.getContext());
+
+    ConversionTarget target(*func.getContext());
+    target.addLegalDialect<arith::ArithDialect,
+                           func::FuncDialect,
+                           linalg::LinalgDialect,
+                           tensor::TensorDialect>();
+    target.markUnknownOpDynamicallyLegal([](Operation *op) {
+      return op->getName().getStringRef() != "llm.rmsnorm";
+    });
+
+    if (failed(applyPartialConversion(func, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
+LogicalResult verifyFusedRMSNorm(Operation *op) {
+  if (op->getNumOperands() != 1) {
+    return op->emitOpError("expects exactly one input operand");
+  }
+  if (op->getNumResults() != 1) {
+    return op->emitOpError("expects exactly one result");
+  }
+  if (op->getOperand(0).getType() != op->getResult(0).getType()) {
+    return op->emitOpError("expects input and result types to match");
+  }
+
+  auto candidate = op->getAttrOfType<StringAttr>("fusion.candidate");
+  if (!candidate || candidate.getValue() != "rmsnorm") {
+    return op->emitOpError("requires fusion.candidate = \"rmsnorm\"");
+  }
+  if (!op->getAttrOfType<StringAttr>("kernel.selection")) {
+    return op->emitOpError("requires kernel.selection metadata");
+  }
+  return success();
+}
+
+LogicalResult verifyFusedMatMulBiasRelu(Operation *op) {
+  if (op->getNumOperands() != 3) {
+    return op->emitOpError("expects lhs, rhs, and bias operands");
+  }
+  if (op->getNumResults() != 1) {
+    return op->emitOpError("expects exactly one result");
+  }
+
+  auto candidate = op->getAttrOfType<StringAttr>("fusion.candidate");
+  if (!candidate || candidate.getValue() != "matmul_bias_relu") {
+    return op->emitOpError("requires fusion.candidate = \"matmul_bias_relu\"");
+  }
+  if (!op->getAttrOfType<StringAttr>("kernel.selection")) {
+    return op->emitOpError("requires kernel.selection metadata");
+  }
+  return success();
+}
+
+struct HIRFusedOpVerifierPass
+    : impl::HIRFusedOpVerifierBase<HIRFusedOpVerifierPass> {
+  void runOnOperation() override {
+    WalkResult result = getOperation().walk([&](Operation *op) -> WalkResult {
+      StringRef opName = op->getName().getStringRef();
+      if (opName == "hir.fused_rmsnorm") {
+        return failed(verifyFusedRMSNorm(op)) ? WalkResult::interrupt()
+                                             : WalkResult::advance();
+      }
+      if (opName == "hir.fused_matmul_bias_relu") {
+        return failed(verifyFusedMatMulBiasRelu(op)) ? WalkResult::interrupt()
+                                                     : WalkResult::advance();
+      }
+      return WalkResult::advance();
+    });
+
+    if (result.wasInterrupted()) {
+      signalPassFailure();
     }
   }
 };
@@ -319,8 +421,13 @@ std::unique_ptr<Pass> createHIRFusionLoweringPass() {
   return std::make_unique<HIRFusionLoweringPass>();
 }
 
+std::unique_ptr<Pass> createHIRFusedOpVerifierPass() {
+  return std::make_unique<HIRFusedOpVerifierPass>();
+}
+
 void registerFusionPasses() {
   PassRegistration<HIRCanonicalizationPass>();
+  PassRegistration<HIRFusedOpVerifierPass>();
 
   static PassPipelineRegistration<> pipeline(
       "matmul-bias-relu-fusion",
@@ -348,6 +455,13 @@ void registerFusionPasses() {
       "Lower fusion candidates to HIR generic MLIR ops",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createHIRFusionLoweringPass());
+      });
+
+  static PassPipelineRegistration<> verifierPipeline(
+      "hir-verify-fused-ops",
+      "Verify generic HIR fused op invariants",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createHIRFusedOpVerifierPass());
       });
 }
 

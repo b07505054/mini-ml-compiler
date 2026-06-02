@@ -7,6 +7,7 @@
 - Added an artifact-lowering pipeline that converts compiler analysis output into Apple-demo-ready JSON contracts for execution planning, KV-cache layout, memory budget validation, and scheduler visualization.
 - Added validation tooling for LLM compiler artifacts, checking required outputs, prefill/decode phases, KV-cache capacity consistency, memory budget status, scheduling queues, and manifest completeness.
 - Built a real MLIR C++ pass plugin that detects MatMul-Bias-ReLU patterns in `linalg` IR and annotates fusion candidates with producer/consumer fusion metadata.
+- Upgraded the MLIR pass pipeline with `RewritePattern`/`PatternRewriter` canonicalization, `ConversionTarget`/`TypeConverter`-aware RMSNorm lowering, and a verifier pass for emitted HIR fused ops.
 - Added MLIR FileCheck coverage for positive and negative fusion cases, preventing false-positive fusion when the ReLU consumer is absent.
 - Connected annotated MLIR output into runtime-facing artifacts by exporting fused graph IR, lowered graph JSON, and execution plan JSON for a heterogeneous C++ runtime planner.
 - Added lightweight cost-model metadata for fused MatMul-Bias-ReLU ops, including estimated FLOPs, memory traffic, and arithmetic intensity for backend scheduling.
@@ -15,7 +16,7 @@
 ## Short Version
 
 - Implemented an LLM compiler/runtime planning pipeline from tiny MLIR graph analysis to validated execution, KV-cache, memory, scheduling, and Apple-demo artifacts.
-- Implemented an MLIR C++ fusion pass pipeline for MatMul-Bias-ReLU detection, FileCheck validation, runtime lowering artifacts, and cost-model metadata.
+- Implemented an MLIR C++ fusion pass pipeline with pattern rewrites, conversion-based RMSNorm lowering, fused-op verification, FileCheck validation, runtime lowering artifacts, and cost-model metadata.
 
 ## Interview Talking Points
 
@@ -24,7 +25,7 @@
 - KV-cache work is scoped to layout and memory planning metadata, while dynamic allocation, eviction, token sampling, and request serving remain runtime responsibilities.
 - Added a KV-cache policy contract for downstream serving runtimes, covering prefix-cache enablement, LRU finished-prefix eviction, capacity-aware admission, and expected runtime metrics/events.
 - The validation report turns generated JSON into a testable contract, checking phase structure, KV-cache capacity, memory budget, scheduling queues, and manifest completeness.
-- The pass currently performs detect-and-annotate instead of rewrite, which keeps the first version robust and easy to validate.
+- The pass pipeline now includes both detect-and-annotate fusion metadata and real IR rewrites/lowering through MLIR pattern rewrite and dialect-conversion infrastructure.
 - The pipeline separates MLIR frontend analysis from the existing custom C++ runtime planner.
 - The negative test demonstrates that the pass avoids annotating incomplete fusion patterns.
 - The runtime bridge shows how compiler annotations can feed backend placement, scheduling, and dispatch decisions.

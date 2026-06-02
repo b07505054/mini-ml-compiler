@@ -71,4 +71,16 @@ def HIRFusionLowering
   let constructor = "mlir::hir::createHIRFusionLoweringPass()";
 }
 
+def HIRFusedOpVerifier
+    : Pass<"hir-verify-fused-ops", "mlir::func::FuncOp"> {
+  let summary = "Verify invariants on generic HIR fused ops";
+  let description = [{
+    Checks the generic HIR ops emitted by the fusion lowering pipeline before
+    they are exported to runtime-facing artifacts. This gives the pass pipeline
+    an explicit verifier stage even before the generic HIR ops are promoted to
+    a fully registered dialect.
+  }];
+  let constructor = "mlir::hir::createHIRFusedOpVerifierPass()";
+}
+
 #endif // HIR_FUSION_PASSES
