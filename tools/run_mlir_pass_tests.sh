@@ -48,6 +48,10 @@ run_verify_diagnostics \
   "HIR INT8 quant verifier rejects invalid metadata" \
   "$REPO_ROOT/mlir_passes/test/hir_quant_verifier_invalid.mlir"
 
+run_verify_diagnostics \
+  "HIR layout verifier rejects invalid alignment" \
+  "$REPO_ROOT/mlir_passes/test/hir_layout_verifier_invalid.mlir"
+
 run_filecheck \
   "canonicalize add zero" \
   "$REPO_ROOT/mlir_passes/test/canonicalize_add_zero.mlir" \

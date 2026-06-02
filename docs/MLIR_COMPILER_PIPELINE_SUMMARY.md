@@ -29,6 +29,9 @@
   negative verifier diagnostic test for invalid fused-op metadata
 - Positive and negative FileCheck coverage for INT8 quantization metadata,
   scale, zero point, and per-channel quantization constraints
+- Layout-aware verifier constraints for mobile accelerator legality:
+  NHWC activations, blocked-KC weights, 128-byte alignment, and channel/tile
+  dimensions that are multiples of 32
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Profile-calibrated cost table:
   `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
@@ -107,6 +110,8 @@ This demonstrates:
 - MLIR C++ pass/plugin development
 - MLIR dialect/op definition with TableGen and C++ op verifiers
 - Quantization-aware lowering surface for INT8 mobile/accelerator kernels
+- Layout-aware verifier checks for memory alignment and tile/channel
+  constraints relevant to Qualcomm-style DSP/NPU paths
 - Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection

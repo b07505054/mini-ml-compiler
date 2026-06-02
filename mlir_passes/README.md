@@ -66,9 +66,19 @@ hir.fused_qmatmul_bias_relu
 hir.dequantize
 ```
 
-The quantized ops verify INT8 dtype metadata, scale, zero point, and
-per-channel activation quantization metadata before any runtime dispatch
-contract can be exported.
+The quantized ops verify INT8 dtype metadata, scale, zero point, per-channel
+activation quantization metadata, and mobile accelerator layout constraints:
+
+```text
+input_layout = "NHWC"
+weight_layout = "blocked_kc"
+alignment = 128
+K dimension multiple of 32
+INT8 output channel dimension multiple of 32
+```
+
+These checks model Qualcomm-style DSP/NPU constraints where layout, tile shape,
+and memory alignment affect whether a lowered kernel is legal.
 
 The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
 in that order: the input graph contains an identity `add(x, 0.0)` between

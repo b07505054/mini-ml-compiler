@@ -24,13 +24,16 @@ func.func @quant_path(
 
   // CHECK: hir.fused_qmatmul_bias_relu
   %fused = hir.fused_qmatmul_bias_relu %xq, %w, %bias {
+    alignment = 128 : i32,
     fusion.candidate = "qmatmul_bias_relu",
+    input_layout = "NHWC",
     lhs_scale = 1.000000e-02 : f32,
     lhs_zero_point = 0 : i32,
     quantization.mode = "per_channel",
     quantized_dtype = "i8",
     rhs_scale = 1.000000e-02 : f32,
-    rhs_zero_point = 0 : i32
+    rhs_zero_point = 0 : i32,
+    weight_layout = "blocked_kc"
   } : (tensor<128x128xi8>, tensor<128x128xi8>, tensor<128x128xf32>) -> tensor<128x128xf32>
 
   // CHECK: hir.dequantize

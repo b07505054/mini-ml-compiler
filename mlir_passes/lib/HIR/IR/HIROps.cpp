@@ -2,6 +2,8 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 
+#include <optional>
+
 using namespace mlir;
 using namespace mlir::hir;
 
@@ -29,6 +31,14 @@ static LogicalResult requireIntegerAttr(Operation *op, StringRef name) {
     return op->emitOpError("requires integer attribute '") << name << "'";
   }
   return success();
+}
+
+static std::optional<int64_t> integerAttrValue(Operation *op, StringRef name) {
+  auto attr = op->getAttrOfType<IntegerAttr>(name);
+  if (!attr) {
+    return std::nullopt;
+  }
+  return attr.getInt();
 }
 
 static LogicalResult requireRankedTensor(Operation *op, Type type, StringRef label) {
@@ -163,11 +173,30 @@ LogicalResult FusedQMatMulBiasReluOp::verify() {
       failed(requireStringAttr(getOperation(), "quantized_dtype", "i8")) ||
       failed(requireStringAttr(getOperation(), "quantization.mode",
                                "per_channel")) ||
+      failed(requireStringAttr(getOperation(), "input_layout", "NHWC")) ||
+      failed(requireStringAttr(getOperation(), "weight_layout", "blocked_kc")) ||
       failed(requireFloatAttr(getOperation(), "lhs_scale")) ||
       failed(requireFloatAttr(getOperation(), "rhs_scale")) ||
       failed(requireIntegerAttr(getOperation(), "lhs_zero_point")) ||
-      failed(requireIntegerAttr(getOperation(), "rhs_zero_point"))) {
+      failed(requireIntegerAttr(getOperation(), "rhs_zero_point")) ||
+      failed(requireIntegerAttr(getOperation(), "alignment"))) {
     return failure();
+  }
+  auto alignment = integerAttrValue(getOperation(), "alignment");
+  if (!alignment || *alignment != 128) {
+    return emitOpError("requires 128-byte activation alignment");
+  }
+  if (lhsType.getDimSize(1) != ShapedType::kDynamic &&
+      lhsType.getDimSize(1) % 32 != 0) {
+    return emitOpError("requires lhs K dimension to be a multiple of 32");
+  }
+  if (rhsType.getDimSize(0) != ShapedType::kDynamic &&
+      rhsType.getDimSize(0) % 32 != 0) {
+    return emitOpError("requires weight K dimension to be a multiple of 32");
+  }
+  if (rhsType.getDimSize(1) != ShapedType::kDynamic &&
+      rhsType.getDimSize(1) % 32 != 0) {
+    return emitOpError("requires INT8 output channel dimension to be a multiple of 32");
   }
   return success();
 }
