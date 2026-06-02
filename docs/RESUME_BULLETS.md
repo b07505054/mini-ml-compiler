@@ -9,6 +9,7 @@
 - Defined a real `hir` MLIR dialect with typed fused ops, TableGen op declarations, C++ op verifiers, and positive/negative FileCheck coverage.
 - Added INT8 quantization-aware HIR ops for `quantize`, `dequantize`, `qmatmul`, and fused quantized MatMul-Bias-ReLU with scale, zero-point, and per-channel metadata verification.
 - Added layout-aware HIR verifier constraints for mobile accelerator lowering, including NHWC activation layout, blocked-KC weight layout, 128-byte alignment, and INT8 tile/channel multiples.
+- Added profile-guided INT8 lowering that converts eligible f32 MatMul-Bias-ReLU chains into `hir.fused_qmatmul_bias_relu` only when benchmark metadata selects the quantized kernel.
 - Built a real MLIR C++ pass plugin that detects MatMul-Bias-ReLU patterns in `linalg` IR and annotates fusion candidates with producer/consumer fusion metadata.
 - Upgraded the MLIR pass pipeline with `RewritePattern`/`PatternRewriter` canonicalization, `ConversionTarget`/`TypeConverter`-aware RMSNorm lowering, and a verifier pass for emitted HIR fused ops.
 - Added MLIR FileCheck coverage for positive and negative fusion cases, preventing false-positive fusion when the ReLU consumer is absent.

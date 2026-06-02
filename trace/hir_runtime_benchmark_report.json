@@ -2,8 +2,8 @@
   "artifact_type": "hir_runtime_benchmark_report",
   "status": "passed",
   "summary": {
-    "num_entries": 2,
-    "num_passed": 2,
+    "num_entries": 3,
+    "num_passed": 3,
     "num_failed": 0
   },
   "entries": [
@@ -16,7 +16,7 @@
       "backend": "CPU",
       "fallback_kernel": "unfused_matmul_add_relu",
       "selection_reason": "profile_calibrated_fallback",
-      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
       "latency": {
         "custom_ms": 5.354697,
         "fallback_ms": 5.145997,
@@ -31,7 +31,7 @@
         "backend": "CPU",
         "candidate_kernel": "fused_matmul_add_relu",
         "fallback_kernel": "unfused_matmul_add_relu",
-        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
         "selection_reason": "profile_calibrated_fallback",
         "profile_calibrated": true,
         "shape_bucket": "128x128x128:f32"
@@ -55,7 +55,7 @@
       "backend": "CUDA",
       "fallback_kernel": "torch_rmsnorm",
       "selection_reason": "profile_calibrated_fastest",
-      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
       "latency": {
         "custom_ms": 0.02975,
         "fallback_ms": 0.086751,
@@ -70,10 +70,49 @@
         "backend": "CUDA",
         "candidate_kernel": "fused_rmsnorm_cuda",
         "fallback_kernel": "torch_rmsnorm",
-        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
         "selection_reason": "profile_calibrated_fastest",
         "profile_calibrated": true,
         "shape_bucket": "16x4096:f32"
+      },
+      "checks": {
+        "compiler_emitted_typed_hir_op": true,
+        "runtime_dispatch_contract_present": true,
+        "runtime_decision_profile_calibrated": true,
+        "runtime_decision_matches_benchmark": true,
+        "numeric_correctness_passed": true,
+        "benchmark_available": true
+      },
+      "passed": true
+    },
+    {
+      "name": "INT8 QMatMul-Bias-ReLU",
+      "execution_plan": "trace/qmatmul_execution_plan.json",
+      "compiler_emitted_op": "hir.fused_qmatmul_bias_relu",
+      "runtime_op_type": "FusedQMatMulBiasReLU",
+      "runtime_kernel": "int8_qmatmul_bias_relu",
+      "backend": "CPU",
+      "fallback_kernel": "fused_matmul_add_relu",
+      "selection_reason": "profile_calibrated_fastest",
+      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+      "latency": {
+        "custom_ms": 4.94182,
+        "fallback_ms": 5.72657,
+        "speedup": 1.1588
+      },
+      "correct": true,
+      "custom_kernel_was_faster": true,
+      "runtime_dispatch_contract": {
+        "op_type": "hir.fused_qmatmul_bias_relu",
+        "runtime_op_type": "FusedQMatMulBiasReLU",
+        "runtime_kernel": "int8_qmatmul_bias_relu",
+        "backend": "CPU",
+        "candidate_kernel": "int8_qmatmul_bias_relu",
+        "fallback_kernel": "fused_matmul_add_relu",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "profile_calibrated_fastest",
+        "profile_calibrated": true,
+        "shape_bucket": "128x128x128:i8"
       },
       "checks": {
         "compiler_emitted_typed_hir_op": true,

@@ -1,0 +1,24 @@
+{
+  "artifact_type": "runtime_kernel_profile",
+  "source": "apps/benchmark_int8_matmul.cpp",
+  "profile_status": "measured",
+  "kernel_benchmarks": [
+    {
+      "fusion_candidate": "qmatmul_bias_relu",
+      "custom_kernel": "int8_qmatmul_bias_relu",
+      "fallback_kernel": "fused_matmul_add_relu",
+      "custom_latency_ms": 4.94182,
+      "fallback_latency_ms": 5.72657,
+      "speedup": 1.1588,
+      "correct": true,
+      "selection_ready": true,
+      "representative_shape": {
+        "m": 128,
+        "k": 128,
+        "n": 128,
+        "dtype": "i8"
+      },
+      "max_abs_error": 5.58794e-09
+    }
+  ]
+}

@@ -32,6 +32,9 @@
 - Layout-aware verifier constraints for mobile accelerator legality:
   NHWC activations, blocked-KC weights, 128-byte alignment, and channel/tile
   dimensions that are multiples of 32
+- Profile-guided INT8 lowering decision:
+  `f32 matmul+bias+relu -> hir.fused_qmatmul_bias_relu` only when imported
+  benchmark metadata marks the quantized path valid and faster
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Profile-calibrated cost table:
   `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
@@ -100,6 +103,7 @@ kernel_selection.evidence
 profile_calibrated_cost_table chooses the measured winner for each shape bucket
 llm.rmsnorm annotated as fusion.candidate = "rmsnorm"
 hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fallback
+hir.fused_qmatmul_bias_relu emitted when profile.quantized_path = "faster"
 trace/hir_runtime_benchmark_report.json status = passed
 ```
 
@@ -112,6 +116,8 @@ This demonstrates:
 - Quantization-aware lowering surface for INT8 mobile/accelerator kernels
 - Layout-aware verifier checks for memory alignment and tile/channel
   constraints relevant to Qualcomm-style DSP/NPU paths
+- Profile-driven quantized lowering from f32 MatMul chains to INT8 HIR fused ops
+  when benchmark evidence selects the quantized kernel
 - Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection

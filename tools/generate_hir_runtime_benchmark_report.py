@@ -113,6 +113,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--matmul-plan", default="trace/mlir_execution_plan.json")
     parser.add_argument("--rmsnorm-plan", default="trace/rmsnorm_execution_plan.json")
+    parser.add_argument("--qmatmul-plan", default="trace/qmatmul_execution_plan.json")
     parser.add_argument("--json-output", default="trace/hir_runtime_benchmark_report.json")
     parser.add_argument("--markdown-output", default="trace/hir_runtime_benchmark_report.md")
     args = parser.parse_args()
@@ -121,6 +122,8 @@ def main():
         build_entry("MatMul-Bias-ReLU", args.matmul_plan),
         build_entry("RMSNorm", args.rmsnorm_plan),
     ]
+    if Path(args.qmatmul_plan).exists():
+        entries.append(build_entry("INT8 QMatMul-Bias-ReLU", args.qmatmul_plan))
     report = {
         "artifact_type": "hir_runtime_benchmark_report",
         "status": "passed" if all(entry["passed"] for entry in entries) else "failed",

@@ -67,9 +67,13 @@ trace/*
 !trace/paged_kv_runtime.json
 !trace/serving_trace.json
 !trace/matmul_bias_relu_kernel_profile.json
+!trace/qmatmul_bias_relu_kernel_profile.json
 !trace/rmsnorm_fused_graph.mlir
 !trace/rmsnorm_lowered_graph.json
 !trace/rmsnorm_execution_plan.json
+!trace/qmatmul_fused_graph.mlir
+!trace/qmatmul_lowered_graph.json
+!trace/qmatmul_execution_plan.json
 !trace/hir_runtime_benchmark_report.json
 !trace/hir_runtime_benchmark_report.md
 !trace/profile_calibrated_cost_table.json

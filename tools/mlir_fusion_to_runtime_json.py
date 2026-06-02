@@ -40,6 +40,14 @@ def detect_rmsnorm(text):
     return list(annotated_pattern.finditer(text))
 
 
+def detect_fused_qmatmul(text):
+    hir_pattern = re.compile(
+        r"(?P<result>%[\w\d_]+)\s*=\s*(?:\"hir\.fused_qmatmul_bias_relu\"|hir\.fused_qmatmul_bias_relu)\s*",
+        re.MULTILINE,
+    )
+    return list(hir_pattern.finditer(text))
+
+
 def load_kernel_profiles(paths):
     if not paths:
         return {"profile_status": "not_provided", "kernels": {}}
@@ -83,6 +91,8 @@ def load_kernel_profiles(paths):
 def shape_bucket_for(fusion_candidate):
     if fusion_candidate == "matmul_bias_relu":
         return "128x128x128:f32"
+    if fusion_candidate == "qmatmul_bias_relu":
+        return "128x128x128:i8"
     if fusion_candidate == "rmsnorm":
         return "16x4096:f32"
     return "default:f32"
@@ -310,12 +320,75 @@ def build_rmsnorm_op(index, match, profile):
     }
 
 
-def build_lowered_graph(matmul_matches, rmsnorm_matches, source_path, profile):
+def build_qmatmul_op(index, match, profile):
+    selection = select_kernel(
+        "qmatmul_bias_relu",
+        "int8_qmatmul_bias_relu",
+        "CPU",
+        "fused_matmul_add_relu",
+        "CPU",
+        profile,
+    )
+    result_name = match.group("result")
+    hir_op_type = "hir.fused_qmatmul_bias_relu"
+    runtime_op_type = "FusedQMatMulBiasReLU"
+    return {
+        "id": index,
+        "name": f"fused_qmatmul_bias_relu_{index}",
+        "source_result": result_name,
+        "op_type": hir_op_type,
+        "legacy_op_type": "FusedQMatMulBiasReLU",
+        "lowered_op_type": hir_op_type,
+        "runtime_op_type": runtime_op_type,
+        "runtime_kernel": selection["selected_kernel"],
+        "runtime_kernel_backend": selection["selected_backend"],
+        "backend": selection["selected_backend"],
+        "runtime_dispatch_contract": build_runtime_dispatch_contract(
+            hir_op_type,
+            runtime_op_type,
+            selection,
+        ),
+        "fusion_candidate": "qmatmul_bias_relu",
+        "fusion_group": f"qmatmul_bias_relu_{index}",
+        "inputs": ["A_int8", "B_int8", "bias"],
+        "outputs": [result_name],
+        "cost_model": {
+            "m": 128,
+            "k": 128,
+            "n": 128,
+            "dtype": "i8",
+            "estimated_flops": 2 * 128 * 128 * 128 + 128 * 128 * 2,
+            "estimated_bytes_read": 128 * 128 + 128 * 128 + 128 * 128 * 4,
+            "estimated_bytes_written": 128 * 128 * 4,
+            "arithmetic_intensity_flops_per_byte": (
+                (2 * 128 * 128 * 128 + 128 * 128 * 2)
+                / max((128 * 128 + 128 * 128 + 128 * 128 * 4 + 128 * 128 * 4), 1)
+            ),
+            "source": "profile_calibrated_table",
+            "shape_bucket": "128x128x128:i8",
+            "layout": {
+                "input_layout": "NHWC",
+                "weight_layout": "blocked_kc",
+                "alignment": 128,
+            },
+        },
+        "kernel_selection": selection,
+        "notes": [
+            "Detected from typed HIR quantized MatMul-Bias-ReLU op",
+            "Lowered only when profile metadata marks the INT8 path valid and faster",
+            "Layout constraints model mobile DSP/NPU alignment and channel requirements",
+        ],
+    }
+
+
+def build_lowered_graph(matmul_matches, rmsnorm_matches, qmatmul_matches, source_path, profile):
     ops = []
     for match in matmul_matches:
         ops.append(build_matmul_op(len(ops), match, profile))
     for match in rmsnorm_matches:
         ops.append(build_rmsnorm_op(len(ops), match, profile))
+    for match in qmatmul_matches:
+        ops.append(build_qmatmul_op(len(ops), match, profile))
 
     return {
         "format": "hir.lowered_graph.v1",
@@ -374,17 +447,19 @@ def main():
 
     matmul_matches = detect_fused_matmul(text)
     rmsnorm_matches = detect_rmsnorm(text)
+    qmatmul_matches = detect_fused_qmatmul(text)
 
-    if not matmul_matches and not rmsnorm_matches:
+    if not matmul_matches and not rmsnorm_matches and not qmatmul_matches:
         raise SystemExit(
             "No fusion annotations found. Expected fusion.candidate for "
-            "matmul_bias_relu or rmsnorm."
+            "matmul_bias_relu, qmatmul_bias_relu, or rmsnorm."
         )
 
     profile = load_kernel_profiles(args.kernel_profile)
     lowered_graph = build_lowered_graph(
         matmul_matches,
         rmsnorm_matches,
+        qmatmul_matches,
         input_path,
         profile,
     )

@@ -80,6 +80,21 @@ INT8 output channel dimension multiple of 32
 These checks model Qualcomm-style DSP/NPU constraints where layout, tile shape,
 and memory alignment affect whether a lowered kernel is legal.
 
+Profile-guided quantized lowering is intentionally conditional. A MatMul chain
+only lowers to `hir.fused_qmatmul_bias_relu` when imported profile metadata marks
+the INT8 path as valid and faster:
+
+```text
+f32 linalg.matmul + bias + relu
+  -> profile.quantized_path = "faster"
+  -> hir.fused_qmatmul_bias_relu
+  -> int8_qmatmul_bias_relu
+```
+
+The committed qmatmul benchmark profile records the INT8 path as faster for the
+`128x128x128:i8` shape bucket, so the generated qmatmul execution plan selects
+`int8_qmatmul_bias_relu` from the profile-calibrated cost table.
+
 The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
 in that order: the input graph contains an identity `add(x, 0.0)` between
 MatMul and BiasAdd. `hir-canonicalize` removes the identity map first, then

@@ -3,6 +3,7 @@
   "format": "hir.profile_cost_table.v1",
   "sources": [
     "trace/matmul_bias_relu_kernel_profile.json",
+    "trace/qmatmul_bias_relu_kernel_profile.json",
     "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
   ],
   "cost_table": {
@@ -18,6 +19,21 @@
           "selection_ready": false,
           "winner": "unfused_matmul_add_relu",
           "source": "trace/matmul_bias_relu_kernel_profile.json"
+        }
+      }
+    },
+    "qmatmul_bias_relu": {
+      "CPU": {
+        "128x128x128:i8": {
+          "custom_kernel": "int8_qmatmul_bias_relu",
+          "fallback_kernel": "fused_matmul_add_relu",
+          "custom_ms": 4.94182,
+          "fallback_ms": 5.72657,
+          "speedup": 1.1588,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "int8_qmatmul_bias_relu",
+          "source": "trace/qmatmul_bias_relu_kernel_profile.json"
         }
       }
     },

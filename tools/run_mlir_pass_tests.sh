@@ -111,6 +111,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
+  "profile-guided INT8 qmatmul HIR lowering" \
+  "$REPO_ROOT/mlir_passes/test/profile_guided_qmatmul_lowering.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

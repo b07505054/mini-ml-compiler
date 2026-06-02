@@ -1,0 +1,103 @@
+{
+  "format": "hir.lowered_graph.v1",
+  "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/mlir_fused_graph.mlir",
+  "kernel_profile": {
+    "status": "loaded",
+    "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+  },
+  "num_ops": 1,
+  "ops": [
+    {
+      "id": 0,
+      "name": "fused_qmatmul_bias_relu_0",
+      "source_result": "%1",
+      "op_type": "hir.fused_qmatmul_bias_relu",
+      "legacy_op_type": "FusedQMatMulBiasReLU",
+      "lowered_op_type": "hir.fused_qmatmul_bias_relu",
+      "runtime_op_type": "FusedQMatMulBiasReLU",
+      "runtime_kernel": "int8_qmatmul_bias_relu",
+      "runtime_kernel_backend": "CPU",
+      "backend": "CPU",
+      "runtime_dispatch_contract": {
+        "op_type": "hir.fused_qmatmul_bias_relu",
+        "runtime_op_type": "FusedQMatMulBiasReLU",
+        "runtime_kernel": "int8_qmatmul_bias_relu",
+        "backend": "CPU",
+        "candidate_kernel": "int8_qmatmul_bias_relu",
+        "fallback_kernel": "fused_matmul_add_relu",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "profile_calibrated_fastest",
+        "profile_calibrated": true,
+        "shape_bucket": "128x128x128:i8"
+      },
+      "fusion_candidate": "qmatmul_bias_relu",
+      "fusion_group": "qmatmul_bias_relu_0",
+      "inputs": [
+        "A_int8",
+        "B_int8",
+        "bias"
+      ],
+      "outputs": [
+        "%1"
+      ],
+      "cost_model": {
+        "m": 128,
+        "k": 128,
+        "n": 128,
+        "dtype": "i8",
+        "estimated_flops": 4227072,
+        "estimated_bytes_read": 98304,
+        "estimated_bytes_written": 65536,
+        "arithmetic_intensity_flops_per_byte": 25.8,
+        "source": "profile_calibrated_table",
+        "shape_bucket": "128x128x128:i8",
+        "layout": {
+          "input_layout": "NHWC",
+          "weight_layout": "blocked_kc",
+          "alignment": 128
+        }
+      },
+      "kernel_selection": {
+        "selected_kernel": "int8_qmatmul_bias_relu",
+        "selected_backend": "CPU",
+        "candidate_kernel": "int8_qmatmul_bias_relu",
+        "candidate_backend": "CPU",
+        "fallback_kernel": "fused_matmul_add_relu",
+        "fallback_backend": "CPU",
+        "profile_status": "loaded",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "profile_calibrated_fastest",
+        "profile_calibrated": true,
+        "shape_bucket": "128x128x128:i8",
+        "cost_table_entry": {
+          "custom_kernel": "int8_qmatmul_bias_relu",
+          "fallback_kernel": "fused_matmul_add_relu",
+          "custom_ms": 4.94182,
+          "fallback_ms": 5.72657,
+          "speedup": 1.1588,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "int8_qmatmul_bias_relu",
+          "source": "trace/qmatmul_bias_relu_kernel_profile.json"
+        },
+        "evidence": {
+          "fusion_candidate": "qmatmul_bias_relu",
+          "custom_kernel": "int8_qmatmul_bias_relu",
+          "fallback_kernel": "fused_matmul_add_relu",
+          "custom_latency_ms": 4.94182,
+          "fallback_latency_ms": 5.72657,
+          "speedup": 1.1588,
+          "correct": true,
+          "selection_ready": true,
+          "shape_bucket": "128x128x128:i8",
+          "profile_table_source": "trace/qmatmul_bias_relu_kernel_profile.json"
+        }
+      },
+      "notes": [
+        "Detected from typed HIR quantized MatMul-Bias-ReLU op",
+        "Lowered only when profile metadata marks the INT8 path valid and faster",
+        "Layout constraints model mobile DSP/NPU alignment and channel requirements"
+      ]
+    }
+  ]
+}

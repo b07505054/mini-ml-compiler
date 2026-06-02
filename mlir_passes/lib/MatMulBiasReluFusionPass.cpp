@@ -228,6 +228,15 @@ struct HIRTypeConverter : TypeConverter {
   }
 };
 
+bool shouldUseQuantizedMatMul(linalg::MatmulOp matmul) {
+  auto quantizationCandidate =
+      matmul->getAttrOfType<StringAttr>("quantization.candidate");
+  auto profileDecision =
+      matmul->getAttrOfType<StringAttr>("profile.quantized_path");
+  return quantizationCandidate && quantizationCandidate.getValue() == "int8" &&
+         profileDecision && profileDecision.getValue() == "faster";
+}
+
 struct MatMulBiasReluToHIRConversionPattern
     : OpConversionPattern<linalg::MatmulOp> {
   using OpConversionPattern<linalg::MatmulOp>::OpConversionPattern;
@@ -275,15 +284,49 @@ struct MatMulBiasReluToHIRConversionPattern
     }
 
     rewriter.setInsertionPoint(reluMap);
-    auto fused = rewriter.create<FusedMatMulBiasReluOp>(
-        reluMap.getLoc(), loweredType,
-        matmul.getInputs()[0], matmul.getInputs()[1], bias);
-    fused->setAttr("fusion.candidate", candidate);
-    fused->setAttr("fusion.group", matmul->getAttr("fusion.group"));
-    fused->setAttr("kernel.selection",
-                   StringAttr::get(matmul.getContext(), "runtime_profile"));
-    fused->setAttr("lowering.source",
-                   StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+    Operation *fused = nullptr;
+    if (shouldUseQuantizedMatMul(matmul)) {
+      auto quantized = rewriter.create<FusedQMatMulBiasReluOp>(
+          reluMap.getLoc(), loweredType,
+          matmul.getInputs()[0], matmul.getInputs()[1], bias);
+      quantized->setAttr("fusion.candidate",
+                         StringAttr::get(matmul.getContext(), "qmatmul_bias_relu"));
+      quantized->setAttr("fusion.group", matmul->getAttr("fusion.group"));
+      quantized->setAttr("kernel.selection",
+                         StringAttr::get(matmul.getContext(), "runtime_profile"));
+      quantized->setAttr("lowering.source",
+                         StringAttr::get(matmul.getContext(), "profile_guided_int8_matmul_add_relu"));
+      quantized->setAttr("quantized_dtype",
+                         StringAttr::get(matmul.getContext(), "i8"));
+      quantized->setAttr("quantization.mode",
+                         StringAttr::get(matmul.getContext(), "per_channel"));
+      quantized->setAttr("input_layout",
+                         StringAttr::get(matmul.getContext(), "NHWC"));
+      quantized->setAttr("weight_layout",
+                         StringAttr::get(matmul.getContext(), "blocked_kc"));
+      quantized->setAttr("alignment",
+                         rewriter.getI32IntegerAttr(128));
+      quantized->setAttr("lhs_scale",
+                         rewriter.getF32FloatAttr(0.01f));
+      quantized->setAttr("rhs_scale",
+                         rewriter.getF32FloatAttr(0.01f));
+      quantized->setAttr("lhs_zero_point",
+                         rewriter.getI32IntegerAttr(0));
+      quantized->setAttr("rhs_zero_point",
+                         rewriter.getI32IntegerAttr(0));
+      fused = quantized.getOperation();
+    } else {
+      auto fp32 = rewriter.create<FusedMatMulBiasReluOp>(
+          reluMap.getLoc(), loweredType,
+          matmul.getInputs()[0], matmul.getInputs()[1], bias);
+      fp32->setAttr("fusion.candidate", candidate);
+      fp32->setAttr("fusion.group", matmul->getAttr("fusion.group"));
+      fp32->setAttr("kernel.selection",
+                    StringAttr::get(matmul.getContext(), "runtime_profile"));
+      fp32->setAttr("lowering.source",
+                    StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+      fused = fp32.getOperation();
+    }
 
     rewriter.replaceOp(reluMap, fused->getResults());
     rewriter.eraseOp(addMap);
