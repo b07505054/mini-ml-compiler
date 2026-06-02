@@ -228,6 +228,71 @@ struct HIRTypeConverter : TypeConverter {
   }
 };
 
+struct MatMulBiasReluToHIRConversionPattern
+    : OpConversionPattern<linalg::MatmulOp> {
+  using OpConversionPattern<linalg::MatmulOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      linalg::MatmulOp matmul, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    if (matmul->getNumResults() != 1) {
+      return rewriter.notifyMatchFailure(matmul, "expected one matmul result");
+    }
+
+    auto candidate = matmul->getAttrOfType<StringAttr>("fusion.candidate");
+    if (!candidate || candidate.getValue() != "matmul_bias_relu") {
+      return rewriter.notifyMatchFailure(matmul, "missing MatMul-Bias-ReLU fusion marker");
+    }
+
+    Value matmulResult = matmul->getResult(0);
+    if (!matmulResult.hasOneUse()) {
+      return rewriter.notifyMatchFailure(matmul, "fused matmul result must have one user");
+    }
+
+    auto addMap = dyn_cast<linalg::MapOp>(*matmulResult.getUsers().begin());
+    if (!addMap || !isAddMap(addMap) || addMap->getNumResults() != 1) {
+      return rewriter.notifyMatchFailure(matmul, "expected bias-add linalg.map user");
+    }
+
+    Value addResult = addMap->getResult(0);
+    if (!addResult.hasOneUse()) {
+      return rewriter.notifyMatchFailure(matmul, "bias-add result must have one user");
+    }
+
+    auto reluMap = dyn_cast<linalg::MapOp>(*addResult.getUsers().begin());
+    if (!reluMap || !isReluMap(reluMap) || reluMap->getNumResults() != 1) {
+      return rewriter.notifyMatchFailure(matmul, "expected ReLU linalg.map user");
+    }
+
+    Value bias = biasInputForAdd(addMap, matmulResult);
+    if (!bias || matmul.getInputs().size() < 2) {
+      return rewriter.notifyMatchFailure(matmul, "failed to identify fused bias input");
+    }
+
+    Type loweredType = getTypeConverter()->convertType(reluMap->getResult(0).getType());
+    if (!loweredType) {
+      return rewriter.notifyMatchFailure(matmul, "failed to convert fused result type");
+    }
+
+    rewriter.setInsertionPoint(reluMap);
+    auto fused = rewriter.create<FusedMatMulBiasReluOp>(
+        reluMap.getLoc(), loweredType,
+        matmul.getInputs()[0], matmul.getInputs()[1], bias);
+    fused->setAttr("fusion.candidate", candidate);
+    fused->setAttr("fusion.group", matmul->getAttr("fusion.group"));
+    fused->setAttr("kernel.selection",
+                   StringAttr::get(matmul.getContext(), "runtime_profile"));
+    fused->setAttr("lowering.source",
+                   StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+
+    rewriter.replaceOp(reluMap, fused->getResults());
+    rewriter.eraseOp(addMap);
+    rewriter.eraseOp(matmul);
+    (void)adaptor;
+    return success();
+  }
+};
+
 struct RMSNormToHIRConversionPattern : ConversionPattern {
   RMSNormToHIRConversionPattern(TypeConverter &typeConverter,
                                 MLIRContext *context)
@@ -271,69 +336,11 @@ struct HIRFusionLoweringPass
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
-    SmallVector<Operation *> toErase;
-
-    func.walk([&](linalg::MatmulOp matmul) {
-      if (matmul->getNumResults() == 0 ||
-          !matmul->hasAttr("fusion.candidate")) {
-        return;
-      }
-
-      auto candidate = matmul->getAttrOfType<StringAttr>("fusion.candidate");
-      if (!candidate || candidate.getValue() != "matmul_bias_relu") {
-        return;
-      }
-
-      Value matmulResult = matmul->getResult(0);
-      for (Operation *matmulUser : llvm::make_early_inc_range(matmulResult.getUsers())) {
-        auto addMap = dyn_cast<linalg::MapOp>(matmulUser);
-        if (!addMap || !isAddMap(addMap) || addMap->getNumResults() == 0) {
-          continue;
-        }
-
-        Value addResult = addMap->getResult(0);
-        for (Operation *addUser : llvm::make_early_inc_range(addResult.getUsers())) {
-          auto reluMap = dyn_cast<linalg::MapOp>(addUser);
-          if (!reluMap || !isReluMap(reluMap) || reluMap->getNumResults() == 0) {
-            continue;
-          }
-
-          Value bias = biasInputForAdd(addMap, matmulResult);
-          if (!bias || matmul.getInputs().size() < 2) {
-            continue;
-          }
-
-          OpBuilder builder(reluMap);
-          auto fused = builder.create<FusedMatMulBiasReluOp>(
-              reluMap.getLoc(), reluMap->getResult(0).getType(),
-              matmul.getInputs()[0], matmul.getInputs()[1], bias);
-          fused->setAttr("fusion.candidate", candidate);
-          fused->setAttr("fusion.group", matmul->getAttr("fusion.group"));
-          fused->setAttr("kernel.selection",
-                         StringAttr::get(matmul.getContext(), "runtime_profile"));
-          fused->setAttr("lowering.source",
-                         StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
-
-          reluMap->getResult(0).replaceAllUsesWith(fused->getResult(0));
-
-          toErase.push_back(reluMap.getOperation());
-          toErase.push_back(addMap.getOperation());
-          toErase.push_back(matmul.getOperation());
-          return;
-        }
-      }
-    });
-
-    for (Operation *op : toErase) {
-      if (!op->use_empty()) {
-        continue;
-      }
-      op->erase();
-    }
 
     HIRTypeConverter typeConverter;
     RewritePatternSet patterns(func.getContext());
-    patterns.add<RMSNormToHIRConversionPattern>(typeConverter, func.getContext());
+    patterns.add<MatMulBiasReluToHIRConversionPattern,
+                 RMSNormToHIRConversionPattern>(typeConverter, func.getContext());
 
     ConversionTarget target(*func.getContext());
     target.addLegalDialect<arith::ArithDialect,
@@ -341,6 +348,10 @@ struct HIRFusionLoweringPass
                            HIRDialect,
                            linalg::LinalgDialect,
                            tensor::TensorDialect>();
+    target.addDynamicallyLegalOp<linalg::MatmulOp>([](linalg::MatmulOp op) {
+      auto candidate = op->getAttrOfType<StringAttr>("fusion.candidate");
+      return !candidate || candidate.getValue() != "matmul_bias_relu";
+    });
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       return op->getName().getStringRef() != "llm.rmsnorm";
     });
