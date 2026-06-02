@@ -94,9 +94,8 @@ def select_kernel(
             "fallback_backend": fallback_backend,
             "profile_status": profile.get("profile_status", "not_provided"),
             "profile_source": profile.get("profile_path"),
-            "selection_reason": (
-                "fallback selected because no runtime benchmark evidence was provided"
-            ),
+            "selection_reason": "fallback_no_profile_evidence",
+            "profile_calibrated": False,
             "evidence": None,
         }
 
@@ -117,12 +116,23 @@ def select_kernel(
         "fallback_backend": fallback_backend,
         "profile_status": profile.get("profile_status", "loaded"),
         "profile_source": profile.get("profile_path"),
-        "selection_reason": (
-            "runtime benchmark selected custom kernel"
-            if custom_wins
-            else "fallback retained because runtime benchmark did not show a custom-kernel win"
-        ),
+        "selection_reason": "profile_calibrated_fastest" if custom_wins else "profile_calibrated_fallback",
+        "profile_calibrated": True,
         "evidence": evidence,
+    }
+
+
+def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
+    return {
+        "op_type": hir_op_type,
+        "runtime_op_type": runtime_op_type,
+        "runtime_kernel": selection["selected_kernel"],
+        "backend": selection["selected_backend"],
+        "candidate_kernel": selection["candidate_kernel"],
+        "fallback_kernel": selection["fallback_kernel"],
+        "profile_source": selection["profile_source"],
+        "selection_reason": selection["selection_reason"],
+        "profile_calibrated": selection["profile_calibrated"],
     }
 
 
@@ -180,16 +190,24 @@ def build_matmul_op(index, match, profile):
         profile,
     )
     result_name = match.group("result")
+    hir_op_type = "hir.fused_matmul_bias_relu"
+    runtime_op_type = "FusedMatMulAddReLU"
     return {
         "id": index,
         "name": f"fused_matmul_bias_relu_{index}",
         "source_result": result_name,
-        "op_type": "FusedMatMulBiasReLU",
-        "lowered_op_type": "hir.fused_matmul_bias_relu",
-        "runtime_op_type": "FusedMatMulAddReLU",
+        "op_type": hir_op_type,
+        "legacy_op_type": "FusedMatMulBiasReLU",
+        "lowered_op_type": hir_op_type,
+        "runtime_op_type": runtime_op_type,
         "runtime_kernel": selection["selected_kernel"],
         "runtime_kernel_backend": selection["selected_backend"],
         "backend": selection["selected_backend"],
+        "runtime_dispatch_contract": build_runtime_dispatch_contract(
+            hir_op_type,
+            runtime_op_type,
+            selection,
+        ),
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],
@@ -214,16 +232,24 @@ def build_rmsnorm_op(index, match, profile):
         profile,
     )
     result_name = match.group("result")
+    hir_op_type = "hir.fused_rmsnorm"
+    runtime_op_type = "FusedRMSNorm"
     return {
         "id": index,
         "name": f"fused_rmsnorm_{index}",
         "source_result": result_name,
-        "op_type": "FusedRMSNorm",
-        "lowered_op_type": "hir.fused_rmsnorm",
-        "runtime_op_type": "FusedRMSNorm",
+        "op_type": hir_op_type,
+        "legacy_op_type": "FusedRMSNorm",
+        "lowered_op_type": hir_op_type,
+        "runtime_op_type": runtime_op_type,
         "runtime_kernel": selection["selected_kernel"],
         "runtime_kernel_backend": selection["selected_backend"],
         "backend": selection["selected_backend"],
+        "runtime_dispatch_contract": build_runtime_dispatch_contract(
+            hir_op_type,
+            runtime_op_type,
+            selection,
+        ),
         "fusion_candidate": "rmsnorm",
         "fusion_group": f"rmsnorm_{index}",
         "inputs": ["hidden_states", "weight"],
@@ -273,6 +299,7 @@ def build_execution_plan(lowered_graph):
             "fusion_candidate": op["fusion_candidate"],
             "fusion_group": op["fusion_group"],
             "runtime_action": "dispatch_selected_kernel",
+            "runtime_dispatch_contract": op["runtime_dispatch_contract"],
             "kernel_selection": op["kernel_selection"],
             "estimated_launch_overhead_us": 80,
             "estimated_flops": op["cost_model"]["estimated_flops"],

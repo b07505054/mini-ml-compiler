@@ -10,7 +10,7 @@
     {
       "step": 0,
       "op_name": "fused_matmul_bias_relu_0",
-      "op_type": "FusedMatMulBiasReLU",
+      "op_type": "hir.fused_matmul_bias_relu",
       "lowered_op_type": "hir.fused_matmul_bias_relu",
       "runtime_op_type": "FusedMatMulAddReLU",
       "runtime_kernel": "fused_matmul_add_relu",
@@ -19,6 +19,17 @@
       "fusion_candidate": "matmul_bias_relu",
       "fusion_group": "matmul_bias_relu_0",
       "runtime_action": "dispatch_selected_kernel",
+      "runtime_dispatch_contract": {
+        "op_type": "hir.fused_matmul_bias_relu",
+        "runtime_op_type": "FusedMatMulAddReLU",
+        "runtime_kernel": "fused_matmul_add_relu",
+        "backend": "CPU",
+        "candidate_kernel": "fused_matmul_add_relu",
+        "fallback_kernel": "unfused_matmul_add_relu",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "profile_calibrated_fastest",
+        "profile_calibrated": true
+      },
       "kernel_selection": {
         "selected_kernel": "fused_matmul_add_relu",
         "selected_backend": "CPU",
@@ -28,7 +39,8 @@
         "fallback_backend": "CPU",
         "profile_status": "loaded",
         "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
-        "selection_reason": "runtime benchmark selected custom kernel",
+        "selection_reason": "profile_calibrated_fastest",
+        "profile_calibrated": true,
         "evidence": {
           "fusion_candidate": "matmul_bias_relu",
           "custom_kernel": "fused_matmul_add_relu",
