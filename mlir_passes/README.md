@@ -169,6 +169,18 @@ The JSON bridge also attaches a lightweight cost model with estimated FLOPs,
 memory traffic, and arithmetic intensity so the fused op can be consumed by
 backend placement or scheduling heuristics.
 
+The runtime-aware cost model is calibrated from benchmark artifacts into:
+
+```text
+cost_table[fusion_candidate][backend][shape_bucket][dtype]
+```
+
+`tools/build_profile_cost_table.py` builds
+`trace/profile_calibrated_cost_table.json` from runtime profiles. The JSON
+bridge consumes that table before selecting a runtime kernel, so the planner
+uses measured shape-bucket evidence instead of assuming fused kernels always
+win.
+
 The pass also assigns a `fusion.group` and per-op `fusion.role` metadata to
 the MatMul, bias-add, and ReLU operations, making the detected producer and
 consumer chain explicit before runtime lowering.

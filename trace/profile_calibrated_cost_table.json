@@ -1,0 +1,205 @@
+{
+  "artifact_type": "profile_calibrated_cost_table",
+  "format": "hir.profile_cost_table.v1",
+  "sources": [
+    "trace/matmul_bias_relu_kernel_profile.json",
+    "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+  ],
+  "cost_table": {
+    "matmul_bias_relu": {
+      "CPU": {
+        "128x128x128:f32": {
+          "custom_kernel": "fused_matmul_add_relu",
+          "fallback_kernel": "unfused_matmul_add_relu",
+          "custom_ms": 5.354697,
+          "fallback_ms": 5.145997,
+          "speedup": 0.961025,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "unfused_matmul_add_relu",
+          "source": "trace/matmul_bias_relu_kernel_profile.json"
+        }
+      }
+    },
+    "rmsnorm": {
+      "CUDA": {
+        "16x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.02975,
+          "fallback_ms": 0.086751,
+          "speedup": 2.916,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "1x768:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.033729,
+          "fallback_ms": 0.098004,
+          "speedup": 2.9056,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "1x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.032869,
+          "fallback_ms": 0.091844,
+          "speedup": 2.7942,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "1x2048:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.031165,
+          "fallback_ms": 0.089302,
+          "speedup": 2.8655,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "1x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.030843,
+          "fallback_ms": 0.086994,
+          "speedup": 2.8206,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "16x768:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.031967,
+          "fallback_ms": 0.084374,
+          "speedup": 2.6394,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "16x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.031466,
+          "fallback_ms": 0.084626,
+          "speedup": 2.6894,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "16x2048:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.029685,
+          "fallback_ms": 0.085199,
+          "speedup": 2.8701,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "128x768:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.02967,
+          "fallback_ms": 0.085456,
+          "speedup": 2.8802,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "128x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.03435,
+          "fallback_ms": 0.098915,
+          "speedup": 2.8796,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "128x2048:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.045403,
+          "fallback_ms": 0.112256,
+          "speedup": 2.4724,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "128x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.084616,
+          "fallback_ms": 0.183348,
+          "speedup": 2.1668,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "512x768:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.064237,
+          "fallback_ms": 0.143818,
+          "speedup": 2.2388,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "512x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.076558,
+          "fallback_ms": 0.183844,
+          "speedup": 2.4014,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "512x2048:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.117191,
+          "fallback_ms": 0.334124,
+          "speedup": 2.8511,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        },
+        "512x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_cuda",
+          "fallback_kernel": "torch_rmsnorm",
+          "custom_ms": 0.280284,
+          "fallback_ms": 0.638128,
+          "speedup": 2.2767,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_cuda",
+          "source": "/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+        }
+      }
+    }
+  }
+}

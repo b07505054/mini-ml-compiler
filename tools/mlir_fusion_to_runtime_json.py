@@ -46,6 +46,7 @@ def load_kernel_profiles(paths):
 
     profile_paths = [Path(path) for path in paths]
     kernels = {}
+    cost_table = {}
     loaded = []
     missing = []
 
@@ -56,6 +57,9 @@ def load_kernel_profiles(paths):
 
         payload = json.loads(profile_path.read_text(encoding="utf-8"))
         loaded.append(str(profile_path))
+        if payload.get("artifact_type") == "profile_calibrated_cost_table":
+            for fusion_candidate, by_backend in payload.get("cost_table", {}).items():
+                cost_table.setdefault(fusion_candidate, {}).update(by_backend)
         for row in payload.get("kernel_benchmarks", []):
             kernels[row.get("fusion_candidate")] = row
 
@@ -72,7 +76,26 @@ def load_kernel_profiles(paths):
         "profile_path": ",".join(loaded),
         "missing_profiles": missing,
         "kernels": kernels,
+        "cost_table": cost_table,
     }
+
+
+def shape_bucket_for(fusion_candidate):
+    if fusion_candidate == "matmul_bias_relu":
+        return "128x128x128:f32"
+    if fusion_candidate == "rmsnorm":
+        return "16x4096:f32"
+    return "default:f32"
+
+
+def profile_cost_entry(profile, fusion_candidate, backend):
+    bucket = shape_bucket_for(fusion_candidate)
+    return (
+        profile.get("cost_table", {})
+        .get(fusion_candidate, {})
+        .get(backend, {})
+        .get(bucket)
+    )
 
 
 def select_kernel(
@@ -83,7 +106,22 @@ def select_kernel(
     fallback_backend,
     profile,
 ):
+    bucket = shape_bucket_for(fusion_candidate)
+    table_entry = profile_cost_entry(profile, fusion_candidate, custom_backend)
     evidence = profile.get("kernels", {}).get(fusion_candidate)
+    if table_entry:
+        evidence = {
+            "fusion_candidate": fusion_candidate,
+            "custom_kernel": table_entry.get("custom_kernel"),
+            "fallback_kernel": table_entry.get("fallback_kernel"),
+            "custom_latency_ms": table_entry.get("custom_ms"),
+            "fallback_latency_ms": table_entry.get("fallback_ms"),
+            "speedup": table_entry.get("speedup"),
+            "correct": table_entry.get("correct"),
+            "selection_ready": table_entry.get("selection_ready"),
+            "shape_bucket": bucket,
+            "profile_table_source": table_entry.get("source"),
+        }
     if not evidence:
         return {
             "selected_kernel": fallback_kernel,
@@ -96,6 +134,7 @@ def select_kernel(
             "profile_source": profile.get("profile_path"),
             "selection_reason": "fallback_no_profile_evidence",
             "profile_calibrated": False,
+            "shape_bucket": bucket,
             "evidence": None,
         }
 
@@ -118,6 +157,8 @@ def select_kernel(
         "profile_source": profile.get("profile_path"),
         "selection_reason": "profile_calibrated_fastest" if custom_wins else "profile_calibrated_fallback",
         "profile_calibrated": True,
+        "shape_bucket": bucket,
+        "cost_table_entry": table_entry,
         "evidence": evidence,
     }
 
@@ -133,6 +174,7 @@ def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
         "profile_source": selection["profile_source"],
         "selection_reason": selection["selection_reason"],
         "profile_calibrated": selection["profile_calibrated"],
+        "shape_bucket": selection["shape_bucket"],
     }
 
 
@@ -160,6 +202,8 @@ def estimate_matmul_bias_relu_cost(m=1, k=128, n=64, dtype_bytes=4):
         "estimated_bytes_read": bytes_read,
         "estimated_bytes_written": bytes_written,
         "arithmetic_intensity_flops_per_byte": arithmetic_intensity,
+        "source": "profile_calibrated_table",
+        "shape_bucket": "128x128x128:f32",
     }
 
 
@@ -177,6 +221,8 @@ def estimate_rmsnorm_cost(tokens=16, hidden=768, dtype_bytes=2):
         "estimated_bytes_read": bytes_read,
         "estimated_bytes_written": bytes_written,
         "arithmetic_intensity_flops_per_byte": total_flops / max(bytes_read + bytes_written, 1),
+        "source": "profile_calibrated_table",
+        "shape_bucket": "16x4096:f32",
     }
 
 

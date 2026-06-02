@@ -72,5 +72,6 @@ trace/*
 !trace/rmsnorm_execution_plan.json
 !trace/hir_runtime_benchmark_report.json
 !trace/hir_runtime_benchmark_report.md
+!trace/profile_calibrated_cost_table.json
 
 build-mlir/

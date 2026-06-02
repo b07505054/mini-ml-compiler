@@ -14,7 +14,7 @@ Status: `passed`
 - Compiler emitted: `hir.fused_matmul_bias_relu`
 - Runtime dispatch: `unfused_matmul_add_relu` on `CPU`
 - Selection reason: `profile_calibrated_fallback`
-- Profile source: `/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
+- Profile source: `/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
 - compiler_emitted_typed_hir_op: `True`
 - runtime_dispatch_contract_present: `True`
 - runtime_decision_profile_calibrated: `True`
@@ -27,7 +27,7 @@ Status: `passed`
 - Compiler emitted: `hir.fused_rmsnorm`
 - Runtime dispatch: `fused_rmsnorm_cuda` on `CUDA`
 - Selection reason: `profile_calibrated_fastest`
-- Profile source: `/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
+- Profile source: `/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
 - compiler_emitted_typed_hir_op: `True`
 - runtime_dispatch_contract_present: `True`
 - runtime_decision_profile_calibrated: `True`

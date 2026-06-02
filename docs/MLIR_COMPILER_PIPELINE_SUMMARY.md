@@ -25,6 +25,8 @@
 - Positive parse/print FileCheck coverage for typed HIR dialect ops and a
   negative verifier diagnostic test for invalid fused-op metadata
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
+- Profile-calibrated cost table:
+  `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
 - Runtime execution plan metadata that maps the lowered fused op to
   `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
 - A C++ benchmark that checks the MLIR execution plan and dispatches the fused
@@ -67,6 +69,7 @@ be inspected without overwriting the default MatMul-Bias-ReLU pipeline outputs.
 cmake --build build-mlir
 tools/run_mlir_pass_tests.sh
 tools/run_mlir_fusion_pipeline.sh
+tools/build_profile_cost_table.py
 tools/generate_hir_runtime_benchmark_report.py
 ```
 
@@ -86,6 +89,7 @@ runtime_op_type = FusedMatMulAddReLU
 kernel_selection.selected_kernel
 kernel_selection.fallback_kernel
 kernel_selection.evidence
+profile_calibrated_cost_table chooses the measured winner for each shape bucket
 llm.rmsnorm annotated as fusion.candidate = "rmsnorm"
 hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fallback
 trace/hir_runtime_benchmark_report.json status = passed
@@ -109,6 +113,7 @@ This demonstrates:
 - Affine vectorization
 - Runtime lowering bridge
 - Cost-model metadata for backend scheduling
+- Profile-calibrated cost table for runtime-aware kernel and backend decisions
 - Custom fused-kernel dispatch path from MLIR lowering metadata to C++ runtime
 - End-to-end benchmark evidence tying compiler-emitted HIR dialect ops to
   runtime kernel correctness and latency data
