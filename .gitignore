@@ -67,5 +67,8 @@ trace/*
 !trace/paged_kv_runtime.json
 !trace/serving_trace.json
 !trace/matmul_bias_relu_kernel_profile.json
+!trace/rmsnorm_fused_graph.mlir
+!trace/rmsnorm_lowered_graph.json
+!trace/rmsnorm_execution_plan.json
 
 build-mlir/

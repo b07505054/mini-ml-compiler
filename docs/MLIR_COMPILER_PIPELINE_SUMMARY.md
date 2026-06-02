@@ -42,6 +42,11 @@ MLIR input
   -> runtime-aware dispatch to selected kernel or fallback
 ```
 
+RMSNorm-specific compiler artifacts are also preserved as
+`trace/rmsnorm_fused_graph.mlir`, `trace/rmsnorm_lowered_graph.json`, and
+`trace/rmsnorm_execution_plan.json` so the transformer-kernel selection path can
+be inspected without overwriting the default MatMul-Bias-ReLU pipeline outputs.
+
 ## Verification
 
 ```bash
