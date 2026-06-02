@@ -70,5 +70,7 @@ trace/*
 !trace/rmsnorm_fused_graph.mlir
 !trace/rmsnorm_lowered_graph.json
 !trace/rmsnorm_execution_plan.json
+!trace/hir_runtime_benchmark_report.json
+!trace/hir_runtime_benchmark_report.md
 
 build-mlir/

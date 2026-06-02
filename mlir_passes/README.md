@@ -137,6 +137,8 @@ Outputs:
 trace/mlir_fused_graph.mlir
 trace/mlir_lowered_graph.json
 trace/mlir_execution_plan.json
+trace/hir_runtime_benchmark_report.json
+trace/hir_runtime_benchmark_report.md
 ```
 
 This connects the real MLIR pass output to the existing C++ heterogeneous
@@ -185,10 +187,16 @@ checks fused-vs-unfused numerical correctness. The benchmark is used as a
 compiler/runtime integration check; CPU speedup depends on shape and local
 microarchitecture.
 
+`tools/generate_hir_runtime_benchmark_report.py` ties the compiler and runtime
+evidence together. It fails if the execution plans do not contain typed
+`hir.fused_*` ops, profile-calibrated runtime kernel selections, benchmark
+latencies, and correctness-passing evidence for both MatMul-Bias-ReLU and
+RMSNorm.
+
 ## Resume Bullet
 
 Added an MLIR C++ compiler pipeline with `RewritePattern` canonicalization,
 typed HIR dialect ops, MatMul-Bias-ReLU fusion detection,
 `ConversionTarget`/`TypeConverter`-aware RMSNorm lowering, op verification,
-FileCheck coverage, and runtime-facing lowering artifacts for a heterogeneous
-C++ execution planner.
+FileCheck coverage, runtime-facing lowering artifacts, and correctness/benchmark
+reports for a heterogeneous C++ execution planner.

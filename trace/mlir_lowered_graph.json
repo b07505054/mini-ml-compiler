@@ -15,18 +15,18 @@
       "legacy_op_type": "FusedMatMulBiasReLU",
       "lowered_op_type": "hir.fused_matmul_bias_relu",
       "runtime_op_type": "FusedMatMulAddReLU",
-      "runtime_kernel": "fused_matmul_add_relu",
+      "runtime_kernel": "unfused_matmul_add_relu",
       "runtime_kernel_backend": "CPU",
       "backend": "CPU",
       "runtime_dispatch_contract": {
         "op_type": "hir.fused_matmul_bias_relu",
         "runtime_op_type": "FusedMatMulAddReLU",
-        "runtime_kernel": "fused_matmul_add_relu",
+        "runtime_kernel": "unfused_matmul_add_relu",
         "backend": "CPU",
         "candidate_kernel": "fused_matmul_add_relu",
         "fallback_kernel": "unfused_matmul_add_relu",
         "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
-        "selection_reason": "profile_calibrated_fastest",
+        "selection_reason": "profile_calibrated_fallback",
         "profile_calibrated": true
       },
       "fusion_candidate": "matmul_bias_relu",
@@ -50,7 +50,7 @@
         "arithmetic_intensity_flops_per_byte": 0.48863636363636365
       },
       "kernel_selection": {
-        "selected_kernel": "fused_matmul_add_relu",
+        "selected_kernel": "unfused_matmul_add_relu",
         "selected_backend": "CPU",
         "candidate_kernel": "fused_matmul_add_relu",
         "candidate_backend": "CPU",
@@ -58,17 +58,17 @@
         "fallback_backend": "CPU",
         "profile_status": "loaded",
         "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
-        "selection_reason": "profile_calibrated_fastest",
+        "selection_reason": "profile_calibrated_fallback",
         "profile_calibrated": true,
         "evidence": {
           "fusion_candidate": "matmul_bias_relu",
           "custom_kernel": "fused_matmul_add_relu",
           "fallback_kernel": "unfused_matmul_add_relu",
-          "custom_latency_ms": 5.313557,
-          "fallback_latency_ms": 5.420378,
-          "speedup": 1.020103,
+          "custom_latency_ms": 5.354697,
+          "fallback_latency_ms": 5.145997,
+          "speedup": 0.961025,
           "correct": true,
-          "selection_ready": true
+          "selection_ready": false
         }
       },
       "notes": [

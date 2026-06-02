@@ -29,6 +29,9 @@
   `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
 - A C++ benchmark that checks the MLIR execution plan and dispatches the fused
   op through the runtime registry for correctness and latency comparison
+- End-to-end HIR runtime benchmark report that verifies typed HIR ops emitted
+  by compiler passes are connected to measured runtime kernels with correctness
+  and latency evidence
 - Runtime-aware kernel-selection metadata for fusion candidates. The compiler
   now records selected, candidate, and fallback kernels plus runtime benchmark
   evidence instead of assuming that every fused candidate should dispatch to a
@@ -64,6 +67,7 @@ be inspected without overwriting the default MatMul-Bias-ReLU pipeline outputs.
 cmake --build build-mlir
 tools/run_mlir_pass_tests.sh
 tools/run_mlir_fusion_pipeline.sh
+tools/generate_hir_runtime_benchmark_report.py
 ```
 
 Expected signals:
@@ -84,6 +88,7 @@ kernel_selection.fallback_kernel
 kernel_selection.evidence
 llm.rmsnorm annotated as fusion.candidate = "rmsnorm"
 hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fallback
+trace/hir_runtime_benchmark_report.json status = passed
 ```
 
 ## Engineering Relevance
@@ -105,5 +110,7 @@ This demonstrates:
 - Runtime lowering bridge
 - Cost-model metadata for backend scheduling
 - Custom fused-kernel dispatch path from MLIR lowering metadata to C++ runtime
+- End-to-end benchmark evidence tying compiler-emitted HIR dialect ops to
+  runtime kernel correctness and latency data
 - Runtime-aware compiler behavior: kernel selection is based on benchmark
   evidence when available and conservatively falls back when evidence is absent

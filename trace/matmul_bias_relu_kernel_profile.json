@@ -7,11 +7,11 @@
       "fusion_candidate": "matmul_bias_relu",
       "custom_kernel": "fused_matmul_add_relu",
       "fallback_kernel": "unfused_matmul_add_relu",
-      "custom_latency_ms": 5.313557,
-      "fallback_latency_ms": 5.420378,
-      "speedup": 1.020103,
+      "custom_latency_ms": 5.354697,
+      "fallback_latency_ms": 5.145997,
+      "speedup": 0.961025,
       "correct": true,
-      "selection_ready": true
+      "selection_ready": false
     }
   ]
 }
