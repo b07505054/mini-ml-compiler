@@ -5,6 +5,9 @@
 - Real MLIR C++ pass plugin infrastructure in `mlir_passes/`
 - Real `hir` MLIR dialect plugin with typed fused ops:
   `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`
+- INT8 quantization-aware HIR ops:
+  `hir.quantize`, `hir.dequantize`, `hir.qmatmul`, and
+  `hir.fused_qmatmul_bias_relu`
 - HIR-focused canonicalization pass for tensor-level cleanup
 - Canonicalization implemented with MLIR `RewritePattern`,
   `PatternRewriter`, `RewritePatternSet`, and the greedy rewrite driver
@@ -24,6 +27,8 @@
   artifact export
 - Positive parse/print FileCheck coverage for typed HIR dialect ops and a
   negative verifier diagnostic test for invalid fused-op metadata
+- Positive and negative FileCheck coverage for INT8 quantization metadata,
+  scale, zero point, and per-channel quantization constraints
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Profile-calibrated cost table:
   `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
@@ -101,6 +106,7 @@ This demonstrates:
 
 - MLIR C++ pass/plugin development
 - MLIR dialect/op definition with TableGen and C++ op verifiers
+- Quantization-aware lowering surface for INT8 mobile/accelerator kernels
 - Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection

@@ -7,7 +7,8 @@ The plugin currently contains MLIR compiler passes for canonicalization,
 fusion detection, lowering, and verification:
 
 - `hir` dialect: defines typed runtime-facing fused ops such as
-  `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`.
+  `hir.fused_matmul_bias_relu`, `hir.fused_rmsnorm`, `hir.quantize`,
+  `hir.dequantize`, `hir.qmatmul`, and `hir.fused_qmatmul_bias_relu`.
 
 - `hir-canonicalize`: rewrites small tensor-level canonical forms before
   optimization.
@@ -54,6 +55,20 @@ ConversionPattern rewrites "llm.rmsnorm" -> hir.fused_rmsnorm
 hir.fused_rmsnorm::verify checks op invariants
 hir-verify-fused-ops provides a pipeline-level verification stage
 ```
+
+The HIR dialect also includes an INT8 quantization path for mobile accelerator
+compiler work:
+
+```text
+hir.quantize
+hir.qmatmul
+hir.fused_qmatmul_bias_relu
+hir.dequantize
+```
+
+The quantized ops verify INT8 dtype metadata, scale, zero point, and
+per-channel activation quantization metadata before any runtime dispatch
+contract can be exported.
 
 The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
 in that order: the input graph contains an identity `add(x, 0.0)` between

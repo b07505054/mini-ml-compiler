@@ -36,9 +36,17 @@ run_filecheck \
   "HIR dialect ops parse and verify" \
   "$REPO_ROOT/mlir_passes/test/hir_dialect_ops.mlir"
 
+run_filecheck \
+  "HIR INT8 quant ops parse and verify" \
+  "$REPO_ROOT/mlir_passes/test/hir_quant_ops.mlir"
+
 run_verify_diagnostics \
   "HIR dialect verifier rejects invalid metadata" \
   "$REPO_ROOT/mlir_passes/test/hir_dialect_verifier_invalid.mlir"
+
+run_verify_diagnostics \
+  "HIR INT8 quant verifier rejects invalid metadata" \
+  "$REPO_ROOT/mlir_passes/test/hir_quant_verifier_invalid.mlir"
 
 run_filecheck \
   "canonicalize add zero" \

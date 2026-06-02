@@ -17,6 +17,27 @@ static LogicalResult requireStringAttr(Operation *op, StringRef name,
   return success();
 }
 
+static LogicalResult requireFloatAttr(Operation *op, StringRef name) {
+  if (!op->getAttrOfType<FloatAttr>(name)) {
+    return op->emitOpError("requires float attribute '") << name << "'";
+  }
+  return success();
+}
+
+static LogicalResult requireIntegerAttr(Operation *op, StringRef name) {
+  if (!op->getAttrOfType<IntegerAttr>(name)) {
+    return op->emitOpError("requires integer attribute '") << name << "'";
+  }
+  return success();
+}
+
+static LogicalResult requireRankedTensor(Operation *op, Type type, StringRef label) {
+  if (!isa<RankedTensorType>(type)) {
+    return op->emitOpError("expects ranked tensor ") << label;
+  }
+  return success();
+}
+
 LogicalResult FusedMatMulBiasReluOp::verify() {
   auto lhsType = dyn_cast<RankedTensorType>(getLhs().getType());
   auto rhsType = dyn_cast<RankedTensorType>(getRhs().getType());
@@ -77,6 +98,75 @@ LogicalResult FusedRMSNormOp::verify() {
   if (failed(requireStringAttr(getOperation(), "fusion.candidate", "rmsnorm")) ||
       failed(requireStringAttr(getOperation(), "kernel.selection")) ||
       failed(requireStringAttr(getOperation(), "lowering.source", "llm.rmsnorm"))) {
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult QuantizeOp::verify() {
+  if (failed(requireRankedTensor(getOperation(), getInput().getType(), "input")) ||
+      failed(requireRankedTensor(getOperation(), getOutput().getType(), "output")) ||
+      failed(requireFloatAttr(getOperation(), "scale")) ||
+      failed(requireIntegerAttr(getOperation(), "zero_point")) ||
+      failed(requireStringAttr(getOperation(), "quantized_dtype", "i8")) ||
+      failed(requireStringAttr(getOperation(), "quantization.mode"))) {
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult DequantizeOp::verify() {
+  if (failed(requireRankedTensor(getOperation(), getInput().getType(), "input")) ||
+      failed(requireRankedTensor(getOperation(), getOutput().getType(), "output")) ||
+      failed(requireFloatAttr(getOperation(), "scale")) ||
+      failed(requireIntegerAttr(getOperation(), "zero_point")) ||
+      failed(requireStringAttr(getOperation(), "quantized_dtype", "i8"))) {
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult QMatMulOp::verify() {
+  auto lhsType = dyn_cast<RankedTensorType>(getLhs().getType());
+  auto rhsType = dyn_cast<RankedTensorType>(getRhs().getType());
+  auto outputType = dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!lhsType || !rhsType || !outputType) {
+    return emitOpError("expects ranked tensor lhs, rhs, and result");
+  }
+  if (lhsType.getRank() != 2 || rhsType.getRank() != 2 || outputType.getRank() != 2) {
+    return emitOpError("expects rank-2 lhs, rhs, and result tensors");
+  }
+  if (failed(requireStringAttr(getOperation(), "quantized_dtype", "i8")) ||
+      failed(requireFloatAttr(getOperation(), "lhs_scale")) ||
+      failed(requireFloatAttr(getOperation(), "rhs_scale")) ||
+      failed(requireIntegerAttr(getOperation(), "lhs_zero_point")) ||
+      failed(requireIntegerAttr(getOperation(), "rhs_zero_point"))) {
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult FusedQMatMulBiasReluOp::verify() {
+  auto lhsType = dyn_cast<RankedTensorType>(getLhs().getType());
+  auto rhsType = dyn_cast<RankedTensorType>(getRhs().getType());
+  auto biasType = dyn_cast<RankedTensorType>(getBias().getType());
+  auto outputType = dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!lhsType || !rhsType || !biasType || !outputType) {
+    return emitOpError("expects ranked tensor operands and result");
+  }
+  if (lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
+      biasType.getRank() != 2 || outputType.getRank() != 2) {
+    return emitOpError("expects rank-2 lhs, rhs, bias, and result tensors");
+  }
+  if (failed(requireStringAttr(getOperation(), "fusion.candidate",
+                               "qmatmul_bias_relu")) ||
+      failed(requireStringAttr(getOperation(), "quantized_dtype", "i8")) ||
+      failed(requireStringAttr(getOperation(), "quantization.mode",
+                               "per_channel")) ||
+      failed(requireFloatAttr(getOperation(), "lhs_scale")) ||
+      failed(requireFloatAttr(getOperation(), "rhs_scale")) ||
+      failed(requireIntegerAttr(getOperation(), "lhs_zero_point")) ||
+      failed(requireIntegerAttr(getOperation(), "rhs_zero_point"))) {
     return failure();
   }
   return success();
