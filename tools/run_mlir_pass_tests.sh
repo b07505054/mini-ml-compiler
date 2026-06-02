@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MLIR_OPT="${MLIR_OPT:-/Users/allen/Developer/llvm-build/bin/mlir-opt}"
 FILECHECK="${FILECHECK:-/Users/allen/Developer/llvm-build/bin/FileCheck}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
+DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
 
 run_filecheck() {
   local name="$1"
@@ -15,8 +16,29 @@ run_filecheck() {
   echo "[MLIR test] $name"
 
   "$MLIR_OPT" "$input" "$@" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
     | "$FILECHECK" "$input"
 }
+
+run_verify_diagnostics() {
+  local name="$1"
+  local input="$2"
+
+  echo "[MLIR test] $name"
+
+  "$MLIR_OPT" "$input" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
+    --verify-diagnostics \
+    >/dev/null
+}
+
+run_filecheck \
+  "HIR dialect ops parse and verify" \
+  "$REPO_ROOT/mlir_passes/test/hir_dialect_ops.mlir"
+
+run_verify_diagnostics \
+  "HIR dialect verifier rejects invalid metadata" \
+  "$REPO_ROOT/mlir_passes/test/hir_dialect_verifier_invalid.mlir"
 
 run_filecheck \
   "canonicalize add zero" \

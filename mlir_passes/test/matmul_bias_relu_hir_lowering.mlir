@@ -8,7 +8,7 @@ func.func @main(
   %empty = tensor.empty() : tensor<1x64xf32>
 
   // CHECK-NOT: linalg.matmul
-  // CHECK: "hir.fused_matmul_bias_relu"
+  // CHECK: hir.fused_matmul_bias_relu
   // CHECK-SAME: fusion.candidate = "matmul_bias_relu"
   // CHECK-SAME: kernel.selection = "runtime_profile"
   // CHECK-SAME: lowering.source = "linalg.matmul_add_relu"

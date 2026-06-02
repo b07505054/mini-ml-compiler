@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 MLIR_OPT="${MLIR_OPT:-/Users/allen/Developer/llvm-build/bin/mlir-opt}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
+DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
 INPUT="${INPUT:-$REPO_ROOT/mlir_passes/test/matmul_bias_relu.mlir}"
 OUTPUT="$REPO_ROOT/trace/mlir_fused_graph.mlir"
 KERNEL_PROFILE="${KERNEL_PROFILE:-}"
@@ -14,6 +15,7 @@ mkdir -p "$REPO_ROOT/trace"
 
 "$MLIR_OPT" \
   --load-pass-plugin="$PLUGIN" \
+  --load-dialect-plugin="$DIALECT_PLUGIN" \
   "$INPUT" \
   --allow-unregistered-dialect \
   --pass-pipeline="$PASS_PIPELINE" \

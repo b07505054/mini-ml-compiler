@@ -24,6 +24,15 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_definitions(${LLVM_DEFINITIONS})
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/HIR/IR)
+
+set(LLVM_TARGET_DEFINITIONS include/HIR/IR/HIROps.td)
+mlir_tablegen(include/HIR/IR/HIROps.h.inc -gen-op-decls)
+mlir_tablegen(include/HIR/IR/HIROps.cpp.inc -gen-op-defs)
+mlir_tablegen(include/HIR/IR/HIROpsDialect.h.inc -gen-dialect-decls -dialect=hir)
+mlir_tablegen(include/HIR/IR/HIROpsDialect.cpp.inc -gen-dialect-defs -dialect=hir)
+add_public_tablegen_target(HIRDialectIncGen)
+
 set(LLVM_TARGET_DEFINITIONS include/FusionPasses.td)
 mlir_tablegen(include/FusionPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(HIRFusionPassIncGen)
@@ -31,11 +40,14 @@ add_public_tablegen_target(HIRFusionPassIncGen)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_library(HIRMatMulBiasReluFusionPass MODULE
+  lib/HIR/IR/HIRDialect.cpp
+  lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
 add_dependencies(HIRMatMulBiasReluFusionPass
+  HIRDialectIncGen
   HIRFusionPassIncGen
 )
 

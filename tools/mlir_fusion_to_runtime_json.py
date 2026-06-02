@@ -8,7 +8,7 @@ from pathlib import Path
 
 def detect_fused_matmul(text):
     hir_pattern = re.compile(
-        r"(?P<result>%[\w\d_]+)\s*=\s*\"hir\.fused_matmul_bias_relu\"\s*",
+        r"(?P<result>%[\w\d_]+)\s*=\s*(?:\"hir\.fused_matmul_bias_relu\"|hir\.fused_matmul_bias_relu)\s*",
         re.MULTILINE,
     )
     hir_matches = list(hir_pattern.finditer(text))
@@ -25,7 +25,7 @@ def detect_fused_matmul(text):
 
 def detect_rmsnorm(text):
     hir_pattern = re.compile(
-        r"(?P<result>%[\w\d_]+)\s*=\s*\"hir\.fused_rmsnorm\"\s*",
+        r"(?P<result>%[\w\d_]+)\s*=\s*(?:\"hir\.fused_rmsnorm\"|hir\.fused_rmsnorm)\s*",
         re.MULTILINE,
     )
     hir_matches = list(hir_pattern.finditer(text))

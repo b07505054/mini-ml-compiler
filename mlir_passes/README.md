@@ -6,15 +6,18 @@ project's custom toy graph IR.
 The plugin currently contains MLIR compiler passes for canonicalization,
 fusion detection, lowering, and verification:
 
+- `hir` dialect: defines typed runtime-facing fused ops such as
+  `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`.
+
 - `hir-canonicalize`: rewrites small tensor-level canonical forms before
   optimization.
 - `matmul-bias-relu-fusion`: detects a tensor-level MatMul + Bias Add + ReLU
   fusion candidate.
 - `rmsnorm-kernel-selection`: marks `llm.rmsnorm` ops for runtime-aware HIR
   lowering.
-- `hir-fusion-lowering`: lowers annotated fusion candidates into generic HIR
-  ops.
-- `hir-verify-fused-ops`: verifies invariants on emitted generic HIR fused ops.
+- `hir-fusion-lowering`: lowers annotated fusion candidates into typed HIR
+  dialect ops.
+- `hir-verify-fused-ops`: verifies invariants on emitted HIR fused ops.
 
 The canonicalization pass performs real IR rewrites with MLIR
 `OpRewritePattern`, `PatternRewriter`, `RewritePatternSet`, and the greedy
@@ -47,8 +50,9 @@ RMSNorm lowering uses MLIR dialect-conversion infrastructure:
 ```text
 ConversionTarget marks "llm.rmsnorm" illegal
 TypeConverter provides the HIR result-type conversion hook
-ConversionPattern rewrites "llm.rmsnorm" -> "hir.fused_rmsnorm"
-hir-verify-fused-ops checks the emitted HIR generic op invariants
+ConversionPattern rewrites "llm.rmsnorm" -> hir.fused_rmsnorm
+hir.fused_rmsnorm::verify checks op invariants
+hir-verify-fused-ops provides a pipeline-level verification stage
 ```
 
 The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
@@ -96,6 +100,7 @@ binary from the LLVM/MLIR build used by CMake.
 
 ```bash
 /Users/allen/Developer/llvm-build/bin/mlir-opt \
+  --load-dialect-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
@@ -111,6 +116,7 @@ linalg.matmul {fusion.candidate = "matmul_bias_relu"}
 
 ```bash
 /Users/allen/Developer/llvm-build/bin/mlir-opt \
+  --load-dialect-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)' \
@@ -135,8 +141,8 @@ trace/mlir_execution_plan.json
 
 This connects the real MLIR pass output to the existing C++ heterogeneous
 runtime planning story by first lowering an annotated `linalg.matmul` chain into
-the generic MLIR op `"hir.fused_matmul_bias_relu"`, then exporting that HIR op
-to runtime-facing JSON.
+the typed MLIR op `hir.fused_matmul_bias_relu`, then exporting that HIR op to
+runtime-facing JSON.
 
 The default bridge pipeline runs:
 
@@ -182,6 +188,7 @@ microarchitecture.
 ## Resume Bullet
 
 Added an MLIR C++ compiler pipeline with `RewritePattern` canonicalization,
-MatMul-Bias-ReLU fusion detection, `ConversionTarget`/`TypeConverter`-aware
-RMSNorm lowering, fused-op verification, FileCheck coverage, and
-runtime-facing lowering artifacts for a heterogeneous C++ execution planner.
+typed HIR dialect ops, MatMul-Bias-ReLU fusion detection,
+`ConversionTarget`/`TypeConverter`-aware RMSNorm lowering, op verification,
+FileCheck coverage, and runtime-facing lowering artifacts for a heterogeneous
+C++ execution planner.

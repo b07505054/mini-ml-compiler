@@ -1,4 +1,6 @@
 #include "FusionPasses.h"
+#include "HIR/IR/HIRDialect.h"
+#include "HIR/IR/HIROps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -12,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -146,6 +149,10 @@ struct HIRCanonicalizationPass
 
 struct MatMulBiasReluFusionPass
     : impl::MatMulBiasReluFusionBase<MatMulBiasReluFusionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<HIRDialect>();
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
@@ -242,17 +249,15 @@ struct RMSNormToHIRConversionPattern : ConversionPattern {
       return rewriter.notifyMatchFailure(op, "failed to convert RMSNorm result type");
     }
 
-    OperationState state(op->getLoc(), "hir.fused_rmsnorm");
-    state.addOperands(operands);
-    state.addTypes(loweredType);
-    state.addAttribute("fusion.candidate", candidate);
-    state.addAttribute("fusion.group", op->getAttr("fusion.group"));
-    state.addAttribute("kernel.selection",
-                       StringAttr::get(op->getContext(), "runtime_profile"));
-    state.addAttribute("lowering.source",
-                       StringAttr::get(op->getContext(), "llm.rmsnorm"));
+    auto lowered = rewriter.create<FusedRMSNormOp>(op->getLoc(), loweredType,
+                                                  operands.front());
+    lowered->setAttr("fusion.candidate", candidate);
+    lowered->setAttr("fusion.group", op->getAttr("fusion.group"));
+    lowered->setAttr("kernel.selection",
+                     StringAttr::get(op->getContext(), "runtime_profile"));
+    lowered->setAttr("lowering.source",
+                     StringAttr::get(op->getContext(), "llm.rmsnorm"));
 
-    Operation *lowered = rewriter.create(state);
     rewriter.replaceOp(op, lowered->getResults());
     return success();
   }
@@ -260,6 +265,10 @@ struct RMSNormToHIRConversionPattern : ConversionPattern {
 
 struct HIRFusionLoweringPass
     : impl::HIRFusionLoweringBase<HIRFusionLoweringPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<HIRDialect>();
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     SmallVector<Operation *> toErase;
@@ -295,17 +304,16 @@ struct HIRFusionLoweringPass
           }
 
           OpBuilder builder(reluMap);
-          OperationState state(reluMap.getLoc(), "hir.fused_matmul_bias_relu");
-          state.addOperands({matmul.getInputs()[0], matmul.getInputs()[1], bias});
-          state.addTypes(reluMap->getResult(0).getType());
-          state.addAttribute("fusion.candidate", candidate);
-          state.addAttribute("fusion.group", matmul->getAttr("fusion.group"));
-          state.addAttribute("kernel.selection",
-                             StringAttr::get(matmul.getContext(), "runtime_profile"));
-          state.addAttribute("lowering.source",
-                             StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+          auto fused = builder.create<FusedMatMulBiasReluOp>(
+              reluMap.getLoc(), reluMap->getResult(0).getType(),
+              matmul.getInputs()[0], matmul.getInputs()[1], bias);
+          fused->setAttr("fusion.candidate", candidate);
+          fused->setAttr("fusion.group", matmul->getAttr("fusion.group"));
+          fused->setAttr("kernel.selection",
+                         StringAttr::get(matmul.getContext(), "runtime_profile"));
+          fused->setAttr("lowering.source",
+                         StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
 
-          Operation *fused = builder.create(state);
           reluMap->getResult(0).replaceAllUsesWith(fused->getResult(0));
 
           toErase.push_back(reluMap.getOperation());
@@ -330,6 +338,7 @@ struct HIRFusionLoweringPass
     ConversionTarget target(*func.getContext());
     target.addLegalDialect<arith::ArithDialect,
                            func::FuncDialect,
+                           HIRDialect,
                            linalg::LinalgDialect,
                            tensor::TensorDialect>();
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
@@ -383,6 +392,10 @@ LogicalResult verifyFusedMatMulBiasRelu(Operation *op) {
 
 struct HIRFusedOpVerifierPass
     : impl::HIRFusedOpVerifierBase<HIRFusedOpVerifierPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<HIRDialect>();
+  }
+
   void runOnOperation() override {
     WalkResult result = getOperation().walk([&](Operation *op) -> WalkResult {
       StringRef opName = op->getName().getStringRef();
@@ -474,5 +487,16 @@ mlirGetPassPluginInfo() {
       LLVM_VERSION_STRING,
       []() {
         mlir::hir::registerFusionPasses();
+      }};
+}
+
+extern "C" ::mlir::DialectPluginLibraryInfo
+mlirGetDialectPluginInfo() {
+  return {
+      MLIR_PLUGIN_API_VERSION,
+      "HIRDialect",
+      LLVM_VERSION_STRING,
+      [](mlir::DialectRegistry *registry) {
+        registry->insert<mlir::hir::HIRDialect>();
       }};
 }

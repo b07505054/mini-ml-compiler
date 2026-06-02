@@ -2,7 +2,7 @@
 
 func.func @main(%x: tensor<16x768xf16>) -> tensor<16x768xf16> {
   // CHECK-NOT: "llm.rmsnorm"
-  // CHECK: "hir.fused_rmsnorm"
+  // CHECK: hir.fused_rmsnorm
   // CHECK-SAME: fusion.candidate = "rmsnorm"
   // CHECK-SAME: kernel.selection = "runtime_profile"
   // CHECK-SAME: lowering.source = "llm.rmsnorm"

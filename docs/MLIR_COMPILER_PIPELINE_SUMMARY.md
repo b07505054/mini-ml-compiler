@@ -3,6 +3,8 @@
 ## What Was Added
 
 - Real MLIR C++ pass plugin infrastructure in `mlir_passes/`
+- Real `hir` MLIR dialect plugin with typed fused ops:
+  `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`
 - HIR-focused canonicalization pass for tensor-level cleanup
 - Canonicalization implemented with MLIR `RewritePattern`,
   `PatternRewriter`, `RewritePatternSet`, and the greedy rewrite driver
@@ -14,12 +16,14 @@
 - MLIR Affine loop tiling test
 - MLIR Affine vectorization test
 - Pipeline script for generating runtime-facing artifacts
-- MLIR HIR lowering pass that rewrites fusion candidates to generic HIR ops:
+- MLIR HIR lowering pass that rewrites fusion candidates to typed HIR ops:
   `hir.fused_matmul_bias_relu` and `hir.fused_rmsnorm`
 - RMSNorm lowering implemented with MLIR `ConversionPattern`,
   `ConversionTarget`, and `TypeConverter`
-- HIR fused-op verifier pass for generic HIR op invariants before artifact
-  export
+- HIR op verifiers plus a fused-op verifier pass for HIR invariants before
+  artifact export
+- Positive parse/print FileCheck coverage for typed HIR dialect ops and a
+  negative verifier diagnostic test for invalid fused-op metadata
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Runtime execution plan metadata that maps the lowered fused op to
   `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
@@ -87,13 +91,14 @@ hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fa
 This demonstrates:
 
 - MLIR C++ pass/plugin development
+- MLIR dialect/op definition with TableGen and C++ op verifiers
 - Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection
-- MLIR lowering from source/fusion dialect patterns into HIR-stage generic ops
+- MLIR lowering from source/fusion dialect patterns into typed HIR dialect ops
 - MLIR dialect-conversion infrastructure through `ConversionTarget`,
   `TypeConverter`, and conversion patterns
-- Verifier-style invariant checks for emitted HIR fused ops
+- Op verifier and verifier-pass invariant checks for emitted HIR fused ops
 - False-positive prevention with negative tests
 - Affine loop tiling
 - Affine vectorization
