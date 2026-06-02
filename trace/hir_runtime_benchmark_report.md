@@ -5,7 +5,7 @@ Status: `passed`
 | HIR op | Runtime kernel | Backend | Custom ms | Baseline ms | Speedup | Correct |
 |---|---|---:|---:|---:|---:|---:|
 | hir.fused_matmul_bias_relu | unfused_matmul_add_relu | CPU | 5.354697 | 5.145997 | 0.961025 | True |
-| hir.fused_rmsnorm | fused_rmsnorm_cuda | CUDA | 0.02975 | 0.086751 | 2.916 | True |
+| hir.fused_rmsnorm | fused_rmsnorm_cuda | CUDA | 0.031597 | 0.090415 | 2.8615 | True |
 | hir.fused_qmatmul_bias_relu | int8_qmatmul_bias_relu | CPU | 4.94182 | 5.72657 | 1.1588 | True |
 
 ## Validation

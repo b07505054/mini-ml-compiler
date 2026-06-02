@@ -245,10 +245,25 @@ evidence together. It fails if the execution plans do not contain typed
 latencies, and correctness-passing evidence for both MatMul-Bias-ReLU and
 RMSNorm.
 
+`tools/generate_rmsnorm_case_study.py` preserves the RMSNorm transformer-kernel
+story as a standalone compiler/runtime case study. It checks that
+`llm.rmsnorm` lowers to `hir.fused_rmsnorm`, imports the measured CUDA benchmark
+from `heterogeneous-inference-runtime`, and records the selected
+`fused_rmsnorm_cuda` path against the `torch_rmsnorm` fallback with correctness,
+latency, bandwidth, and roofline metadata.
+
+`tools/generate_attention_kv_bandwidth_model.py` adds a decode-attention
+KV-cache bandwidth model. This is not a full FlashAttention implementation; it
+is a planning artifact that explains why decode attention is KV-memory-bound
+and why compiler-selected layout, block size, and runtime memory pressure matter
+for paged KV-cache serving.
+
 ## Resume Bullet
 
 Added an MLIR C++ compiler pipeline with `RewritePattern` canonicalization,
 typed HIR dialect ops, MatMul-Bias-ReLU fusion detection,
 `ConversionTarget`/`TypeConverter`-aware RMSNorm lowering, op verification,
 FileCheck coverage, runtime-facing lowering artifacts, and correctness/benchmark
-reports for a heterogeneous C++ execution planner.
+reports for a heterogeneous C++ execution planner, including a measured CUDA
+RMSNorm compiler/runtime case study and an attention decode KV-cache bandwidth
+model.

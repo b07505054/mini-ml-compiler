@@ -52,6 +52,13 @@
 - RMSNorm compiler annotation and lowering support:
   `llm.rmsnorm -> hir.fused_rmsnorm`, with kernel selection driven by
   `heterogeneous-inference-runtime` RMSNorm benchmark artifacts.
+- RMSNorm compiler/runtime case study report that proves the lowered
+  `hir.fused_rmsnorm` op selects `fused_rmsnorm_cuda` from measured CUDA
+  benchmark evidence, compares against `torch_rmsnorm`, and records
+  correctness, latency, bandwidth, and roofline metadata.
+- Decode-attention KV-cache bandwidth model for serving-time attention, showing
+  why context-length growth makes KV reads the bottleneck and why layout/block
+  choices belong in the compiler/runtime planning loop.
 
 ## Pipeline
 
@@ -74,6 +81,12 @@ RMSNorm-specific compiler artifacts are also preserved as
 `trace/rmsnorm_execution_plan.json` so the transformer-kernel selection path can
 be inspected without overwriting the default MatMul-Bias-ReLU pipeline outputs.
 
+The standalone RMSNorm case study is preserved as
+`trace/rmsnorm_compiler_runtime_case_study.json` and
+`trace/rmsnorm_compiler_runtime_case_study.md`. The attention decode model is
+preserved as `trace/attention_kv_bandwidth_model.json` and
+`trace/attention_kv_bandwidth_model.md`.
+
 ## Verification
 
 ```bash
@@ -82,6 +95,8 @@ tools/run_mlir_pass_tests.sh
 tools/run_mlir_fusion_pipeline.sh
 tools/build_profile_cost_table.py
 tools/generate_hir_runtime_benchmark_report.py
+tools/generate_rmsnorm_case_study.py
+tools/generate_attention_kv_bandwidth_model.py
 ```
 
 Expected signals:
@@ -105,6 +120,8 @@ llm.rmsnorm annotated as fusion.candidate = "rmsnorm"
 hir.fused_rmsnorm emitted with fused_rmsnorm_cuda candidate and torch_rmsnorm fallback
 hir.fused_qmatmul_bias_relu emitted when profile.quantized_path = "faster"
 trace/hir_runtime_benchmark_report.json status = passed
+trace/rmsnorm_compiler_runtime_case_study.json status = passed
+trace/attention_kv_bandwidth_model.json status = modeled
 ```
 
 ## Engineering Relevance
@@ -136,3 +153,7 @@ This demonstrates:
   runtime kernel correctness and latency data
 - Runtime-aware compiler behavior: kernel selection is based on benchmark
   evidence when available and conservatively falls back when evidence is absent
+- Measured RMSNorm case-study evidence with correctness, latency, speedup,
+  bandwidth, and memory-bound roofline metadata
+- Attention decode bandwidth modeling for KV-cache layout, paged blocks, and
+  runtime memory-pressure decisions

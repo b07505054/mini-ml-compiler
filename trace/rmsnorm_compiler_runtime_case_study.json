@@ -1,0 +1,40 @@
+{
+  "artifact_type": "rmsnorm_compiler_runtime_case_study",
+  "status": "passed",
+  "pipeline": [
+    "llm.rmsnorm",
+    "RMSNormKernelSelectionPass",
+    "hir.fused_rmsnorm",
+    "profile_calibrated_runtime_dispatch_contract",
+    "fused_rmsnorm_cuda"
+  ],
+  "runtime_decision": {
+    "hir_op": "hir.fused_rmsnorm",
+    "selected_kernel": "fused_rmsnorm_cuda",
+    "fallback_kernel": "torch_rmsnorm",
+    "backend": "CUDA",
+    "selection_reason": "profile_calibrated_fastest",
+    "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+  },
+  "performance": {
+    "shape_bucket": "16x4096:f32",
+    "custom_latency_ms": 0.031597,
+    "fallback_latency_ms": 0.090415,
+    "speedup": 2.8615,
+    "correct": true,
+    "custom_effective_bandwidth_gbps": 33.186,
+    "fallback_effective_bandwidth_gbps": 11.597,
+    "bytes_per_token": 65536,
+    "flops_per_token": 16384,
+    "arithmetic_intensity_flops_per_byte": 0.25
+  },
+  "checks": {
+    "input_contains_llm_rmsnorm": true,
+    "lowered_to_hir_fused_rmsnorm": true,
+    "selected_fused_cuda_kernel": true,
+    "fallback_is_torch_rmsnorm": true,
+    "runtime_profile_measured": true,
+    "correctness_passed": true,
+    "profile_calibrated": true
+  }
+}
