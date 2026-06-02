@@ -117,15 +117,16 @@ trace/mlir_execution_plan.json
 ```
 
 This connects the real MLIR pass output to the existing C++ heterogeneous
-runtime planning story by mapping an annotated `linalg.matmul` into a
-`hir.fused_matmul_bias_relu` lowered runtime op.
+runtime planning story by first lowering an annotated `linalg.matmul` chain into
+the generic MLIR op `"hir.fused_matmul_bias_relu"`, then exporting that HIR op
+to runtime-facing JSON.
 
 Quick verification:
 
 ```bash
-grep 'fusion.candidate = "matmul_bias_relu"' trace/mlir_fused_graph.mlir
+grep 'hir.fused_matmul_bias_relu' trace/mlir_fused_graph.mlir
 grep 'FusedMatMulBiasReLU' trace/mlir_lowered_graph.json
-grep 'dispatch_fused_kernel' trace/mlir_execution_plan.json
+grep 'dispatch_selected_kernel' trace/mlir_execution_plan.json
 grep 'fused_matmul_add_relu' trace/mlir_execution_plan.json
 ```
 
@@ -137,12 +138,12 @@ The pass also assigns a `fusion.group` and per-op `fusion.role` metadata to
 the MatMul, bias-add, and ReLU operations, making the detected producer and
 consumer chain explicit before runtime lowering.
 
-The runtime bridge records the concrete C++ dispatch path:
+The runtime bridge records the concrete selected C++ dispatch path:
 
 ```text
 hir.fused_matmul_bias_relu
   -> OpType::FusedMatMulAddReLU
-  -> fused_matmul_add_relu
+  -> selected kernel from runtime benchmark evidence
 ```
 
 `run_mlir_fused_kernel_benchmark` verifies that the emitted execution plan names

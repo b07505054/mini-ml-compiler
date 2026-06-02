@@ -49,6 +49,27 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
 
 run_filecheck \
+  "rmsnorm kernel selection annotation" \
+  "$REPO_ROOT/mlir_passes/test/rmsnorm_kernel_selection.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(rmsnorm-kernel-selection)'
+
+run_filecheck \
+  "matmul-bias-relu HIR lowering" \
+  "$REPO_ROOT/mlir_passes/test/matmul_bias_relu_hir_lowering.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering)'
+
+run_filecheck \
+  "rmsnorm HIR lowering" \
+  "$REPO_ROOT/mlir_passes/test/rmsnorm_hir_lowering.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

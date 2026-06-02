@@ -66,5 +66,6 @@ trace/*
 !trace/kv_cache_trace.json
 !trace/paged_kv_runtime.json
 !trace/serving_trace.json
+!trace/matmul_bias_relu_kernel_profile.json
 
 build-mlir/

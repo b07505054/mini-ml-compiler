@@ -39,4 +39,36 @@ def MatMulBiasReluFusion
   let constructor = "mlir::hir::createMatMulBiasReluFusionPass()";
 }
 
+def RMSNormKernelSelection
+    : Pass<"rmsnorm-kernel-selection", "mlir::func::FuncOp"> {
+  let summary = "Annotate RMSNorm ops for runtime-aware kernel selection";
+  let description = [{
+    Detects LLM RMSNorm ops and annotates them as compiler-visible fusion and
+    lowering candidates:
+
+      "llm.rmsnorm" -> hir.fused_rmsnorm
+
+    The pass does not claim a kernel is faster by itself. Downstream lowering
+    consumes runtime benchmark evidence to select a custom CUDA kernel or a
+    PyTorch/runtime fallback.
+  }];
+  let constructor = "mlir::hir::createRMSNormKernelSelectionPass()";
+}
+
+def HIRFusionLowering
+    : Pass<"hir-fusion-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower compiler fusion candidates to HIR generic MLIR ops";
+  let description = [{
+    Lowers annotated fusion candidates into HIR-stage MLIR ops before JSON
+    export:
+
+      linalg.matmul + add + relu -> "hir.fused_matmul_bias_relu"
+      "llm.rmsnorm"              -> "hir.fused_rmsnorm"
+
+    These are emitted as generic MLIR ops so the compiler pipeline can carry a
+    real lowering stage even before a full custom HIR dialect is introduced.
+  }];
+  let constructor = "mlir::hir::createHIRFusionLoweringPass()";
+}
+
 #endif // HIR_FUSION_PASSES

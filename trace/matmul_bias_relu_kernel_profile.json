@@ -1,0 +1,17 @@
+{
+  "artifact_type": "runtime_kernel_profile",
+  "source": "apps/run_mlir_fused_kernel_benchmark.cpp",
+  "profile_status": "measured",
+  "kernel_benchmarks": [
+    {
+      "fusion_candidate": "matmul_bias_relu",
+      "custom_kernel": "fused_matmul_add_relu",
+      "fallback_kernel": "unfused_matmul_add_relu",
+      "custom_latency_ms": 5.313557,
+      "fallback_latency_ms": 5.420378,
+      "speedup": 1.020103,
+      "correct": true,
+      "selection_ready": true
+    }
+  ]
+}

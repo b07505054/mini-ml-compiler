@@ -1,6 +1,10 @@
 {
   "format": "hir.lowered_graph.v1",
-  "source": "/Users/allen/Desktop/project/ml-graph-compiler-runtime/trace/mlir_fused_graph.mlir",
+  "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/mlir_fused_graph.mlir",
+  "kernel_profile": {
+    "status": "loaded",
+    "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json"
+  },
   "num_ops": 1,
   "ops": [
     {
@@ -12,7 +16,7 @@
       "runtime_op_type": "FusedMatMulAddReLU",
       "runtime_kernel": "fused_matmul_add_relu",
       "runtime_kernel_backend": "CPU",
-      "backend": "Metal",
+      "backend": "CPU",
       "fusion_candidate": "matmul_bias_relu",
       "fusion_group": "matmul_bias_relu_0",
       "inputs": [
@@ -33,10 +37,31 @@
         "estimated_bytes_written": 256,
         "arithmetic_intensity_flops_per_byte": 0.48863636363636365
       },
+      "kernel_selection": {
+        "selected_kernel": "fused_matmul_add_relu",
+        "selected_backend": "CPU",
+        "candidate_kernel": "fused_matmul_add_relu",
+        "candidate_backend": "CPU",
+        "fallback_kernel": "unfused_matmul_add_relu",
+        "fallback_backend": "CPU",
+        "profile_status": "loaded",
+        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "runtime benchmark selected custom kernel",
+        "evidence": {
+          "fusion_candidate": "matmul_bias_relu",
+          "custom_kernel": "fused_matmul_add_relu",
+          "fallback_kernel": "unfused_matmul_add_relu",
+          "custom_latency_ms": 5.313557,
+          "fallback_latency_ms": 5.420378,
+          "speedup": 1.020103,
+          "correct": true,
+          "selection_ready": true
+        }
+      },
       "notes": [
         "Detected from MLIR linalg.matmul annotated by MatMulBiasReluFusionPass",
-        "Mapped to the existing heterogeneous runtime planner as a fused accelerator candidate",
-        "Runtime-compatible custom kernel path uses OpType::FusedMatMulAddReLU"
+        "Lowered through the shared runtime-aware kernel selection contract",
+        "Runtime benchmark evidence selects the custom fused kernel or fallback path"
       ]
     }
   ]
