@@ -7,7 +7,7 @@ func.func @main(%input: tensor<1x64xf32>) -> tensor<1x64xf32> {
   %relu0 = linalg.map
       ins(%input : tensor<1x64xf32>)
       outs(%empty : tensor<1x64xf32>)
-      (%x: f32) {
+      (%x: f32, %out: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }
@@ -15,7 +15,7 @@ func.func @main(%input: tensor<1x64xf32>) -> tensor<1x64xf32> {
   %relu1 = linalg.map
       ins(%relu0 : tensor<1x64xf32>)
       outs(%empty : tensor<1x64xf32>)
-      (%x: f32) {
+      (%x: f32, %out: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }
