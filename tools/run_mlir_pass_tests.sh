@@ -3,10 +3,20 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-MLIR_OPT="${MLIR_OPT:-/Users/allen/Developer/llvm-build/bin/mlir-opt}"
-FILECHECK="${FILECHECK:-/Users/allen/Developer/llvm-build/bin/FileCheck}"
+MLIR_OPT="${MLIR_OPT:-$(command -v mlir-opt || true)}"
+FILECHECK="${FILECHECK:-$(command -v FileCheck || true)}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
 DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
+
+if [[ -z "$MLIR_OPT" ]]; then
+  echo "error: mlir-opt not found; set MLIR_OPT or add it to PATH" >&2
+  exit 1
+fi
+
+if [[ -z "$FILECHECK" ]]; then
+  echo "error: FileCheck not found; set FILECHECK or add it to PATH" >&2
+  exit 1
+fi
 
 run_filecheck() {
   local name="$1"

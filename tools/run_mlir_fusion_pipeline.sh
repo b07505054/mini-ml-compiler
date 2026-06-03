@@ -3,13 +3,18 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-MLIR_OPT="${MLIR_OPT:-/Users/allen/Developer/llvm-build/bin/mlir-opt}"
+MLIR_OPT="${MLIR_OPT:-$(command -v mlir-opt || true)}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
 DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
 INPUT="${INPUT:-$REPO_ROOT/mlir_passes/test/matmul_bias_relu.mlir}"
 OUTPUT="$REPO_ROOT/trace/mlir_fused_graph.mlir"
 KERNEL_PROFILE="${KERNEL_PROFILE:-}"
 PASS_PIPELINE="${PASS_PIPELINE:-builtin.module(hir-canonicalize,matmul-bias-relu-fusion,rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)}"
+
+if [[ -z "$MLIR_OPT" ]]; then
+  echo "error: mlir-opt not found; set MLIR_OPT or add it to PATH" >&2
+  exit 1
+fi
 
 mkdir -p "$REPO_ROOT/trace"
 

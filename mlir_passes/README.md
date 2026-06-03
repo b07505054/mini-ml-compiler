@@ -137,17 +137,15 @@ not only that it finds the happy path.
 
 ## Requirements
 
-Tested target: LLVM/MLIR built from `/Users/allen/Developer/llvm-build`.
-
 Use the same LLVM/MLIR build for CMake, `mlir-opt`, and `FileCheck`.
-Mixing a Homebrew `mlir-opt` with a locally built plugin can cause plugin
-registration failures.
+Mixing tools from different LLVM builds can cause plugin ABI or registration
+failures.
 
 Required CMake packages:
 
 ```text
-/Users/allen/Developer/llvm-build/lib/cmake/mlir
-/Users/allen/Developer/llvm-build/lib/cmake/llvm
+$(brew --prefix llvm)/lib/cmake/mlir
+$(brew --prefix llvm)/lib/cmake/llvm
 ```
 
 ## Build
@@ -156,8 +154,8 @@ From the `ml-graph-compiler-runtime` repo root:
 
 ```bash
 cmake -S mlir_passes -B build-mlir \
-  -DMLIR_DIR=/Users/allen/Developer/llvm-build/lib/cmake/mlir \
-  -DLLVM_DIR=/Users/allen/Developer/llvm-build/lib/cmake/llvm
+  -DMLIR_DIR="$(brew --prefix llvm)/lib/cmake/mlir" \
+  -DLLVM_DIR="$(brew --prefix llvm)/lib/cmake/llvm"
 
 cmake --build build-mlir
 ```
@@ -174,7 +172,7 @@ This plugin is registered as an MLIR pass pipeline. Use the same `mlir-opt`
 binary from the LLVM/MLIR build used by CMake.
 
 ```bash
-/Users/allen/Developer/llvm-build/bin/mlir-opt \
+mlir-opt \
   --load-dialect-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
@@ -190,12 +188,12 @@ linalg.matmul {fusion.candidate = "matmul_bias_relu"}
 ## FileCheck
 
 ```bash
-/Users/allen/Developer/llvm-build/bin/mlir-opt \
+mlir-opt \
   --load-dialect-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   --load-pass-plugin=build-mlir/HIRMatMulBiasReluFusionPass.dylib \
   mlir_passes/test/matmul_bias_relu.mlir \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)' \
-  | /Users/allen/Developer/llvm-build/bin/FileCheck mlir_passes/test/matmul_bias_relu.mlir
+  | FileCheck mlir_passes/test/matmul_bias_relu.mlir
 ```
 
 ## Runtime Bridge
