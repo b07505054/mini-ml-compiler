@@ -30,6 +30,27 @@
         "profile_calibrated": true,
         "shape_bucket": "128x128x128:i8"
       },
+      "target_model": {
+        "target": "sparsecore_like_v1",
+        "tile_shape": {
+          "m": 16,
+          "n": 16,
+          "k": 32
+        },
+        "memory_hierarchy": "global_sram_register",
+        "sram_kb": 256,
+        "vector_bytes": 128,
+        "alignment_bytes": 128,
+        "sparse_layout": "dense_or_2_4",
+        "collective": "none",
+        "legality": [
+          "matmul result must have one use",
+          "bias add result must have one use",
+          "bias must be materialized to result shape or represented as legal HIR broadcast",
+          "M/N/K must be static multiples of 16/16/32",
+          "dtype must be f32 or f16 for this fused floating-point path"
+        ]
+      },
       "fusion_candidate": "qmatmul_bias_relu",
       "fusion_group": "qmatmul_bias_relu_0",
       "inputs": [

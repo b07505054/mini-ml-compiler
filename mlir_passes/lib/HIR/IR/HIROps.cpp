@@ -41,6 +41,56 @@ static std::optional<int64_t> integerAttrValue(Operation *op, StringRef name) {
   return attr.getInt();
 }
 
+static LogicalResult verifySparseCoreTargetAttrs(Operation *op,
+                                                RankedTensorType lhsType,
+                                                RankedTensorType rhsType) {
+  auto target = op->getAttrOfType<StringAttr>("target.model");
+  if (!target) {
+    return success();
+  }
+  if (target.getValue() != "sparsecore_like_v1") {
+    return op->emitOpError("requires target.model = \"sparsecore_like_v1\"");
+  }
+  if (failed(requireStringAttr(op, "target.memory_hierarchy",
+                               "global_sram_register")) ||
+      failed(requireStringAttr(op, "target.sparse_layout")) ||
+      failed(requireStringAttr(op, "target.collective")) ||
+      failed(requireIntegerAttr(op, "target.tile_m")) ||
+      failed(requireIntegerAttr(op, "target.tile_n")) ||
+      failed(requireIntegerAttr(op, "target.tile_k")) ||
+      failed(requireIntegerAttr(op, "target.vector_bytes")) ||
+      failed(requireIntegerAttr(op, "target.alignment")) ||
+      failed(requireIntegerAttr(op, "target.sram_kb"))) {
+    return failure();
+  }
+
+  auto tileM = integerAttrValue(op, "target.tile_m");
+  auto tileN = integerAttrValue(op, "target.tile_n");
+  auto tileK = integerAttrValue(op, "target.tile_k");
+  auto vectorBytes = integerAttrValue(op, "target.vector_bytes");
+  auto alignment = integerAttrValue(op, "target.alignment");
+  if (!tileM || *tileM != 16 || !tileN || *tileN != 16 ||
+      !tileK || *tileK != 32) {
+    return op->emitOpError("requires SparseCore-like tile shape 16x16x32");
+  }
+  if (!vectorBytes || *vectorBytes != 128 || !alignment || *alignment != 128) {
+    return op->emitOpError("requires 128-byte target vector/alignment");
+  }
+  if (lhsType.getDimSize(0) != ShapedType::kDynamic &&
+      lhsType.getDimSize(0) % *tileM != 0) {
+    return op->emitOpError("requires lhs M dimension to be a multiple of target.tile_m");
+  }
+  if (lhsType.getDimSize(1) != ShapedType::kDynamic &&
+      lhsType.getDimSize(1) % *tileK != 0) {
+    return op->emitOpError("requires lhs K dimension to be a multiple of target.tile_k");
+  }
+  if (rhsType.getDimSize(1) != ShapedType::kDynamic &&
+      rhsType.getDimSize(1) % *tileN != 0) {
+    return op->emitOpError("requires rhs N dimension to be a multiple of target.tile_n");
+  }
+  return success();
+}
+
 static LogicalResult requireRankedTensor(Operation *op, Type type, StringRef label) {
   if (!isa<RankedTensorType>(type)) {
     return op->emitOpError("expects ranked tensor ") << label;
@@ -85,12 +135,21 @@ LogicalResult FusedMatMulBiasReluOp::verify() {
       biasType.getDimSize(1) != outputType.getDimSize(1)) {
     return emitOpError("expects bias N dimension to match result N dimension");
   }
+  if (biasType.getDimSize(0) != ShapedType::kDynamic &&
+      outputType.getDimSize(0) != ShapedType::kDynamic &&
+      biasType.getDimSize(0) != 1 &&
+      biasType.getDimSize(0) != outputType.getDimSize(0)) {
+    return emitOpError("expects bias M dimension to be 1 or match result M dimension");
+  }
 
   if (failed(requireStringAttr(getOperation(), "fusion.candidate",
                                "matmul_bias_relu")) ||
       failed(requireStringAttr(getOperation(), "kernel.selection")) ||
       failed(requireStringAttr(getOperation(), "lowering.source",
                                "linalg.matmul_add_relu"))) {
+    return failure();
+  }
+  if (failed(verifySparseCoreTargetAttrs(getOperation(), lhsType, rhsType))) {
     return failure();
   }
   return success();

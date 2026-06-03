@@ -30,6 +30,27 @@
         "profile_calibrated": true,
         "shape_bucket": "128x128x128:f32"
       },
+      "target_model": {
+        "target": "sparsecore_like_v1",
+        "tile_shape": {
+          "m": 16,
+          "n": 16,
+          "k": 32
+        },
+        "memory_hierarchy": "global_sram_register",
+        "sram_kb": 256,
+        "vector_bytes": 128,
+        "alignment_bytes": 128,
+        "sparse_layout": "dense_or_2_4",
+        "collective": "none",
+        "legality": [
+          "matmul result must have one use",
+          "bias add result must have one use",
+          "bias must be materialized to result shape or represented as legal HIR broadcast",
+          "M/N/K must be static multiples of 16/16/32",
+          "dtype must be f32 or f16 for this fused floating-point path"
+        ]
+      },
       "fusion_candidate": "matmul_bias_relu",
       "fusion_group": "matmul_bias_relu_0",
       "inputs": [
@@ -41,14 +62,14 @@
         "%1"
       ],
       "cost_model": {
-        "m": 1,
+        "m": 16,
         "k": 128,
         "n": 64,
         "dtype": "f32",
-        "estimated_flops": 16512,
-        "estimated_bytes_read": 33536,
-        "estimated_bytes_written": 256,
-        "arithmetic_intensity_flops_per_byte": 0.48863636363636365,
+        "estimated_flops": 264192,
+        "estimated_bytes_read": 45056,
+        "estimated_bytes_written": 4096,
+        "arithmetic_intensity_flops_per_byte": 5.375,
         "source": "profile_calibrated_table",
         "shape_bucket": "128x128x128:f32"
       },

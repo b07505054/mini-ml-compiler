@@ -188,7 +188,27 @@ def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
     }
 
 
-def estimate_matmul_bias_relu_cost(m=1, k=128, n=64, dtype_bytes=4):
+def sparsecore_like_target_model():
+    return {
+        "target": "sparsecore_like_v1",
+        "tile_shape": {"m": 16, "n": 16, "k": 32},
+        "memory_hierarchy": "global_sram_register",
+        "sram_kb": 256,
+        "vector_bytes": 128,
+        "alignment_bytes": 128,
+        "sparse_layout": "dense_or_2_4",
+        "collective": "none",
+        "legality": [
+            "matmul result must have one use",
+            "bias add result must have one use",
+            "bias must be materialized to result shape or represented as legal HIR broadcast",
+            "M/N/K must be static multiples of 16/16/32",
+            "dtype must be f32 or f16 for this fused floating-point path",
+        ],
+    }
+
+
+def estimate_matmul_bias_relu_cost(m=16, k=128, n=64, dtype_bytes=4):
     matmul_flops = 2 * m * k * n
     bias_add_flops = m * n
     relu_flops = m * n
@@ -264,6 +284,7 @@ def build_matmul_op(index, match, profile):
             runtime_op_type,
             selection,
         ),
+        "target_model": sparsecore_like_target_model(),
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],
@@ -348,6 +369,7 @@ def build_qmatmul_op(index, match, profile):
             runtime_op_type,
             selection,
         ),
+        "target_model": sparsecore_like_target_model(),
         "fusion_candidate": "qmatmul_bias_relu",
         "fusion_group": f"qmatmul_bias_relu_{index}",
         "inputs": ["A_int8", "B_int8", "bias"],
@@ -420,6 +442,7 @@ def build_execution_plan(lowered_graph):
             "runtime_action": "dispatch_selected_kernel",
             "runtime_dispatch_contract": op["runtime_dispatch_contract"],
             "kernel_selection": op["kernel_selection"],
+            "target_model": op.get("target_model"),
             "estimated_launch_overhead_us": 80,
             "estimated_flops": op["cost_model"]["estimated_flops"],
             "arithmetic_intensity_flops_per_byte": op["cost_model"]["arithmetic_intensity_flops_per_byte"],

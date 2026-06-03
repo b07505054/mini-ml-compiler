@@ -52,6 +52,14 @@ run_verify_diagnostics \
   "HIR layout verifier rejects invalid alignment" \
   "$REPO_ROOT/mlir_passes/test/hir_layout_verifier_invalid.mlir"
 
+run_verify_diagnostics \
+  "HIR target verifier rejects invalid tile shape" \
+  "$REPO_ROOT/mlir_passes/test/hir_target_verifier_invalid.mlir"
+
+run_verify_diagnostics \
+  "HIR verifier rejects invalid bias broadcast" \
+  "$REPO_ROOT/mlir_passes/test/hir_bad_bias_broadcast_invalid.mlir"
+
 run_filecheck \
   "canonicalize add zero" \
   "$REPO_ROOT/mlir_passes/test/canonicalize_add_zero.mlir" \
@@ -81,6 +89,18 @@ run_filecheck \
   "$REPO_ROOT/mlir_passes/test/no_fusion_without_relu.mlir" \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion)'
+
+run_filecheck \
+  "no fusion for multi-use matmul result" \
+  "$REPO_ROOT/mlir_passes/test/no_fusion_matmul_multi_use.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+
+run_filecheck \
+  "no fusion for dynamic target shape" \
+  "$REPO_ROOT/mlir_passes/test/no_fusion_dynamic_shape_target.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
 
 run_filecheck \
   "rmsnorm kernel selection annotation" \

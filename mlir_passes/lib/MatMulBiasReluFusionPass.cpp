@@ -7,6 +7,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -92,6 +93,118 @@ Value biasInputForAdd(linalg::MapOp addMap, Value matmulResult) {
   return {};
 }
 
+constexpr int64_t kTargetTileM = 16;
+constexpr int64_t kTargetTileN = 16;
+constexpr int64_t kTargetTileK = 32;
+constexpr int64_t kTargetAlignmentBytes = 128;
+constexpr int64_t kTargetSramKb = 256;
+
+bool isStaticMultiple(int64_t dim, int64_t multiple) {
+  return dim != ShapedType::kDynamic && dim % multiple == 0;
+}
+
+bool isSupportedMatMulElementType(Type type) {
+  return type.isF32() || type.isF16();
+}
+
+struct MatMulBiasReluLegality {
+  bool legal = false;
+  StringRef reason = "unknown";
+  Value bias;
+};
+
+MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
+                                                   linalg::MapOp addMap,
+                                                   linalg::MapOp reluMap) {
+  if (matmul->getNumResults() != 1) {
+    return {false, "matmul_result_count", {}};
+  }
+  if (!matmul->getResult(0).hasOneUse()) {
+    return {false, "matmul_result_not_one_use", {}};
+  }
+  if (addMap->getNumResults() != 1 || !addMap->getResult(0).hasOneUse()) {
+    return {false, "bias_add_not_one_use", {}};
+  }
+  if (reluMap->getNumResults() != 1) {
+    return {false, "relu_result_count", {}};
+  }
+
+  auto lhsType =
+      dyn_cast<RankedTensorType>(matmul.getInputs()[0].getType());
+  auto rhsType =
+      dyn_cast<RankedTensorType>(matmul.getInputs()[1].getType());
+  auto resultType =
+      dyn_cast<RankedTensorType>(reluMap->getResult(0).getType());
+  if (!lhsType || !rhsType || !resultType) {
+    return {false, "dynamic_or_unranked_shape", {}};
+  }
+  if (lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
+      resultType.getRank() != 2) {
+    return {false, "rank_not_2", {}};
+  }
+  if (!isSupportedMatMulElementType(lhsType.getElementType()) ||
+      lhsType.getElementType() != rhsType.getElementType() ||
+      lhsType.getElementType() != resultType.getElementType()) {
+    return {false, "unsupported_dtype", {}};
+  }
+
+  int64_t m = lhsType.getDimSize(0);
+  int64_t k = lhsType.getDimSize(1);
+  int64_t rhsK = rhsType.getDimSize(0);
+  int64_t n = rhsType.getDimSize(1);
+  if (rhsK == ShapedType::kDynamic || k == ShapedType::kDynamic ||
+      rhsK != k) {
+    return {false, "matmul_k_mismatch_or_dynamic", {}};
+  }
+  if (resultType.getDimSize(0) != m || resultType.getDimSize(1) != n) {
+    return {false, "result_shape_mismatch", {}};
+  }
+  if (!isStaticMultiple(m, kTargetTileM) ||
+      !isStaticMultiple(n, kTargetTileN) ||
+      !isStaticMultiple(k, kTargetTileK)) {
+    return {false, "target_tile_multiple", {}};
+  }
+
+  Value bias = biasInputForAdd(addMap, matmul->getResult(0));
+  auto biasType = bias ? dyn_cast<RankedTensorType>(bias.getType()) : nullptr;
+  if (!biasType || biasType.getRank() != 2) {
+    return {false, "bias_not_rank2", {}};
+  }
+  int64_t biasM = biasType.getDimSize(0);
+  int64_t biasN = biasType.getDimSize(1);
+  bool legalBiasM = biasM == 1 || biasM == m;
+  bool legalBiasN = biasN == n;
+  if (!legalBiasM || !legalBiasN) {
+    return {false, "bias_broadcast_illegal", {}};
+  }
+
+  return {true, "target_legal", bias};
+}
+
+void attachSparseCoreTargetAttrs(Operation *op, OpBuilder &builder) {
+  MLIRContext *context = op->getContext();
+  op->setAttr("target.model",
+              StringAttr::get(context, "sparsecore_like_v1"));
+  op->setAttr("target.memory_hierarchy",
+              StringAttr::get(context, "global_sram_register"));
+  op->setAttr("target.sram_kb",
+              builder.getI32IntegerAttr(kTargetSramKb));
+  op->setAttr("target.tile_m",
+              builder.getI32IntegerAttr(kTargetTileM));
+  op->setAttr("target.tile_n",
+              builder.getI32IntegerAttr(kTargetTileN));
+  op->setAttr("target.tile_k",
+              builder.getI32IntegerAttr(kTargetTileK));
+  op->setAttr("target.vector_bytes",
+              builder.getI32IntegerAttr(kTargetAlignmentBytes));
+  op->setAttr("target.alignment",
+              builder.getI32IntegerAttr(kTargetAlignmentBytes));
+  op->setAttr("target.sparse_layout",
+              StringAttr::get(context, "dense_or_2_4"));
+  op->setAttr("target.collective",
+              StringAttr::get(context, "none"));
+}
+
 struct AddZeroCanonicalizationPattern : OpRewritePattern<linalg::MapOp> {
   using OpRewritePattern<linalg::MapOp>::OpRewritePattern;
 
@@ -162,6 +275,9 @@ struct MatMulBiasReluFusionPass
       }
 
       Value matmulResult = matmul->getResult(0);
+      if (!matmulResult.hasOneUse()) {
+        return;
+      }
 
       for (Operation *matmulUser : matmulResult.getUsers()) {
         auto addMap = dyn_cast<linalg::MapOp>(matmulUser);
@@ -174,6 +290,15 @@ struct MatMulBiasReluFusionPass
         for (Operation *addUser : addResult.getUsers()) {
           auto reluMap = dyn_cast<linalg::MapOp>(addUser);
           if (!reluMap || !isReluMap(reluMap)) {
+            continue;
+          }
+
+          MatMulBiasReluLegality legality =
+              checkMatMulBiasReluLegality(matmul, addMap, reluMap);
+          if (!legality.legal) {
+            matmul->setAttr(
+                "fusion.reject_reason",
+                StringAttr::get(matmul.getContext(), legality.reason));
             continue;
           }
 
@@ -278,6 +403,12 @@ struct MatMulBiasReluToHIRConversionPattern
       return rewriter.notifyMatchFailure(matmul, "failed to identify fused bias input");
     }
 
+    MatMulBiasReluLegality legality =
+        checkMatMulBiasReluLegality(matmul, addMap, reluMap);
+    if (!legality.legal) {
+      return rewriter.notifyMatchFailure(matmul, legality.reason);
+    }
+
     Type loweredType = getTypeConverter()->convertType(reluMap->getResult(0).getType());
     if (!loweredType) {
       return rewriter.notifyMatchFailure(matmul, "failed to convert fused result type");
@@ -314,6 +445,7 @@ struct MatMulBiasReluToHIRConversionPattern
                          rewriter.getI32IntegerAttr(0));
       quantized->setAttr("rhs_zero_point",
                          rewriter.getI32IntegerAttr(0));
+      attachSparseCoreTargetAttrs(quantized.getOperation(), rewriter);
       fused = quantized.getOperation();
     } else {
       auto fp32 = rewriter.create<FusedMatMulBiasReluOp>(
@@ -325,6 +457,7 @@ struct MatMulBiasReluToHIRConversionPattern
                     StringAttr::get(matmul.getContext(), "runtime_profile"));
       fp32->setAttr("lowering.source",
                     StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+      attachSparseCoreTargetAttrs(fp32.getOperation(), rewriter);
       fused = fp32.getOperation();
     }
 

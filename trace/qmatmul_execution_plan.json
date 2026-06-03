@@ -67,6 +67,27 @@
           "profile_table_source": "trace/qmatmul_bias_relu_kernel_profile.json"
         }
       },
+      "target_model": {
+        "target": "sparsecore_like_v1",
+        "tile_shape": {
+          "m": 16,
+          "n": 16,
+          "k": 32
+        },
+        "memory_hierarchy": "global_sram_register",
+        "sram_kb": 256,
+        "vector_bytes": 128,
+        "alignment_bytes": 128,
+        "sparse_layout": "dense_or_2_4",
+        "collective": "none",
+        "legality": [
+          "matmul result must have one use",
+          "bias add result must have one use",
+          "bias must be materialized to result shape or represented as legal HIR broadcast",
+          "M/N/K must be static multiples of 16/16/32",
+          "dtype must be f32 or f16 for this fused floating-point path"
+        ]
+      },
       "estimated_launch_overhead_us": 80,
       "estimated_flops": 4227072,
       "arithmetic_intensity_flops_per_byte": 25.8

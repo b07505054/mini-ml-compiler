@@ -40,11 +40,35 @@ linalg.matmul
   -> linalg.map arith.maximumf with zero
 ```
 
-The initial implementation is detect-and-annotate:
+The MatMul fusion pass is legality-driven rather than purely detect-and-annotate.
+Before it marks a candidate, it checks:
 
-```mlir
-linalg.matmul {fusion.candidate = "matmul_bias_relu"}
+```text
+matmul result has one use
+bias-add result has one use
+bias input is legal for the fused output shape
+lhs/rhs/result are ranked rank-2 tensors
+dtype is supported by the target path
+M/N/K are static multiples of the target tile shape
 ```
+
+Legal candidates are annotated and later lowered to a typed HIR op. Illegal
+patterns remain unfused so the original IR can fall back conservatively.
+
+The target model attached during lowering is intentionally small but real:
+
+```text
+target.model = "sparsecore_like_v1"
+tile_m/tile_n/tile_k = 16/16/32
+target.sram_kb = 256
+target.vector_bytes = 128
+target.alignment = 128
+target.sparse_layout = "dense_or_2_4"
+target.memory_hierarchy = "global_sram_register"
+```
+
+The HIR verifier checks these attributes when present, so invalid target
+metadata is rejected before artifact export.
 
 RMSNorm lowering uses MLIR dialect-conversion infrastructure:
 
@@ -99,6 +123,11 @@ The test `canonicalization_enables_fusion.mlir` demonstrates why the passes run
 in that order: the input graph contains an identity `add(x, 0.0)` between
 MatMul and BiasAdd. `hir-canonicalize` removes the identity map first, then
 `matmul-bias-relu-fusion` can see and annotate the cleaned fusion chain.
+
+Negative FileCheck tests cover missing ReLU, multi-use MatMul results, dynamic
+target shapes, invalid HIR bias broadcast metadata, and invalid target tile
+metadata. These tests are meant to prove the pass avoids wrong-code rewrites,
+not only that it finds the happy path.
 
 ## Requirements
 

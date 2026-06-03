@@ -13,7 +13,16 @@
   `PatternRewriter`, `RewritePatternSet`, and the greedy rewrite driver
 - MatMul + Bias Add + ReLU fusion candidate detection
 - Fusion group and role annotations across producer and consumer ops
+- SparseCore-like HIR target model metadata for fused MatMul lowering:
+  tile shape 16x16x32, 256 KB SRAM model, 128-byte vector/alignment
+  constraints, dense-or-2:4 sparse layout metadata, and memory-hierarchy tags
+- Legality-driven MatMul-Bias-ReLU rewrite guards for one-use producer results,
+  one-use bias-add results, ranked/static tensor shapes, supported dtypes,
+  legal bias shape, and target tile multiples before fusion annotation
 - FileCheck tests for canonicalization, positive fusion, and negative fusion cases
+- Negative FileCheck/verifier coverage for multi-use MatMul results, dynamic
+  target shapes, invalid HIR bias broadcast metadata, and invalid target tile
+  metadata
 - A canonicalization-enables-fusion test where `add(x, 0.0)` cleanup exposes
   the MatMul -> BiasAdd -> ReLU chain to the fusion detector
 - MLIR Affine loop tiling test
@@ -111,6 +120,8 @@ relu(relu(x)) canonicalized to relu(x)
 canonicalization_enables_fusion.mlir gains fusion.candidate after cleanup
 fusion.candidate = "matmul_bias_relu"
 fusion.group = "matmul_bias_relu_0"
+target.model = "sparsecore_like_v1"
+target.tile_m/tile_n/tile_k = 16/16/32
 hir.fused_matmul_bias_relu emitted by HIRFusionLoweringPass
 FusedMatMulBiasReLU
 dispatch_selected_kernel
@@ -135,6 +146,8 @@ This demonstrates:
 - MLIR C++ pass/plugin development
 - MLIR dialect/op definition with TableGen and C++ op verifiers
 - Quantization-aware lowering surface for INT8 mobile/accelerator kernels
+- Target-aware lowering legality for accelerator-style tile, memory hierarchy,
+  sparse layout, and vector alignment constraints
 - Layout-aware verifier checks for memory alignment and tile/channel
   constraints relevant to Qualcomm-style DSP/NPU paths
 - Profile-driven quantized lowering from f32 MatMul chains to INT8 HIR fused ops
@@ -142,6 +155,9 @@ This demonstrates:
 - Pattern-based canonicalization rewrites before fusion
 - Linalg pattern analysis
 - Fusion candidate detection
+- Legality-driven rewrite discipline that prevents wrong-code fusion when
+  producer use-count, bias shape, dynamic shape, dtype, or target tile
+  constraints are not satisfied
 - MLIR lowering from source/fusion dialect patterns into typed HIR dialect ops
 - MLIR dialect-conversion infrastructure through `ConversionTarget`,
   `TypeConverter`, and conversion patterns
