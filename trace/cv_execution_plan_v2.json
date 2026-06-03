@@ -1,42 +1,46 @@
-{
-  "plan": [
-    {
-      "step": 0,
-      "lowered_op": "LoweredFusedConvBatchNormReLU",
-      "backend": "Metal",
-      "mem_offset": 150976,
-      "dependencies": [],
-      "launch_config": "threadgroup=256"
-    },
-    {
-      "step": 1,
-      "lowered_op": "LoweredMaxPool",
-      "backend": "CPU",
-      "mem_offset": 150976,
-      "dependencies": [
-        0
-      ],
-      "launch_config": "host-call"
-    },
-    {
-      "step": 2,
-      "lowered_op": "LoweredFlatten",
-      "backend": "CPU",
-      "mem_offset": 150976,
-      "dependencies": [
-        1
-      ],
-      "launch_config": "host-call"
-    },
-    {
-      "step": 3,
-      "lowered_op": "LoweredLinear",
-      "backend": "Metal",
-      "mem_offset": 150976,
-      "dependencies": [
-        2
-      ],
-      "launch_config": "threadgroup=256"
-    }
-  ]
-}
+[
+  {
+    "step_id": 0,
+    "lowered_op_id": 0,
+    "lowered_op_type": "LoweredFusedConvBatchNormReLU",
+    "backend": "Metal",
+    "inputs": [0, 1],
+    "outputs": [5],
+    "dependency_steps": [],
+    "memory_offset": 150976,
+    "launch_config": "threadgroup=256"
+  },
+  {
+    "step_id": 1,
+    "lowered_op_id": 1,
+    "lowered_op_type": "LoweredMaxPool",
+    "backend": "CPU",
+    "inputs": [5],
+    "outputs": [6],
+    "dependency_steps": [0],
+    "memory_offset": 150976,
+    "launch_config": "host-call"
+  },
+  {
+    "step_id": 2,
+    "lowered_op_id": 2,
+    "lowered_op_type": "LoweredFlatten",
+    "backend": "CPU",
+    "inputs": [6],
+    "outputs": [7],
+    "dependency_steps": [1],
+    "memory_offset": 150976,
+    "launch_config": "host-call"
+  },
+  {
+    "step_id": 3,
+    "lowered_op_id": 3,
+    "lowered_op_type": "LoweredLinear",
+    "backend": "Metal",
+    "inputs": [7, 8],
+    "outputs": [9],
+    "dependency_steps": [2],
+    "memory_offset": 150976,
+    "launch_config": "threadgroup=256"
+  }
+]

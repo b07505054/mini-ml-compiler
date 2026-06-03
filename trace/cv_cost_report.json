@@ -1,49 +1,58 @@
-{
-  "entries": [
-    {
-      "op": "conv1",
-      "type": "FusedConvBatchNormReLU",
-      "backend": "Metal",
-      "read_bytes": 603840,
-      "write_bytes": 3154176,
-      "flops": 42581376,
-      "arithmetic_intensity": 11.3308,
-      "launch_cost_ms": 0.08,
-      "backend_switch_cost_ms": 0,
-      "fusion": "Conv2D+BatchNorm+ReLU fused"
-    },
-    {
-      "op": "pool1",
-      "type": "MaxPool",
-      "backend": "CPU",
-      "read_bytes": 3154176,
-      "write_bytes": 788544,
-      "flops": 0,
-      "arithmetic_intensity": 0,
-      "launch_cost_ms": 0.005,
-      "backend_switch_cost_ms": 0.02
-    },
-    {
-      "op": "flatten",
-      "type": "Flatten",
-      "backend": "CPU",
-      "read_bytes": 788544,
-      "write_bytes": 788544,
-      "flops": 0,
-      "arithmetic_intensity": 0,
-      "launch_cost_ms": 0.005,
-      "backend_switch_cost_ms": 0
-    },
-    {
-      "op": "linear",
-      "type": "Linear",
-      "backend": "Metal",
-      "read_bytes": 8673984,
-      "write_bytes": 40,
-      "flops": 3942720,
-      "arithmetic_intensity": 0.454543,
-      "launch_cost_ms": 0.08,
-      "backend_switch_cost_ms": 0.02
-    }
-  ]
-}
+[
+  {
+    "op_name": "conv1",
+    "op_type": "FusedConvBatchNormReLU",
+    "backend": "Metal",
+    "estimated_read_bytes": 603840,
+    "estimated_write_bytes": 3154176,
+    "estimated_flops": 42581376,
+    "arithmetic_intensity": 11.3308,
+    "estimated_kernel_launch_cost": 0.08,
+    "estimated_backend_switch_cost": 0,
+    "actual_backend": "N/A",
+    "actual_latency_ms": -1,
+    "fusion_note": "Conv2D+BatchNorm+ReLU fused"
+  },
+  {
+    "op_name": "pool1",
+    "op_type": "MaxPool",
+    "backend": "CPU",
+    "estimated_read_bytes": 3154176,
+    "estimated_write_bytes": 788544,
+    "estimated_flops": 0,
+    "arithmetic_intensity": 0,
+    "estimated_kernel_launch_cost": 0.005,
+    "estimated_backend_switch_cost": 0.02,
+    "actual_backend": "N/A",
+    "actual_latency_ms": -1,
+    "fusion_note": ""
+  },
+  {
+    "op_name": "flatten",
+    "op_type": "Flatten",
+    "backend": "CPU",
+    "estimated_read_bytes": 788544,
+    "estimated_write_bytes": 788544,
+    "estimated_flops": 0,
+    "arithmetic_intensity": 0,
+    "estimated_kernel_launch_cost": 0.005,
+    "estimated_backend_switch_cost": 0,
+    "actual_backend": "N/A",
+    "actual_latency_ms": -1,
+    "fusion_note": ""
+  },
+  {
+    "op_name": "linear",
+    "op_type": "Linear",
+    "backend": "Metal",
+    "estimated_read_bytes": 8673984,
+    "estimated_write_bytes": 40,
+    "estimated_flops": 3942720,
+    "arithmetic_intensity": 0.454543,
+    "estimated_kernel_launch_cost": 0.08,
+    "estimated_backend_switch_cost": 0.02,
+    "actual_backend": "N/A",
+    "actual_latency_ms": -1,
+    "fusion_note": ""
+  }
+]

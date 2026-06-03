@@ -238,6 +238,12 @@ The JSON bridge also attaches a lightweight cost model with estimated FLOPs,
 memory traffic, and arithmetic intensity so the fused op can be consumed by
 backend placement or scheduling heuristics.
 
+The C++ `CostBasedPlanner` consumes the compiler `CostReport` instead of
+discarding it. Planner candidates now estimate each op from FLOPs, bytes moved,
+backend bandwidth/compute, launch overhead, and backend transfer cost, then
+export per-op cost source and decision reason in
+`trace/cv_cost_based_planner.json`.
+
 The runtime-aware cost model is calibrated from benchmark artifacts into:
 
 ```text

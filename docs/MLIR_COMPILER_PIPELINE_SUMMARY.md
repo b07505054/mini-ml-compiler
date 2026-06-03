@@ -47,6 +47,10 @@
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
 - Profile-calibrated cost table:
   `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
+- C++ `CostBasedPlanner` now consumes `CostReport` FLOPs, bytes moved, launch
+  overhead, and backend placement metadata instead of ignoring the report.
+  Planner candidates include per-op compute time, memory time, transfer cost,
+  cost source, and decision reason.
 - Runtime execution plan metadata that maps the lowered fused op to
   `OpType::FusedMatMulAddReLU` and the `fused_matmul_add_relu` custom kernel
 - A C++ benchmark that checks the MLIR execution plan and dispatches the fused
@@ -110,6 +114,7 @@ tools/build_profile_cost_table.py
 tools/generate_hir_runtime_benchmark_report.py
 tools/generate_rmsnorm_case_study.py
 tools/generate_attention_kv_bandwidth_model.py
+tools/validate_cost_based_planner.py
 ```
 
 Expected signals:
@@ -137,6 +142,8 @@ hir.fused_qmatmul_bias_relu emitted when profile.quantized_path = "faster"
 trace/hir_runtime_benchmark_report.json status = passed
 trace/rmsnorm_compiler_runtime_case_study.json status = passed
 trace/attention_kv_bandwidth_model.json status = modeled
+trace/cv_cost_based_planner.json format = cost_based_planner.v2
+planner op_costs include FLOPs/bytes/launch/memory/transfer breakdowns
 ```
 
 ## Engineering Relevance
@@ -168,6 +175,8 @@ This demonstrates:
 - Runtime lowering bridge
 - Cost-model metadata for backend scheduling
 - Profile-calibrated cost table for runtime-aware kernel and backend decisions
+- CostReport-driven C++ planning where FLOPs, bytes moved, launch overhead, and
+  backend transfer cost change backend selection
 - Custom fused-kernel dispatch path from MLIR lowering metadata to C++ runtime
 - End-to-end benchmark evidence tying compiler-emitted HIR dialect ops to
   runtime kernel correctness and latency data

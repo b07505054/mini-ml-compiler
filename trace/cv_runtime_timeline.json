@@ -1,34 +1,26 @@
-{
-  "events": [
+[
     {
-      "order": 0,
-      "op": "conv1",
-      "backend": "Metal",
-      "start_ms": 0,
-      "duration_ms": 0.32
+        "op": "conv1",
+        "backend": "Metal",
+        "start_ms": 0.00,
+        "duration_ms": 0.32
     },
     {
-      "order": 1,
-      "op": "pool1",
-      "backend": "CPU",
-      "start_ms": 0.34,
-      "duration_ms": 0.72
+        "op": "pool1",
+        "backend": "CPU",
+        "start_ms": 0.36,
+        "duration_ms": 0.18
     },
     {
-      "order": 2,
-      "op": "flatten",
-      "backend": "CPU",
-      "start_ms": 1.06,
-      "duration_ms": 0.2
+        "op": "flatten",
+        "backend": "CPU",
+        "start_ms": 0.55,
+        "duration_ms": 0.05
     },
     {
-      "order": 3,
-      "op": "linear",
-      "backend": "Metal",
-      "start_ms": 1.28,
-      "duration_ms": 0.21
+        "op": "linear",
+        "backend": "Metal",
+        "start_ms": 0.66,
+        "duration_ms": 0.21
     }
-  ],
-  "total_latency_ms": 1.49,
-  "backend_switch_cost_ms": 0.04
-}
+    ]
