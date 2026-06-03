@@ -24,12 +24,12 @@ llm.rmsnorm
 ## Performance Evidence
 
 - Shape bucket: `16x4096:f32`
-- Custom latency: `0.031597 ms`
-- PyTorch latency: `0.090415 ms`
-- Speedup: `2.8615x`
+- Custom latency: `0.030196 ms`
+- PyTorch latency: `0.088261 ms`
+- Speedup: `2.923x`
 - Correct: `True`
-- Custom effective bandwidth: `33.186 GB/s`
-- PyTorch effective bandwidth: `11.597 GB/s`
+- Custom effective bandwidth: `34.726 GB/s`
+- PyTorch effective bandwidth: `11.88 GB/s`
 - Bytes/token: `65536`
 - FLOPs/token: `16384`
 - Arithmetic intensity: `0.25 FLOPs/byte`

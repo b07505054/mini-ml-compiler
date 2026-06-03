@@ -258,6 +258,10 @@ is a planning artifact that explains why decode attention is KV-memory-bound
 and why compiler-selected layout, block size, and runtime memory pressure matter
 for paged KV-cache serving.
 
+`docs/GPU_COMPILER_RUNTIME_CASE_STUDY.md` is the repo-level narrative that ties
+the runtime evidence, MLIR lowering, profile-calibrated decision, roofline
+analysis, and KV-cache serving extension into one interview-ready story.
+
 ## Resume Bullet
 
 Added an MLIR C++ compiler pipeline with `RewritePattern` canonicalization,

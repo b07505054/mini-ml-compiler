@@ -87,6 +87,10 @@ The standalone RMSNorm case study is preserved as
 preserved as `trace/attention_kv_bandwidth_model.json` and
 `trace/attention_kv_bandwidth_model.md`.
 
+For the interview-level narrative that connects runtime evidence, compiler
+lowering, roofline analysis, and KV-cache serving pressure, see
+`docs/GPU_COMPILER_RUNTIME_CASE_STUDY.md`.
+
 ## Verification
 
 ```bash

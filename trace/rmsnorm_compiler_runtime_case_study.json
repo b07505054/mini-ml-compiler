@@ -18,12 +18,12 @@
   },
   "performance": {
     "shape_bucket": "16x4096:f32",
-    "custom_latency_ms": 0.031597,
-    "fallback_latency_ms": 0.090415,
-    "speedup": 2.8615,
+    "custom_latency_ms": 0.030196,
+    "fallback_latency_ms": 0.088261,
+    "speedup": 2.923,
     "correct": true,
-    "custom_effective_bandwidth_gbps": 33.186,
-    "fallback_effective_bandwidth_gbps": 11.597,
+    "custom_effective_bandwidth_gbps": 34.726,
+    "fallback_effective_bandwidth_gbps": 11.88,
     "bytes_per_token": 65536,
     "flops_per_token": 16384,
     "arithmetic_intensity_flops_per_byte": 0.25
