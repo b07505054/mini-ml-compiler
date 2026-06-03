@@ -254,7 +254,7 @@ struct HIRCanonicalizationPass
     patterns.add<AddZeroCanonicalizationPattern,
                  NestedReluCanonicalizationPattern>(&getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       signalPassFailure();
     }
   }
@@ -417,8 +417,8 @@ struct MatMulBiasReluToHIRConversionPattern
     rewriter.setInsertionPoint(reluMap);
     Operation *fused = nullptr;
     if (shouldUseQuantizedMatMul(matmul)) {
-      auto quantized = rewriter.create<FusedQMatMulBiasReluOp>(
-          reluMap.getLoc(), loweredType,
+      auto quantized = FusedQMatMulBiasReluOp::create(
+          rewriter, reluMap.getLoc(), loweredType,
           matmul.getInputs()[0], matmul.getInputs()[1], bias);
       quantized->setAttr("fusion.candidate",
                          StringAttr::get(matmul.getContext(), "qmatmul_bias_relu"));
@@ -448,8 +448,8 @@ struct MatMulBiasReluToHIRConversionPattern
       attachSparseCoreTargetAttrs(quantized.getOperation(), rewriter);
       fused = quantized.getOperation();
     } else {
-      auto fp32 = rewriter.create<FusedMatMulBiasReluOp>(
-          reluMap.getLoc(), loweredType,
+      auto fp32 = FusedMatMulBiasReluOp::create(
+          rewriter, reluMap.getLoc(), loweredType,
           matmul.getInputs()[0], matmul.getInputs()[1], bias);
       fp32->setAttr("fusion.candidate", candidate);
       fp32->setAttr("fusion.group", matmul->getAttr("fusion.group"));
@@ -490,8 +490,8 @@ struct RMSNormToHIRConversionPattern : ConversionPattern {
       return rewriter.notifyMatchFailure(op, "failed to convert RMSNorm result type");
     }
 
-    auto lowered = rewriter.create<FusedRMSNormOp>(op->getLoc(), loweredType,
-                                                  operands.front());
+    auto lowered = FusedRMSNormOp::create(rewriter, op->getLoc(), loweredType,
+                                          operands.front());
     lowered->setAttr("fusion.candidate", candidate);
     lowered->setAttr("fusion.group", op->getAttr("fusion.group"));
     lowered->setAttr("kernel.selection",
