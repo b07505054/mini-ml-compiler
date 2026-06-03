@@ -45,6 +45,9 @@
   `f32 matmul+bias+relu -> hir.fused_qmatmul_bias_relu` only when imported
   benchmark metadata marks the quantized path valid and faster
 - JSON bridge from HIR MLIR ops to lowered graph and execution plan artifacts
+- Target-aware dispatch descriptor export for fused MatMul and qmatmul HIR ops,
+  including shape, dtype, selected tile, SRAM usage, vector alignment, and
+  rejected tile candidates
 - Profile-calibrated cost table:
   `cost_table[fusion_candidate][backend][shape_bucket][dtype]`
 - C++ `CostBasedPlanner` now consumes `CostReport` FLOPs, bytes moved, launch
@@ -115,6 +118,7 @@ tools/generate_hir_runtime_benchmark_report.py
 tools/generate_rmsnorm_case_study.py
 tools/generate_attention_kv_bandwidth_model.py
 tools/validate_cost_based_planner.py
+tools/validate_dispatch_descriptors.py
 ```
 
 Expected signals:
@@ -144,6 +148,7 @@ trace/rmsnorm_compiler_runtime_case_study.json status = passed
 trace/attention_kv_bandwidth_model.json status = modeled
 trace/cv_cost_based_planner.json format = cost_based_planner.v2
 planner op_costs include FLOPs/bytes/launch/memory/transfer breakdowns
+target.dispatch_descriptor.v1 selects legal SRAM/alignment-aware tiles
 ```
 
 ## Engineering Relevance
@@ -155,6 +160,8 @@ This demonstrates:
 - Quantization-aware lowering surface for INT8 mobile/accelerator kernels
 - Target-aware lowering legality for accelerator-style tile, memory hierarchy,
   sparse layout, and vector alignment constraints
+- Target-aware tile planning that enumerates legal/rejected tiles and emits a
+  dispatch descriptor consumed by execution-plan artifacts
 - Layout-aware verifier checks for memory alignment and tile/channel
   constraints relevant to Qualcomm-style DSP/NPU paths
 - Profile-driven quantized lowering from f32 MatMul chains to INT8 HIR fused ops

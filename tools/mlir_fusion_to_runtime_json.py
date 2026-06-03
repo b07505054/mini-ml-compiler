@@ -48,6 +48,43 @@ def detect_fused_qmatmul(text):
     return list(hir_pattern.finditer(text))
 
 
+def op_line(text, match):
+    line_start = text.rfind("\n", 0, match.start()) + 1
+    line_end = text.find("\n", match.end())
+    if line_end == -1:
+        line_end = len(text)
+    return text[line_start:line_end]
+
+
+def parse_tensor_shapes(text, match):
+    line = op_line(text, match)
+    tensor_pattern = re.compile(
+        r"tensor<(?P<d0>\d+)x(?P<d1>\d+)x(?P<dtype>f32|f16|i8)>"
+    )
+    return [
+        {
+            "d0": int(found.group("d0")),
+            "d1": int(found.group("d1")),
+            "dtype": found.group("dtype"),
+        }
+        for found in tensor_pattern.finditer(line)
+    ]
+
+
+def matmul_shape_from_mlir(text, match, default):
+    shapes = parse_tensor_shapes(text, match)
+    if len(shapes) < 2:
+        return default
+    lhs = shapes[0]
+    rhs = shapes[1]
+    return {
+        "m": lhs["d0"],
+        "k": lhs["d1"],
+        "n": rhs["d1"],
+        "dtype": lhs["dtype"],
+    }
+
+
 def load_kernel_profiles(paths):
     if not paths:
         return {"profile_status": "not_provided", "kernels": {}}
@@ -191,7 +228,7 @@ def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
 def sparsecore_like_target_model():
     return {
         "target": "sparsecore_like_v1",
-        "tile_shape": {"m": 16, "n": 16, "k": 32},
+        "base_tile_shape": {"m": 16, "n": 16, "k": 32},
         "memory_hierarchy": "global_sram_register",
         "sram_kb": 256,
         "vector_bytes": 128,
@@ -208,16 +245,128 @@ def sparsecore_like_target_model():
     }
 
 
-def estimate_matmul_bias_relu_cost(m=16, k=128, n=64, dtype_bytes=4):
+def dtype_bytes(dtype):
+    return {"f32": 4, "f16": 2, "i8": 1}.get(dtype, 4)
+
+
+def estimate_tile_sram_bytes(tile_m, tile_n, tile_k, bytes_per_element):
+    lhs_bytes = tile_m * tile_k * bytes_per_element
+    rhs_bytes = tile_k * tile_n * bytes_per_element
+    bias_bytes = tile_m * tile_n * bytes_per_element
+    out_bytes = tile_m * tile_n * bytes_per_element
+    return lhs_bytes + rhs_bytes + bias_bytes + out_bytes
+
+
+def choose_tile(shape, target):
+    bytes_per_element = dtype_bytes(shape["dtype"])
+    sram_budget = target["sram_kb"] * 1024
+    vector_bytes = target["vector_bytes"]
+    candidates = [
+        {"m": 16, "n": 16, "k": 32},
+        {"m": 16, "n": 32, "k": 32},
+        {"m": 32, "n": 16, "k": 32},
+        {"m": 32, "n": 32, "k": 32},
+        {"m": 16, "n": 64, "k": 32},
+        {"m": 64, "n": 16, "k": 32},
+        {"m": 64, "n": 32, "k": 32},
+        {"m": 32, "n": 64, "k": 32},
+        {"m": 64, "n": 64, "k": 32},
+        {"m": 16, "n": 32, "k": 128},
+        {"m": 16, "n": 64, "k": 128},
+        {"m": 32, "n": 32, "k": 128},
+        {"m": 32, "n": 64, "k": 128},
+        {"m": 64, "n": 32, "k": 128},
+        {"m": 64, "n": 64, "k": 128},
+    ]
+
+    evaluated = []
+    legal = []
+    for tile in candidates:
+        reasons = []
+        if shape["m"] % tile["m"] != 0:
+            reasons.append("M_not_multiple_of_tile_m")
+        if shape["n"] % tile["n"] != 0:
+            reasons.append("N_not_multiple_of_tile_n")
+        if shape["k"] % tile["k"] != 0:
+            reasons.append("K_not_multiple_of_tile_k")
+        if (tile["k"] * bytes_per_element) % vector_bytes != 0:
+            reasons.append("K_tile_not_vector_aligned")
+        sram_bytes = estimate_tile_sram_bytes(
+            tile["m"],
+            tile["n"],
+            tile["k"],
+            bytes_per_element,
+        )
+        if sram_bytes > sram_budget:
+            reasons.append("tile_exceeds_sram_budget")
+        flops = 2 * tile["m"] * tile["n"] * tile["k"]
+        arithmetic_intensity = flops / max(sram_bytes, 1)
+        record = {
+            "tile": tile,
+            "sram_bytes": sram_bytes,
+            "arithmetic_intensity_flops_per_byte": round(arithmetic_intensity, 6),
+            "legal": not reasons,
+            "reject_reasons": reasons,
+        }
+        evaluated.append(record)
+        if record["legal"]:
+            legal.append(record)
+
+    if not legal:
+        return {
+            "status": "fallback_no_legal_tile",
+            "selected_tile": None,
+            "selected_sram_bytes": None,
+            "decision_reason": "no tile satisfies shape, vector alignment, and SRAM constraints",
+            "candidates": evaluated,
+        }
+
+    selected = max(
+        legal,
+        key=lambda item: (
+            item["arithmetic_intensity_flops_per_byte"],
+            item["tile"]["m"] * item["tile"]["n"],
+        ),
+    )
+    return {
+        "status": "selected",
+        "selected_tile": selected["tile"],
+        "selected_sram_bytes": selected["sram_bytes"],
+        "decision_reason": "selected highest-intensity legal tile under SRAM/alignment constraints",
+        "candidates": evaluated,
+    }
+
+
+def build_dispatch_descriptor(hir_op_type, runtime_op_type, selection, shape, target):
+    tile_decision = choose_tile(shape, target)
+    return {
+        "descriptor_type": "target.dispatch_descriptor.v1",
+        "hir_op": hir_op_type,
+        "runtime_op_type": runtime_op_type,
+        "target": target["target"],
+        "backend": selection["selected_backend"],
+        "kernel": selection["selected_kernel"],
+        "shape": shape,
+        "dtype": shape["dtype"],
+        "tile_decision": tile_decision,
+        "memory_hierarchy": target["memory_hierarchy"],
+        "alignment_bytes": target["alignment_bytes"],
+        "vector_bytes": target["vector_bytes"],
+        "sparse_layout": target["sparse_layout"],
+    }
+
+
+def estimate_matmul_bias_relu_cost(m=16, k=128, n=64, dtype="f32"):
+    bytes_per_element = dtype_bytes(dtype)
     matmul_flops = 2 * m * k * n
     bias_add_flops = m * n
     relu_flops = m * n
     total_flops = matmul_flops + bias_add_flops + relu_flops
 
-    bytes_a = m * k * dtype_bytes
-    bytes_b = k * n * dtype_bytes
-    bytes_bias = m * n * dtype_bytes
-    bytes_out = m * n * dtype_bytes
+    bytes_a = m * k * bytes_per_element
+    bytes_b = k * n * bytes_per_element
+    bytes_bias = m * n * bytes_per_element
+    bytes_out = m * n * bytes_per_element
 
     bytes_read = bytes_a + bytes_b + bytes_bias
     bytes_written = bytes_out
@@ -227,7 +376,7 @@ def estimate_matmul_bias_relu_cost(m=16, k=128, n=64, dtype_bytes=4):
         "m": m,
         "k": k,
         "n": n,
-        "dtype": "f32",
+        "dtype": dtype,
         "estimated_flops": total_flops,
         "estimated_bytes_read": bytes_read,
         "estimated_bytes_written": bytes_written,
@@ -256,7 +405,7 @@ def estimate_rmsnorm_cost(tokens=16, hidden=768, dtype_bytes=2):
     }
 
 
-def build_matmul_op(index, match, profile):
+def build_matmul_op(index, match, profile, source_text):
     selection = select_kernel(
         "matmul_bias_relu",
         "fused_matmul_add_relu",
@@ -268,6 +417,19 @@ def build_matmul_op(index, match, profile):
     result_name = match.group("result")
     hir_op_type = "hir.fused_matmul_bias_relu"
     runtime_op_type = "FusedMatMulAddReLU"
+    shape = matmul_shape_from_mlir(
+        source_text,
+        match,
+        {"m": 16, "k": 128, "n": 64, "dtype": "f32"},
+    )
+    target = sparsecore_like_target_model()
+    dispatch_descriptor = build_dispatch_descriptor(
+        hir_op_type,
+        runtime_op_type,
+        selection,
+        shape,
+        target,
+    )
     return {
         "id": index,
         "name": f"fused_matmul_bias_relu_{index}",
@@ -284,12 +446,18 @@ def build_matmul_op(index, match, profile):
             runtime_op_type,
             selection,
         ),
-        "target_model": sparsecore_like_target_model(),
+        "target_model": target,
+        "dispatch_descriptor": dispatch_descriptor,
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],
         "outputs": [result_name],
-        "cost_model": estimate_matmul_bias_relu_cost(),
+        "cost_model": estimate_matmul_bias_relu_cost(
+            shape["m"],
+            shape["k"],
+            shape["n"],
+            shape["dtype"],
+        ),
         "kernel_selection": selection,
         "notes": [
             "Detected from MLIR linalg.matmul annotated by MatMulBiasReluFusionPass",
@@ -341,7 +509,7 @@ def build_rmsnorm_op(index, match, profile):
     }
 
 
-def build_qmatmul_op(index, match, profile):
+def build_qmatmul_op(index, match, profile, source_text):
     selection = select_kernel(
         "qmatmul_bias_relu",
         "int8_qmatmul_bias_relu",
@@ -353,6 +521,20 @@ def build_qmatmul_op(index, match, profile):
     result_name = match.group("result")
     hir_op_type = "hir.fused_qmatmul_bias_relu"
     runtime_op_type = "FusedQMatMulBiasReLU"
+    shape = matmul_shape_from_mlir(
+        source_text,
+        match,
+        {"m": 128, "k": 128, "n": 128, "dtype": "i8"},
+    )
+    shape["dtype"] = "i8"
+    target = sparsecore_like_target_model()
+    dispatch_descriptor = build_dispatch_descriptor(
+        hir_op_type,
+        runtime_op_type,
+        selection,
+        shape,
+        target,
+    )
     return {
         "id": index,
         "name": f"fused_qmatmul_bias_relu_{index}",
@@ -369,7 +551,8 @@ def build_qmatmul_op(index, match, profile):
             runtime_op_type,
             selection,
         ),
-        "target_model": sparsecore_like_target_model(),
+        "target_model": target,
+        "dispatch_descriptor": dispatch_descriptor,
         "fusion_candidate": "qmatmul_bias_relu",
         "fusion_group": f"qmatmul_bias_relu_{index}",
         "inputs": ["A_int8", "B_int8", "bias"],
@@ -403,14 +586,14 @@ def build_qmatmul_op(index, match, profile):
     }
 
 
-def build_lowered_graph(matmul_matches, rmsnorm_matches, qmatmul_matches, source_path, profile):
+def build_lowered_graph(matmul_matches, rmsnorm_matches, qmatmul_matches, source_path, profile, source_text):
     ops = []
     for match in matmul_matches:
-        ops.append(build_matmul_op(len(ops), match, profile))
+        ops.append(build_matmul_op(len(ops), match, profile, source_text))
     for match in rmsnorm_matches:
         ops.append(build_rmsnorm_op(len(ops), match, profile))
     for match in qmatmul_matches:
-        ops.append(build_qmatmul_op(len(ops), match, profile))
+        ops.append(build_qmatmul_op(len(ops), match, profile, source_text))
 
     return {
         "format": "hir.lowered_graph.v1",
@@ -443,6 +626,7 @@ def build_execution_plan(lowered_graph):
             "runtime_dispatch_contract": op["runtime_dispatch_contract"],
             "kernel_selection": op["kernel_selection"],
             "target_model": op.get("target_model"),
+            "dispatch_descriptor": op.get("dispatch_descriptor"),
             "estimated_launch_overhead_us": 80,
             "estimated_flops": op["cost_model"]["estimated_flops"],
             "arithmetic_intensity_flops_per_byte": op["cost_model"]["arithmetic_intensity_flops_per_byte"],
@@ -485,6 +669,7 @@ def main():
         qmatmul_matches,
         input_path,
         profile,
+        text,
     )
     execution_plan = build_execution_plan(lowered_graph)
 

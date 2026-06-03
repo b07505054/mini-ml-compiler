@@ -70,6 +70,12 @@ target.memory_hierarchy = "global_sram_register"
 The HIR verifier checks these attributes when present, so invalid target
 metadata is rejected before artifact export.
 
+The runtime JSON bridge also turns target metadata into a dispatch descriptor.
+For fused MatMul and qmatmul HIR ops, it parses M/N/K/dtype from the emitted
+MLIR type, enumerates candidate tiles, rejects tiles that violate shape,
+SRAM, or vector-alignment constraints, and records the selected tile plus
+rejected candidates in the execution plan.
+
 RMSNorm lowering uses MLIR dialect-conversion infrastructure:
 
 ```text

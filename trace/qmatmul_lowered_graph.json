@@ -32,7 +32,7 @@
       },
       "target_model": {
         "target": "sparsecore_like_v1",
-        "tile_shape": {
+        "base_tile_shape": {
           "m": 16,
           "n": 16,
           "k": 32
@@ -50,6 +50,220 @@
           "M/N/K must be static multiples of 16/16/32",
           "dtype must be f32 or f16 for this fused floating-point path"
         ]
+      },
+      "dispatch_descriptor": {
+        "descriptor_type": "target.dispatch_descriptor.v1",
+        "hir_op": "hir.fused_qmatmul_bias_relu",
+        "runtime_op_type": "FusedQMatMulBiasReLU",
+        "target": "sparsecore_like_v1",
+        "backend": "CPU",
+        "kernel": "int8_qmatmul_bias_relu",
+        "shape": {
+          "m": 128,
+          "k": 128,
+          "n": 128,
+          "dtype": "i8"
+        },
+        "dtype": "i8",
+        "tile_decision": {
+          "status": "selected",
+          "selected_tile": {
+            "m": 64,
+            "n": 64,
+            "k": 128
+          },
+          "selected_sram_bytes": 24576,
+          "decision_reason": "selected highest-intensity legal tile under SRAM/alignment constraints",
+          "candidates": [
+            {
+              "tile": {
+                "m": 16,
+                "n": 16,
+                "k": 32
+              },
+              "sram_bytes": 1536,
+              "arithmetic_intensity_flops_per_byte": 10.666667,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 16,
+                "n": 32,
+                "k": 32
+              },
+              "sram_bytes": 2560,
+              "arithmetic_intensity_flops_per_byte": 12.8,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 32,
+                "n": 16,
+                "k": 32
+              },
+              "sram_bytes": 2560,
+              "arithmetic_intensity_flops_per_byte": 12.8,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 32,
+                "n": 32,
+                "k": 32
+              },
+              "sram_bytes": 4096,
+              "arithmetic_intensity_flops_per_byte": 16.0,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 16,
+                "n": 64,
+                "k": 32
+              },
+              "sram_bytes": 4608,
+              "arithmetic_intensity_flops_per_byte": 14.222222,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 64,
+                "n": 16,
+                "k": 32
+              },
+              "sram_bytes": 4608,
+              "arithmetic_intensity_flops_per_byte": 14.222222,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 64,
+                "n": 32,
+                "k": 32
+              },
+              "sram_bytes": 7168,
+              "arithmetic_intensity_flops_per_byte": 18.285714,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 32,
+                "n": 64,
+                "k": 32
+              },
+              "sram_bytes": 7168,
+              "arithmetic_intensity_flops_per_byte": 18.285714,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 64,
+                "n": 64,
+                "k": 32
+              },
+              "sram_bytes": 12288,
+              "arithmetic_intensity_flops_per_byte": 21.333333,
+              "legal": false,
+              "reject_reasons": [
+                "K_tile_not_vector_aligned"
+              ]
+            },
+            {
+              "tile": {
+                "m": 16,
+                "n": 32,
+                "k": 128
+              },
+              "sram_bytes": 7168,
+              "arithmetic_intensity_flops_per_byte": 18.285714,
+              "legal": true,
+              "reject_reasons": []
+            },
+            {
+              "tile": {
+                "m": 16,
+                "n": 64,
+                "k": 128
+              },
+              "sram_bytes": 12288,
+              "arithmetic_intensity_flops_per_byte": 21.333333,
+              "legal": true,
+              "reject_reasons": []
+            },
+            {
+              "tile": {
+                "m": 32,
+                "n": 32,
+                "k": 128
+              },
+              "sram_bytes": 10240,
+              "arithmetic_intensity_flops_per_byte": 25.6,
+              "legal": true,
+              "reject_reasons": []
+            },
+            {
+              "tile": {
+                "m": 32,
+                "n": 64,
+                "k": 128
+              },
+              "sram_bytes": 16384,
+              "arithmetic_intensity_flops_per_byte": 32.0,
+              "legal": true,
+              "reject_reasons": []
+            },
+            {
+              "tile": {
+                "m": 64,
+                "n": 32,
+                "k": 128
+              },
+              "sram_bytes": 16384,
+              "arithmetic_intensity_flops_per_byte": 32.0,
+              "legal": true,
+              "reject_reasons": []
+            },
+            {
+              "tile": {
+                "m": 64,
+                "n": 64,
+                "k": 128
+              },
+              "sram_bytes": 24576,
+              "arithmetic_intensity_flops_per_byte": 42.666667,
+              "legal": true,
+              "reject_reasons": []
+            }
+          ]
+        },
+        "memory_hierarchy": "global_sram_register",
+        "alignment_bytes": 128,
+        "vector_bytes": 128,
+        "sparse_layout": "dense_or_2_4"
       },
       "fusion_candidate": "qmatmul_bias_relu",
       "fusion_group": "qmatmul_bias_relu_0",
