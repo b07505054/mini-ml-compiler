@@ -1,0 +1,168 @@
+{
+  "artifact_type": "compiler_runtime_decision_report",
+  "format": "compiler_runtime_decision_report.v1",
+  "status": "passed",
+  "compiler_planner": {
+    "format": "cost_based_planner.v2",
+    "chosen_plan": "current",
+    "chosen_latency_ms": 0.557655,
+    "all_metal_latency_ms": 0.630856,
+    "all_metal_transfer_cost_ms": 0.137995,
+    "decision_delta_vs_all_metal_ms": 0.073201,
+    "decision_reason": "CostReport-driven planner keeps memory-heavy CPU ops on CPU because moving pool/flatten to Metal adds transfer cost.",
+    "chosen_op_costs": [
+      {
+        "op_name": "conv1",
+        "op_type": "FusedConvBatchNormReLU",
+        "backend": "Metal",
+        "latency_ms": 0.132607,
+        "launch_overhead_ms": 0.08,
+        "compute_time_ms": 0.0212907,
+        "memory_time_ms": 0.0313168,
+        "transfer_cost_ms": 0,
+        "estimated_flops": 42581376,
+        "estimated_bytes": 3758016,
+        "cost_source": "cost_report_static_model",
+        "decision_reason": "CostReport FLOPs/bytes calibrated backend estimate"
+      },
+      {
+        "op_name": "pool1",
+        "op_type": "MaxPool",
+        "backend": "CPU",
+        "latency_ms": 0.162709,
+        "launch_overhead_ms": 0.005,
+        "compute_time_ms": 0,
+        "memory_time_ms": 0.157709,
+        "transfer_cost_ms": 0,
+        "estimated_flops": 0,
+        "estimated_bytes": 3942720,
+        "cost_source": "cost_report_static_model",
+        "decision_reason": "CostReport FLOPs/bytes calibrated backend estimate"
+      },
+      {
+        "op_name": "flatten",
+        "op_type": "Flatten",
+        "backend": "CPU",
+        "latency_ms": 0.0680835,
+        "launch_overhead_ms": 0.005,
+        "compute_time_ms": 0,
+        "memory_time_ms": 0.0630835,
+        "transfer_cost_ms": 0,
+        "estimated_flops": 0,
+        "estimated_bytes": 1577088,
+        "cost_source": "cost_report_static_model",
+        "decision_reason": "CostReport FLOPs/bytes calibrated backend estimate"
+      },
+      {
+        "op_name": "linear",
+        "op_type": "Linear",
+        "backend": "Metal",
+        "latency_ms": 0.154255,
+        "launch_overhead_ms": 0.08,
+        "compute_time_ms": 0.00197136,
+        "memory_time_ms": 0.0722835,
+        "transfer_cost_ms": 0,
+        "estimated_flops": 3942720,
+        "estimated_bytes": 8674024,
+        "cost_source": "cost_report_static_model",
+        "decision_reason": "CostReport FLOPs/bytes calibrated backend estimate"
+      }
+    ]
+  },
+  "kernel_and_dispatch_decisions": [
+    {
+      "name": "MatMul-Bias-ReLU",
+      "plan": "trace/mlir_execution_plan.json",
+      "hir_op": "hir.fused_matmul_bias_relu",
+      "runtime_kernel": "unfused_matmul_add_relu",
+      "backend": "CPU",
+      "selection_reason": "profile_calibrated_fallback",
+      "profile_calibrated": true,
+      "shape_bucket": "128x128x128:f32",
+      "latency": {
+        "custom_ms": 5.354697,
+        "fallback_ms": 5.145997,
+        "speedup": 0.961025,
+        "correct": true
+      },
+      "dispatch_descriptor": {
+        "target": "sparsecore_like_v1",
+        "shape": {
+          "m": 16,
+          "k": 128,
+          "n": 64,
+          "dtype": "f32"
+        },
+        "selected_tile": {
+          "m": 16,
+          "n": 64,
+          "k": 128
+        },
+        "selected_sram_bytes": 49152,
+        "decision_reason": "selected highest-intensity legal tile under SRAM/alignment constraints",
+        "num_legal_tile_candidates": 5,
+        "num_rejected_tile_candidates": 10
+      }
+    },
+    {
+      "name": "RMSNorm",
+      "plan": "trace/rmsnorm_execution_plan.json",
+      "hir_op": "hir.fused_rmsnorm",
+      "runtime_kernel": "fused_rmsnorm_cuda",
+      "backend": "CUDA",
+      "selection_reason": "profile_calibrated_fastest",
+      "profile_calibrated": true,
+      "shape_bucket": "16x4096:f32",
+      "latency": {
+        "custom_ms": 0.030196,
+        "fallback_ms": 0.088261,
+        "speedup": 2.923,
+        "correct": true
+      },
+      "dispatch_descriptor": null
+    },
+    {
+      "name": "INT8 QMatMul-Bias-ReLU",
+      "plan": "trace/qmatmul_execution_plan.json",
+      "hir_op": "hir.fused_qmatmul_bias_relu",
+      "runtime_kernel": "int8_qmatmul_bias_relu",
+      "backend": "CPU",
+      "selection_reason": "profile_calibrated_fastest",
+      "profile_calibrated": true,
+      "shape_bucket": "128x128x128:i8",
+      "latency": {
+        "custom_ms": 4.94182,
+        "fallback_ms": 5.72657,
+        "speedup": 1.1588,
+        "correct": true
+      },
+      "dispatch_descriptor": {
+        "target": "sparsecore_like_v1",
+        "shape": {
+          "m": 128,
+          "k": 128,
+          "n": 128,
+          "dtype": "i8"
+        },
+        "selected_tile": {
+          "m": 64,
+          "n": 64,
+          "k": 128
+        },
+        "selected_sram_bytes": 24576,
+        "decision_reason": "selected highest-intensity legal tile under SRAM/alignment constraints",
+        "num_legal_tile_candidates": 6,
+        "num_rejected_tile_candidates": 9
+      }
+    }
+  ],
+  "checks": {
+    "planner_uses_cost_report_v2": true,
+    "planner_decision_changed_from_all_metal": true,
+    "all_metal_has_transfer_cost": true,
+    "matmul_profile_falls_back_when_fused_slower": true,
+    "rmsnorm_profile_selects_cuda": true,
+    "qmatmul_profile_selects_int8": true,
+    "dispatch_descriptors_have_tiles": true
+  }
+}

@@ -20,6 +20,7 @@
 - Added an end-to-end HIR runtime benchmark report proving compiler-emitted `hir.fused_*` ops dispatch to measured runtime kernels with correctness and latency evidence.
 - Built a CUDA RMSNorm compiler/runtime case study where `llm.rmsnorm` lowers to `hir.fused_rmsnorm`, runtime profile data selects `fused_rmsnorm_cuda` over `torch_rmsnorm`, and reports include correctness, latency, speedup, bandwidth, and roofline metadata.
 - Added a decode-attention KV-cache bandwidth model that quantifies bytes/token, FLOPs/token, arithmetic intensity, paged-block pressure, and why compiler-selected layout must coordinate with runtime memory pressure.
+- Added an interview-ready compiler/runtime decision report showing CostReport-driven backend planning, profile-calibrated kernel fallback/selection, selected target tiles, SRAM usage, and runtime benchmark evidence in one artifact.
 - Added lightweight cost-model metadata for fused MatMul-Bias-ReLU ops, including estimated FLOPs, memory traffic, and arithmetic intensity for backend scheduling.
 - Upgraded the C++ planner to consume compiler `CostReport` entries, estimating candidate latency from FLOPs, bytes moved, launch overhead, backend bandwidth/compute, and transfer cost with per-op decision reasons.
 - Replaced hard-coded fused-kernel assumptions with a profile-calibrated cost table keyed by fusion candidate, backend, shape bucket, and dtype.
@@ -35,6 +36,7 @@
 - Implemented a runtime-aware compiler cost model where benchmark profiles choose the winning backend/kernel for each shape bucket instead of assuming the fused path is always faster.
 - Implemented CostReport-driven backend planning where compiler-estimated FLOPs, bytes, launch overhead, and backend transfer costs can change the selected execution plan.
 - Built a measured RMSNorm compiler/runtime case study and an attention decode KV-cache bandwidth model to explain real inference bottlenecks beyond JSON contracts.
+- Built a compiler/runtime decision report tying MLIR lowering, target-aware tile selection, CostReport-driven planning, and measured runtime profiles into a single validated case study.
 
 ## Interview Talking Points
 
@@ -50,6 +52,7 @@
 - The negative test demonstrates that the pass avoids annotating incomplete fusion patterns.
 - The runtime bridge shows how compiler annotations can feed backend placement, scheduling, and dispatch decisions.
 - The C++ planner no longer ignores compiler cost analysis; its JSON report exposes per-op cost source, compute/memory/transfer breakdowns, and the reason each backend candidate wins or loses.
+- The decision report is the best interview artifact: it shows a concrete planner choice changing because transfer cost makes all-Metal slower, while HIR fused ops still use profile evidence and target tile descriptors.
 - The RMSNorm case study is the strongest transformer-kernel evidence: MLIR lowering emits `hir.fused_rmsnorm`, runtime profile data selects the custom CUDA kernel, and the report includes correctness plus roofline-style bandwidth analysis.
 - The attention/KV model is intentionally scoped as architecture analysis, not a claimed FlashAttention kernel; it gives a concrete way to discuss decode-time KV bandwidth, paged-cache block sizing, and memory-pressure-aware scheduling.
 - The Affine tiling and vectorization tests show familiarity with MLIR loop transformation workflows beyond graph-level pattern matching.

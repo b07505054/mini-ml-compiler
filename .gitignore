@@ -81,5 +81,7 @@ trace/*
 !trace/rmsnorm_compiler_runtime_case_study.md
 !trace/attention_kv_bandwidth_model.json
 !trace/attention_kv_bandwidth_model.md
+!trace/compiler_runtime_decision_report.json
+!trace/compiler_runtime_decision_report.md
 
 build-mlir/

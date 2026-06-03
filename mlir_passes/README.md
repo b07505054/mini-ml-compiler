@@ -286,6 +286,12 @@ evidence together. It fails if the execution plans do not contain typed
 latencies, and correctness-passing evidence for both MatMul-Bias-ReLU and
 RMSNorm.
 
+`tools/generate_compiler_runtime_decision_report.py` is the compact
+interview-facing artifact. It combines the CostReport-driven C++ planner,
+profile-calibrated kernel choices, target dispatch descriptors, selected tile
+shapes, SRAM usage, and fallback reasons into
+`trace/compiler_runtime_decision_report.md`.
+
 `tools/generate_rmsnorm_case_study.py` preserves the RMSNorm transformer-kernel
 story as a standalone compiler/runtime case study. It checks that
 `llm.rmsnorm` lowers to `hir.fused_rmsnorm`, imports the measured CUDA benchmark

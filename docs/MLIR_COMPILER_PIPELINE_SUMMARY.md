@@ -107,6 +107,13 @@ For the interview-level narrative that connects runtime evidence, compiler
 lowering, roofline analysis, and KV-cache serving pressure, see
 `docs/GPU_COMPILER_RUNTIME_CASE_STUDY.md`.
 
+The cross-cutting planner/kernel/tile decision report is preserved as
+`trace/compiler_runtime_decision_report.json` and
+`trace/compiler_runtime_decision_report.md`. It shows the CostReport-driven C++
+planner choosing a mixed CPU/Metal plan over all-Metal due to transfer cost,
+plus profile-calibrated kernel selection and target tile decisions for HIR
+fused ops.
+
 ## Verification
 
 ```bash
@@ -119,6 +126,7 @@ tools/generate_rmsnorm_case_study.py
 tools/generate_attention_kv_bandwidth_model.py
 tools/validate_cost_based_planner.py
 tools/validate_dispatch_descriptors.py
+tools/generate_compiler_runtime_decision_report.py
 ```
 
 Expected signals:
@@ -149,6 +157,7 @@ trace/attention_kv_bandwidth_model.json status = modeled
 trace/cv_cost_based_planner.json format = cost_based_planner.v2
 planner op_costs include FLOPs/bytes/launch/memory/transfer breakdowns
 target.dispatch_descriptor.v1 selects legal SRAM/alignment-aware tiles
+trace/compiler_runtime_decision_report.json status = passed
 ```
 
 ## Engineering Relevance
