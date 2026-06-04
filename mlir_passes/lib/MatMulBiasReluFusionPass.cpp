@@ -35,6 +35,7 @@ namespace {
 #define GEN_PASS_DEF_HIRFUSIONLOWERING
 #define GEN_PASS_DEF_HIRFUSEDOPVERIFIER
 #define GEN_PASS_DEF_HIRRMSNORMTOLINALG
+#define GEN_PASS_DEF_STABLEHLOCOMPATIBLERMSNORMIMPORT
 #include "FusionPasses.h.inc"
 
 bool isAddMap(linalg::MapOp mapOp) {
@@ -724,6 +725,104 @@ struct HIRRMSNormToLinalgPass
   }
 };
 
+bool hasRsqrtInBody(linalg::GenericOp generic) {
+  bool foundRsqrt = false;
+  generic.getBody()->walk([&](math::RsqrtOp) { foundRsqrt = true; });
+  return foundRsqrt;
+}
+
+bool hasMulInBody(linalg::GenericOp generic) {
+  bool foundMul = false;
+  generic.getBody()->walk([&](arith::MulFOp) { foundMul = true; });
+  return foundMul;
+}
+
+bool allParallelIterators(linalg::GenericOp generic) {
+  for (utils::IteratorType iteratorType : generic.getIteratorTypesArray()) {
+    if (iteratorType != utils::IteratorType::parallel) {
+      return false;
+    }
+  }
+  return true;
+}
+
+struct StableHLOCompatibleRMSNormPattern
+    : OpRewritePattern<linalg::GenericOp> {
+  using OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::GenericOp normalize,
+                                PatternRewriter &rewriter) const override {
+    if (normalize->getNumResults() != 1 || normalize.getInputs().size() != 2 ||
+        normalize.getNumDpsInits() != 1) {
+      return failure();
+    }
+    if (!allParallelIterators(normalize) || !hasRsqrtInBody(normalize) ||
+        !hasMulInBody(normalize)) {
+      return failure();
+    }
+
+    Value input = normalize.getInputs()[0];
+    Value reduction = normalize.getInputs()[1];
+    auto inputType = dyn_cast<RankedTensorType>(input.getType());
+    auto reductionType = dyn_cast<RankedTensorType>(reduction.getType());
+    auto outputType =
+        dyn_cast<RankedTensorType>(normalize->getResult(0).getType());
+    if (!inputType || !reductionType || !outputType) {
+      return failure();
+    }
+    if (inputType != outputType || inputType.getRank() != 2 ||
+        reductionType.getRank() != 1 ||
+        reductionType.getDimSize(0) != inputType.getDimSize(0) ||
+        !inputType.getElementType().isF32()) {
+      return failure();
+    }
+
+    auto reductionProducer = reduction.getDefiningOp<linalg::GenericOp>();
+    if (!reductionProducer || !hasMulInBody(reductionProducer)) {
+      return failure();
+    }
+
+    auto fused = FusedRMSNormOp::create(
+        rewriter, normalize.getLoc(), outputType, input);
+    fused->setAttr("fusion.candidate",
+                   StringAttr::get(normalize.getContext(), "rmsnorm"));
+    fused->setAttr("fusion.group",
+                   StringAttr::get(normalize.getContext(),
+                                   "stablehlo_compatible_rmsnorm_0"));
+    fused->setAttr("kernel.selection",
+                   StringAttr::get(normalize.getContext(), "runtime_profile"));
+    fused->setAttr("lowering.source",
+                   StringAttr::get(normalize.getContext(), "llm.rmsnorm"));
+    fused->setAttr("frontend.source",
+                   StringAttr::get(
+                       normalize.getContext(),
+                       "stablehlo_compatible_rmsnorm_decomposition"));
+
+    rewriter.replaceOp(normalize, fused->getResults());
+    return success();
+  }
+};
+
+struct StableHLOCompatibleRMSNormImportPass
+    : impl::StableHLOCompatibleRMSNormImportBase<
+          StableHLOCompatibleRMSNormImportPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect,
+                    HIRDialect,
+                    linalg::LinalgDialect,
+                    math::MathDialect,
+                    tensor::TensorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<StableHLOCompatibleRMSNormPattern>(&getContext());
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
 } // namespace
 
 std::unique_ptr<Pass> createHIRCanonicalizationPass() {
@@ -750,10 +849,15 @@ std::unique_ptr<Pass> createHIRRMSNormToLinalgPass() {
   return std::make_unique<HIRRMSNormToLinalgPass>();
 }
 
+std::unique_ptr<Pass> createStableHLOCompatibleRMSNormImportPass() {
+  return std::make_unique<StableHLOCompatibleRMSNormImportPass>();
+}
+
 void registerFusionPasses() {
   PassRegistration<HIRCanonicalizationPass>();
   PassRegistration<HIRFusedOpVerifierPass>();
   PassRegistration<HIRRMSNormToLinalgPass>();
+  PassRegistration<StableHLOCompatibleRMSNormImportPass>();
 
   static PassPipelineRegistration<> pipeline(
       "matmul-bias-relu-fusion",
@@ -795,6 +899,14 @@ void registerFusionPasses() {
       "Lower hir.fused_rmsnorm to executable Linalg/Math tensor IR",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createHIRRMSNormToLinalgPass());
+      });
+
+  static PassPipelineRegistration<> stableHLOCompatibleRMSNormPipeline(
+      "stablehlo-compatible-rmsnorm-import",
+      "Import StableHLO-compatible RMSNorm decomposition into HIR",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(
+            createStableHLOCompatibleRMSNormImportPass());
       });
 }
 

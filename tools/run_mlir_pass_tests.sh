@@ -170,6 +170,12 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
+  "StableHLO-compatible RMSNorm decomposition lowers to HIR" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_rmsnorm_to_hir.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(stablehlo-compatible-rmsnorm-import)'
+
+run_filecheck \
   "profile-guided INT8 qmatmul HIR lowering" \
   "$REPO_ROOT/mlir_passes/test/profile_guided_qmatmul_lowering.mlir" \
   --allow-unregistered-dialect \

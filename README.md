@@ -610,7 +610,8 @@ python3 tools/check_openxla_toolchain.py
 Until `stablehlo-opt` or StableHLO Python tooling is installed, native
 StableHLO tests are skipped. The current FileCheck coverage uses
 StableHLO-compatible decompositions represented in standard MLIR
-`linalg/arith/tensor` form, then lowers those patterns into HIR.
+`linalg/arith/tensor/math` form, then lowers MatMul-Bias-ReLU and RMSNorm
+patterns into HIR.
 
 ### Apple Silicon MLIR-to-Metal RMSNorm
 

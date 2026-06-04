@@ -83,6 +83,10 @@
 - StableHLO-compatible MatMul decomposition test:
   `dot_general/add/maximum` frontend semantics represented as equivalent
   `linalg.matmul/linalg.map` IR, then lowered into `hir.fused_matmul_bias_relu`.
+- StableHLO-compatible RMSNorm decomposition import:
+  row sum-of-squares reduction plus `math.rsqrt` normalization represented in
+  Linalg/Arith/Math IR, then rewritten into `hir.fused_rmsnorm` with
+  `frontend.source = "stablehlo_compatible_rmsnorm_decomposition"`.
 - OpenXLA toolchain status check for `stablehlo-opt`, `torch-mlir-opt`, JAX,
   TensorFlow, Torch-MLIR, and StableHLO Python modules. Native StableHLO tests
   are skipped until those tools are installed.

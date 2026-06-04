@@ -100,4 +100,21 @@ def HIRRMSNormToLinalg
   let constructor = "mlir::hir::createHIRRMSNormToLinalgPass()";
 }
 
+def StableHLOCompatibleRMSNormImport
+    : Pass<"stablehlo-compatible-rmsnorm-import", "mlir::func::FuncOp"> {
+  let summary = "Import StableHLO-compatible RMSNorm decomposition into HIR";
+  let description = [{
+    Recognizes the standard frontend decomposition shape for RMSNorm after it
+    has been represented in Linalg/Arith/Math form:
+
+      row sum-of-squares reduction
+      x * math.rsqrt(sum / hidden + epsilon)
+
+    The pass rewrites the final normalize operation to `hir.fused_rmsnorm`.
+    It is intentionally narrow and CI-friendly until native StableHLO tooling
+    is installed.
+  }];
+  let constructor = "mlir::hir::createStableHLOCompatibleRMSNormImportPass()";
+}
+
 #endif // HIR_FUSION_PASSES
