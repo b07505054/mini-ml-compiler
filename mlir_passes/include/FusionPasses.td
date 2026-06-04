@@ -83,4 +83,21 @@ def HIRFusedOpVerifier
   let constructor = "mlir::hir::createHIRFusedOpVerifierPass()";
 }
 
+def HIRRMSNormToLinalg
+    : Pass<"hir-rmsnorm-to-linalg", "mlir::func::FuncOp"> {
+  let summary = "Lower hir.fused_rmsnorm to executable Linalg/Math tensor IR";
+  let description = [{
+    Lowers the runtime-facing HIR RMSNorm op into MLIR-native tensor code:
+
+      hir.fused_rmsnorm
+        -> linalg.generic row sum-of-squares reduction
+        -> linalg.generic elementwise x * math.rsqrt(mean + epsilon)
+
+    This is the first codegen-oriented backend lowering stage after HIR. The
+    output is designed to be consumed by MLIR bufferization and LLVM lowering
+    pipelines rather than by the JSON runtime bridge.
+  }];
+  let constructor = "mlir::hir::createHIRRMSNormToLinalgPass()";
+}
+
 #endif // HIR_FUSION_PASSES

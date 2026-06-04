@@ -5,7 +5,9 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Builders.h"
@@ -32,6 +34,7 @@ namespace {
 #define GEN_PASS_DEF_RMSNORMKERNELSELECTION
 #define GEN_PASS_DEF_HIRFUSIONLOWERING
 #define GEN_PASS_DEF_HIRFUSEDOPVERIFIER
+#define GEN_PASS_DEF_HIRRMSNORMTOLINALG
 #include "FusionPasses.h.inc"
 
 bool isAddMap(linalg::MapOp mapOp) {
@@ -603,6 +606,124 @@ struct HIRFusedOpVerifierPass
   }
 };
 
+struct HIRRMSNormToLinalgPattern : OpRewritePattern<FusedRMSNormOp> {
+  using OpRewritePattern<FusedRMSNormOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FusedRMSNormOp op,
+                                PatternRewriter &rewriter) const override {
+    auto inputType = dyn_cast<RankedTensorType>(op.getInput().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getOutput().getType());
+    if (!inputType || !outputType) {
+      return rewriter.notifyMatchFailure(op, "expected ranked tensor types");
+    }
+    if (inputType != outputType) {
+      return rewriter.notifyMatchFailure(op, "input and output types must match");
+    }
+    if (inputType.getRank() != 2) {
+      return rewriter.notifyMatchFailure(op, "RMSNorm lowering expects rank-2 tensors");
+    }
+    if (!inputType.getElementType().isF32()) {
+      return rewriter.notifyMatchFailure(op, "CPU linalg RMSNorm lowering supports f32");
+    }
+    if (inputType.isDynamicDim(0) || inputType.isDynamicDim(1)) {
+      return rewriter.notifyMatchFailure(op, "CPU linalg RMSNorm lowering expects static shapes");
+    }
+
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type elementType = inputType.getElementType();
+    int64_t rows = inputType.getDimSize(0);
+    int64_t hidden = inputType.getDimSize(1);
+
+    auto rowType = RankedTensorType::get({rows}, elementType);
+    auto zero = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getFloatAttr(elementType, 0.0));
+    auto epsilon = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getFloatAttr(elementType, 1.0e-6));
+    auto hiddenConstant = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getFloatAttr(elementType, static_cast<double>(hidden)));
+
+    auto rowEmpty = tensor::EmptyOp::create(
+        rewriter, loc, ArrayRef<int64_t>{rows}, elementType);
+    auto rowInit = linalg::FillOp::create(
+        rewriter, loc, ValueRange{zero.getResult()}, ValueRange{rowEmpty.getResult()});
+    Value rowAccumulator = rowInit.getResult(0);
+
+    SmallVector<AffineMap> reductionMaps = {
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+                       context),
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0)}, context)};
+    SmallVector<utils::IteratorType> reductionIterators = {
+        utils::IteratorType::parallel,
+        utils::IteratorType::reduction};
+
+    auto sumSquares = linalg::GenericOp::create(
+        rewriter, loc, rowType, ValueRange{op.getInput()},
+        ValueRange{rowAccumulator}, reductionMaps, reductionIterators,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          Value squared = arith::MulFOp::create(
+              nestedBuilder, nestedLoc, args[0], args[0]);
+          Value sum = arith::AddFOp::create(
+              nestedBuilder, nestedLoc, args[1], squared);
+          linalg::YieldOp::create(nestedBuilder, nestedLoc, sum);
+        });
+
+    auto outputEmpty = tensor::EmptyOp::create(
+        rewriter, loc, inputType.getShape(), elementType);
+    SmallVector<AffineMap> normalizeMaps = {
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+                       context),
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0)}, context),
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+                       context)};
+    SmallVector<utils::IteratorType> normalizeIterators = {
+        utils::IteratorType::parallel,
+        utils::IteratorType::parallel};
+
+    auto normalized = linalg::GenericOp::create(
+        rewriter, loc, outputType, ValueRange{op.getInput(), sumSquares.getResult(0)},
+        ValueRange{outputEmpty.getResult()}, normalizeMaps, normalizeIterators,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          Value mean = arith::DivFOp::create(
+              nestedBuilder, nestedLoc, args[1], hiddenConstant.getResult());
+          Value variance = arith::AddFOp::create(
+              nestedBuilder, nestedLoc, mean, epsilon.getResult());
+          Value inv = math::RsqrtOp::create(nestedBuilder, nestedLoc, variance);
+          Value result = arith::MulFOp::create(
+              nestedBuilder, nestedLoc, args[0], inv);
+          linalg::YieldOp::create(nestedBuilder, nestedLoc, result);
+        });
+
+    rewriter.replaceOp(op, normalized.getResults());
+    return success();
+  }
+};
+
+struct HIRRMSNormToLinalgPass
+    : impl::HIRRMSNormToLinalgBase<HIRRMSNormToLinalgPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect,
+                    HIRDialect,
+                    linalg::LinalgDialect,
+                    math::MathDialect,
+                    tensor::TensorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<HIRRMSNormToLinalgPattern>(&getContext());
+
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
 } // namespace
 
 std::unique_ptr<Pass> createHIRCanonicalizationPass() {
@@ -625,9 +746,14 @@ std::unique_ptr<Pass> createHIRFusedOpVerifierPass() {
   return std::make_unique<HIRFusedOpVerifierPass>();
 }
 
+std::unique_ptr<Pass> createHIRRMSNormToLinalgPass() {
+  return std::make_unique<HIRRMSNormToLinalgPass>();
+}
+
 void registerFusionPasses() {
   PassRegistration<HIRCanonicalizationPass>();
   PassRegistration<HIRFusedOpVerifierPass>();
+  PassRegistration<HIRRMSNormToLinalgPass>();
 
   static PassPipelineRegistration<> pipeline(
       "matmul-bias-relu-fusion",
@@ -662,6 +788,13 @@ void registerFusionPasses() {
       "Verify generic HIR fused op invariants",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createHIRFusedOpVerifierPass());
+      });
+
+  static PassPipelineRegistration<> rmsnormToLinalgPipeline(
+      "hir-rmsnorm-to-linalg",
+      "Lower hir.fused_rmsnorm to executable Linalg/Math tensor IR",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createHIRRMSNormToLinalgPass());
       });
 }
 

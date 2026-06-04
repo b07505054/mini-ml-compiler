@@ -5,7 +5,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 MLIR_OPT="${MLIR_OPT:-$(command -v mlir-opt || true)}"
 FILECHECK="${FILECHECK:-$(command -v FileCheck || true)}"
-PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib}"
+DEFAULT_PLUGIN="$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib"
+if [[ ! -f "$DEFAULT_PLUGIN" && -f "$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib" ]]; then
+  DEFAULT_PLUGIN="$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib"
+fi
+PLUGIN="${PLUGIN:-$DEFAULT_PLUGIN}"
 DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
 
 if [[ -z "$MLIR_OPT" ]]; then
@@ -146,6 +150,24 @@ run_filecheck \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
+  "HIR RMSNorm lowers to Linalg/Math" \
+  "$REPO_ROOT/mlir_passes/test/hir_rmsnorm_to_linalg.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-rmsnorm-to-linalg)'
+
+run_filecheck \
+  "HIR RMSNorm lowers to LLVM dialect" \
+  "$REPO_ROOT/mlir_passes/test/hir_rmsnorm_to_llvm.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-rmsnorm-to-linalg,one-shot-bufferize{bufferize-function-boundaries},convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
+
+run_filecheck \
+  "StableHLO-compatible MatMul decomposition lowers to HIR" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_matmul_to_hir.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
   "profile-guided INT8 qmatmul HIR lowering" \

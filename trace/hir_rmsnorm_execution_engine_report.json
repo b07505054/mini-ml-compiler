@@ -1,0 +1,14 @@
+{
+  "artifact_type": "hir_rmsnorm_execution_engine_report",
+  "source": "tools/run_hir_rmsnorm_execution_engine.py",
+  "mlir_opt": "/opt/homebrew/opt/llvm/bin/mlir-opt",
+  "mlir_runner": "/opt/homebrew/opt/llvm/bin/mlir-runner",
+  "plugin": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib",
+  "runner_utils": "/opt/homebrew/opt/llvm/lib/libmlir_c_runner_utils.dylib",
+  "pipeline": "builtin.module(hir-rmsnorm-to-linalg,one-shot-bufferize{bufferize-function-boundaries},convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)",
+  "status": "ok",
+  "expected": 0.7302966946537768,
+  "actual": 0.7302967,
+  "abs_error": 5.346223241886605e-09,
+  "tolerance": 1e-05
+}
