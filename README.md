@@ -576,6 +576,42 @@ tools/run_mlir_fusion_pipeline.sh
 This adds a real MLIR frontend pass stage before the existing custom
 LoweredGraph / ExecutionPlan / heterogeneous runtime planning flow.
 
+### HIR-to-LLVM Executable CPU Path
+
+The compiler now has a native MLIR backend lowering path in addition to the
+runtime JSON bridge:
+
+```text
+hir.fused_rmsnorm
+  -> linalg.generic + math.rsqrt
+  -> one-shot bufferization
+  -> LLVM dialect
+  -> mlir-runner executable CPU function
+```
+
+Run the correctness harness:
+
+```bash
+PLUGIN=$PWD/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib \
+python3 tools/run_hir_rmsnorm_execution_engine.py
+```
+
+The report is written to
+`trace/hir_rmsnorm_execution_engine_report.json` and `.md`.
+
+### OpenXLA / StableHLO Alignment
+
+StableHLO tooling is optional and checked explicitly:
+
+```bash
+python3 tools/check_openxla_toolchain.py
+```
+
+Until `stablehlo-opt` or StableHLO Python tooling is installed, native
+StableHLO tests are skipped. The current FileCheck coverage uses
+StableHLO-compatible decompositions represented in standard MLIR
+`linalg/arith/tensor` form, then lowers those patterns into HIR.
+
 ### Apple Silicon MLIR-to-Metal RMSNorm
 
 The Apple Silicon path executes a real Metal RMSNorm kernel and closes the

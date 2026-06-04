@@ -91,3 +91,4 @@ trace/*
 !trace/metal_rmsnorm_runtime_report.json
 
 build-mlir/
+build-mlir-codex/

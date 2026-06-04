@@ -76,6 +76,16 @@
   CPU reference produce shape-bucket profiles, the compiler selects Metal only
   when correctness passes and measured latency wins, and a runtime executor
   reads the emitted plan before dispatching the selected kernel.
+- MLIR-native HIR RMSNorm codegen path:
+  `hir.fused_rmsnorm -> linalg.generic/math.rsqrt -> one-shot bufferization
+  -> LLVM dialect -> mlir-runner`, with correctness checked against a CPU
+  reference value.
+- StableHLO-compatible MatMul decomposition test:
+  `dot_general/add/maximum` frontend semantics represented as equivalent
+  `linalg.matmul/linalg.map` IR, then lowered into `hir.fused_matmul_bias_relu`.
+- OpenXLA toolchain status check for `stablehlo-opt`, `torch-mlir-opt`, JAX,
+  TensorFlow, Torch-MLIR, and StableHLO Python modules. Native StableHLO tests
+  are skipped until those tools are installed.
 - Decode-attention KV-cache bandwidth model for serving-time attention, showing
   why context-length growth makes KV reads the bottleneck and why layout/block
   choices belong in the compiler/runtime planning loop.
@@ -94,6 +104,18 @@ MLIR input
   -> trace/mlir_lowered_graph.json
   -> trace/mlir_execution_plan.json
   -> runtime-aware dispatch to selected kernel or fallback
+```
+
+The native codegen path now continues from HIR without going through JSON:
+
+```text
+hir.fused_rmsnorm
+  -> HIRRMSNormToLinalgPass
+  -> linalg.generic + math.rsqrt tensor IR
+  -> one-shot bufferization
+  -> LLVM dialect
+  -> mlir-runner executable CPU function
+  -> trace/hir_rmsnorm_execution_engine_report.{json,md}
 ```
 
 RMSNorm-specific compiler artifacts are also preserved as
