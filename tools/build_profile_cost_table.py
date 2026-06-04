@@ -24,9 +24,13 @@ def shape_bucket(fusion_candidate, row):
 
 
 def backend_for(fusion_candidate, row):
+    if row.get("custom_backend"):
+        return row["custom_backend"]
     custom_kernel = row.get("custom_kernel", "")
-    if fusion_candidate == "rmsnorm" or "cuda" in custom_kernel:
+    if "cuda" in custom_kernel:
         return "CUDA"
+    if "metal" in custom_kernel:
+        return "Metal"
     return "CPU"
 
 

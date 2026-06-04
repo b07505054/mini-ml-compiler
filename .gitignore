@@ -84,5 +84,9 @@ trace/*
 !trace/compiler_runtime_decision_report.json
 !trace/compiler_runtime_decision_report.md
 !trace/metal_rmsnorm_benchmark.json
+!trace/metal_rmsnorm_cost_table.json
+!trace/metal_rmsnorm_fused_graph.mlir
+!trace/metal_rmsnorm_lowered_graph.json
+!trace/metal_rmsnorm_execution_plan.json
 
 build-mlir/

@@ -43,3 +43,34 @@ shape-dependent:
 This crossover is the intended compiler decision signal. The compiler should
 not select Metal because it is available; it should select Metal because the
 profile table proves it wins for the requested shape bucket.
+
+## Profile-Guided Compiler Decision
+
+The Apple target pipeline lowers:
+
+```text
+llm.rmsnorm
+  -> hir.fused_rmsnorm
+  -> profile-calibrated kernel selection
+  -> fused_rmsnorm_metal or cpu_rmsnorm
+```
+
+Run the compiler decision path after building the MLIR plugin:
+
+```bash
+PLUGIN=$PWD/build-mlir/HIRMatMulBiasReluFusionPass.dylib \
+tools/run_metal_rmsnorm_compiler_pipeline.sh
+```
+
+The validator proves both sides of the shape-aware policy:
+
+- `1x768:f32` selects `cpu_rmsnorm` because Metal launch overhead dominates.
+- `16x4096:f32` selects `fused_rmsnorm_metal` because measured Metal latency
+  is lower and correctness passed.
+
+Generated evidence:
+
+- `trace/metal_rmsnorm_cost_table.json`
+- `trace/metal_rmsnorm_fused_graph.mlir`
+- `trace/metal_rmsnorm_lowered_graph.json`
+- `trace/metal_rmsnorm_execution_plan.json`

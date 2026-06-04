@@ -1,0 +1,145 @@
+{
+  "artifact_type": "profile_calibrated_cost_table",
+  "format": "hir.profile_cost_table.v1",
+  "sources": [
+    "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+  ],
+  "cost_table": {
+    "rmsnorm": {
+      "Metal": {
+        "1x768:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.331167,
+          "fallback_ms": 0.004333,
+          "speedup": 0.013084,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "1x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.321834,
+          "fallback_ms": 0.005791,
+          "speedup": 0.017994,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "1x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.254625,
+          "fallback_ms": 0.024625,
+          "speedup": 0.096711,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "1x8192:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.239458,
+          "fallback_ms": 0.049125,
+          "speedup": 0.205151,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "16x768:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.211541,
+          "fallback_ms": 0.070375,
+          "speedup": 0.332678,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "16x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.201208,
+          "fallback_ms": 0.084417,
+          "speedup": 0.419551,
+          "correct": true,
+          "selection_ready": false,
+          "winner": "cpu_rmsnorm",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "16x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.202791,
+          "fallback_ms": 0.284917,
+          "speedup": 1.404979,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "16x8192:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.202,
+          "fallback_ms": 0.604917,
+          "speedup": 2.994639,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "128x768:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.352667,
+          "fallback_ms": 0.431084,
+          "speedup": 1.222354,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "128x1024:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.2145,
+          "fallback_ms": 0.5735,
+          "speedup": 2.67366,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "128x4096:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.393292,
+          "fallback_ms": 2.2655,
+          "speedup": 5.760351,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        },
+        "128x8192:f32": {
+          "custom_kernel": "fused_rmsnorm_metal",
+          "fallback_kernel": "cpu_rmsnorm",
+          "custom_ms": 0.257875,
+          "fallback_ms": 4.894292,
+          "speedup": 18.979319,
+          "correct": true,
+          "selection_ready": true,
+          "winner": "fused_rmsnorm_metal",
+          "source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/metal_rmsnorm_benchmark.json"
+        }
+      }
+    }
+  }
+}

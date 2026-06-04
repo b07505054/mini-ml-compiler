@@ -141,6 +141,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
+  "Apple Silicon RMSNorm HIR lowering" \
+  "$REPO_ROOT/mlir_passes/test/rmsnorm_metal_target.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(rmsnorm-kernel-selection,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
   "profile-guided INT8 qmatmul HIR lowering" \
   "$REPO_ROOT/mlir_passes/test/profile_guided_qmatmul_lowering.mlir" \
   --allow-unregistered-dialect \

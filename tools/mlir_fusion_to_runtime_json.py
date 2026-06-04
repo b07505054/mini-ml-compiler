@@ -125,7 +125,9 @@ def load_kernel_profiles(paths):
     }
 
 
-def shape_bucket_for(fusion_candidate):
+def shape_bucket_for(fusion_candidate, shape=None):
+    if shape and fusion_candidate == "rmsnorm":
+        return f"{shape['tokens']}x{shape['hidden']}:{shape['dtype']}"
     if fusion_candidate == "matmul_bias_relu":
         return "128x128x128:f32"
     if fusion_candidate == "qmatmul_bias_relu":
@@ -135,8 +137,8 @@ def shape_bucket_for(fusion_candidate):
     return "default:f32"
 
 
-def profile_cost_entry(profile, fusion_candidate, backend):
-    bucket = shape_bucket_for(fusion_candidate)
+def profile_cost_entry(profile, fusion_candidate, backend, shape=None):
+    bucket = shape_bucket_for(fusion_candidate, shape)
     return (
         profile.get("cost_table", {})
         .get(fusion_candidate, {})
@@ -152,9 +154,10 @@ def select_kernel(
     fallback_kernel,
     fallback_backend,
     profile,
+    shape=None,
 ):
-    bucket = shape_bucket_for(fusion_candidate)
-    table_entry = profile_cost_entry(profile, fusion_candidate, custom_backend)
+    bucket = shape_bucket_for(fusion_candidate, shape)
+    table_entry = profile_cost_entry(profile, fusion_candidate, custom_backend, shape)
     evidence = profile.get("kernels", {}).get(fusion_candidate)
     if table_entry:
         evidence = {
@@ -191,6 +194,8 @@ def select_kernel(
         isinstance(custom_ms, (int, float))
         and isinstance(fallback_ms, (int, float))
         and custom_ms < fallback_ms
+        and evidence.get("correct") is True
+        and evidence.get("selection_ready") is not False
     )
 
     return {
@@ -386,16 +391,17 @@ def estimate_matmul_bias_relu_cost(m=16, k=128, n=64, dtype="f32"):
     }
 
 
-def estimate_rmsnorm_cost(tokens=16, hidden=768, dtype_bytes=2):
+def estimate_rmsnorm_cost(tokens=16, hidden=768, dtype="f16"):
+    bytes_per_element = dtype_bytes(dtype)
     elements = tokens * hidden
     total_flops = elements * 4
-    bytes_read = elements * dtype_bytes * 2
-    bytes_written = elements * dtype_bytes
+    bytes_read = elements * bytes_per_element * 2
+    bytes_written = elements * bytes_per_element
 
     return {
         "tokens": tokens,
         "hidden": hidden,
-        "dtype": "f16",
+        "dtype": dtype,
         "estimated_flops": total_flops,
         "estimated_bytes_read": bytes_read,
         "estimated_bytes_written": bytes_written,
@@ -467,14 +473,29 @@ def build_matmul_op(index, match, profile, source_text):
     }
 
 
-def build_rmsnorm_op(index, match, profile):
+def build_rmsnorm_op(index, match, profile, source_text, rmsnorm_backend):
+    shapes = parse_tensor_shapes(source_text, match)
+    shape = {
+        "tokens": shapes[0]["d0"] if shapes else 16,
+        "hidden": shapes[0]["d1"] if shapes else 4096,
+        "dtype": shapes[0]["dtype"] if shapes else "f32",
+    }
+    if rmsnorm_backend == "Metal":
+        custom_kernel = "fused_rmsnorm_metal"
+        fallback_kernel = "cpu_rmsnorm"
+        fallback_backend = "CPU"
+    else:
+        custom_kernel = "fused_rmsnorm_cuda"
+        fallback_kernel = "torch_rmsnorm"
+        fallback_backend = "PyTorch"
     selection = select_kernel(
         "rmsnorm",
-        "fused_rmsnorm_cuda",
-        "CUDA",
-        "torch_rmsnorm",
-        "PyTorch",
+        custom_kernel,
+        rmsnorm_backend,
+        fallback_kernel,
+        fallback_backend,
         profile,
+        shape,
     )
     result_name = match.group("result")
     hir_op_type = "hir.fused_rmsnorm"
@@ -499,7 +520,12 @@ def build_rmsnorm_op(index, match, profile):
         "fusion_group": f"rmsnorm_{index}",
         "inputs": ["hidden_states", "weight"],
         "outputs": [result_name],
-        "cost_model": estimate_rmsnorm_cost(),
+        "cost_model": estimate_rmsnorm_cost(
+            shape["tokens"],
+            shape["hidden"],
+            shape["dtype"],
+        ),
+        "shape": shape,
         "kernel_selection": selection,
         "notes": [
             "Detected from MLIR llm.rmsnorm annotated by RMSNormKernelSelectionPass",
@@ -586,12 +612,26 @@ def build_qmatmul_op(index, match, profile, source_text):
     }
 
 
-def build_lowered_graph(matmul_matches, rmsnorm_matches, qmatmul_matches, source_path, profile, source_text):
+def build_lowered_graph(
+    matmul_matches,
+    rmsnorm_matches,
+    qmatmul_matches,
+    source_path,
+    profile,
+    source_text,
+    rmsnorm_backend,
+):
     ops = []
     for match in matmul_matches:
         ops.append(build_matmul_op(len(ops), match, profile, source_text))
     for match in rmsnorm_matches:
-        ops.append(build_rmsnorm_op(len(ops), match, profile))
+        ops.append(build_rmsnorm_op(
+            len(ops),
+            match,
+            profile,
+            source_text,
+            rmsnorm_backend,
+        ))
     for match in qmatmul_matches:
         ops.append(build_qmatmul_op(len(ops), match, profile, source_text))
 
@@ -647,6 +687,7 @@ def main():
     parser.add_argument("--lowered-output", default="trace/mlir_lowered_graph.json")
     parser.add_argument("--plan-output", default="trace/mlir_execution_plan.json")
     parser.add_argument("--kernel-profile", action="append")
+    parser.add_argument("--rmsnorm-backend", choices=["CUDA", "Metal"], default="CUDA")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -670,6 +711,7 @@ def main():
         input_path,
         profile,
         text,
+        args.rmsnorm_backend,
     )
     execution_plan = build_execution_plan(lowered_graph)
 
