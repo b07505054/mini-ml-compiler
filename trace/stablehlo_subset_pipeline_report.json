@@ -1,0 +1,15 @@
+{
+  "artifact_type": "stablehlo_subset_pipeline_report",
+  "source": "tools/run_stablehlo_subset_pipeline.py",
+  "frontend": "stablehlo_textual_subset",
+  "mlir_opt": "/opt/homebrew/opt/llvm/bin/mlir-opt",
+  "mlir_runner": "/opt/homebrew/opt/llvm/bin/mlir-runner",
+  "plugin": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib",
+  "status": "ok",
+  "rmsnorm_hir_contains_fused_op": true,
+  "matmul_hir_contains_fused_op": true,
+  "rmsnorm_llvm_contains_llvm_func": true,
+  "expected": 0.7302966946537768,
+  "actual": 0.7302967,
+  "abs_error": 5.346223241886605e-09
+}

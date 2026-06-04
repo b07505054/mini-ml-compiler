@@ -613,6 +613,18 @@ StableHLO-compatible decompositions represented in standard MLIR
 `linalg/arith/tensor/math` form, then lowers MatMul-Bias-ReLU and RMSNorm
 patterns into HIR.
 
+For a CI-friendly frontend proof that still starts from `stablehlo.*` op names,
+run the textual subset pipeline:
+
+```bash
+PLUGIN=$PWD/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib \
+python3 tools/run_stablehlo_subset_pipeline.py
+```
+
+This imports the supported StableHLO textual subset into standard MLIR, lowers
+RMSNorm and MatMul-Bias-ReLU into HIR, then lowers RMSNorm to LLVM dialect and
+executes it with `mlir-runner`.
+
 ### Apple Silicon MLIR-to-Metal RMSNorm
 
 The Apple Silicon path executes a real Metal RMSNorm kernel and closes the

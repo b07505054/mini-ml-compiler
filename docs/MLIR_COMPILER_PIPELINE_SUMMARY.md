@@ -90,6 +90,11 @@
 - OpenXLA toolchain status check for `stablehlo-opt`, `torch-mlir-opt`, JAX,
   TensorFlow, Torch-MLIR, and StableHLO Python modules. Native StableHLO tests
   are skipped until those tools are installed.
+- StableHLO textual subset importer for the two high-value patterns used in
+  this portfolio: RMSNorm decomposition and `dot_general + add + maximum`.
+  The subset keeps `stablehlo.*` op names at the frontend boundary, imports
+  them into standard MLIR, lowers them to HIR, and executes RMSNorm through the
+  LLVM dialect path.
 - Decode-attention KV-cache bandwidth model for serving-time attention, showing
   why context-length growth makes KV reads the bottleneck and why layout/block
   choices belong in the compiler/runtime planning loop.
@@ -120,6 +125,18 @@ hir.fused_rmsnorm
   -> LLVM dialect
   -> mlir-runner executable CPU function
   -> trace/hir_rmsnorm_execution_engine_report.{json,md}
+```
+
+The Google/OpenXLA-facing frontend proof is:
+
+```text
+stablehlo textual subset
+  -> tools/import_stablehlo_subset.py
+  -> linalg/arith/math
+  -> stablehlo-compatible RMSNorm import or MatMul fusion
+  -> hir.fused_rmsnorm / hir.fused_matmul_bias_relu
+  -> HIR RMSNorm LLVM executable path
+  -> trace/stablehlo_subset_pipeline_report.{json,md}
 ```
 
 RMSNorm-specific compiler artifacts are also preserved as

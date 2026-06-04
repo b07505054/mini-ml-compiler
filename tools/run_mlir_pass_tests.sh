@@ -34,6 +34,25 @@ run_filecheck() {
     | "$FILECHECK" "$input"
 }
 
+run_stablehlo_subset_filecheck() {
+  local name="$1"
+  local input="$2"
+  local check_file="$3"
+  local pipeline="$4"
+  local tmp
+  tmp="$(mktemp)"
+
+  echo "[MLIR test] $name"
+
+  python3 "$REPO_ROOT/tools/import_stablehlo_subset.py" "$input" --output "$tmp" >/dev/null
+  "$MLIR_OPT" "$tmp" \
+    --load-pass-plugin="$PLUGIN" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
+    --pass-pipeline="$pipeline" \
+    | "$FILECHECK" "$check_file"
+  rm -f "$tmp"
+}
+
 run_verify_diagnostics() {
   local name="$1"
   local input="$2"
@@ -174,6 +193,18 @@ run_filecheck \
   "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_rmsnorm_to_hir.mlir" \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(stablehlo-compatible-rmsnorm-import)'
+
+run_stablehlo_subset_filecheck \
+  "StableHLO textual RMSNorm subset imports and lowers to HIR" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_textual_rmsnorm.mlir" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_rmsnorm_to_hir.mlir" \
+  'builtin.module(stablehlo-compatible-rmsnorm-import)'
+
+run_stablehlo_subset_filecheck \
+  "StableHLO textual MatMul subset imports and lowers to HIR" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_textual_matmul_bias_relu.mlir" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_matmul_to_hir.mlir" \
+  'builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
   "profile-guided INT8 qmatmul HIR lowering" \
