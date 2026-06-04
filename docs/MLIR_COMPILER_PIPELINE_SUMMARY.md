@@ -72,6 +72,10 @@
   `hir.fused_rmsnorm` op selects `fused_rmsnorm_cuda` from measured CUDA
   benchmark evidence, compares against `torch_rmsnorm`, and records
   correctness, latency, bandwidth, and roofline metadata.
+- Real Apple Silicon MLIR-to-Metal RMSNorm path: a measured Metal kernel and
+  CPU reference produce shape-bucket profiles, the compiler selects Metal only
+  when correctness passes and measured latency wins, and a runtime executor
+  reads the emitted plan before dispatching the selected kernel.
 - Decode-attention KV-cache bandwidth model for serving-time attention, showing
   why context-length growth makes KV reads the bottleneck and why layout/block
   choices belong in the compiler/runtime planning loop.

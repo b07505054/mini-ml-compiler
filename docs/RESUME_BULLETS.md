@@ -19,6 +19,7 @@
 - Connected annotated MLIR output into runtime-facing artifacts by exporting fused graph IR, lowered graph JSON, and execution plan JSON for a heterogeneous C++ runtime planner.
 - Added an end-to-end HIR runtime benchmark report proving compiler-emitted `hir.fused_*` ops dispatch to measured runtime kernels with correctness and latency evidence.
 - Built a CUDA RMSNorm compiler/runtime case study where `llm.rmsnorm` lowers to `hir.fused_rmsnorm`, runtime profile data selects `fused_rmsnorm_cuda` over `torch_rmsnorm`, and reports include correctness, latency, speedup, bandwidth, and roofline metadata.
+- Built an end-to-end Apple Silicon MLIR-to-Metal RMSNorm path where measured shape-bucket profiles drive CPU-versus-Metal kernel selection, the runtime reads the emitted execution plan and dispatches the selected Metal kernel, and CTest validates numerical correctness.
 - Added a decode-attention KV-cache bandwidth model that quantifies bytes/token, FLOPs/token, arithmetic intensity, paged-block pressure, and why compiler-selected layout must coordinate with runtime memory pressure.
 - Added an interview-ready compiler/runtime decision report showing CostReport-driven backend planning, profile-calibrated kernel fallback/selection, selected target tiles, SRAM usage, and runtime benchmark evidence in one artifact.
 - Added lightweight cost-model metadata for fused MatMul-Bias-ReLU ops, including estimated FLOPs, memory traffic, and arithmetic intensity for backend scheduling.
@@ -36,6 +37,7 @@
 - Implemented a runtime-aware compiler cost model where benchmark profiles choose the winning backend/kernel for each shape bucket instead of assuming the fused path is always faster.
 - Implemented CostReport-driven backend planning where compiler-estimated FLOPs, bytes, launch overhead, and backend transfer costs can change the selected execution plan.
 - Built a measured RMSNorm compiler/runtime case study and an attention decode KV-cache bandwidth model to explain real inference bottlenecks beyond JSON contracts.
+- Built a measured Apple Silicon path from `llm.rmsnorm` through typed HIR and profile-guided kernel selection to real Metal dispatch with CPU fallback and correctness validation.
 - Built a compiler/runtime decision report tying MLIR lowering, target-aware tile selection, CostReport-driven planning, and measured runtime profiles into a single validated case study.
 
 ## Interview Talking Points
@@ -54,6 +56,7 @@
 - The C++ planner no longer ignores compiler cost analysis; its JSON report exposes per-op cost source, compute/memory/transfer breakdowns, and the reason each backend candidate wins or loses.
 - The decision report is the best interview artifact: it shows a concrete planner choice changing because transfer cost makes all-Metal slower, while HIR fused ops still use profile evidence and target tile descriptors.
 - The RMSNorm case study is the strongest transformer-kernel evidence: MLIR lowering emits `hir.fused_rmsnorm`, runtime profile data selects the custom CUDA kernel, and the report includes correctness plus roofline-style bandwidth analysis.
+- The Apple Silicon path demonstrates a real backend crossover: small RMSNorm shapes remain on CPU due to launch overhead, while larger measured shapes select and dispatch the Metal kernel.
 - The attention/KV model is intentionally scoped as architecture analysis, not a claimed FlashAttention kernel; it gives a concrete way to discuss decode-time KV bandwidth, paged-cache block sizing, and memory-pressure-aware scheduling.
 - The Affine tiling and vectorization tests show familiarity with MLIR loop transformation workflows beyond graph-level pattern matching.
 

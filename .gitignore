@@ -88,5 +88,6 @@ trace/*
 !trace/metal_rmsnorm_fused_graph.mlir
 !trace/metal_rmsnorm_lowered_graph.json
 !trace/metal_rmsnorm_execution_plan.json
+!trace/metal_rmsnorm_runtime_report.json
 
 build-mlir/

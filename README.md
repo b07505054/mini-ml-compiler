@@ -576,6 +576,30 @@ tools/run_mlir_fusion_pipeline.sh
 This adds a real MLIR frontend pass stage before the existing custom
 LoweredGraph / ExecutionPlan / heterogeneous runtime planning flow.
 
+### Apple Silicon MLIR-to-Metal RMSNorm
+
+The Apple Silicon path executes a real Metal RMSNorm kernel and closes the
+measured compiler/runtime loop:
+
+```text
+llm.rmsnorm
+  -> hir.fused_rmsnorm
+  -> measured CPU/Metal shape-bucket profile
+  -> compiler-selected fused_rmsnorm_metal or cpu_rmsnorm
+  -> runtime reads execution plan
+  -> real Metal dispatch and numeric correctness report
+```
+
+Run the full path:
+
+```bash
+PLUGIN=$PWD/build-mlir/HIRMatMulBiasReluFusionPass.dylib \
+tools/run_metal_rmsnorm_end_to_end.sh
+```
+
+See `docs/APPLE_SILICON_MLIR_METAL_PATH.md` for the measured crossover,
+generated artifacts, and validation workflow.
+
 ### LLM Compiler Artifact Generation
 
 This project emits Apple-demo-ready LLM compiler/runtime planning artifacts:

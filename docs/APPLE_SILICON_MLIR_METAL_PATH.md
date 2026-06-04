@@ -74,3 +74,27 @@ Generated evidence:
 - `trace/metal_rmsnorm_fused_graph.mlir`
 - `trace/metal_rmsnorm_lowered_graph.json`
 - `trace/metal_rmsnorm_execution_plan.json`
+
+## Runtime Dispatch
+
+`run_metal_rmsnorm_plan` closes the compiler/runtime loop:
+
+1. Reads `trace/metal_rmsnorm_execution_plan.json`.
+2. Verifies that the compiler selected `fused_rmsnorm_metal` on `Metal`.
+3. Parses the selected shape bucket.
+4. Dispatches the real kernel through `MetalRMSNormExecutor`.
+5. Compares the GPU result against the CPU reference.
+6. Emits `trace/metal_rmsnorm_runtime_report.json`.
+
+```bash
+cmake --build build-metal --target run_metal_rmsnorm_plan
+./build-metal/run_metal_rmsnorm_plan
+ctest --test-dir build-metal -R metal_rmsnorm_plan_dispatch --output-on-failure
+```
+
+Run the complete measured compiler/runtime loop:
+
+```bash
+PLUGIN=$PWD/build-mlir/HIRMatMulBiasReluFusionPass.dylib \
+tools/run_metal_rmsnorm_end_to_end.sh
+```

@@ -10,11 +10,17 @@ import mlir_fusion_to_runtime_json as bridge
 
 PROFILE = Path("trace/metal_rmsnorm_benchmark.json")
 PLAN = Path("trace/metal_rmsnorm_execution_plan.json")
+RUNTIME_REPORT = Path("trace/metal_rmsnorm_runtime_report.json")
 
 
 def main():
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     plan = json.loads(PLAN.read_text(encoding="utf-8"))
+    runtime_report = (
+        json.loads(RUNTIME_REPORT.read_text(encoding="utf-8"))
+        if RUNTIME_REPORT.exists()
+        else None
+    )
     rows = profile["kernel_benchmarks"]
     step = plan["steps"][0]
     loaded_profile = bridge.load_kernel_profiles([str(Path("trace/metal_rmsnorm_cost_table.json"))])
@@ -73,11 +79,18 @@ def main():
     assert large_decision["selected_kernel"] == "fused_rmsnorm_metal"
     assert large_decision["selection_reason"] == "profile_calibrated_fastest"
     assert invalid_decision["selected_kernel"] == "cpu_rmsnorm"
+    if runtime_report:
+        assert runtime_report["compiler_selected_kernel"] == "fused_rmsnorm_metal"
+        assert runtime_report["runtime_dispatched_kernel"] == "fused_rmsnorm_metal"
+        assert runtime_report["compiler_runtime_kernel_match"] is True
+        assert runtime_report["correct"] is True
+        assert runtime_report["max_abs_diff"] <= 1.0e-4
 
     print(
         "validated MLIR-to-Metal RMSNorm path: "
         f"1x768:f32 -> {small_decision['selected_kernel']}; "
         f"{step['kernel_selection']['shape_bucket']} -> {step['runtime_kernel']}"
+        + (" -> real Metal dispatch" if runtime_report else "")
     )
 
 

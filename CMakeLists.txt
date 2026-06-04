@@ -20,6 +20,7 @@ include_directories(include)
 file(GLOB_RECURSE SOURCES
     src/*.cpp
 )
+list(FILTER SOURCES EXCLUDE REGEX "src/runtime/metal_backend_stub\\.cpp$")
 
 if(NOT APPLE)
     list(APPEND SOURCES
@@ -182,6 +183,13 @@ if(APPLE)
     target_link_libraries(benchmark_metal_rmsnorm "-framework Metal" "-framework Foundation")
     add_test(NAME metal_rmsnorm_correctness COMMAND benchmark_metal_rmsnorm)
     set_tests_properties(metal_rmsnorm_correctness PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+
+    add_executable(run_metal_rmsnorm_plan apps/run_metal_rmsnorm_plan.mm)
+    target_link_libraries(run_metal_rmsnorm_plan mlcompiler)
+    add_test(NAME metal_rmsnorm_plan_dispatch COMMAND run_metal_rmsnorm_plan)
+    set_tests_properties(metal_rmsnorm_plan_dispatch PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()
