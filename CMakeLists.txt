@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(mini_ml_compiler LANGUAGES CXX)
 
 option(ENABLE_CUDA "Build CUDA targets" OFF)
+include(CTest)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -176,6 +177,13 @@ if(APPLE)
 
     add_executable(run_metal_vector_add_profile apps/run_metal_vector_add_profile.mm)
     target_link_libraries(run_metal_vector_add_profile "-framework Metal" "-framework Foundation")
+
+    add_executable(benchmark_metal_rmsnorm apps/benchmark_metal_rmsnorm.mm)
+    target_link_libraries(benchmark_metal_rmsnorm "-framework Metal" "-framework Foundation")
+    add_test(NAME metal_rmsnorm_correctness COMMAND benchmark_metal_rmsnorm)
+    set_tests_properties(metal_rmsnorm_correctness PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
 endif()
 
 if(ENABLE_CUDA)

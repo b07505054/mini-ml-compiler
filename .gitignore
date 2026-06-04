@@ -83,5 +83,6 @@ trace/*
 !trace/attention_kv_bandwidth_model.md
 !trace/compiler_runtime_decision_report.json
 !trace/compiler_runtime_decision_report.md
+!trace/metal_rmsnorm_benchmark.json
 
 build-mlir/
