@@ -13,6 +13,16 @@
       "path": null,
       "version": null
     },
+    "iree-compile": {
+      "available": true,
+      "path": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/.venv/bin/iree-compile",
+      "version": "IREE (https://iree.dev):"
+    },
+    "iree-run-module": {
+      "available": false,
+      "path": null,
+      "version": null
+    },
     "mlir-opt": {
       "available": true,
       "path": "/opt/homebrew/opt/llvm/bin/mlir-opt",

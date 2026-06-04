@@ -6,6 +6,8 @@ Status: `stablehlo_unavailable_skip_native_tests`
 
 - `stablehlo-opt`: available=`False`, path=`None`, version=`None`
 - `torch-mlir-opt`: available=`False`, path=`None`, version=`None`
+- `iree-compile`: available=`True`, path=`/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/.venv/bin/iree-compile`, version=`IREE (https://iree.dev):`
+- `iree-run-module`: available=`False`, path=`None`, version=`None`
 - `mlir-opt`: available=`True`, path=`/opt/homebrew/opt/llvm/bin/mlir-opt`, version=`Homebrew LLVM version 22.1.5`
 - `mlir-runner`: available=`True`, path=`/opt/homebrew/opt/llvm/bin/mlir-runner`, version=`Homebrew LLVM version 22.1.5`
 

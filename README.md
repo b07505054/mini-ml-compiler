@@ -625,6 +625,17 @@ This imports the supported StableHLO textual subset into standard MLIR, lowers
 RMSNorm and MatMul-Bias-ReLU into HIR, then lowers RMSNorm to LLVM dialect and
 executes it with `mlir-runner`.
 
+Optional frontend/comparison probes:
+
+```bash
+.venv/bin/python tools/run_torch_mlir_tiny_transformer_probe.py
+.venv/bin/python tools/run_iree_stablehlo_subset_comparison.py
+```
+
+The Torch-MLIR probe exports a tiny RMSNorm/Linear/ReLU block when `torch_mlir`
+is installed; otherwise it writes a skip report. The IREE probe compiles the
+same StableHLO textual subset through IREE VM/HAL for architecture comparison.
+
 ### Apple Silicon MLIR-to-Metal RMSNorm
 
 The Apple Silicon path executes a real Metal RMSNorm kernel and closes the

@@ -95,6 +95,12 @@
   The subset keeps `stablehlo.*` op names at the frontend boundary, imports
   them into standard MLIR, lowers them to HIR, and executes RMSNorm through the
   LLVM dialect path.
+- IREE comparison layer for the same StableHLO textual subset, compiling
+  RMSNorm and MatMul-Bias-ReLU through IREE VM/HAL with LLVM CPU target when
+  `iree-compile` is available.
+- Torch-MLIR tiny transformer probe that exports a minimal RMSNorm/Linear/ReLU
+  block when `torch` and `torch_mlir` are installed, otherwise producing a
+  clean skip report.
 - Decode-attention KV-cache bandwidth model for serving-time attention, showing
   why context-length growth makes KV reads the bottleneck and why layout/block
   choices belong in the compiler/runtime planning loop.

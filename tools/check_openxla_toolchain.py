@@ -28,6 +28,20 @@ def command_version(path):
     return None
 
 
+def command_path(name):
+    found = shutil.which(name)
+    if found:
+        return found
+    local = ROOT / ".venv" / "bin" / name
+    if local.exists():
+        return str(local)
+    if name.startswith("mlir-"):
+        brew = Path("/opt/homebrew/opt/llvm/bin") / name
+        if brew.exists():
+            return str(brew)
+    return None
+
+
 def python_module_status(name):
     spec = importlib.util.find_spec(name)
     return {
@@ -67,11 +81,8 @@ def write_reports(payload):
 
 def main():
     commands = {}
-    for name in ["stablehlo-opt", "torch-mlir-opt", "mlir-opt", "mlir-runner"]:
-        path = shutil.which(name)
-        if not path and name.startswith("mlir-"):
-            fallback = Path("/opt/homebrew/opt/llvm/bin") / name
-            path = str(fallback) if fallback.exists() else None
+    for name in ["stablehlo-opt", "torch-mlir-opt", "iree-compile", "iree-run-module", "mlir-opt", "mlir-runner"]:
+        path = command_path(name)
         commands[name] = {
             "available": path is not None,
             "path": path,
