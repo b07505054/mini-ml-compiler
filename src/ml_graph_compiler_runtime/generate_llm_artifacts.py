@@ -29,6 +29,7 @@ ARTIFACT_FILES = [
     "scheduling_plan.json",
     "artifact_provenance.json",
     "candidate_execution_plans.json",
+    "serving_framework_contract.json",
     "memory_timeline.json",
     "validation_manifest.json",
 ]
@@ -132,6 +133,7 @@ def build_serving_execution_plan(config):
             "scheduler_plan": "scheduling_plan.json",
             "kv_cache_plan": "kv_cache_plan.json",
             "memory_plan": "memory_plan.json",
+            "serving_framework_contract": "serving_framework_contract.json",
             "kv_policy_contract": {
                 "prefix_cache_enabled": config["kv_cache"]["prefix_cache_enabled"],
                 "eviction_policy": config["kv_cache"]["eviction_policy"],
@@ -140,6 +142,21 @@ def build_serving_execution_plan(config):
                     "capacity_only",
                 ),
             },
+            "serving_policy_targets": [
+                "vllm_style_continuous_batching",
+                "sglang_style_request_decode_scheduler",
+                "triton_server_style_dynamic_batching",
+                "tensorrt_style_engine_profile_dispatch",
+            ],
+            "metrics_targets": [
+                "TTFT",
+                "TPOT",
+                "latency_p95",
+                "throughput_tokens_per_s",
+                "queue_wait_p95",
+                "kv_cache_pressure",
+                "slo_violation_rate",
+            ],
         },
     }
 
@@ -317,6 +334,115 @@ def build_candidate_execution_plans(config):
     }
 
 
+def build_serving_framework_contract(config):
+    scheduling = config["scheduling"]
+    kv_cache = config["kv_cache"]
+    return {
+        "schema_version": config["schema_version"],
+        "artifact_type": "serving_framework_contract",
+        "model": config["model"]["name"],
+        "positioning": (
+            "Compiler-produced serving metadata for a runtime layer modeled after "
+            "vLLM, SGLang, Triton Server, and TensorRT serving decisions."
+        ),
+        "framework_targets": {
+            "vllm": {
+                "enabled_decisions": [
+                    "continuous_batching",
+                    "prefill_decode_split",
+                    "paged_kv_cache_pressure_tracking",
+                ],
+                "runtime_fields": [
+                    "scheduler",
+                    "decode_step_tokens",
+                    "block_size_tokens",
+                    "paged_attention_enabled",
+                    "block_table_enabled",
+                ],
+            },
+            "sglang": {
+                "enabled_decisions": [
+                    "request_queue_decode_scheduling",
+                    "prefix_cache_reuse",
+                    "structured_serving_trace",
+                ],
+                "runtime_fields": [
+                    "queues",
+                    "prefix_cache_enabled",
+                    "prefix_cache_policy",
+                    "eviction_policy",
+                ],
+            },
+            "triton_server": {
+                "enabled_decisions": [
+                    "dynamic_batching_comparison",
+                    "backend_instance_routing",
+                    "per_backend_metrics",
+                ],
+                "runtime_fields": [
+                    "max_batch_size",
+                    "candidate_execution_plans",
+                    "backend_placement",
+                    "throughput_tokens_per_s",
+                ],
+            },
+            "tensorrt": {
+                "enabled_decisions": [
+                    "engine_candidate_selection",
+                    "optimization_profile_shape_metadata",
+                    "execution_context_memory_budget",
+                ],
+                "runtime_fields": [
+                    "preferred_backend",
+                    "memory_budget_mb",
+                    "batch_size",
+                    "prefill_tokens_per_request",
+                    "decode_tokens_per_request",
+                ],
+            },
+        },
+        "serving_policy": {
+            "scheduler": scheduling["scheduler"],
+            "max_batch_size": scheduling["max_batch_size"],
+            "decode_step_tokens": scheduling["decode_step_tokens"],
+            "preemption_enabled": scheduling["preemption_enabled"],
+            "cache_policy": {
+                "kv_cache": "paged" if kv_cache["paged_attention_enabled"] else "contiguous",
+                "prefix_cache_enabled": kv_cache["prefix_cache_enabled"],
+                "eviction_policy": kv_cache["eviction_policy"],
+                "admission_policy": kv_cache.get("admission_policy", "capacity_only"),
+            },
+        },
+        "selection_contract": {
+            "selected_backend_values": [
+                "pytorch",
+                "tensorrt",
+                "cuda",
+                "triton",
+                "tvm",
+                "executorch",
+                "metal",
+                "cpu",
+            ],
+            "selection_reason_values": [
+                "profile_guided_backend_selection",
+                "lowest_p95_latency_under_memory_budget",
+                "memory_pressure_aware_admission",
+                "kernel_profile_fastest_for_shape_bucket",
+            ],
+            "required_metrics": [
+                "TTFT",
+                "TPOT",
+                "latency_p95",
+                "throughput_tokens_per_s",
+                "queue_wait_p95",
+                "kv_cache_pressure",
+                "slo_violation_rate",
+            ],
+        },
+    }
+
+
 def build_memory_timeline(config):
     memory = build_memory_plan(config)
     activation = memory["activation_memory_mb"]
@@ -436,6 +562,7 @@ def build_validation_manifest(config):
             "scheduling_queues_present",
             "artifact_provenance_present",
             "candidate_plans_present",
+            "serving_framework_contract_present",
             "memory_timeline_present",
         ],
         "demo_contract": {
@@ -460,6 +587,7 @@ def generate_artifacts(config, out_dir):
         "memory_plan.json": build_memory_plan(config),
         "scheduling_plan.json": build_scheduling_plan(config),
         "candidate_execution_plans.json": build_candidate_execution_plans(config),
+        "serving_framework_contract.json": build_serving_framework_contract(config),
         "memory_timeline.json": build_memory_timeline(config),
         "validation_manifest.json": build_validation_manifest(config),
     }

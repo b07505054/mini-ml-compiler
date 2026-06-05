@@ -10,6 +10,13 @@ Implemented compiler-runtime infrastructure inspired by:
 - MLIR-based runtimes
 - heterogeneous inference runtimes
 - LLM compiler/runtime planning systems
+- vLLM / SGLang / Triton Server / TensorRT serving decisions
+
+The LLM artifact path now emits a `serving_framework_contract.json` alongside
+the execution plan. This contract names the serving policies and metrics a
+runtime should honor: continuous batching, prefill/decode split, paged KV-cache
+pressure, dynamic batching/backend routing, TensorRT-style engine profile
+dispatch, TTFT, TPOT, throughput, queue wait, memory pressure, and SLO signals.
 
 ### CV Graph Pipeline
 

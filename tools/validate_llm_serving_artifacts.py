@@ -10,6 +10,10 @@ REQUIRED_FILES = [
     "kv_cache_plan.json",
     "memory_plan.json",
     "scheduling_plan.json",
+    "artifact_provenance.json",
+    "candidate_execution_plans.json",
+    "serving_framework_contract.json",
+    "memory_timeline.json",
     "validation_manifest.json",
 ]
 
@@ -52,6 +56,10 @@ def validate_artifacts(artifact_dir):
     kv_plan = files["kv_cache_plan.json"]
     memory_plan = files["memory_plan.json"]
     scheduling_plan = files["scheduling_plan.json"]
+    provenance = files["artifact_provenance.json"]
+    candidate_plans = files["candidate_execution_plans.json"]
+    serving_framework_contract = files["serving_framework_contract.json"]
+    memory_timeline = files["memory_timeline.json"]
     manifest = files["validation_manifest.json"]
 
     results.append(check(
@@ -135,6 +143,48 @@ def validate_artifacts(artifact_dir):
         "prefill_queue" in queue_names and "decode_queue" in queue_names,
         "scheduling_queues_present",
         queue_names,
+    ))
+
+    results.append(check(
+        provenance.get("artifact_type") == "artifact_provenance"
+        and bool(provenance.get("outputs")),
+        "artifact_provenance_present",
+        {
+            "artifact_type": provenance.get("artifact_type"),
+            "output_count": len(provenance.get("outputs", [])),
+        },
+    ))
+
+    results.append(check(
+        candidate_plans.get("artifact_type") == "candidate_execution_plans"
+        and bool(candidate_plans.get("plans")),
+        "candidate_plans_present",
+        {
+            "artifact_type": candidate_plans.get("artifact_type"),
+            "plan_count": len(candidate_plans.get("plans", [])),
+        },
+    ))
+
+    framework_targets = serving_framework_contract.get("framework_targets", {})
+    required_frameworks = {"vllm", "sglang", "triton_server", "tensorrt"}
+    results.append(check(
+        serving_framework_contract.get("artifact_type") == "serving_framework_contract"
+        and required_frameworks.issubset(set(framework_targets)),
+        "serving_framework_contract_present",
+        {
+            "artifact_type": serving_framework_contract.get("artifact_type"),
+            "framework_targets": sorted(framework_targets),
+        },
+    ))
+
+    results.append(check(
+        memory_timeline.get("artifact_type") == "memory_timeline"
+        and bool(memory_timeline.get("events")),
+        "memory_timeline_present",
+        {
+            "artifact_type": memory_timeline.get("artifact_type"),
+            "event_count": len(memory_timeline.get("events", [])),
+        },
     ))
 
     expected_outputs = manifest.get("expected_outputs", [])
