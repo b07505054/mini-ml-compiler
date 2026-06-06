@@ -16,7 +16,7 @@ Status: `passed`
 | Case | HIR op | Kernel | Backend | Selection | Custom ms | Fallback ms | Speedup | Tile | SRAM bytes |
 |---|---|---|---|---|---:|---:|---:|---|---:|
 | MatMul-Bias-ReLU | hir.fused_matmul_bias_relu | unfused_matmul_add_relu | CPU | profile_calibrated_fallback | 5.354697 | 5.145997 | 0.961025 | 16x64x128 | 49152 |
-| RMSNorm | hir.fused_rmsnorm | fused_rmsnorm_cuda | CUDA | profile_calibrated_fastest | 0.030196 | 0.088261 | 2.923 |  |  |
+| RMSNorm | hir.fused_rmsnorm | fused_rmsnorm_cuda | CUDA | gpu_pgo_like_lowest_p95_latency | 0.030196 | 0.088261 | 2.923 |  |  |
 | INT8 QMatMul-Bias-ReLU | hir.fused_qmatmul_bias_relu | int8_qmatmul_bias_relu | CPU | profile_calibrated_fastest | 4.94182 | 5.72657 | 1.1588 | 64x64x128 | 24576 |
 
 ## Checks

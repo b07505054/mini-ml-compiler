@@ -27,8 +27,8 @@ Status: `passed`
 
 - Compiler emitted: `hir.fused_rmsnorm`
 - Runtime dispatch: `fused_rmsnorm_cuda` on `CUDA`
-- Selection reason: `profile_calibrated_fastest`
-- Profile source: `/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
+- Selection reason: `gpu_pgo_like_lowest_p95_latency`
+- Profile source: `trace/profile_calibrated_cost_table.json,trace/qmatmul_bias_relu_kernel_profile.json,trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json`
 - compiler_emitted_typed_hir_op: `True`
 - runtime_dispatch_contract_present: `True`
 - runtime_decision_profile_calibrated: `True`

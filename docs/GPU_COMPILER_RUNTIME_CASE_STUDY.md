@@ -15,6 +15,8 @@ compiler repo:
 ```text
 results/cuda_transformer/rmsnorm_benchmark.json
 results/cuda_transformer/rmsnorm_benchmark_report.md
+results/cuda_transformer/gpu_pgo_like_rmsnorm_report.json
+results/cuda_transformer/gpu_pgo_like_rmsnorm_report.md
 ```
 
 The benchmark compares:
@@ -48,6 +50,15 @@ NVCC version, PyTorch version, NVIDIA driver version, warmup runs, timed runs,
 dtype, and commit hash. Nsight Compute is optional; if `ncu` is missing, the
 report records that explicitly instead of blocking the benchmark.
 
+The GPU PGO-like report combines CUDA/Triton/PyTorch candidates by shape bucket
+and records the three required portfolio questions:
+
+```text
+input: compiler-emitted HIR RMSNorm op plus runtime shape/workload distribution
+decision: profile-guided selection among CUDA/Triton/PyTorch candidates
+metric: kernel p95 latency, bandwidth, TPOT projection, throughput projection
+```
+
 ## Compiler Decision
 
 The compiler consumes the runtime artifact and makes a kernel-selection
@@ -57,7 +68,7 @@ decision. It does not fabricate benchmark numbers.
 llm.rmsnorm
   -> RMSNormKernelSelectionPass
   -> hir.fused_rmsnorm
-  -> profile-calibrated cost table
+  -> GPU PGO-like profile feedback table
   -> fused_rmsnorm_cuda or torch_rmsnorm fallback
 ```
 
@@ -78,6 +89,7 @@ fallback kernel is torch_rmsnorm
 runtime profile status is measured
 correctness passed
 decision is profile calibrated
+GPU PGO-like gate passes input/decision/metric
 ```
 
 ## Why It Is Fast

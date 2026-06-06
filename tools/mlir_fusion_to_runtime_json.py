@@ -198,6 +198,15 @@ def select_kernel(
         and evidence.get("selection_ready") is not False
     )
 
+    if fusion_candidate == "rmsnorm" and custom_backend in {"CUDA", "Triton"}:
+        selection_reason = (
+            "gpu_pgo_like_lowest_p95_latency"
+            if custom_wins
+            else "gpu_pgo_like_profile_guided_fallback"
+        )
+    else:
+        selection_reason = "profile_calibrated_fastest" if custom_wins else "profile_calibrated_fallback"
+
     return {
         "selected_kernel": custom_kernel if custom_wins else fallback_kernel,
         "selected_backend": custom_backend if custom_wins else fallback_backend,
@@ -207,8 +216,13 @@ def select_kernel(
         "fallback_backend": fallback_backend,
         "profile_status": profile.get("profile_status", "loaded"),
         "profile_source": profile.get("profile_path"),
-        "selection_reason": "profile_calibrated_fastest" if custom_wins else "profile_calibrated_fallback",
+        "selection_reason": selection_reason,
         "profile_calibrated": True,
+        "feedback_loop": (
+            "gpu_pgo_like_kernel_selection"
+            if fusion_candidate == "rmsnorm" and custom_backend in {"CUDA", "Triton"}
+            else "profile_calibrated_cost_model"
+        ),
         "shape_bucket": bucket,
         "cost_table_entry": table_entry,
         "evidence": evidence,
@@ -226,6 +240,7 @@ def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
         "profile_source": selection["profile_source"],
         "selection_reason": selection["selection_reason"],
         "profile_calibrated": selection["profile_calibrated"],
+        "feedback_loop": selection.get("feedback_loop"),
         "shape_bucket": selection["shape_bucket"],
     }
 

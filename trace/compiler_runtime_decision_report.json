@@ -110,9 +110,9 @@
       "hir_op": "hir.fused_rmsnorm",
       "runtime_kernel": "fused_rmsnorm_cuda",
       "backend": "CUDA",
-      "selection_reason": "profile_calibrated_fastest",
+      "selection_reason": "gpu_pgo_like_lowest_p95_latency",
       "profile_calibrated": true,
-      "shape_bucket": "16x4096:f32",
+      "shape_bucket": "16x768:f16",
       "latency": {
         "custom_ms": 0.030196,
         "fallback_ms": 0.088261,

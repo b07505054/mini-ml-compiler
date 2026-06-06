@@ -54,8 +54,8 @@
       "runtime_kernel": "fused_rmsnorm_cuda",
       "backend": "CUDA",
       "fallback_kernel": "torch_rmsnorm",
-      "selection_reason": "profile_calibrated_fastest",
-      "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+      "selection_reason": "gpu_pgo_like_lowest_p95_latency",
+      "profile_source": "trace/profile_calibrated_cost_table.json,trace/qmatmul_bias_relu_kernel_profile.json,trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
       "latency": {
         "custom_ms": 0.030196,
         "fallback_ms": 0.088261,
@@ -70,10 +70,11 @@
         "backend": "CUDA",
         "candidate_kernel": "fused_rmsnorm_cuda",
         "fallback_kernel": "torch_rmsnorm",
-        "profile_source": "/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/profile_calibrated_cost_table.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/qmatmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
-        "selection_reason": "profile_calibrated_fastest",
+        "profile_source": "trace/profile_calibrated_cost_table.json,trace/qmatmul_bias_relu_kernel_profile.json,trace/matmul_bias_relu_kernel_profile.json,/Users/allen/Documents/Codex/project/heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_benchmark.json",
+        "selection_reason": "gpu_pgo_like_lowest_p95_latency",
         "profile_calibrated": true,
-        "shape_bucket": "16x4096:f32"
+        "feedback_loop": "gpu_pgo_like_kernel_selection",
+        "shape_bucket": "16x768:f16"
       },
       "checks": {
         "compiler_emitted_typed_hir_op": true,
