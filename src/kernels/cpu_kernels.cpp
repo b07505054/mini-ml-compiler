@@ -14,6 +14,13 @@
 #if defined(__ARM_NEON) || defined(__aarch64__)
 #include <arm_neon.h>
 #endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define MLGC_PREFETCH_READ(addr) __builtin_prefetch((addr), 0, 1)
+#else
+#define MLGC_PREFETCH_READ(addr) ((void)0)
+#endif
+
 void matmul(const Tensor& A, const Tensor& B, Tensor& C) {
     int M = A.shape[0];
     int K = A.shape[1];
@@ -57,6 +64,53 @@ void matmul_tiled(const Tensor& A, const Tensor& B, Tensor& C, int tile_size) {
             }
         }
     }
+}
+
+void matmul_tiled_prefetch(
+    const Tensor& A,
+    const Tensor& B,
+    Tensor& C,
+    int tile_size,
+    int prefetch_distance
+) {
+#if defined(__GNUC__) || defined(__clang__)
+    int M = A.shape[0];
+    int K = A.shape[1];
+    int N = B.shape[1];
+
+    std::fill(C.data.begin(), C.data.end(), 0.0f);
+
+    for (int ii = 0; ii < M; ii += tile_size) {
+        for (int kk = 0; kk < K; kk += tile_size) {
+            for (int jj = 0; jj < N; jj += tile_size) {
+                int i_max = std::min(ii + tile_size, M);
+                int k_max = std::min(kk + tile_size, K);
+                int j_max = std::min(jj + tile_size, N);
+
+                for (int i = ii; i < i_max; ++i) {
+                    for (int k = kk; k < k_max; ++k) {
+                        int next_k = k + prefetch_distance;
+                        if (next_k < k_max) {
+                            MLGC_PREFETCH_READ(&A.data[i * K + next_k]);
+                            MLGC_PREFETCH_READ(&B.data[next_k * N + jj]);
+                        }
+                        float a = A.data[i * K + k];
+                        for (int j = jj; j < j_max; ++j) {
+                            int next_j = j + prefetch_distance;
+                            if (next_j < j_max) {
+                                MLGC_PREFETCH_READ(&B.data[k * N + next_j]);
+                            }
+                            C.data[i * N + j] += a * B.data[k * N + j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+#else
+    (void)prefetch_distance;
+    matmul_tiled(A, B, C, tile_size);
+#endif
 }
 
 void matmul_tiled_threaded(const Tensor& A, const Tensor& B, Tensor& C, int tile_size, int num_threads) {
@@ -205,6 +259,65 @@ void fused_matmul_add_relu_optimized(const Tensor& A, const Tensor& B, const Ten
             Out.data[index] = std::max(0.0f, Out.data[index] + Bias.data[index]);
         }
     }
+}
+
+void fused_matmul_add_relu_prefetch(
+    const Tensor& A,
+    const Tensor& B,
+    const Tensor& Bias,
+    Tensor& Out,
+    int prefetch_distance
+) {
+#if defined(__GNUC__) || defined(__clang__)
+    int M = A.shape[0];
+    int K = A.shape[1];
+    int N = B.shape[1];
+    const int tile = 32;
+
+    std::fill(Out.data.begin(), Out.data.end(), 0.0f);
+
+    for (int ii = 0; ii < M; ii += tile) {
+        for (int jj = 0; jj < N; jj += tile) {
+            for (int kk = 0; kk < K; kk += tile) {
+                int i_end = std::min(ii + tile, M);
+                int j_end = std::min(jj + tile, N);
+                int k_end = std::min(kk + tile, K);
+
+                for (int i = ii; i < i_end; ++i) {
+                    for (int k = kk; k < k_end; ++k) {
+                        int next_k = k + prefetch_distance;
+                        if (next_k < k_end) {
+                            MLGC_PREFETCH_READ(&A.data[i * K + next_k]);
+                            MLGC_PREFETCH_READ(&B.data[next_k * N + jj]);
+                        }
+                        float a = A.data[i * K + k];
+                        for (int j = jj; j < j_end; ++j) {
+                            int next_j = j + prefetch_distance;
+                            if (next_j < j_end) {
+                                MLGC_PREFETCH_READ(&B.data[k * N + next_j]);
+                            }
+                            Out.data[i * N + j] += a * B.data[k * N + j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            int index = i * N + j;
+            if (j + prefetch_distance < N) {
+                MLGC_PREFETCH_READ(&Bias.data[index + prefetch_distance]);
+                MLGC_PREFETCH_READ(&Out.data[index + prefetch_distance]);
+            }
+            Out.data[index] = std::max(0.0f, Out.data[index] + Bias.data[index]);
+        }
+    }
+#else
+    (void)prefetch_distance;
+    fused_matmul_add_relu_optimized(A, B, Bias, Out);
+#endif
 }
 
 void fused_matmul_add_relu(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out) {

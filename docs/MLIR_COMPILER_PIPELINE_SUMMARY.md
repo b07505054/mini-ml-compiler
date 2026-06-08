@@ -72,6 +72,10 @@
   `hir.fused_rmsnorm` op selects `fused_rmsnorm_cuda` from measured CUDA
   benchmark evidence, compares against `torch_rmsnorm`, and records
   correctness, latency, bandwidth, and roofline metadata.
+- CPU software prefetching backend candidate for tiled MatMul-Bias-ReLU:
+  `fused_matmul_add_relu_prefetch` is benchmarked against the existing tiled
+  fused CPU kernel, records p50/p95 latency, correctness, estimated bytes
+  moved, and remains a fallback candidate when measured p95 does not improve.
 - Real Apple Silicon MLIR-to-Metal RMSNorm path: a measured Metal kernel and
   CPU reference produce shape-bucket profiles, the compiler selects Metal only
   when correctness passes and measured latency wins, and a runtime executor
@@ -174,6 +178,7 @@ cmake --build build-mlir
 tools/run_mlir_pass_tests.sh
 tools/run_mlir_fusion_pipeline.sh
 tools/build_profile_cost_table.py
+build/benchmark_prefetch_matmul
 tools/generate_hir_runtime_benchmark_report.py
 tools/generate_rmsnorm_case_study.py
 tools/generate_attention_kv_bandwidth_model.py

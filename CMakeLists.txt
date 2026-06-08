@@ -61,6 +61,9 @@ target_link_libraries(benchmark_matmul mlcompiler)
 add_executable(benchmark_kernels apps/benchmark_kernels.cpp)
 target_link_libraries(benchmark_kernels mlcompiler)
 
+add_executable(benchmark_prefetch_matmul apps/benchmark_prefetch_matmul.cpp)
+target_link_libraries(benchmark_prefetch_matmul mlcompiler)
+
 add_executable(benchmark_threads apps/benchmark_threads.cpp)
 target_link_libraries(benchmark_threads mlcompiler)
 

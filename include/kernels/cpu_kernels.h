@@ -15,6 +15,13 @@ void matmul_int8(
 );
 void matmul(const Tensor& A, const Tensor& B, Tensor& C);
 void matmul_tiled(const Tensor& A, const Tensor& B, Tensor& C, int tile_size = 32);
+void matmul_tiled_prefetch(
+    const Tensor& A,
+    const Tensor& B,
+    Tensor& C,
+    int tile_size = 32,
+    int prefetch_distance = 16
+);
 
 void add(const Tensor& A, const Tensor& B, Tensor& C);
 void relu(const Tensor& A, Tensor& B);
@@ -22,6 +29,13 @@ void attention(const Tensor& Q, const Tensor& K, const Tensor& V, Tensor& Out);
 
 void fused_matmul_add_relu_baseline(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);
 void fused_matmul_add_relu_optimized(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);
+void fused_matmul_add_relu_prefetch(
+    const Tensor& A,
+    const Tensor& B,
+    const Tensor& Bias,
+    Tensor& Out,
+    int prefetch_distance = 16
+);
 void causal_attention(const Tensor& Q, const Tensor& K, const Tensor& V, Tensor& Out);
 // default fused op uses optimized kernel
 void fused_matmul_add_relu(const Tensor& A, const Tensor& B, const Tensor& Bias, Tensor& Out);

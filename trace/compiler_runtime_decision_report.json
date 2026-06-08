@@ -156,6 +156,23 @@
       }
     }
   ],
+  "prefetch_candidate_decision": {
+    "available": true,
+    "path": "trace/prefetch_matmul_benchmark.json",
+    "technology": "cpu_software_prefetching",
+    "input": "HIR fused MatMul-Bias-ReLU CPU backend workload",
+    "decision": "profile-guided choice between tiled CPU kernel and prefetch tiled CPU kernel",
+    "metric": "p50/p95 latency, speedup, correctness, estimated bytes moved",
+    "candidate_kernel": "fused_matmul_add_relu_prefetch",
+    "fallback_kernel": "fused_matmul_add_relu_optimized",
+    "correct": true,
+    "baseline_p95_ms": 43.112046,
+    "prefetch_p95_ms": 47.359127,
+    "speedup": 0.895305,
+    "selection_ready": false,
+    "selection_reason": "fallback_p95_not_improved",
+    "decision_matches_measurement": true
+  },
   "checks": {
     "planner_uses_cost_report_v2": true,
     "planner_decision_changed_from_all_metal": true,
@@ -163,6 +180,7 @@
     "matmul_profile_falls_back_when_fused_slower": true,
     "rmsnorm_profile_selects_cuda": true,
     "qmatmul_profile_selects_int8": true,
-    "dispatch_descriptors_have_tiles": true
+    "dispatch_descriptors_have_tiles": true,
+    "prefetch_candidate_profile_valid": true
   }
 }

@@ -9,6 +9,13 @@ def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def load_optional_json(path):
+    path = Path(path)
+    if not path.exists():
+        return {}
+    return load_json(path)
+
+
 def chosen_candidate(planner):
     chosen = [candidate for candidate in planner.get("candidates", []) if candidate.get("chosen")]
     if len(chosen) != 1:
@@ -65,6 +72,34 @@ def dispatch_summary(name, plan_path):
     }
 
 
+def prefetch_summary(path):
+    payload = load_optional_json(path)
+    if not payload:
+        return {
+            "available": False,
+            "path": str(path),
+        }
+    faster = payload.get("prefetch_p95_ms", 0) < payload.get("baseline_p95_ms", 0)
+    selected = payload.get("selection_ready") is True
+    return {
+        "available": True,
+        "path": str(path),
+        "technology": payload.get("technology"),
+        "input": payload.get("input"),
+        "decision": payload.get("decision"),
+        "metric": payload.get("metric"),
+        "candidate_kernel": payload.get("candidate_kernel"),
+        "fallback_kernel": payload.get("fallback_kernel"),
+        "correct": payload.get("correct"),
+        "baseline_p95_ms": payload.get("baseline_p95_ms"),
+        "prefetch_p95_ms": payload.get("prefetch_p95_ms"),
+        "speedup": payload.get("speedup"),
+        "selection_ready": selected,
+        "selection_reason": payload.get("selection_reason"),
+        "decision_matches_measurement": selected == faster,
+    }
+
+
 def build_report(args):
     planner = load_json(args.cost_planner)
     chosen = chosen_candidate(planner)
@@ -94,6 +129,7 @@ def build_report(args):
         dispatch_summary("RMSNorm", args.rmsnorm_plan),
         dispatch_summary("INT8 QMatMul-Bias-ReLU", args.qmatmul_plan),
     ]
+    prefetch = prefetch_summary(args.prefetch_benchmark)
 
     checks = {
         "planner_uses_cost_report_v2": planner.get("format") == "cost_based_planner.v2",
@@ -106,6 +142,11 @@ def build_report(args):
             entry["dispatch_descriptor"] is None or entry["dispatch_descriptor"]["selected_tile"]
             for entry in dispatch_entries
         ),
+        "prefetch_candidate_profile_valid": (
+            prefetch.get("available") is True
+            and prefetch.get("correct") is True
+            and prefetch.get("decision_matches_measurement") is True
+        ),
     }
 
     return {
@@ -114,6 +155,7 @@ def build_report(args):
         "status": "passed" if all(checks.values()) else "failed",
         "compiler_planner": compiler_planner,
         "kernel_and_dispatch_decisions": dispatch_entries,
+        "prefetch_candidate_decision": prefetch,
         "checks": checks,
     }
 
@@ -161,6 +203,23 @@ def write_markdown(report, path):
             )
         )
 
+    prefetch = report.get("prefetch_candidate_decision", {})
+    if prefetch.get("available"):
+        lines.extend([
+            "",
+            "## CPU Software Prefetch Candidate",
+            "",
+            f"- Input: `{prefetch.get('input')}`",
+            f"- Decision: `{prefetch.get('decision')}`",
+            f"- Metric: `{prefetch.get('metric')}`",
+            f"- Candidate: `{prefetch.get('candidate_kernel')}`",
+            f"- Fallback: `{prefetch.get('fallback_kernel')}`",
+            f"- Baseline p95: `{prefetch.get('baseline_p95_ms')}` ms",
+            f"- Prefetch p95: `{prefetch.get('prefetch_p95_ms')}` ms",
+            f"- Selection ready: `{prefetch.get('selection_ready')}`",
+            f"- Selection reason: `{prefetch.get('selection_reason')}`",
+        ])
+
     lines.extend(["", "## Checks", ""])
     for key, value in report["checks"].items():
         lines.append(f"- {key}: `{value}`")
@@ -175,6 +234,7 @@ def main():
     parser.add_argument("--matmul-plan", default="trace/mlir_execution_plan.json")
     parser.add_argument("--rmsnorm-plan", default="trace/rmsnorm_execution_plan.json")
     parser.add_argument("--qmatmul-plan", default="trace/qmatmul_execution_plan.json")
+    parser.add_argument("--prefetch-benchmark", default="trace/prefetch_matmul_benchmark.json")
     parser.add_argument("--json-output", default="trace/compiler_runtime_decision_report.json")
     parser.add_argument("--markdown-output", default="trace/compiler_runtime_decision_report.md")
     args = parser.parse_args()

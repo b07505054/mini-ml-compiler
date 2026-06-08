@@ -7,6 +7,7 @@ from pathlib import Path
 
 DEFAULT_SHAPES = {
     "matmul_bias_relu": {"m": 128, "k": 128, "n": 128, "dtype": "f32"},
+    "matmul_bias_relu_prefetch": {"m": 256, "k": 256, "n": 256, "dtype": "f32"},
     "qmatmul_bias_relu": {"m": 128, "k": 128, "n": 128, "dtype": "i8"},
 }
 
@@ -18,7 +19,7 @@ def shape_bucket(fusion_candidate, row):
         dtype = "f32"
     if fusion_candidate == "rmsnorm":
         return f"{shape.get('tokens', '?')}x{shape.get('hidden', '?')}:{dtype}"
-    if fusion_candidate in {"matmul_bias_relu", "qmatmul_bias_relu"}:
+    if fusion_candidate in {"matmul_bias_relu", "matmul_bias_relu_prefetch", "qmatmul_bias_relu"}:
         return f"{shape.get('m', '?')}x{shape.get('k', '?')}x{shape.get('n', '?')}:{dtype}"
     return f"default:{dtype}"
 

@@ -19,6 +19,18 @@ Status: `passed`
 | RMSNorm | hir.fused_rmsnorm | fused_rmsnorm_cuda | CUDA | gpu_pgo_like_lowest_p95_latency | 0.030196 | 0.088261 | 2.923 |  |  |
 | INT8 QMatMul-Bias-ReLU | hir.fused_qmatmul_bias_relu | int8_qmatmul_bias_relu | CPU | profile_calibrated_fastest | 4.94182 | 5.72657 | 1.1588 | 64x64x128 | 24576 |
 
+## CPU Software Prefetch Candidate
+
+- Input: `HIR fused MatMul-Bias-ReLU CPU backend workload`
+- Decision: `profile-guided choice between tiled CPU kernel and prefetch tiled CPU kernel`
+- Metric: `p50/p95 latency, speedup, correctness, estimated bytes moved`
+- Candidate: `fused_matmul_add_relu_prefetch`
+- Fallback: `fused_matmul_add_relu_optimized`
+- Baseline p95: `43.112046` ms
+- Prefetch p95: `47.359127` ms
+- Selection ready: `False`
+- Selection reason: `fallback_p95_not_improved`
+
 ## Checks
 
 - planner_uses_cost_report_v2: `True`
@@ -28,3 +40,4 @@ Status: `passed`
 - rmsnorm_profile_selects_cuda: `True`
 - qmatmul_profile_selects_int8: `True`
 - dispatch_descriptors_have_tiles: `True`
+- prefetch_candidate_profile_valid: `True`
