@@ -5,10 +5,21 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 MLIR_OPT="${MLIR_OPT:-$(command -v mlir-opt || true)}"
 FILECHECK="${FILECHECK:-$(command -v FileCheck || true)}"
-DEFAULT_PLUGIN="$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib"
-if [[ ! -f "$DEFAULT_PLUGIN" && -f "$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib" ]]; then
-  DEFAULT_PLUGIN="$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib"
-fi
+DEFAULT_PLUGIN=""
+PLUGIN_CANDIDATES=(
+  "$REPO_ROOT/build-mlir/libHIRMatMulBiasReluFusionPass.so"
+  "$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.so"
+  "$REPO_ROOT/build-mlir/HIRMatMulBiasReluFusionPass.dylib"
+  "$REPO_ROOT/build-mlir-codex/libHIRMatMulBiasReluFusionPass.so"
+  "$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.so"
+  "$REPO_ROOT/build-mlir-codex/HIRMatMulBiasReluFusionPass.dylib"
+)
+for candidate in "${PLUGIN_CANDIDATES[@]}"; do
+  if [[ -f "$candidate" ]]; then
+    DEFAULT_PLUGIN="$candidate"
+    break
+  fi
+done
 PLUGIN="${PLUGIN:-$DEFAULT_PLUGIN}"
 DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
 
@@ -19,6 +30,18 @@ fi
 
 if [[ -z "$FILECHECK" ]]; then
   echo "error: FileCheck not found; set FILECHECK or add it to PATH" >&2
+  exit 1
+fi
+
+if [[ -z "$PLUGIN" || ! -f "$PLUGIN" ]]; then
+  echo "error: MLIR pass plugin not found; set PLUGIN or build mlir_passes first" >&2
+  printf 'searched:\n' >&2
+  printf '  %s\n' "${PLUGIN_CANDIDATES[@]}" >&2
+  exit 1
+fi
+
+if [[ -z "$DIALECT_PLUGIN" || ! -f "$DIALECT_PLUGIN" ]]; then
+  echo "error: MLIR dialect plugin not found; set DIALECT_PLUGIN or build mlir_passes first" >&2
   exit 1
 fi
 
