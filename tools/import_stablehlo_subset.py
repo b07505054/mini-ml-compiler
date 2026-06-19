@@ -57,7 +57,7 @@ MATMUL_LINALG = """func.func @stablehlo_textual_matmul_bias_relu(
   %add = linalg.map
       ins(%matmul, %bias : tensor<16x64xf32>, tensor<16x64xf32>)
       outs(%empty : tensor<16x64xf32>)
-      (%x: f32, %b: f32, %out: f32) {
+      (%x: f32, %b: f32) {
     %y = arith.addf %x, %b : f32
     linalg.yield %y : f32
   }
@@ -65,7 +65,7 @@ MATMUL_LINALG = """func.func @stablehlo_textual_matmul_bias_relu(
   %relu = linalg.map
       ins(%add : tensor<16x64xf32>)
       outs(%empty : tensor<16x64xf32>)
-      (%x: f32, %out: f32) {
+      (%x: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }
