@@ -49,7 +49,9 @@ bias-add result has one use
 bias input is legal for the fused output shape
 lhs/rhs/result are ranked rank-2 tensors
 dtype is supported by the target path
-M/N/K are static multiples of the target tile shape
+M/N/K are static; exact tile multiples lower directly, while near-tile shapes
+can lower through `pad_to_tile_with_crop` when compute/output overhead is
+below the profitability threshold
 ```
 
 Legal candidates are annotated and later lowered to a typed HIR op. Illegal
@@ -70,9 +72,25 @@ target.memory_hierarchy = "global_sram_register"
 The HIR verifier checks these attributes when present, so invalid target
 metadata is rejected before artifact export.
 
+Sparse layout is now a compiler decision rather than passive metadata for the
+supported constant-weight case. When a MatMul requests:
+
+```text
+sparse.candidate = "2_4"
+profile.sparse_2_4_path = "faster"
+```
+
+the fusion pass checks the RHS/weight tensor at compile time. Along the K
+dimension, every group of 4 values for each output channel must contain at most
+2 non-zero values. Legal constant weights emit `target.sparse_layout =
+"structured_2_4"` plus group metadata; illegal or non-constant weights fall
+back to the dense fused path and record the sparse fallback reason. This models
+accelerator sparse-layout legality without claiming a real SparseCore backend.
+
 The runtime JSON bridge also turns target metadata into a dispatch descriptor.
 For fused MatMul and qmatmul HIR ops, it parses M/N/K/dtype from the emitted
-MLIR type, enumerates candidate tiles, rejects tiles that violate shape,
+MLIR type, enumerates candidate tiles, accepts either exact divisibility or
+profitable pad/crop tiles, rejects candidates that violate padding overhead,
 SRAM, or vector-alignment constraints, and records the selected tile plus
 rejected candidates in the execution plan.
 
@@ -131,9 +149,9 @@ MatMul and BiasAdd. `hir-canonicalize` removes the identity map first, then
 `matmul-bias-relu-fusion` can see and annotate the cleaned fusion chain.
 
 Negative FileCheck tests cover missing ReLU, multi-use MatMul results, dynamic
-target shapes, invalid HIR bias broadcast metadata, and invalid target tile
-metadata. These tests are meant to prove the pass avoids wrong-code rewrites,
-not only that it finds the happy path.
+target shapes, padding overhead fallback, invalid HIR bias broadcast metadata,
+and invalid target tile/padded metadata. These tests are meant to prove the
+pass avoids wrong-code rewrites, not only that it finds the happy path.
 
 ## Requirements
 

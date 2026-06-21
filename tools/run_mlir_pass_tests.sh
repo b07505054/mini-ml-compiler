@@ -76,6 +76,37 @@ run_stablehlo_subset_filecheck() {
   rm -f "$tmp"
 }
 
+run_stablehlo_import_reject() {
+  local name="$1"
+  local input="$2"
+  local expected_reason="$3"
+  local tmp
+  local err
+  tmp="$(mktemp)"
+  err="$(mktemp)"
+  rm -f "$tmp"
+
+  echo "[MLIR test] $name"
+
+  if python3 "$REPO_ROOT/tools/import_stablehlo_subset.py" "$input" --output "$tmp" 2>"$err"; then
+    echo "error: StableHLO importer unexpectedly accepted $input" >&2
+    rm -f "$tmp" "$err"
+    exit 1
+  fi
+  if [[ -f "$tmp" ]]; then
+    echo "error: StableHLO importer emitted output for rejected input $input" >&2
+    rm -f "$tmp" "$err"
+    exit 1
+  fi
+  if ! grep -q "$expected_reason" "$err"; then
+    echo "error: StableHLO importer rejection did not contain '$expected_reason'" >&2
+    cat "$err" >&2
+    rm -f "$tmp" "$err"
+    exit 1
+  fi
+  rm -f "$tmp" "$err"
+}
+
 run_verify_diagnostics() {
   local name="$1"
   local input="$2"
@@ -111,6 +142,14 @@ run_verify_diagnostics \
 run_verify_diagnostics \
   "HIR target verifier rejects invalid tile shape" \
   "$REPO_ROOT/mlir_passes/test/hir_target_verifier_invalid.mlir"
+
+run_verify_diagnostics \
+  "HIR target verifier rejects invalid padded metadata" \
+  "$REPO_ROOT/mlir_passes/test/hir_padded_target_verifier_invalid.mlir"
+
+run_verify_diagnostics \
+  "HIR target verifier rejects invalid structured 2:4 metadata" \
+  "$REPO_ROOT/mlir_passes/test/hir_sparse_2_4_verifier_invalid.mlir"
 
 run_verify_diagnostics \
   "HIR verifier rejects invalid bias broadcast" \
@@ -159,6 +198,12 @@ run_filecheck \
   --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
 
 run_filecheck \
+  "no fusion when tile padding overhead is too high" \
+  "$REPO_ROOT/mlir_passes/test/no_fusion_padding_overhead.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+
+run_filecheck \
   "rmsnorm kernel selection annotation" \
   "$REPO_ROOT/mlir_passes/test/rmsnorm_kernel_selection.mlir" \
   --allow-unregistered-dialect \
@@ -171,6 +216,34 @@ run_filecheck \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering)'
+
+run_filecheck \
+  "matmul-bias-relu padded HIR lowering" \
+  "$REPO_ROOT/mlir_passes/test/matmul_bias_relu_padded_hir_lowering.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering)'
+
+run_filecheck \
+  "legal structured 2:4 MatMul-Bias-ReLU selects sparse HIR metadata" \
+  "$REPO_ROOT/mlir_passes/test/sparse_2_4_matmul_hir_lowering.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
+  "illegal structured 2:4 RHS falls back to dense HIR metadata" \
+  "$REPO_ROOT/mlir_passes/test/sparse_2_4_illegal_fallback.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_filecheck \
+  "non-constant structured 2:4 RHS falls back to dense HIR metadata" \
+  "$REPO_ROOT/mlir_passes/test/sparse_2_4_nonconstant_fallback.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
   "rmsnorm HIR lowering" \
@@ -206,6 +279,30 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-rmsnorm-to-linalg,one-shot-bufferize{bufferize-function-boundaries},convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
 
 run_filecheck \
+  "HIR MatMul-Bias-ReLU lowers to Linalg" \
+  "$REPO_ROOT/mlir_passes/test/hir_matmul_bias_relu_to_linalg.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg)'
+
+run_filecheck \
+  "Padded HIR MatMul-Bias-ReLU lowers to Linalg with crop" \
+  "$REPO_ROOT/mlir_passes/test/hir_matmul_bias_relu_padded_to_linalg.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg)'
+
+run_filecheck \
+  "HIR MatMul-Bias-ReLU bufferizes to memref" \
+  "$REPO_ROOT/mlir_passes/test/hir_matmul_bias_relu_bufferize.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries})'
+
+run_filecheck \
+  "HIR MatMul-Bias-ReLU lowers to LLVM dialect" \
+  "$REPO_ROOT/mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
+
+run_filecheck \
   "StableHLO-compatible MatMul decomposition lowers to HIR" \
   "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_matmul_to_hir.mlir" \
   --load-pass-plugin="$PLUGIN" \
@@ -228,6 +325,31 @@ run_stablehlo_subset_filecheck \
   "$REPO_ROOT/mlir_passes/test/stablehlo_textual_matmul_bias_relu.mlir" \
   "$REPO_ROOT/mlir_passes/test/stablehlo_compatible_matmul_to_hir.mlir" \
   'builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
+
+run_stablehlo_import_reject \
+  "StableHLO parser rejects RMSNorm missing rsqrt" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_bad_rmsnorm_missing_rsqrt.mlir" \
+  "missing_rsqrt"
+
+run_stablehlo_import_reject \
+  "StableHLO parser rejects RMSNorm f16 in parser v1" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_bad_rmsnorm_f16.mlir" \
+  "unsupported_dtype"
+
+run_stablehlo_import_reject \
+  "StableHLO parser rejects MatMul missing ReLU maximum" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_bad_matmul_missing_maximum.mlir" \
+  "missing_maximum_relu"
+
+run_stablehlo_import_reject \
+  "StableHLO parser rejects MatMul dynamic shape" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_bad_matmul_dynamic_shape.mlir" \
+  "dynamic_shape_unsupported"
+
+run_stablehlo_import_reject \
+  "StableHLO parser rejects MatMul multi-use dot result" \
+  "$REPO_ROOT/mlir_passes/test/stablehlo_bad_matmul_multi_use.mlir" \
+  "dot_result_multi_use"
 
 run_filecheck \
   "profile-guided INT8 qmatmul HIR lowering" \

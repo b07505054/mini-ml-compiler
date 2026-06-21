@@ -319,6 +319,21 @@ Generated artifacts:
 
 This simulates lightweight cost-based runtime scheduling infrastructure used in modern inference runtimes and compiler-runtime systems.
 
+### Offline Compiler Artifact Validation Gate
+
+Added an offline compiler artifact gate for catching compiler/runtime contract regressions before expensive backend or accelerator benchmarking.
+
+Run the CV compiler pipeline and validate the generated artifacts:
+
+```bash
+cmake --build build
+mkdir -p trace
+(cd build && ./run_cv_graph_demo)
+python3 tools/validate_compiler_artifacts.py
+```
+
+The gate checks execution-plan dependency contracts, cost-planner consistency, backend-placement sanity, and optional memory-plan regressions across the generated `trace/cv_*.json` artifacts.
+
 ### Runtime Adaptive Replanning
 
 Implemented runtime-feedback-driven adaptive replanning simulation for heterogeneous inference execution.
@@ -632,6 +647,29 @@ This imports the supported StableHLO textual subset into standard MLIR, lowers
 RMSNorm and MatMul-Bias-ReLU into HIR, then lowers RMSNorm to LLVM dialect and
 executes it with `mlir-runner`.
 
+For the real JAX frontend path, install CPU JAX in the repo venv and run:
+
+```bash
+.venv/bin/python -m pip install -U "jax[cpu]"
+.venv/bin/python tools/run_jax_stablehlo_pipeline.py
+```
+
+This exports StableHLO from JAX RMSNorm and MatMul-Bias-ReLU functions, imports
+the supported patterns through a lightweight StableHLO parser/legality gate,
+lowers legal imports into HIR, and executes the RMSNorm HIR-to-LLVM CPU path
+against the JAX/PJRT-backed compiled CPU reference. Illegal patterns are
+rejected before Linalg/HIR import. The result records correctness, compile
+latency, first-run latency, warm-run latency, host/device-buffer timing,
+executable metadata, and local `mlir-runner` latency. The same artifact records a JAX tiny block
+`RMSNorm -> MatMul -> Bias -> ReLU` and shape-specialized RMSNorm compile/reuse
+costs to show the frontend/runtime boundary for multi-op and shape-bucketed
+workloads. MatMul-Bias-ReLU also has a native HIR-to-Linalg-to-LLVM executable
+path, dynamic-shape input falls back before lowering, and measured tile
+autotuning selects the fastest correct tile candidate for supported shape
+buckets. It is intentionally scoped to the local HIR/LLVM pipeline and a
+JAX-backed runtime-boundary comparison; it does not claim full OpenXLA, XLA
+passes, TPU execution, or custom PJRT runtime integration.
+
 Optional frontend/comparison probes:
 
 ```bash
@@ -758,3 +796,17 @@ Run the full MLIR-to-artifacts pipeline:
 ```bash
 tools/run_llm_serving_artifact_pipeline.sh
 ```
+
+## Handoff Documentation
+
+For Codex-to-Claude Code handoff, start with:
+
+- `CLAUDE.md`
+- `docs/architecture.md`
+- `docs/data_flow.md`
+- `docs/design_decisions.md`
+- `docs/technical_debt.md`
+- `docs/future_work.md`
+
+These files document implemented compiler/runtime components, generated
+artifacts, assumptions, known weak spots, and realistic next steps.

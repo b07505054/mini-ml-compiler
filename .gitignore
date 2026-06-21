@@ -89,6 +89,9 @@ trace/*
 !trace/metal_rmsnorm_lowered_graph.json
 !trace/metal_rmsnorm_execution_plan.json
 !trace/metal_rmsnorm_runtime_report.json
+!trace/jax_stablehlo_rmsnorm.mlir
+!trace/jax_stablehlo_matmul_bias_relu.mlir
+!trace/jax_frontend_pipeline_result.json
 
 build-mlir/
 build-mlir-codex/

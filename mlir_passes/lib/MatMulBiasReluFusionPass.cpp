@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 
+#include <cstdint>
 #include <string>
 
 namespace mlir::hir {
@@ -35,6 +36,7 @@ namespace {
 #define GEN_PASS_DEF_HIRFUSIONLOWERING
 #define GEN_PASS_DEF_HIRFUSEDOPVERIFIER
 #define GEN_PASS_DEF_HIRRMSNORMTOLINALG
+#define GEN_PASS_DEF_HIRMATMULBIASRELUTOLINALG
 #define GEN_PASS_DEF_STABLEHLOCOMPATIBLERMSNORMIMPORT
 #include "FusionPasses.h.inc"
 
@@ -102,9 +104,19 @@ constexpr int64_t kTargetTileN = 16;
 constexpr int64_t kTargetTileK = 32;
 constexpr int64_t kTargetAlignmentBytes = 128;
 constexpr int64_t kTargetSramKb = 256;
+constexpr double kMaxPaddingComputeOverhead = 1.25;
+constexpr double kMaxPaddingOutputOverhead = 1.25;
 
 bool isStaticMultiple(int64_t dim, int64_t multiple) {
   return dim != ShapedType::kDynamic && dim % multiple == 0;
+}
+
+int64_t ceilDiv(int64_t value, int64_t divisor) {
+  return (value + divisor - 1) / divisor;
+}
+
+int64_t roundUpToMultiple(int64_t value, int64_t multiple) {
+  return ceilDiv(value, multiple) * multiple;
 }
 
 bool isSupportedMatMulElementType(Type type) {
@@ -115,7 +127,69 @@ struct MatMulBiasReluLegality {
   bool legal = false;
   StringRef reason = "unknown";
   Value bias;
+  bool sparseCandidate = false;
+  bool sparseProfileFaster = false;
+  bool sparse2_4Legal = false;
+  StringRef sparseFallbackReason = "";
+  bool requiresPaddingCrop = false;
+  int64_t m = 0;
+  int64_t n = 0;
+  int64_t k = 0;
+  int64_t paddedM = 0;
+  int64_t paddedN = 0;
+  int64_t paddedK = 0;
+  double paddingComputeOverhead = 1.0;
+  double paddingOutputOverhead = 1.0;
 };
+
+bool requestsSparse2_4(linalg::MatmulOp matmul) {
+  auto candidate = matmul->getAttrOfType<StringAttr>("sparse.candidate");
+  return candidate && candidate.getValue() == "2_4";
+}
+
+bool sparse2_4ProfileFaster(linalg::MatmulOp matmul) {
+  auto profile = matmul->getAttrOfType<StringAttr>("profile.sparse_2_4_path");
+  return profile && profile.getValue() == "faster";
+}
+
+StringRef checkRhs2_4Sparsity(Value rhs, int64_t k) {
+  if (k % 4 != 0) {
+    return "sparse_2_4_k_not_multiple_of_4";
+  }
+  auto constant = rhs.getDefiningOp<arith::ConstantOp>();
+  if (!constant) {
+    return "sparse_2_4_not_compile_time_verifiable";
+  }
+  auto elements = dyn_cast<DenseFPElementsAttr>(constant.getValue());
+  if (!elements) {
+    return "sparse_2_4_not_compile_time_verifiable";
+  }
+  auto type = dyn_cast<RankedTensorType>(elements.getType());
+  if (!type || type.getRank() != 2 || type.getDimSize(0) != k) {
+    return "sparse_2_4_not_compile_time_verifiable";
+  }
+  int64_t n = type.getDimSize(1);
+  SmallVector<llvm::APFloat> values;
+  values.reserve(elements.getNumElements());
+  for (llvm::APFloat value : elements.getValues<llvm::APFloat>()) {
+    values.push_back(value);
+  }
+  for (int64_t col = 0; col < n; ++col) {
+    for (int64_t group = 0; group < k; group += 4) {
+      int nonzero = 0;
+      for (int64_t offset = 0; offset < 4; ++offset) {
+        const llvm::APFloat &value = values[(group + offset) * n + col];
+        if (!value.isZero()) {
+          ++nonzero;
+        }
+      }
+      if (nonzero > 2) {
+        return "sparse_2_4_illegal";
+      }
+    }
+  }
+  return "";
+}
 
 MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
                                                    linalg::MapOp addMap,
@@ -160,13 +234,11 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
       rhsK != k) {
     return {false, "matmul_k_mismatch_or_dynamic", {}};
   }
+  if (m == ShapedType::kDynamic || n == ShapedType::kDynamic) {
+    return {false, "dynamic_target_shape", {}};
+  }
   if (resultType.getDimSize(0) != m || resultType.getDimSize(1) != n) {
     return {false, "result_shape_mismatch", {}};
-  }
-  if (!isStaticMultiple(m, kTargetTileM) ||
-      !isStaticMultiple(n, kTargetTileN) ||
-      !isStaticMultiple(k, kTargetTileK)) {
-    return {false, "target_tile_multiple", {}};
   }
 
   Value bias = biasInputForAdd(addMap, matmul->getResult(0));
@@ -182,7 +254,56 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
     return {false, "bias_broadcast_illegal", {}};
   }
 
-  return {true, "target_legal", bias};
+  int64_t paddedM = roundUpToMultiple(m, kTargetTileM);
+  int64_t paddedN = roundUpToMultiple(n, kTargetTileN);
+  int64_t paddedK = roundUpToMultiple(k, kTargetTileK);
+  bool requiresPaddingCrop =
+      paddedM != m || paddedN != n || paddedK != k;
+  double computeOverhead =
+      static_cast<double>(paddedM) * static_cast<double>(paddedN) *
+      static_cast<double>(paddedK) /
+      (static_cast<double>(m) * static_cast<double>(n) *
+       static_cast<double>(k));
+  double outputOverhead =
+      static_cast<double>(paddedM) * static_cast<double>(paddedN) /
+      (static_cast<double>(m) * static_cast<double>(n));
+  if (requiresPaddingCrop &&
+      computeOverhead > kMaxPaddingComputeOverhead) {
+    return {false, "padding_compute_overhead_too_high", bias};
+  }
+  if (requiresPaddingCrop &&
+      outputOverhead > kMaxPaddingOutputOverhead) {
+    return {false, "padding_output_overhead_too_high", bias};
+  }
+
+  bool sparseCandidate = requestsSparse2_4(matmul);
+  bool profileFaster = sparse2_4ProfileFaster(matmul);
+  bool sparseLegal = false;
+  StringRef sparseReason = "";
+  if (sparseCandidate && profileFaster) {
+    sparseReason = checkRhs2_4Sparsity(matmul.getInputs()[1], k);
+    sparseLegal = sparseReason.empty();
+  } else if (sparseCandidate) {
+    sparseReason = "sparse_2_4_profile_not_faster";
+  }
+
+  return {true,
+          requiresPaddingCrop ? "target_legal_with_padding_crop"
+                              : "target_legal",
+          bias,
+          sparseCandidate,
+          profileFaster,
+          sparseLegal,
+          sparseReason,
+          requiresPaddingCrop,
+          m,
+          n,
+          k,
+          paddedM,
+          paddedN,
+          paddedK,
+          computeOverhead,
+          outputOverhead};
 }
 
 void attachSparseCoreTargetAttrs(Operation *op, OpBuilder &builder) {
@@ -207,6 +328,56 @@ void attachSparseCoreTargetAttrs(Operation *op, OpBuilder &builder) {
               StringAttr::get(context, "dense_or_2_4"));
   op->setAttr("target.collective",
               StringAttr::get(context, "none"));
+}
+
+void attachSparse2_4Attrs(Operation *op, OpBuilder &builder,
+                          const MatMulBiasReluLegality &legality) {
+  MLIRContext *context = op->getContext();
+  if (!legality.sparseCandidate) {
+    return;
+  }
+  op->setAttr("sparse.candidate", StringAttr::get(context, "2_4"));
+  if (legality.sparse2_4Legal) {
+    op->setAttr("sparse.legal", builder.getBoolAttr(true));
+    op->setAttr("target.sparse_layout",
+                StringAttr::get(context, "structured_2_4"));
+    op->setAttr("target.sparse_axis", StringAttr::get(context, "rhs_k"));
+    op->setAttr("target.sparse_group_size", builder.getI32IntegerAttr(4));
+    op->setAttr("target.sparse_max_nonzero", builder.getI32IntegerAttr(2));
+    return;
+  }
+  op->setAttr("sparse.legal", builder.getBoolAttr(false));
+  op->setAttr("sparse.fallback_reason",
+              StringAttr::get(context, legality.sparseFallbackReason));
+}
+
+void attachPaddingAttrs(Operation *op, OpBuilder &builder,
+                        const MatMulBiasReluLegality &legality) {
+  MLIRContext *context = op->getContext();
+  if (!legality.requiresPaddingCrop) {
+    op->setAttr("target.padding", StringAttr::get(context, "none"));
+    return;
+  }
+  op->setAttr("target.padding",
+              StringAttr::get(context, "pad_to_tile_with_crop"));
+  op->setAttr("target.valid_region",
+              StringAttr::get(context, "original_m_n"));
+  op->setAttr("target.original_m", builder.getI64IntegerAttr(legality.m));
+  op->setAttr("target.original_n", builder.getI64IntegerAttr(legality.n));
+  op->setAttr("target.original_k", builder.getI64IntegerAttr(legality.k));
+  op->setAttr("target.padded_m", builder.getI64IntegerAttr(legality.paddedM));
+  op->setAttr("target.padded_n", builder.getI64IntegerAttr(legality.paddedN));
+  op->setAttr("target.padded_k", builder.getI64IntegerAttr(legality.paddedK));
+  op->setAttr("target.pad_m",
+              builder.getI64IntegerAttr(legality.paddedM - legality.m));
+  op->setAttr("target.pad_n",
+              builder.getI64IntegerAttr(legality.paddedN - legality.n));
+  op->setAttr("target.pad_k",
+              builder.getI64IntegerAttr(legality.paddedK - legality.k));
+  op->setAttr("target.padding_compute_overhead_ratio",
+              builder.getF64FloatAttr(legality.paddingComputeOverhead));
+  op->setAttr("target.padding_output_overhead_ratio",
+              builder.getF64FloatAttr(legality.paddingOutputOverhead));
 }
 
 struct AddZeroCanonicalizationPattern : OpRewritePattern<linalg::MapOp> {
@@ -450,6 +621,7 @@ struct MatMulBiasReluToHIRConversionPattern
       quantized->setAttr("rhs_zero_point",
                          rewriter.getI32IntegerAttr(0));
       attachSparseCoreTargetAttrs(quantized.getOperation(), rewriter);
+      attachPaddingAttrs(quantized.getOperation(), rewriter, legality);
       fused = quantized.getOperation();
     } else {
       auto fp32 = FusedMatMulBiasReluOp::create(
@@ -458,10 +630,15 @@ struct MatMulBiasReluToHIRConversionPattern
       fp32->setAttr("fusion.candidate", candidate);
       fp32->setAttr("fusion.group", matmul->getAttr("fusion.group"));
       fp32->setAttr("kernel.selection",
-                    StringAttr::get(matmul.getContext(), "runtime_profile"));
+                    StringAttr::get(
+                        matmul.getContext(),
+                        legality.sparse2_4Legal ? "sparse_2_4_profile"
+                                                 : "runtime_profile"));
       fp32->setAttr("lowering.source",
                     StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
       attachSparseCoreTargetAttrs(fp32.getOperation(), rewriter);
+      attachSparse2_4Attrs(fp32.getOperation(), rewriter, legality);
+      attachPaddingAttrs(fp32.getOperation(), rewriter, legality);
       fused = fp32.getOperation();
     }
 
@@ -725,6 +902,186 @@ struct HIRRMSNormToLinalgPass
   }
 };
 
+int64_t intAttr(Operation *op, StringRef name) {
+  return op->getAttrOfType<IntegerAttr>(name).getInt();
+}
+
+AffineMap biasMapFor(OpBuilder &builder, RankedTensorType biasType,
+                     int64_t expectedM) {
+  MLIRContext *context = builder.getContext();
+  AffineExpr d0 = builder.getAffineDimExpr(0);
+  AffineExpr d1 = builder.getAffineDimExpr(1);
+  if (biasType.getDimSize(0) == 1 && expectedM != 1) {
+    return AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                          {builder.getAffineConstantExpr(0), d1}, context);
+  }
+  return AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0, {d0, d1},
+                        context);
+}
+
+Value createZeroPaddedTensor(PatternRewriter &rewriter, Location loc,
+                             Value source, RankedTensorType sourceType,
+                             ArrayRef<int64_t> paddedShape) {
+  auto paddedType =
+      RankedTensorType::get(paddedShape, sourceType.getElementType());
+  SmallVector<OpFoldResult> low(sourceType.getRank(),
+                                rewriter.getIndexAttr(0));
+  SmallVector<OpFoldResult> high;
+  for (auto [original, padded] :
+       llvm::zip_equal(sourceType.getShape(), paddedShape)) {
+    high.push_back(rewriter.getIndexAttr(padded - original));
+  }
+
+  auto zero = arith::ConstantOp::create(
+      rewriter, loc, rewriter.getFloatAttr(sourceType.getElementType(), 0.0));
+  auto pad = tensor::PadOp::create(rewriter, loc, paddedType, source,
+                                   low, high, zero.getResult(), false, {});
+  return pad.getResult();
+}
+
+struct HIRMatMulBiasReluToLinalgPattern
+    : OpRewritePattern<FusedMatMulBiasReluOp> {
+  using OpRewritePattern<FusedMatMulBiasReluOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FusedMatMulBiasReluOp op,
+                                PatternRewriter &rewriter) const override {
+    auto lhsType = dyn_cast<RankedTensorType>(op.getLhs().getType());
+    auto rhsType = dyn_cast<RankedTensorType>(op.getRhs().getType());
+    auto biasType = dyn_cast<RankedTensorType>(op.getBias().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getOutput().getType());
+    if (!lhsType || !rhsType || !biasType || !outputType) {
+      return rewriter.notifyMatchFailure(op, "expected ranked tensor types");
+    }
+    if (lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
+        biasType.getRank() != 2 || outputType.getRank() != 2) {
+      return rewriter.notifyMatchFailure(op, "MatMul-Bias-ReLU lowering expects rank-2 tensors");
+    }
+    if (!lhsType.getElementType().isF32() ||
+        rhsType.getElementType() != lhsType.getElementType() ||
+        biasType.getElementType() != lhsType.getElementType() ||
+        outputType.getElementType() != lhsType.getElementType()) {
+      return rewriter.notifyMatchFailure(op, "CPU linalg MatMul-Bias-ReLU lowering supports f32");
+    }
+    if (lhsType.hasStaticShape() && rhsType.hasStaticShape() &&
+        outputType.hasStaticShape()) {
+      int64_t m = lhsType.getDimSize(0);
+      int64_t k = lhsType.getDimSize(1);
+      int64_t rhsK = rhsType.getDimSize(0);
+      int64_t n = rhsType.getDimSize(1);
+      if (k != rhsK || outputType.getDimSize(0) != m ||
+          outputType.getDimSize(1) != n) {
+        return rewriter.notifyMatchFailure(op, "matmul/output shape mismatch");
+      }
+      bool legalBias = (biasType.getDimSize(0) == m || biasType.getDimSize(0) == 1) &&
+                       biasType.getDimSize(1) == n;
+      if (!legalBias) {
+        return rewriter.notifyMatchFailure(op, "bias broadcast shape mismatch");
+      }
+    } else {
+      return rewriter.notifyMatchFailure(op, "CPU linalg MatMul-Bias-ReLU lowering expects static shapes");
+    }
+
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type elementType = outputType.getElementType();
+    auto outputShape = outputType.getShape();
+    auto padding = op->getAttrOfType<StringAttr>("target.padding");
+    bool usePaddingCrop =
+        padding && padding.getValue() == "pad_to_tile_with_crop";
+
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+    Value bias = op.getBias();
+    RankedTensorType matmulOutputType = outputType;
+    RankedTensorType addReluOutputType = outputType;
+    int64_t biasExpectedM = outputType.getDimSize(0);
+    if (usePaddingCrop) {
+      int64_t paddedM = intAttr(op.getOperation(), "target.padded_m");
+      int64_t paddedN = intAttr(op.getOperation(), "target.padded_n");
+      int64_t paddedK = intAttr(op.getOperation(), "target.padded_k");
+      lhs = createZeroPaddedTensor(rewriter, loc, lhs, lhsType,
+                                   {paddedM, paddedK});
+      rhs = createZeroPaddedTensor(rewriter, loc, rhs, rhsType,
+                                   {paddedK, paddedN});
+      int64_t paddedBiasM =
+          biasType.getDimSize(0) == 1 ? 1 : paddedM;
+      bias = createZeroPaddedTensor(rewriter, loc, bias, biasType,
+                                    {paddedBiasM, paddedN});
+      matmulOutputType =
+          RankedTensorType::get({paddedM, paddedN}, elementType);
+      addReluOutputType = matmulOutputType;
+      biasType = cast<RankedTensorType>(bias.getType());
+      biasExpectedM = paddedM;
+    }
+
+    auto zero = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getFloatAttr(elementType, 0.0));
+    auto matmulEmpty = tensor::EmptyOp::create(
+        rewriter, loc, matmulOutputType.getShape(), elementType);
+    auto matmul = linalg::MatmulOp::create(
+        rewriter, loc, matmulOutputType,
+        ValueRange{lhs, rhs},
+        ValueRange{matmulEmpty.getResult()});
+
+    auto outputEmpty = tensor::EmptyOp::create(
+        rewriter, loc, addReluOutputType.getShape(), elementType);
+    SmallVector<AffineMap> maps = {
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+                       context),
+        biasMapFor(rewriter, biasType, biasExpectedM),
+        AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                       {rewriter.getAffineDimExpr(0), rewriter.getAffineDimExpr(1)},
+                       context)};
+    SmallVector<utils::IteratorType> iterators = {
+        utils::IteratorType::parallel,
+        utils::IteratorType::parallel};
+
+    auto addRelu = linalg::GenericOp::create(
+        rewriter, loc, addReluOutputType,
+        ValueRange{matmul->getResult(0), bias},
+        ValueRange{outputEmpty.getResult()}, maps, iterators,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          Value added = arith::AddFOp::create(
+              nestedBuilder, nestedLoc, args[0], args[1]);
+          Value relu = arith::MaximumFOp::create(
+              nestedBuilder, nestedLoc, added, zero.getResult());
+          linalg::YieldOp::create(nestedBuilder, nestedLoc, relu);
+        });
+
+    if (usePaddingCrop) {
+      auto cropped = tensor::ExtractSliceOp::create(
+          rewriter, loc, outputType, addRelu->getResult(0),
+          ValueRange{}, ValueRange{}, ValueRange{},
+          ArrayRef<int64_t>{0, 0}, outputShape, ArrayRef<int64_t>{1, 1});
+      rewriter.replaceOp(op, cropped.getResult());
+      return success();
+    }
+
+    rewriter.replaceOp(op, addRelu.getResults());
+    return success();
+  }
+};
+
+struct HIRMatMulBiasReluToLinalgPass
+    : impl::HIRMatMulBiasReluToLinalgBase<HIRMatMulBiasReluToLinalgPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect,
+                    HIRDialect,
+                    linalg::LinalgDialect,
+                    tensor::TensorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<HIRMatMulBiasReluToLinalgPattern>(&getContext());
+
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
 bool hasRsqrtInBody(linalg::GenericOp generic) {
   bool foundRsqrt = false;
   generic.getBody()->walk([&](math::RsqrtOp) { foundRsqrt = true; });
@@ -849,6 +1206,10 @@ std::unique_ptr<Pass> createHIRRMSNormToLinalgPass() {
   return std::make_unique<HIRRMSNormToLinalgPass>();
 }
 
+std::unique_ptr<Pass> createHIRMatMulBiasReluToLinalgPass() {
+  return std::make_unique<HIRMatMulBiasReluToLinalgPass>();
+}
+
 std::unique_ptr<Pass> createStableHLOCompatibleRMSNormImportPass() {
   return std::make_unique<StableHLOCompatibleRMSNormImportPass>();
 }
@@ -857,6 +1218,7 @@ void registerFusionPasses() {
   PassRegistration<HIRCanonicalizationPass>();
   PassRegistration<HIRFusedOpVerifierPass>();
   PassRegistration<HIRRMSNormToLinalgPass>();
+  PassRegistration<HIRMatMulBiasReluToLinalgPass>();
   PassRegistration<StableHLOCompatibleRMSNormImportPass>();
 
   static PassPipelineRegistration<> pipeline(
@@ -899,6 +1261,14 @@ void registerFusionPasses() {
       "Lower hir.fused_rmsnorm to executable Linalg/Math tensor IR",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createHIRRMSNormToLinalgPass());
+      });
+
+  static PassPipelineRegistration<> matmulToLinalgPipeline(
+      "hir-matmul-bias-relu-to-linalg",
+      "Lower hir.fused_matmul_bias_relu to executable Linalg tensor IR",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(
+            createHIRMatMulBiasReluToLinalgPass());
       });
 
   static PassPipelineRegistration<> stableHLOCompatibleRMSNormPipeline(

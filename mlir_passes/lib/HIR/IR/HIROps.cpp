@@ -33,6 +33,13 @@ static LogicalResult requireIntegerAttr(Operation *op, StringRef name) {
   return success();
 }
 
+static LogicalResult requireFloatAttrNamed(Operation *op, StringRef name) {
+  if (!op->getAttrOfType<FloatAttr>(name)) {
+    return op->emitOpError("requires float attribute '") << name << "'";
+  }
+  return success();
+}
+
 static std::optional<int64_t> integerAttrValue(Operation *op, StringRef name) {
   auto attr = op->getAttrOfType<IntegerAttr>(name);
   if (!attr) {
@@ -76,17 +83,94 @@ static LogicalResult verifySparseCoreTargetAttrs(Operation *op,
   if (!vectorBytes || *vectorBytes != 128 || !alignment || *alignment != 128) {
     return op->emitOpError("requires 128-byte target vector/alignment");
   }
-  if (lhsType.getDimSize(0) != ShapedType::kDynamic &&
-      lhsType.getDimSize(0) % *tileM != 0) {
-    return op->emitOpError("requires lhs M dimension to be a multiple of target.tile_m");
+  auto sparseLayout = op->getAttrOfType<StringAttr>("target.sparse_layout");
+  if (!sparseLayout ||
+      (sparseLayout.getValue() != "dense_or_2_4" &&
+       sparseLayout.getValue() != "structured_2_4")) {
+    return op->emitOpError("requires target.sparse_layout = \"dense_or_2_4\" or \"structured_2_4\"");
   }
-  if (lhsType.getDimSize(1) != ShapedType::kDynamic &&
-      lhsType.getDimSize(1) % *tileK != 0) {
-    return op->emitOpError("requires lhs K dimension to be a multiple of target.tile_k");
+  if (sparseLayout.getValue() == "structured_2_4") {
+    if (failed(requireStringAttr(op, "target.sparse_axis", "rhs_k")) ||
+        failed(requireIntegerAttr(op, "target.sparse_group_size")) ||
+        failed(requireIntegerAttr(op, "target.sparse_max_nonzero"))) {
+      return failure();
+    }
+    auto groupSize = integerAttrValue(op, "target.sparse_group_size");
+    auto maxNonzero = integerAttrValue(op, "target.sparse_max_nonzero");
+    if (!groupSize || *groupSize != 4 || !maxNonzero || *maxNonzero != 2) {
+      return op->emitOpError("requires structured 2:4 sparse metadata");
+    }
+    if (rhsType.getDimSize(0) != ShapedType::kDynamic &&
+        rhsType.getDimSize(0) % *groupSize != 0) {
+      return op->emitOpError("requires rhs K dimension to be a multiple of structured sparse group size");
+    }
   }
-  if (rhsType.getDimSize(1) != ShapedType::kDynamic &&
-      rhsType.getDimSize(1) % *tileN != 0) {
-    return op->emitOpError("requires rhs N dimension to be a multiple of target.tile_n");
+
+  auto padding = op->getAttrOfType<StringAttr>("target.padding");
+  if (!padding || padding.getValue() == "none") {
+    if (lhsType.getDimSize(0) != ShapedType::kDynamic &&
+        lhsType.getDimSize(0) % *tileM != 0) {
+      return op->emitOpError("requires lhs M dimension to be a multiple of target.tile_m");
+    }
+    if (lhsType.getDimSize(1) != ShapedType::kDynamic &&
+        lhsType.getDimSize(1) % *tileK != 0) {
+      return op->emitOpError("requires lhs K dimension to be a multiple of target.tile_k");
+    }
+    if (rhsType.getDimSize(1) != ShapedType::kDynamic &&
+        rhsType.getDimSize(1) % *tileN != 0) {
+      return op->emitOpError("requires rhs N dimension to be a multiple of target.tile_n");
+    }
+    return success();
+  }
+
+  if (padding.getValue() != "pad_to_tile_with_crop") {
+    return op->emitOpError("requires target.padding = \"none\" or \"pad_to_tile_with_crop\"");
+  }
+  if (failed(requireStringAttr(op, "target.valid_region", "original_m_n")) ||
+      failed(requireIntegerAttr(op, "target.original_m")) ||
+      failed(requireIntegerAttr(op, "target.original_n")) ||
+      failed(requireIntegerAttr(op, "target.original_k")) ||
+      failed(requireIntegerAttr(op, "target.padded_m")) ||
+      failed(requireIntegerAttr(op, "target.padded_n")) ||
+      failed(requireIntegerAttr(op, "target.padded_k")) ||
+      failed(requireIntegerAttr(op, "target.pad_m")) ||
+      failed(requireIntegerAttr(op, "target.pad_n")) ||
+      failed(requireIntegerAttr(op, "target.pad_k")) ||
+      failed(requireFloatAttrNamed(op, "target.padding_compute_overhead_ratio")) ||
+      failed(requireFloatAttrNamed(op, "target.padding_output_overhead_ratio"))) {
+    return failure();
+  }
+
+  auto originalM = integerAttrValue(op, "target.original_m");
+  auto originalN = integerAttrValue(op, "target.original_n");
+  auto originalK = integerAttrValue(op, "target.original_k");
+  auto paddedM = integerAttrValue(op, "target.padded_m");
+  auto paddedN = integerAttrValue(op, "target.padded_n");
+  auto paddedK = integerAttrValue(op, "target.padded_k");
+  auto padM = integerAttrValue(op, "target.pad_m");
+  auto padN = integerAttrValue(op, "target.pad_n");
+  auto padK = integerAttrValue(op, "target.pad_k");
+  if (!originalM || !originalN || !originalK || !paddedM || !paddedN ||
+      !paddedK || !padM || !padN || !padK) {
+    return failure();
+  }
+  if (lhsType.getDimSize(0) != *originalM ||
+      lhsType.getDimSize(1) != *originalK ||
+      rhsType.getDimSize(0) != *originalK ||
+      rhsType.getDimSize(1) != *originalN) {
+    return op->emitOpError("requires padded metadata original shape to match lhs/rhs dimensions");
+  }
+  if (*paddedM < *originalM || *paddedN < *originalN ||
+      *paddedK < *originalK) {
+    return op->emitOpError("requires padded dimensions to cover original dimensions");
+  }
+  if (*padM != *paddedM - *originalM || *padN != *paddedN - *originalN ||
+      *padK != *paddedK - *originalK) {
+    return op->emitOpError("requires pad dimensions to equal padded minus original dimensions");
+  }
+  if (*paddedM % *tileM != 0 || *paddedN % *tileN != 0 ||
+      *paddedK % *tileK != 0) {
+    return op->emitOpError("requires padded dimensions to be multiples of target tile shape");
   }
   return success();
 }
@@ -140,6 +224,23 @@ LogicalResult FusedMatMulBiasReluOp::verify() {
       biasType.getDimSize(0) != 1 &&
       biasType.getDimSize(0) != outputType.getDimSize(0)) {
     return emitOpError("expects bias M dimension to be 1 or match result M dimension");
+  }
+
+  auto padding = getOperation()->getAttrOfType<StringAttr>("target.padding");
+  if (padding && padding.getValue() == "pad_to_tile_with_crop") {
+    auto originalM = integerAttrValue(getOperation(), "target.original_m");
+    auto originalN = integerAttrValue(getOperation(), "target.original_n");
+    if (!originalM || !originalN) {
+      return emitOpError("requires padded metadata original M/N dimensions");
+    }
+    if (outputType.getDimSize(0) != *originalM ||
+        outputType.getDimSize(1) != *originalN) {
+      return emitOpError("requires padded metadata original shape to match result dimensions");
+    }
+    if (biasType.getDimSize(1) != *originalN ||
+        (biasType.getDimSize(0) != 1 && biasType.getDimSize(0) != *originalM)) {
+      return emitOpError("requires padded metadata original shape to match bias broadcast dimensions");
+    }
   }
 
   if (failed(requireStringAttr(getOperation(), "fusion.candidate",

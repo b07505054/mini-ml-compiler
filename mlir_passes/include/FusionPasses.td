@@ -100,6 +100,23 @@ def HIRRMSNormToLinalg
   let constructor = "mlir::hir::createHIRRMSNormToLinalgPass()";
 }
 
+def HIRMatMulBiasReluToLinalg
+    : Pass<"hir-matmul-bias-relu-to-linalg", "mlir::func::FuncOp"> {
+  let summary = "Lower hir.fused_matmul_bias_relu to executable Linalg tensor IR";
+  let description = [{
+    Lowers the runtime-facing HIR MatMul-Bias-ReLU op into MLIR-native tensor
+    code:
+
+      hir.fused_matmul_bias_relu
+        -> linalg.matmul
+        -> linalg.generic arith.addf + arith.maximumf
+
+    This gives the fused HIR op a native backend lowering path that can be
+    consumed by bufferization, loop conversion, and LLVM lowering.
+  }];
+  let constructor = "mlir::hir::createHIRMatMulBiasReluToLinalgPass()";
+}
+
 def StableHLOCompatibleRMSNormImport
     : Pass<"stablehlo-compatible-rmsnorm-import", "mlir::func::FuncOp"> {
   let summary = "Import StableHLO-compatible RMSNorm decomposition into HIR";

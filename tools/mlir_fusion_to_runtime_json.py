@@ -56,6 +56,18 @@ def op_line(text, match):
     return text[line_start:line_end]
 
 
+def string_attr(line, name):
+    found = re.search(rf'{re.escape(name)}\s*=\s*"([^"]+)"', line)
+    return found.group(1) if found else None
+
+
+def bool_attr(line, name):
+    found = re.search(rf"{re.escape(name)}\s*=\s*(true|false)", line)
+    if not found:
+        return None
+    return found.group(1) == "true"
+
+
 def parse_tensor_shapes(text, match):
     line = op_line(text, match)
     tensor_pattern = re.compile(
@@ -259,9 +271,15 @@ def sparsecore_like_target_model():
             "matmul result must have one use",
             "bias add result must have one use",
             "bias must be materialized to result shape or represented as legal HIR broadcast",
-            "M/N/K must be static multiples of 16/16/32",
+            "M/N/K exact tile multiples lower directly; near-tile static shapes may use pad_to_tile_with_crop",
             "dtype must be f32 or f16 for this fused floating-point path",
         ],
+        "padding_policy": {
+            "mode": "pad_to_tile_with_crop",
+            "max_compute_overhead_ratio": 1.25,
+            "max_output_overhead_ratio": 1.25,
+            "realization": "tensor.pad + padded linalg.matmul + tensor.extract_slice",
+        },
     }
 
 
@@ -275,6 +293,43 @@ def estimate_tile_sram_bytes(tile_m, tile_n, tile_k, bytes_per_element):
     bias_bytes = tile_m * tile_n * bytes_per_element
     out_bytes = tile_m * tile_n * bytes_per_element
     return lhs_bytes + rhs_bytes + bias_bytes + out_bytes
+
+
+def round_up(value, multiple):
+    return ((value + multiple - 1) // multiple) * multiple
+
+
+def padding_crop_decision(shape, tile, max_compute_overhead=1.25, max_output_overhead=1.25):
+    padded = {
+        "m": round_up(shape["m"], tile["m"]),
+        "n": round_up(shape["n"], tile["n"]),
+        "k": round_up(shape["k"], tile["k"]),
+    }
+    requires_padding = padded != {"m": shape["m"], "n": shape["n"], "k": shape["k"]}
+    compute_overhead = (
+        padded["m"] * padded["n"] * padded["k"]
+    ) / max(shape["m"] * shape["n"] * shape["k"], 1)
+    output_overhead = (
+        padded["m"] * padded["n"]
+    ) / max(shape["m"] * shape["n"], 1)
+    legal = (
+        compute_overhead <= max_compute_overhead
+        and output_overhead <= max_output_overhead
+    )
+    reasons = []
+    if compute_overhead > max_compute_overhead:
+        reasons.append("padding_compute_overhead_too_high")
+    if output_overhead > max_output_overhead:
+        reasons.append("padding_output_overhead_too_high")
+    return {
+        "requires_padding_crop": requires_padding,
+        "original_shape": {"m": shape["m"], "n": shape["n"], "k": shape["k"]},
+        "padded_shape": padded,
+        "padding_compute_overhead_ratio": round(compute_overhead, 6),
+        "padding_output_overhead_ratio": round(output_overhead, 6),
+        "legal": legal,
+        "reject_reasons": reasons,
+    }
 
 
 def choose_tile(shape, target):
@@ -303,12 +358,9 @@ def choose_tile(shape, target):
     legal = []
     for tile in candidates:
         reasons = []
-        if shape["m"] % tile["m"] != 0:
-            reasons.append("M_not_multiple_of_tile_m")
-        if shape["n"] % tile["n"] != 0:
-            reasons.append("N_not_multiple_of_tile_n")
-        if shape["k"] % tile["k"] != 0:
-            reasons.append("K_not_multiple_of_tile_k")
+        padding = padding_crop_decision(shape, tile)
+        if padding["requires_padding_crop"] and not padding["legal"]:
+            reasons.extend(padding["reject_reasons"])
         if (tile["k"] * bytes_per_element) % vector_bytes != 0:
             reasons.append("K_tile_not_vector_aligned")
         sram_bytes = estimate_tile_sram_bytes(
@@ -327,6 +379,7 @@ def choose_tile(shape, target):
             "arithmetic_intensity_flops_per_byte": round(arithmetic_intensity, 6),
             "legal": not reasons,
             "reject_reasons": reasons,
+            "padding": padding,
         }
         evaluated.append(record)
         if record["legal"]:
@@ -352,7 +405,13 @@ def choose_tile(shape, target):
         "status": "selected",
         "selected_tile": selected["tile"],
         "selected_sram_bytes": selected["sram_bytes"],
-        "decision_reason": "selected highest-intensity legal tile under SRAM/alignment constraints",
+        "requires_padding_crop": selected["padding"]["requires_padding_crop"],
+        "padding": selected["padding"],
+        "decision_reason": (
+            "selected padded masked/crop tile under SRAM/alignment constraints"
+            if selected["padding"]["requires_padding_crop"]
+            else "selected highest-intensity legal tile under SRAM/alignment constraints"
+        ),
         "candidates": evaluated,
     }
 
@@ -444,6 +503,43 @@ def build_matmul_op(index, match, profile, source_text):
         {"m": 16, "k": 128, "n": 64, "dtype": "f32"},
     )
     target = sparsecore_like_target_model()
+    line = op_line(source_text, match)
+    sparse_layout = string_attr(line, "target.sparse_layout")
+    sparse_legal = bool_attr(line, "sparse.legal")
+    sparse_fallback_reason = string_attr(line, "sparse.fallback_reason")
+    sparse_metadata = None
+    if sparse_layout == "structured_2_4":
+        target = dict(target)
+        target["sparse_layout"] = "structured_2_4"
+        target["sparse_axis"] = "rhs_k"
+        target["sparse_group_size"] = 4
+        target["sparse_max_nonzero"] = 2
+        selection = {
+            **selection,
+            "selected_kernel": "sparsecore_like_2_4_matmul",
+            "selected_backend": "SparseCoreLike",
+            "candidate_kernel": "sparsecore_like_2_4_matmul",
+            "candidate_backend": "SparseCoreLike",
+            "fallback_kernel": "dense_fused_matmul_bias_relu",
+            "fallback_backend": "CPU",
+            "selection_reason": "profile_guided_sparse_2_4_legal",
+            "profile_calibrated": True,
+        }
+        sparse_metadata = {
+            "sparse_candidate": "2_4",
+            "sparse_legal": True,
+            "sparse_layout": "structured_2_4",
+            "sparse_axis": "rhs_k",
+            "sparse_group_size": 4,
+            "sparse_max_nonzero": 2,
+        }
+    elif sparse_legal is False:
+        sparse_metadata = {
+            "sparse_candidate": "2_4",
+            "sparse_legal": False,
+            "fallback_reason": sparse_fallback_reason or "sparse_2_4_not_selected",
+            "runtime_kernel": selection["selected_kernel"],
+        }
     dispatch_descriptor = build_dispatch_descriptor(
         hir_op_type,
         runtime_op_type,
@@ -469,6 +565,7 @@ def build_matmul_op(index, match, profile, source_text):
         ),
         "target_model": target,
         "dispatch_descriptor": dispatch_descriptor,
+        "sparse_metadata": sparse_metadata,
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],

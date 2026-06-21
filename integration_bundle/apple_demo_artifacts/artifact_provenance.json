@@ -4,7 +4,7 @@
   "compiler": {
     "name": "ml-graph-compiler-runtime",
     "version": "0.4.0",
-    "git_commit": "914cb04d"
+    "git_commit": "7854b8ed"
   },
   "pass_pipeline": [
     "canonicalize",
@@ -13,15 +13,15 @@
     "backend_placement",
     "memory_planning"
   ],
-  "created_at_utc": "2026-06-05T16:01:25.491901+00:00",
+  "created_at_utc": "2026-06-19T21:10:56.424032+00:00",
   "outputs": [
     {
       "path": "llm_graph_ir.json",
-      "sha256": "1f0745c21944eec5e917ad35b95301afd46c545e9af725e64b2523f7ee0ff80a"
+      "sha256": "d04203a5c4f68e0a8ff3f55e76fc29b4cee80c9b37b8ff8e89e4fed76c6bbf61"
     },
     {
       "path": "serving_execution_plan.json",
-      "sha256": "7d1749ccf927454846e0ce61dae2f85ccebe70dd3835c96e0101ce15b4e92086"
+      "sha256": "f03f057a2f9a441a1838e99f376b789ea9b7d1d305fca35e7028cd0240e94f31"
     },
     {
       "path": "kv_cache_plan.json",

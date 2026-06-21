@@ -23,9 +23,20 @@ def validate_plan(path):
         shape = descriptor.get("shape") or {}
         if not tile:
             raise SystemExit(f"{path}: missing selected tile")
-        for dim in ("m", "n", "k"):
-            if shape.get(dim) % tile.get(dim, 1) != 0:
-                raise SystemExit(f"{path}: selected tile does not divide shape {dim}")
+        padding = decision.get("padding") or {}
+        if decision.get("requires_padding_crop"):
+            padded = padding.get("padded_shape") or {}
+            for dim in ("m", "n", "k"):
+                if padded.get(dim, 0) % tile.get(dim, 1) != 0:
+                    raise SystemExit(f"{path}: selected tile does not divide padded shape {dim}")
+            if padding.get("padding_compute_overhead_ratio", 99.0) > 1.25:
+                raise SystemExit(f"{path}: padded tile exceeds compute overhead threshold")
+            if padding.get("padding_output_overhead_ratio", 99.0) > 1.25:
+                raise SystemExit(f"{path}: padded tile exceeds output overhead threshold")
+        else:
+            for dim in ("m", "n", "k"):
+                if shape.get(dim) % tile.get(dim, 1) != 0:
+                    raise SystemExit(f"{path}: selected tile does not divide shape {dim}")
         if decision.get("selected_sram_bytes", 0) > target.get("sram_kb", 0) * 1024:
             raise SystemExit(f"{path}: selected tile exceeds SRAM budget")
         vector_bytes = descriptor.get("vector_bytes", 1)
