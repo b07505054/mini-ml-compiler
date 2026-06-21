@@ -194,6 +194,7 @@ if(APPLE)
     add_test(NAME metal_rmsnorm_plan_dispatch COMMAND run_metal_rmsnorm_plan)
     set_tests_properties(metal_rmsnorm_plan_dispatch PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        SKIP_RETURN_CODE 77
     )
 endif()
 

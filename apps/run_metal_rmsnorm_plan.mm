@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -13,7 +14,13 @@
 
 namespace {
 
-std::filesystem::path find_repo_root() {
+// CTest SKIP_RETURN_CODE for metal_rmsnorm_plan_dispatch (see CMakeLists.txt).
+// The plan artifact comes from a separate MLIR pipeline
+// (tools/run_metal_rmsnorm_compiler_pipeline.sh) that isn't part of the
+// baseline CMake/CTest build, so its absence is a skip, not a failure.
+constexpr int kSkipReturnCode = 77;
+
+std::optional<std::filesystem::path> find_repo_root() {
     std::filesystem::path current = std::filesystem::current_path();
     for (int i = 0; i < 4; ++i) {
         if (std::filesystem::exists(
@@ -22,7 +29,7 @@ std::filesystem::path find_repo_root() {
         }
         current = current.parent_path();
     }
-    throw std::runtime_error("could not find Metal RMSNorm execution plan");
+    return std::nullopt;
 }
 
 std::string read_text(const std::filesystem::path& path) {
@@ -72,7 +79,15 @@ void rmsnorm_cpu(
 } // namespace
 
 int main() {
-    const auto repo_root = find_repo_root();
+    const auto maybe_repo_root = find_repo_root();
+    if (!maybe_repo_root) {
+        std::cerr
+            << "SKIP: trace/metal_rmsnorm_execution_plan.json not found; "
+               "run tools/run_metal_rmsnorm_compiler_pipeline.sh "
+               "(requires an MLIR build) to generate it.\n";
+        return kSkipReturnCode;
+    }
+    const auto& repo_root = *maybe_repo_root;
     const auto plan_path = repo_root / "trace" / "metal_rmsnorm_execution_plan.json";
     const std::string plan = read_text(plan_path);
     if (plan.find("\"runtime_kernel\": \"fused_rmsnorm_metal\"") ==

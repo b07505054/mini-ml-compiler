@@ -705,6 +705,12 @@ tools/run_metal_rmsnorm_end_to_end.sh
 See `docs/APPLE_SILICON_MLIR_METAL_PATH.md` for the measured crossover,
 generated artifacts, and validation workflow.
 
+The `metal_rmsnorm_plan_dispatch` CTest target depends on
+`trace/metal_rmsnorm_execution_plan.json`, produced only by
+`tools/run_metal_rmsnorm_compiler_pipeline.sh` above. Without that artifact,
+`scripts/check.sh` / plain `ctest` report this test as **skipped**, not
+failed — that is expected, not a regression.
+
 ### LLM Compiler Artifact Generation
 
 This project emits Apple-demo-ready LLM compiler/runtime planning artifacts:

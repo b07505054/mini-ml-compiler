@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; case \"$f\" in *.cpp|*.h|*.hpp|*.mm|*.cc|*CMakeLists.txt) /Users/allen/Documents/Codex/project/ml-graph-compiler-runtime/scripts/check.sh ;; esac; }",
+            "timeout": 300,
+            "statusMessage": "Rebuilding and running ctest..."
+          }
+        ]
+      }
+    ]
+  }
+}

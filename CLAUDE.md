@@ -61,13 +61,25 @@ Assume checked-in traces and artifacts may be stale unless regenerated.
 
 ## Suggested Verification
 
-For C++ changes:
+For C++ changes, run the one-shot baseline check:
 
 ```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
+scripts/check.sh
 ```
+
+This runs `cmake -S . -B build`, `cmake --build build`, and
+`ctest --test-dir build --output-on-failure`, and prints whether
+`trace/metal_rmsnorm_execution_plan.json` is present before running CTest.
+
+Note on `metal_rmsnorm_plan_dispatch`: this test requires
+`trace/metal_rmsnorm_execution_plan.json`, which is produced only by
+`tools/run_metal_rmsnorm_compiler_pipeline.sh` (a separate MLIR pipeline
+requiring `mlir-opt` and a built `mlir_passes` plugin). In a clean baseline
+build without that artifact, CTest reports this test as **skipped**
+(`SKIP_RETURN_CODE 77`), not failed or passed. Treat "Not Run (Skipped)" as
+expected in that case — it does not mean the dispatch logic was verified. To
+exercise the real check, build `mlir_passes` and run
+`tools/run_metal_rmsnorm_compiler_pipeline.sh` first.
 
 For MLIR changes, when LLVM/MLIR tools are installed:
 
