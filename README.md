@@ -18,13 +18,27 @@ runtime should honor: continuous batching, prefill/decode split, paged KV-cache
 pressure, dynamic batching/backend routing, TensorRT-style engine profile
 dispatch, TTFT, TPOT, throughput, queue wait, memory pressure, and SLO signals.
 
-### Validation
+### Baseline Validation
 
-Run:
+`bash scripts/check.sh` is the canonical baseline validation command. It runs:
 
 ```bash
-bash scripts/check.sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
+
+It does not install any system dependencies — missing tools should surface as
+a failed step, not be silently worked around.
+
+On Apple builds, `ctest` currently reports a known failure in
+`metal_rmsnorm_plan_dispatch`. That test requires
+`trace/metal_rmsnorm_execution_plan.json`, which is generated only by the MLIR
+pipeline (`tools/run_metal_rmsnorm_compiler_pipeline.sh`), not by the baseline
+CMake build, so the file is absent in a plain checkout. The CTest entry reports
+that case as skipped rather than fabricating the artifact or failing baseline
+validation. Run the MLIR pipeline first when validating the Metal RMSNorm
+dispatch path itself.
 
 ### CV Graph Pipeline
 
