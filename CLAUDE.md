@@ -11,6 +11,13 @@ Be careful to distinguish implemented behavior from simulations:
 
 Assume checked-in traces and artifacts may be stale unless regenerated.
 
+## Environment Policy
+
+- Use the repo's `.venv` for all Python tooling; do not rely on a system Python.
+- Install optional Python dependencies (e.g. `jax[cpu]`, `torch_mlir`) into `.venv` only when a specific demo requires them.
+- For MLIR work, use a single consistent LLVM/MLIR build for CMake, `mlir-opt`, and `FileCheck` (see MLIR Notes).
+- Treat missing toolchain/environment dependencies as expected in a fresh checkout; report them clearly rather than working around them silently.
+
 ## Working Rules
 
 - Do not modify source code unless explicitly asked.
@@ -98,4 +105,14 @@ tools/run_llm_serving_artifact_pipeline.sh
 ```
 
 If a verification command cannot run because dependencies are missing, state that directly.
+
+## Common Commands
+
+- `scripts/check.sh` — canonical CMake build + CTest baseline check (see Suggested Verification above).
+- `tools/run_metal_rmsnorm_compiler_pipeline.sh` — produces `trace/metal_rmsnorm_execution_plan.json`, required for the `metal_rmsnorm_plan_dispatch` CTest target to run instead of skip.
+- `tools/run_mlir_pass_tests.sh` — runs the MLIR pass plugin FileCheck tests against `build-mlir`.
+- `tools/run_llm_serving_artifact_pipeline.sh` — runs the full MLIR-to-LLM-artifacts pipeline end to end.
+- `python3 tools/validate_compiler_artifacts.py` — validates generated `trace/cv_*.json` compiler/runtime artifacts.
+- `python3 tools/validate_llm_serving_artifacts.py` — validates generated `artifacts/apple_demo` LLM serving artifacts.
+- `tools/check_openxla_toolchain.py` — checks optional StableHLO tooling availability.
 
