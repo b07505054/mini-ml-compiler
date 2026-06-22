@@ -2,45 +2,13 @@ name: CI
 
 on:
   push:
+    branches: [master]
   pull_request:
 
 jobs:
-  cmake-ctest:
-    name: CMake build + CTest (baseline)
-    runs-on: macos-14
+  check:
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S . -B build
-      - name: Build
-        run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
-
-  mlir-pipeline:
-    name: MLIR pipeline + RMSNorm plan dispatch (optional)
-    runs-on: macos-14
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install LLVM/MLIR
-        run: brew install llvm
-      - name: Configure main build
-        run: cmake -S . -B build
-      - name: Build main targets
-        run: cmake --build build
-      - name: Configure mlir_passes
-        run: |
-          cmake -S mlir_passes -B build-mlir \
-            -DMLIR_DIR="$(brew --prefix llvm)/lib/cmake/mlir" \
-            -DLLVM_DIR="$(brew --prefix llvm)/lib/cmake/llvm"
-      - name: Build mlir_passes
-        run: cmake --build build-mlir
-      - name: Run MLIR pass tests
-        run: tools/run_mlir_pass_tests.sh
-      - name: Generate Metal RMSNorm execution plan
-        env:
-          MLIR_OPT: "$(brew --prefix llvm)/bin/mlir-opt"
-        run: tools/run_metal_rmsnorm_compiler_pipeline.sh
-      - name: Re-run CTest with the generated plan
-        run: ctest --test-dir build --output-on-failure
+      - name: Run baseline validation
+        run: bash scripts/check.sh

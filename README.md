@@ -18,6 +18,14 @@ runtime should honor: continuous batching, prefill/decode split, paged KV-cache
 pressure, dynamic batching/backend routing, TensorRT-style engine profile
 dispatch, TTFT, TPOT, throughput, queue wait, memory pressure, and SLO signals.
 
+### Validation
+
+Run:
+
+```bash
+bash scripts/check.sh
+```
+
 ### CV Graph Pipeline
 
 Implemented a CV inference graph including:
@@ -127,7 +135,7 @@ Saved memory:
 
 Generated artifacts:
 
-- [cv_memory_plan.json](trace/cv_memory_plan.json)
+- Memory planning metadata is emitted with the generated CV trace artifacts.
 
 This simulates lightweight runtime-memory planning infrastructure used in heterogeneous inference runtimes and serving systems.
 
@@ -323,15 +331,6 @@ This simulates lightweight cost-based runtime scheduling infrastructure used in 
 
 Added an offline compiler artifact gate for catching compiler/runtime contract regressions before expensive backend or accelerator benchmarking.
 
-Run the CV compiler pipeline and validate the generated artifacts:
-
-```bash
-cmake --build build
-mkdir -p trace
-(cd build && ./run_cv_graph_demo)
-python3 tools/validate_compiler_artifacts.py
-```
-
 The gate checks execution-plan dependency contracts, cost-planner consistency, backend-placement sanity, and optional memory-plan regressions across the generated `trace/cv_*.json` artifacts.
 
 ### Runtime Adaptive Replanning
@@ -446,8 +445,6 @@ Implemented:
 
 Generated artifacts:
 
-- [kv_cache_trace.json](trace/kv_cache_trace.json)
-- [paged_kv_runtime.json](trace/paged_kv_runtime.json)
 - [kv_cache_plan.json](artifacts/apple_demo/kv_cache_plan.json)
 
 This is not a full KV-cache manager. It emits a compiler/runtime planning
@@ -797,11 +794,10 @@ Run the full MLIR-to-artifacts pipeline:
 tools/run_llm_serving_artifact_pipeline.sh
 ```
 
-## Handoff Documentation
+## Documentation
 
-For Codex-to-Claude Code handoff, start with:
+For deeper project notes, start with:
 
-- `CLAUDE.md`
 - `docs/architecture.md`
 - `docs/data_flow.md`
 - `docs/design_decisions.md`

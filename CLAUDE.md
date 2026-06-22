@@ -68,25 +68,31 @@ Assume checked-in traces and artifacts may be stale unless regenerated.
 
 ## Suggested Verification
 
-For C++ changes, run the one-shot baseline check:
+`scripts/check.sh` is the canonical baseline validation entrypoint. It runs:
 
 ```bash
 scripts/check.sh
 ```
 
-This runs `cmake -S . -B build`, `cmake --build build`, and
-`ctest --test-dir build --output-on-failure`, and prints whether
-`trace/metal_rmsnorm_execution_plan.json` is present before running CTest.
+It does not install any system dependencies (no `brew`/`apt-get` calls) — if a
+required tool is missing, the relevant step fails and that failure should be
+reported as-is, not worked around.
 
-Note on `metal_rmsnorm_plan_dispatch`: this test requires
-`trace/metal_rmsnorm_execution_plan.json`, which is produced only by
-`tools/run_metal_rmsnorm_compiler_pipeline.sh` (a separate MLIR pipeline
-requiring `mlir-opt` and a built `mlir_passes` plugin). In a clean baseline
-build without that artifact, CTest reports this test as **skipped**
-(`SKIP_RETURN_CODE 77`), not failed or passed. Treat "Not Run (Skipped)" as
-expected in that case — it does not mean the dispatch logic was verified. To
-exercise the real check, build `mlir_passes` and run
-`tools/run_metal_rmsnorm_compiler_pipeline.sh` first.
+### Known baseline validation gap: `metal_rmsnorm_plan_dispatch`
+
+On Apple builds, `bash scripts/check.sh` currently surfaces a known issue in
+the `metal_rmsnorm_plan_dispatch` test (`apps/run_metal_rmsnorm_plan.mm`,
+registered in `CMakeLists.txt`): it requires
+`trace/metal_rmsnorm_execution_plan.json`, which is generated only by the MLIR
+pipeline (`tools/run_metal_rmsnorm_compiler_pipeline.sh`), not by the baseline
+CMake build. In a baseline checkout that file is absent, so this test
+is reported as skipped rather than exercising the dispatch path.
+
+- Do not fabricate `trace/metal_rmsnorm_execution_plan.json` to make this test
+  pass — it is an MLIR-pipeline-generated artifact, not baseline CMake output.
+- Do not describe the dispatch logic as verified unless the MLIR pipeline has
+  produced `trace/metal_rmsnorm_execution_plan.json` and the dispatch test has
+  run against that artifact.
 
 For MLIR changes, when LLVM/MLIR tools are installed:
 
@@ -109,10 +115,9 @@ If a verification command cannot run because dependencies are missing, state tha
 ## Common Commands
 
 - `scripts/check.sh` — canonical CMake build + CTest baseline check (see Suggested Verification above).
-- `tools/run_metal_rmsnorm_compiler_pipeline.sh` — produces `trace/metal_rmsnorm_execution_plan.json`, required for the `metal_rmsnorm_plan_dispatch` CTest target to run instead of skip.
+- `tools/run_metal_rmsnorm_compiler_pipeline.sh` — produces `trace/metal_rmsnorm_execution_plan.json`, required by the `metal_rmsnorm_plan_dispatch` CTest target.
 - `tools/run_mlir_pass_tests.sh` — runs the MLIR pass plugin FileCheck tests against `build-mlir`.
 - `tools/run_llm_serving_artifact_pipeline.sh` — runs the full MLIR-to-LLM-artifacts pipeline end to end.
 - `python3 tools/validate_compiler_artifacts.py` — validates generated `trace/cv_*.json` compiler/runtime artifacts.
 - `python3 tools/validate_llm_serving_artifacts.py` — validates generated `artifacts/apple_demo` LLM serving artifacts.
 - `tools/check_openxla_toolchain.py` — checks optional StableHLO tooling availability.
-
