@@ -9,6 +9,16 @@ Be careful to distinguish implemented behavior from simulations:
 - Implemented: custom C++ `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager, memory planner, execution plan structures, cost planner, Python artifact generation/validation, and real MLIR plugin infrastructure.
 - Simulated or partial: `MockGPUBackend`, generic `MetalBackend` graph execution, runtime replanning, many timeline artifacts, and serving latency/throughput values in generated plans.
 
+High-value implemented compiler/runtime evidence now includes:
+
+- HIR dialect ops, verifiers, canonicalization, fusion, conversion, and lowering tests under `mlir_passes/test/`.
+- StableHLO-compatible textual subset import for RMSNorm and MatMul-Bias-ReLU patterns.
+- JAX StableHLO export into the local HIR/LLVM pipeline when optional JAX dependencies are installed.
+- Torch-MLIR tiny transformer probe and IREE comparison probe when optional dependencies are installed.
+- HIR RMSNorm executable CPU path via the MLIR execution engine.
+- Apple Silicon MLIR-to-Metal RMSNorm path with a real Metal kernel, generated execution plan, and dispatch validation when the MLIR pipeline has produced the required trace.
+- CPU software-prefetch MatMul-Bias-ReLU backend candidate and benchmark executable.
+
 Assume checked-in traces and artifacts may be stale unless regenerated.
 
 ## Environment Policy
@@ -116,135 +126,19 @@ If a verification command cannot run because dependencies are missing, state tha
 
 - `scripts/check.sh` — canonical CMake build + CTest baseline check (see Suggested Verification above).
 - `tools/run_metal_rmsnorm_compiler_pipeline.sh` — produces `trace/metal_rmsnorm_execution_plan.json`, required by the `metal_rmsnorm_plan_dispatch` CTest target.
+- `tools/run_metal_rmsnorm_end_to_end.sh` — runs the Apple Silicon MLIR-to-Metal RMSNorm path end to end when the toolchain is available.
+- `python3 tools/validate_metal_rmsnorm_path.py` — validates Metal RMSNorm generated artifacts and dispatch evidence.
+- `python3 tools/run_stablehlo_subset_pipeline.py` — exercises the StableHLO-compatible textual subset importer.
+- `.venv/bin/python tools/run_jax_stablehlo_pipeline.py` — exports supported JAX functions to StableHLO and runs the local HIR/LLVM path when JAX is installed.
+- `.venv/bin/python tools/run_torch_mlir_tiny_transformer_probe.py` — probes Torch-MLIR export when `torch_mlir` is installed.
+- `.venv/bin/python tools/run_iree_stablehlo_subset_comparison.py` — runs the optional IREE comparison path.
+- `build/benchmark_prefetch_matmul` — benchmarks the CPU software-prefetch MatMul-Bias-ReLU candidate after CMake build.
 - `tools/run_mlir_pass_tests.sh` — runs the MLIR pass plugin FileCheck tests against `build-mlir`.
 - `tools/run_llm_serving_artifact_pipeline.sh` — runs the full MLIR-to-LLM-artifacts pipeline end to end.
 - `python3 tools/validate_compiler_artifacts.py` — validates generated `trace/cv_*.json` compiler/runtime artifacts.
 - `python3 tools/validate_llm_serving_artifacts.py` — validates generated `artifacts/apple_demo` LLM serving artifacts.
 - `tools/check_openxla_toolchain.py` — checks optional StableHLO tooling availability.
 
-## Documentation Hierarchy
+## Portfolio-Level Policy
 
-Truth must flow in the following order:
-
-Code
-↓
-Artifacts
-↓
-README.md
-↓
-CLAUDE.md
-↓
-docs/
-
-Lower levels must never contradict higher levels.
-
-Documentation must describe reality rather than invent behavior.
-
-If uncertainty exists, trust code and generated artifacts.
-
-Never exaggerate capabilities.
-
-Never claim production behavior unless code and artifacts support it.
-
-## README Contract
-
-README.md exists to answer:
-
-1. What is it?
-2. Why is it interesting?
-3. How do I run it?
-4. What results does it produce?
-
-README should emphasize user-facing understanding.
-
-Avoid implementation details unless necessary.
-
-Avoid maintenance instructions.
-
-## CLAUDE.md Contract
-
-CLAUDE.md exists to answer:
-
-1. How do I maintain it?
-2. What commands are canonical?
-3. Which components are implemented?
-4. Which components are simulated?
-5. Which validation commands must pass?
-6. What files should not be changed casually?
-
-CLAUDE.md is intended for maintainers and future AI agents.
-
-## docs/ Contract
-
-docs/ exists to answer:
-
-1. Why is it designed this way?
-2. What tradeoffs were made?
-3. What is measured versus modeled?
-4. What assumptions exist?
-5. What limitations remain?
-6. What future work is possible?
-
-docs/ explains architecture and rationale rather than usage.
-
-## Documentation Principles
-
-Code > Artifacts > README > CLAUDE.md > docs/
-
-Never reverse this order.
-
-Never infer unsupported features.
-
-Never create claims unsupported by code or artifacts.
-
-Prefer conservative wording.
-
-Call synthetic benchmarks synthetic.
-
-Call simulated systems simulated.
-
-Distinguish measured behavior from modeled behavior.
-
-## Git Authorship Policy
-
-The user is the sole maintainer and owner of this repository.
-
-AI agents may modify files as requested.
-
-AI agents must not add AI authorship metadata.
-
-Never add:
-
-* Co-Authored-By entries
-* Co-authored-by trailers
-* Claude authorship metadata
-* AI signatures
-* Generated-by-AI footers
-* any metadata that makes an AI system appear as a repository contributor
-
-Commit policy:
-
-* By default, do not run git commit.
-* If the user explicitly asks in the current conversation to commit, an AI agent may run git add and git commit.
-* Commits must use the machine's global Git identity (`git config --global user.name` and `git config --global user.email`).
-* Commits created by an AI agent must use the user's configured git author and committer identity.
-* Never set author or committer identity to Claude, Anthropic, or any AI/bot identity.
-* Commit messages must not mention AI authorship unless the user explicitly asks.
-* Before committing, show git status and the staged diff summary when practical.
-
-Push policy:
-
-* By default, do not run git push.
-* Only run git push if the user explicitly asks in the current conversation.
-* Pushes must use the user's machine/account Git authentication, never a Claude/Anthropic/bot identity.
-* Never force-push unless the user explicitly asks for a force push and the reason is explained.
-
-History policy:
-
-* Do not create branches, rewrite history, rebase, reset, or amend commits unless the user explicitly asks in the current conversation.
-* Never rewrite public history without explicit user approval.
-
-Ownership rule:
-
-* The user remains the sole author/maintainer for portfolio presentation purposes.
-* No AI system should appear as a repository contributor.
+When this repository is maintained inside the `systems-portfolio` wrapper, follow the root `CLAUDE.md` for shared documentation hierarchy, benchmark honesty, and Git authorship rules. Keep this file focused on repository-specific capabilities, truth boundaries, and validation commands.
