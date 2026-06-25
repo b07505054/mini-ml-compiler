@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "runtime_replan_report",
+  "truth_boundary": "rule_based_replanning_simulation_not_online_vllm_control",
+  "model": "tiny-gpt",
+  "observed_metrics_note": "Synthetic placeholder values for schema demonstration. Not measured benchmark results. Replace with live vLLM metrics when instrumented.",
+  "observed_metrics": {
+    "TTFT_ms": 120.0,
+    "TPOT_ms": 8.0,
+    "replay_hit_rate": 0.85,
+    "kv_transfer_latency_ms": 3.5,
+    "queue_wait_ms": 15.0
+  },
+  "replanning_rules": [
+    {
+      "rule_id": "merge_buckets",
+      "condition": "replay_hit_rate > 0.90",
+      "action": "consolidate underused small decode buckets to reduce CUDA Graph capture overhead"
+    },
+    {
+      "rule_id": "split_buckets",
+      "condition": "TTFT_ms > 100.0",
+      "action": "split large batch buckets into smaller decode groups to reduce head-of-line blocking"
+    },
+    {
+      "rule_id": "reduce_pd_candidates",
+      "condition": "kv_transfer_latency_ms > 10.0",
+      "action": "reduce PD disaggregation candidates; prefer colocated for latency-sensitive requests"
+    },
+    {
+      "rule_id": "prefer_colocated_fallback",
+      "condition": "TPOT_ms > 20.0",
+      "action": "switch disaggregated candidates to colocated mode to reduce per-token latency overhead"
+    }
+  ],
+  "triggered_rules": [
+    "split_buckets"
+  ],
+  "actions": [
+    "split large batch buckets into smaller decode groups to reduce head-of-line blocking"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1",
+  "description": "Synthetic request trace for vLLM serving plan generation. Not measured traffic.",
+  "requests": [
+    {"request_id": "r0", "prompt_tokens": 32,  "output_tokens": 64,  "arrival_order": 0},
+    {"request_id": "r1", "prompt_tokens": 64,  "output_tokens": 128, "arrival_order": 1},
+    {"request_id": "r2", "prompt_tokens": 256, "output_tokens": 128, "arrival_order": 2},
+    {"request_id": "r3", "prompt_tokens": 512, "output_tokens": 256, "arrival_order": 3},
+    {"request_id": "r4", "prompt_tokens": 48,  "output_tokens": 320, "arrival_order": 4},
+    {"request_id": "r5", "prompt_tokens": 128, "output_tokens": 384, "arrival_order": 5},
+    {"request_id": "r6", "prompt_tokens": 16,  "output_tokens": 512, "arrival_order": 6},
+    {"request_id": "r7", "prompt_tokens": 384, "output_tokens": 192, "arrival_order": 7}
+  ]
+}

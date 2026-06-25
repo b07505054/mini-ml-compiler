@@ -1,0 +1,249 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "cuda_graph_bucket_plan",
+  "truth_boundary": "metadata_only_does_not_capture_cuda_graph",
+  "model": "tiny-gpt",
+  "vllm_dispatcher_note": "vLLM V1 selects CUDA Graph mode based on batch shape at runtime. This plan describes compiler-derived candidate buckets for decode replay. No CUDA Graph is captured here; this artifact is planning metadata only.",
+  "decode_buckets": [
+    {
+      "bucket_id": 0,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 128,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 1,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 256,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 2,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 512,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 3,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 1024,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 4,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 2048,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 5,
+      "batch_size": 1,
+      "query_len": 1,
+      "context_bucket": 4096,
+      "replay_safe": false,
+      "fallback_reason": "context_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 6,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 128,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 7,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 256,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 8,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 512,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 9,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 1024,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 10,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 2048,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 11,
+      "batch_size": 2,
+      "query_len": 1,
+      "context_bucket": 4096,
+      "replay_safe": false,
+      "fallback_reason": "context_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 12,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 128,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 13,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 256,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 14,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 512,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 15,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 1024,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 16,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 2048,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 17,
+      "batch_size": 4,
+      "query_len": 1,
+      "context_bucket": 4096,
+      "replay_safe": false,
+      "fallback_reason": "context_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 18,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 128,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 19,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 256,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 20,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 512,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 21,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 1024,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 22,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 2048,
+      "replay_safe": true,
+      "fallback_reason": null
+    },
+    {
+      "bucket_id": 23,
+      "batch_size": 8,
+      "query_len": 1,
+      "context_bucket": 4096,
+      "replay_safe": false,
+      "fallback_reason": "context_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 24,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 128,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 25,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 256,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 26,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 512,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 27,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 1024,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 28,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 2048,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    },
+    {
+      "bucket_id": 29,
+      "batch_size": 16,
+      "query_len": 1,
+      "context_bucket": 4096,
+      "replay_safe": false,
+      "fallback_reason": "batch_size_exceeds_safe_capture_range"
+    }
+  ]
+}

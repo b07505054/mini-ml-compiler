@@ -1,0 +1,120 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "kv_cache_layout_plan",
+  "truth_boundary": "planning_artifact_not_actual_vllm_kv_transfer",
+  "model": "tiny-gpt",
+  "vllm_kv_transfer_note": "vLLM disaggregated prefill uses separate prefill/decode instances with KV transfer connectors under vllm/distributed/kv_transfer. This artifact identifies candidate requests for PD disaggregation based on prompt length. No actual KV transfer occurs here.",
+  "pd_split_threshold_prompt_tokens": 256,
+  "per_request_entries": [
+    {
+      "request_id": "r0",
+      "prompt_tokens": 32,
+      "output_tokens": 64,
+      "total_tokens": 96,
+      "estimated_kv_bytes": 3538944,
+      "estimated_kv_mb": 3.375,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": false,
+      "estimated_kv_transfer_mb": 0.0,
+      "recommendation": "colocated"
+    },
+    {
+      "request_id": "r1",
+      "prompt_tokens": 64,
+      "output_tokens": 128,
+      "total_tokens": 192,
+      "estimated_kv_bytes": 7077888,
+      "estimated_kv_mb": 6.75,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": false,
+      "estimated_kv_transfer_mb": 0.0,
+      "recommendation": "colocated"
+    },
+    {
+      "request_id": "r2",
+      "prompt_tokens": 256,
+      "output_tokens": 128,
+      "total_tokens": 384,
+      "estimated_kv_bytes": 14155776,
+      "estimated_kv_mb": 13.5,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": true,
+      "estimated_kv_transfer_mb": 13.5,
+      "recommendation": "disaggregated"
+    },
+    {
+      "request_id": "r3",
+      "prompt_tokens": 512,
+      "output_tokens": 256,
+      "total_tokens": 768,
+      "estimated_kv_bytes": 28311552,
+      "estimated_kv_mb": 27.0,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": true,
+      "estimated_kv_transfer_mb": 27.0,
+      "recommendation": "disaggregated"
+    },
+    {
+      "request_id": "r4",
+      "prompt_tokens": 48,
+      "output_tokens": 320,
+      "total_tokens": 368,
+      "estimated_kv_bytes": 13565952,
+      "estimated_kv_mb": 12.9375,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": false,
+      "estimated_kv_transfer_mb": 0.0,
+      "recommendation": "colocated"
+    },
+    {
+      "request_id": "r5",
+      "prompt_tokens": 128,
+      "output_tokens": 384,
+      "total_tokens": 512,
+      "estimated_kv_bytes": 18874368,
+      "estimated_kv_mb": 18.0,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": false,
+      "estimated_kv_transfer_mb": 0.0,
+      "recommendation": "colocated"
+    },
+    {
+      "request_id": "r6",
+      "prompt_tokens": 16,
+      "output_tokens": 512,
+      "total_tokens": 528,
+      "estimated_kv_bytes": 19464192,
+      "estimated_kv_mb": 18.5625,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": false,
+      "estimated_kv_transfer_mb": 0.0,
+      "recommendation": "colocated"
+    },
+    {
+      "request_id": "r7",
+      "prompt_tokens": 384,
+      "output_tokens": 192,
+      "total_tokens": 576,
+      "estimated_kv_bytes": 21233664,
+      "estimated_kv_mb": 20.25,
+      "kv_producer_phase": "prefill",
+      "kv_consumer_phase": "decode",
+      "pd_split_candidate": true,
+      "estimated_kv_transfer_mb": 20.25,
+      "recommendation": "disaggregated"
+    }
+  ],
+  "aggregate": {
+    "total_estimated_kv_mb": 120.375,
+    "pd_split_candidate_count": 3,
+    "colocated_count": 5,
+    "disaggregated_count": 3
+  }
+}

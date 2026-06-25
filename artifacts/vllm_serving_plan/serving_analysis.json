@@ -1,0 +1,60 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "serving_analysis",
+  "truth_boundary": "simulated",
+  "model": "tiny-gpt",
+  "prefill_decode_split": {
+    "prefill_phase": "attention_prefill",
+    "prefill_kv_role": "producer",
+    "decode_phase": "attention_decode",
+    "decode_kv_role": "consumer",
+    "pd_separation_viable": true
+  },
+  "prompt_output_assumptions": {
+    "short_prompt_max_tokens": 64,
+    "long_prompt_min_tokens": 65,
+    "decode_heavy_min_output_tokens": 257
+  },
+  "shape_classification": {
+    "prefill": "dynamic",
+    "decode": "static"
+  },
+  "request_classes": [
+    {
+      "class": "short_prompt",
+      "request_ids": [
+        "r0",
+        "r1"
+      ],
+      "cuda_graph_eligible": true,
+      "reason": "small static decode step fits smallest CUDA Graph bucket"
+    },
+    {
+      "class": "long_prompt",
+      "request_ids": [
+        "r2",
+        "r3",
+        "r7"
+      ],
+      "cuda_graph_eligible": false,
+      "reason": "dynamic prompt length may exceed bucket boundary; prefill uses eager execution"
+    },
+    {
+      "class": "decode_heavy",
+      "request_ids": [
+        "r4",
+        "r5",
+        "r6"
+      ],
+      "cuda_graph_eligible": true,
+      "reason": "long decode sequences benefit from CUDA Graph replay at decode step"
+    }
+  ],
+  "batch_shape_buckets": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ]
+}
