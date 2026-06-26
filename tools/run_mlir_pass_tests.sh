@@ -366,6 +366,20 @@ run_filecheck \
   --pass-pipeline='builtin.module(serving-phase-analysis)'
 
 run_filecheck \
+  "kv-layout-planning annotates paged/contiguous and byte estimate" \
+  "$REPO_ROOT/mlir_passes/test/serving/kv_layout_planning.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(kv-layout-planning)'
+
+run_filecheck \
+  "serving-optimization-pipeline produces serving and kv attrs" \
+  "$REPO_ROOT/mlir_passes/test/serving/serving_optimization_pipeline.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(serving-optimization-pipeline)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

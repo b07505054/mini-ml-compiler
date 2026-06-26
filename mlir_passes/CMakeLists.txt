@@ -44,7 +44,9 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
   lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
+  lib/serving/ServingPipeline.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -90,6 +92,7 @@ enable_testing()
 
 add_executable(ServingExecutionPlanBuilderTest
   lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   test/serving/ServingExecutionPlanBuilderTest.cpp
 )

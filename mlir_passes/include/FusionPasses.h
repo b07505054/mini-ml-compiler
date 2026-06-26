@@ -8,7 +8,9 @@ namespace mlir::hir {
 #include "FusionPasses.h.inc"
 
 void registerFusionPasses();
+void registerServingOptimizationPipeline();
 
 std::unique_ptr<::mlir::Pass> createServingPhaseAnalysisPass();
+std::unique_ptr<::mlir::Pass> createKVLayoutPlanningPass();
 
 } // namespace mlir::hir

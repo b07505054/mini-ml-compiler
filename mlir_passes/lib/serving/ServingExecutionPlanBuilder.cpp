@@ -93,10 +93,19 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
     if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("serving.truth_boundary"))
       fp.provenance.truth_boundary = a.getValue().str();
 
-    // kv_plan and replay_plan remain at defaults until KVLayoutPlanningPass
-    // and ReplayEligibilityPass are implemented and run before the builder.
-
     fp.source_passes.push_back("serving-phase-analysis");
+
+    // KV plan from KVLayoutPlanningPass attrs (present when that pass has run).
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("kv.layout")) {
+      llvm::StringRef v = a.getValue();
+      if (v == "paged")           fp.kv_plan.layout = KVLayout::Paged;
+      else if (v == "contiguous") fp.kv_plan.layout = KVLayout::Contiguous;
+      fp.source_passes.push_back("kv-layout-planning");
+    }
+    if (auto a = funcOp->getAttrOfType<mlir::FloatAttr>("kv.byte_estimate_mb"))
+      fp.kv_plan.kv_byte_estimate_mb = a.getValueAsDouble();
+
+    // replay_plan remains at defaults until ReplayEligibilityPass is implemented.
 
     plan.function_plans.push_back(std::move(fp));
   });

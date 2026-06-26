@@ -1285,6 +1285,10 @@ void registerFusionPasses() {
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
       });
+
+  // Registers kv-layout-planning (standalone wrapper) and
+  // serving-optimization-pipeline (serving-phase-analysis + kv-layout-planning).
+  registerServingOptimizationPipeline();
 }
 
 } // namespace mlir::hir

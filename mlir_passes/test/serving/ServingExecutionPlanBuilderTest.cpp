@@ -1,6 +1,7 @@
 // CTest unit test for ServingExecutionPlanBuilder.
 // Pure C++. No GoogleTest. No Python. No JSON. No plugin loading.
-// Compiles ServingPhaseAnalysisPass and ServingExecutionPlanBuilder directly.
+// Compiles ServingPhaseAnalysisPass, KVLayoutPlanningPass, and
+// ServingExecutionPlanBuilder directly.
 
 #include "serving/ServingExecutionPlan.h"
 #include "serving/ServingExecutionPlanBuilder.h"
@@ -16,12 +17,13 @@
 #include <cstdio>
 
 // MLIR module with:
-//   - module-level llm.model, llm.num_layers, llm.hidden_size attrs
-//   - one func.func named @prefill containing llm.attention_prefill
-//   - serving.prompt_tokens = 128, serving.output_tokens = 64, llm.num_layers = 12
-// Expected after ServingPhaseAnalysisPass:
-//   policy = "colocated", confidence = "low"
-//   (see serving_phase_analysis.mlir for the cost derivation)
+//   - module-level llm.model, llm.num_layers=12, llm.hidden_size=768
+//   - one func.func @prefill containing llm.attention_prefill (kv_cache.role="producer")
+//   - serving.prompt_tokens=128, serving.output_tokens=64
+// Expected after both serving passes:
+//   serving: policy="colocated", confidence="low"  (see serving_phase_analysis.mlir)
+//   kv:      layout=Paged, byte_estimate_mb ≈ 6.75
+//            (12 * 2 * 768 * 2 * 192 / 1MB)
 static const char kTestModule[] = R"mlir(
 module attributes {
   llm.model = "tiny-gpt",
@@ -49,9 +51,11 @@ int main() {
   assert(module && "MLIR parse failed");
 
   mlir::PassManager pm(&ctx);
-  // addNestedPass does not require pass registry; constructs the pass directly.
+  // addNestedPass constructs passes directly — no plugin loading needed.
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createServingPhaseAnalysisPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createKVLayoutPlanningPass());
   assert(pm.run(module.get()).succeeded() && "PassManager run failed");
 
   mlir::hir::ServingExecutionPlan plan =
@@ -78,15 +82,20 @@ int main() {
   assert(fp.provenance.truth_boundary == "estimated_cost_not_measured_latency"
          && "truth_boundary mismatch");
 
-  // KV and replay remain at defaults until their passes are implemented.
-  assert(fp.kv_plan.layout == mlir::hir::KVLayout::Unknown
-         && "kv_layout should be Unknown before KVLayoutPlanningPass");
+  // KV plan from KVLayoutPlanningPass: producer role => paged layout.
+  assert(fp.kv_plan.layout == mlir::hir::KVLayout::Paged
+         && "kv_layout should be Paged for kv_cache.role=producer");
+  assert(fp.kv_plan.kv_byte_estimate_mb > 0.0
+         && "kv_byte_estimate_mb should be positive");
+
+  // replay_plan remains at defaults until ReplayEligibilityPass is implemented.
   assert(fp.replay_plan.replay_eligible == false
          && "replay_eligible should be false before ReplayEligibilityPass");
 
-  // Provenance: builder records which pass contributed attrs.
-  assert(!fp.source_passes.empty()
+  // Builder records one source_pass entry per contributing pass.
+  assert(fp.source_passes.size() == 2
          && fp.source_passes[0] == "serving-phase-analysis"
+         && fp.source_passes[1] == "kv-layout-planning"
          && "source_passes mismatch");
 
   std::puts("ServingExecutionPlanBuilderTest: PASS");

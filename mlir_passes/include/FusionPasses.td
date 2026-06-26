@@ -154,8 +154,35 @@ def ServingPhaseAnalysis
 
     Truth boundary: cost values are formula estimates, not measured latency.
     This pass does not execute CUDA Graphs, vLLM, or real KV transfers.
+
+    Future split: this pass combines phase detection, cost computation, and
+    policy decision. It will eventually be split into ServingPhaseAnalysisPass,
+    DistributedServingCostAnalysisPass, and ServingDecisionPass when multi-source
+    cost merging is required.
   }];
   let constructor = "mlir::hir::createServingPhaseAnalysisPass()";
+}
+
+def KVLayoutPlanning
+    : Pass<"kv-layout-planning", "mlir::func::FuncOp"> {
+  let summary = "Annotate serving functions with KV cache layout policy and byte estimate";
+  let description = [{
+    Walks llm.attention_prefill and llm.attention_decode ops within a func.func,
+    reads kv_cache.role, serving.prompt_tokens, serving.output_tokens, and
+    module attrs llm.num_layers and llm.hidden_size, then annotates the
+    enclosing func.func with:
+
+      kv.layout            -- "paged" if kv_cache.role == "producer", else "contiguous"
+      kv.byte_estimate_mb  -- formula: num_layers * 2 * hidden_size * 2 * seq_tokens / 1MB
+      kv.truth_boundary    = "static_formula_estimate_not_measured_memory"
+
+    Truth boundary: layout is a compiler policy decision matching the vLLM
+    paged attention model; byte estimate is a static formula estimate and has
+    not been measured against actual KV cache memory usage.
+
+    Intended to run after ServingPhaseAnalysisPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createKVLayoutPlanningPass()";
 }
 
 #endif // HIR_FUSION_PASSES
