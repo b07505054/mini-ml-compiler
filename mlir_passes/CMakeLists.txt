@@ -43,6 +43,8 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/HIR/IR/HIRDialect.cpp
   lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
+  lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/ServingExecutionPlanBuilder.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -78,3 +80,41 @@ if(APPLE)
     SUFFIX ".dylib"
   )
 endif()
+
+# ---------------------------------------------------------------------------
+# CTest: ServingExecutionPlanBuilder unit test
+# Compiles ServingPhaseAnalysisPass and ServingExecutionPlanBuilder directly
+# (no plugin loading, no Python, no JSON).
+# ---------------------------------------------------------------------------
+enable_testing()
+
+add_executable(ServingExecutionPlanBuilderTest
+  lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/ServingExecutionPlanBuilder.cpp
+  test/serving/ServingExecutionPlanBuilderTest.cpp
+)
+llvm_update_compile_flags(ServingExecutionPlanBuilderTest)
+add_dependencies(ServingExecutionPlanBuilderTest
+  HIRFusionPassIncGen
+)
+target_include_directories(ServingExecutionPlanBuilderTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ServingExecutionPlanBuilderTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(ServingExecutionPlanBuilderTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+)
+add_test(NAME ServingExecutionPlanBuilderTest
+         COMMAND ServingExecutionPlanBuilderTest)

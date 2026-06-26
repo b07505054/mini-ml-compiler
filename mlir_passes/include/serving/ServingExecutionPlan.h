@@ -1,0 +1,62 @@
+#pragma once
+
+// No serialization headers. No JSON. No Python.
+// This is the typed in-memory compiler product produced by the serving pass
+// pipeline and consumed by ServingExecutionPlanBuilder.
+
+#include "serving/ServingEnums.h"
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace mlir::hir {
+
+// Compiler provenance annotation: identifies the reliability and origin of
+// compiler decisions. Not a deployment SLO or validation expectation.
+struct CompilerProvenance {
+  std::string truth_boundary; // e.g. "estimated_cost_not_measured_latency"
+  std::string cost_source;    // e.g. "formula_synthetic"
+};
+
+struct CostSummary {
+  double colocated_total_ms  = 0.0;
+  double pd_split_total_ms   = 0.0;
+  double decision_margin_ms  = 0.0;
+  double decision_margin_pct = 0.0;
+  Confidence confidence      = Confidence::Low;
+};
+
+// KV cache layout plan. Populated by KVLayoutPlanningPass when implemented.
+// Defaults to Unknown until that pass runs.
+struct KVPlan {
+  KVLayout layout            = KVLayout::Unknown;
+  double kv_byte_estimate_mb = 0.0;
+};
+
+// CUDA graph replay eligibility. Populated by ReplayEligibilityPass when
+// implemented. Defaults to false (not eligible) until that pass runs.
+struct ReplayPlan {
+  bool replay_eligible           = false;
+  std::string cuda_graph_bucket; // empty if not eligible
+};
+
+struct FunctionExecutionPlan {
+  std::string function_name;
+  ServingPhase serving_phase   = ServingPhase::Unknown;
+  ExecutionMode execution_mode = ExecutionMode::Unknown;
+  CostSummary cost_summary;
+  KVPlan kv_plan;
+  ReplayPlan replay_plan;
+  CompilerProvenance provenance;
+  std::vector<std::string> source_passes; // passes that contributed attrs
+};
+
+struct ServingExecutionPlan {
+  std::string model_name;
+  int64_t num_layers  = 0;
+  int64_t hidden_size = 0;
+  std::vector<FunctionExecutionPlan> function_plans;
+};
+
+} // namespace mlir::hir
