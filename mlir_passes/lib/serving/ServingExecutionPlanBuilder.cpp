@@ -105,7 +105,13 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
     if (auto a = funcOp->getAttrOfType<mlir::FloatAttr>("kv.byte_estimate_mb"))
       fp.kv_plan.kv_byte_estimate_mb = a.getValueAsDouble();
 
-    // replay_plan remains at defaults until ReplayEligibilityPass is implemented.
+    // Replay plan from ReplayEligibilityPass attrs (present when that pass has run).
+    if (auto a = funcOp->getAttrOfType<mlir::BoolAttr>("replay.eligible")) {
+      fp.replay_plan.replay_eligible = a.getValue();
+      fp.source_passes.push_back("replay-eligibility");
+    }
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("replay.cuda_graph_bucket"))
+      fp.replay_plan.cuda_graph_bucket = a.getValue().str();
 
     plan.function_plans.push_back(std::move(fp));
   });

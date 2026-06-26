@@ -373,7 +373,14 @@ run_filecheck \
   --pass-pipeline='builtin.module(kv-layout-planning)'
 
 run_filecheck \
-  "serving-optimization-pipeline produces serving and kv attrs" \
+  "replay-eligibility annotates static decode as eligible and prefill as ineligible" \
+  "$REPO_ROOT/mlir_passes/test/serving/replay_eligibility.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(replay-eligibility)'
+
+run_filecheck \
+  "serving-optimization-pipeline produces serving, kv, and replay attrs" \
   "$REPO_ROOT/mlir_passes/test/serving/serving_optimization_pipeline.mlir" \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \

@@ -7,9 +7,8 @@
 namespace mlir::hir {
 
 void registerServingOptimizationPipeline() {
-  // Single-pass wrapper so kv-layout-planning can be used standalone via
-  // --pass-pipeline='builtin.module(kv-layout-planning)', mirroring the
-  // serving-phase-analysis wrapper already in registerFusionPasses().
+  // Standalone wrappers mirror the serving-phase-analysis pattern in
+  // registerFusionPasses(), allowing each pass to be used independently.
   static PassPipelineRegistration<> kvLayoutPipeline(
       "kv-layout-planning",
       "Annotate serving functions with KV cache layout policy and byte estimate",
@@ -17,13 +16,21 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
       });
 
-  // Two-pass serving pipeline: phase/cost/policy analysis then KV planning.
+  static PassPipelineRegistration<> replayEligibilityPipeline(
+      "replay-eligibility",
+      "Annotate serving functions with CUDA graph replay eligibility metadata",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());
+      });
+
+  // Three-pass serving pipeline.
   static PassPipelineRegistration<> servingOptPipeline(
       "serving-optimization-pipeline",
-      "HIR serving analysis pipeline: phase/cost/policy then KV layout planning",
+      "HIR serving pipeline: phase/cost, KV layout, replay eligibility",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());
       });
 }
 

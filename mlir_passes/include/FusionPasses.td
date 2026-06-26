@@ -185,4 +185,32 @@ def KVLayoutPlanning
   let constructor = "mlir::hir::createKVLayoutPlanningPass()";
 }
 
+def ReplayEligibility
+    : Pass<"replay-eligibility", "mlir::func::FuncOp"> {
+  let summary = "Annotate serving functions with CUDA graph replay eligibility metadata";
+  let description = [{
+    Inspects the function body for attention op type (prefill or decode) and
+    checks whether any tensor type in the function has dynamic dimensions.
+    Annotates the enclosing func.func with:
+
+      replay.eligible          -- true if function is a replay candidate
+      replay.cuda_graph_bucket -- "decode_static" if eligible, else ""
+      replay.truth_boundary    = "static_shape_replay_eligibility_not_cuda_graph_capture"
+
+    Eligibility rules (applied in order):
+      - llm.attention_prefill present           -> not eligible (variable-length)
+      - llm.attention_decode + dynamic tensor   -> not eligible
+      - llm.attention_decode + all-static shape -> eligible, bucket "decode_static"
+      - no attention op                         -> pass skips the function
+
+    Truth boundary: this pass emits compiler-side eligibility metadata only.
+    It does not capture CUDA Graphs, measure capture latency, or validate
+    runtime replay correctness. The runtime decides whether to actually
+    capture and replay based on this annotation.
+
+    Intended to run after KVLayoutPlanningPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createReplayEligibilityPass()";
+}
+
 #endif // HIR_FUSION_PASSES

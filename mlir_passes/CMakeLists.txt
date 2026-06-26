@@ -45,6 +45,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/MatMulBiasReluFusionPass.cpp
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
+  lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingPipeline.cpp
 )
@@ -93,6 +94,7 @@ enable_testing()
 add_executable(ServingExecutionPlanBuilderTest
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
+  lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   test/serving/ServingExecutionPlanBuilderTest.cpp
 )
