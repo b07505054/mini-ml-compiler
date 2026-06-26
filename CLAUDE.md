@@ -139,6 +139,29 @@ If a verification command cannot run because dependencies are missing, state tha
 - `python3 tools/validate_llm_serving_artifacts.py` — validates generated `artifacts/apple_demo` LLM serving artifacts.
 - `tools/check_openxla_toolchain.py` — checks optional StableHLO tooling availability.
 
+## Compiler Core Policy: Zero Python / Zero JSON
+
+The compiler core must be C++/MLIR-first.
+
+Python and JSON are allowed only at the edges:
+- Python: legacy prototypes, validation tooling, debug scripts, regression comparison, runtime/demo helpers.
+- JSON: debug dumps, validation artifacts, temporary runtime/demo interchange.
+
+They must not be the source of truth for new compiler functionality.
+
+New compiler-core work should be implemented in:
+- C++
+- MLIR passes
+- TableGen where appropriate
+- FileCheck / CTest tests
+
+Runtime metadata must originate from:
+MLIR attributes or C++ RuntimeMetadataContract.
+
+If JSON is emitted, it is a serialization/debug format only.
+
+Do not add new Python+JSON planner logic as the primary compiler implementation.
+
 ## Portfolio-Level Policy
 
 When this repository is maintained inside the `systems-portfolio` wrapper, follow the root `CLAUDE.md` for shared documentation hierarchy, benchmark honesty, and Git authorship rules. Keep this file focused on repository-specific capabilities, truth boundaries, and validation commands.

@@ -9,4 +9,6 @@ namespace mlir::hir {
 
 void registerFusionPasses();
 
+std::unique_ptr<::mlir::Pass> createServingPhaseAnalysisPass();
+
 } // namespace mlir::hir

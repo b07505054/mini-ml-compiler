@@ -134,4 +134,28 @@ def StableHLOCompatibleRMSNormImport
   let constructor = "mlir::hir::createStableHLOCompatibleRMSNormImportPass()";
 }
 
+def ServingPhaseAnalysis
+    : Pass<"serving-phase-analysis", "mlir::func::FuncOp"> {
+  let summary = "Annotate serving functions with colocated vs pd_split policy decisions";
+  let description = [{
+    Walks llm.attention_prefill and llm.attention_decode ops within a func.func,
+    reads serving.phase, kv_cache.role, serving.prompt_tokens, and
+    serving.output_tokens attributes, computes formula-synthetic colocated vs
+    pd_split serving costs, and annotates the enclosing func.func with:
+
+      serving.policy            -- "colocated" or "pd_split"
+      serving.colocated_total_ms
+      serving.pd_split_total_ms
+      serving.decision_margin_ms
+      serving.decision_margin_pct
+      serving.confidence        -- "low", "medium", or "high"
+      serving.cost_source       = "formula_synthetic"
+      serving.truth_boundary    = "estimated_cost_not_measured_latency"
+
+    Truth boundary: cost values are formula estimates, not measured latency.
+    This pass does not execute CUDA Graphs, vLLM, or real KV transfers.
+  }];
+  let constructor = "mlir::hir::createServingPhaseAnalysisPass()";
+}
+
 #endif // HIR_FUSION_PASSES

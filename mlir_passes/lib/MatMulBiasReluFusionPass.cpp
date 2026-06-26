@@ -1278,6 +1278,13 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(
             createStableHLOCompatibleRMSNormImportPass());
       });
+
+  static PassPipelineRegistration<> servingPhaseAnalysisPipeline(
+      "serving-phase-analysis",
+      "Annotate serving functions with colocated vs pd_split policy decisions",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
+      });
 }
 
 } // namespace mlir::hir

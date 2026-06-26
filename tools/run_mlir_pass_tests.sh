@@ -359,6 +359,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
+  "serving phase analysis annotates colocated vs pd_split policy" \
+  "$REPO_ROOT/mlir_passes/test/serving_phase_analysis.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(serving-phase-analysis)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

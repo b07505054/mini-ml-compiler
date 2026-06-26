@@ -1,0 +1,429 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "compiler_serving_cost_report",
+  "truth_boundary": "heuristic_cost_model_not_measured_vllm_benchmark",
+  "cost_model_version": "0.1",
+  "model": "tiny-gpt",
+  "assumptions": {
+    "prefill_ms_per_token": 0.08,
+    "decode_ms_per_token": 0.12,
+    "pd_bandwidth_mb_per_ms": 24.0,
+    "queue_ms_per_prompt_token": 0.02,
+    "pd_split_queue_factor": 0.4,
+    "pd_coordination_ms": 2.0,
+    "replay_gain_ms": 1.5,
+    "memory_penalty_threshold_mb": 15.0,
+    "memory_penalty_factor_ms_per_mb": 0.05,
+    "note": "All values are heuristic placeholders. compute_ms uses a token-count formula by default, or nearest-neighbor GPU proxy lookup when --gpu-batch-scaling-artifact is provided. kv_transfer_ms uses an assumed 24 GB/s bandwidth. queue_ms and other components are synthetic estimates. See truth_boundary and compute_cost_source."
+  },
+  "per_request_costs": [
+    {
+      "request_id": "r0",
+      "colocated_cost": {
+        "compute_ms": 10.24,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 0.64,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 9.38,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 10.24,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 2.256,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 10.996,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "colocated",
+      "confidence": "high",
+      "confidence_reasons": [
+        "decision_margin_at_least_15_percent"
+      ],
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r1",
+      "colocated_cost": {
+        "compute_ms": 20.48,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 1.28,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 20.26,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 20.48,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 2.512,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 21.492,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "colocated",
+      "confidence": "medium",
+      "confidence_reasons": [
+        "decision_margin_between_5_and_15_percent"
+      ],
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r2",
+      "colocated_cost": {
+        "compute_ms": 35.84,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 5.12,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 39.46,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 35.84,
+        "kv_transfer_ms": 0.5625,
+        "queue_ms": 4.048,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 38.9505,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "pd_split",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    },
+    {
+      "request_id": "r3",
+      "colocated_cost": {
+        "compute_ms": 71.68,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 10.24,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.6,
+        "total_ms": 81.02,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 71.68,
+        "kv_transfer_ms": 1.125,
+        "queue_ms": 6.096,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.6,
+        "total_ms": 78.001,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "pd_split",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    },
+    {
+      "request_id": "r4",
+      "colocated_cost": {
+        "compute_ms": 42.24,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 0.96,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 41.7,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 42.24,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 2.384,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.0,
+        "total_ms": 43.124,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "colocated",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r5",
+      "colocated_cost": {
+        "compute_ms": 56.32,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 2.56,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.15,
+        "total_ms": 57.53,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 56.32,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 3.024,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.15,
+        "total_ms": 57.994,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "colocated",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r6",
+      "colocated_cost": {
+        "compute_ms": 62.72,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 0.32,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.1781,
+        "total_ms": 61.7181,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 62.72,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 2.128,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.1781,
+        "total_ms": 63.5261,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "colocated",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r7",
+      "colocated_cost": {
+        "compute_ms": 53.76,
+        "kv_transfer_ms": 0.0,
+        "queue_ms": 7.68,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.2625,
+        "total_ms": 60.2025,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "not_applicable",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "pd_split_cost": {
+        "compute_ms": 53.76,
+        "kv_transfer_ms": 0.8438,
+        "queue_ms": 5.072,
+        "replay_gain_ms": 1.5,
+        "memory_penalty_ms": 0.2625,
+        "total_ms": 58.4383,
+        "cost_sources": {
+          "compute_ms": "formula_synthetic",
+          "kv_transfer_ms": "bandwidth_formula",
+          "queue_ms": "heuristic_queue_model",
+          "replay_gain_ms": "heuristic_cuda_graph_replay_gain",
+          "memory_penalty_ms": "heuristic_memory_pressure"
+        },
+        "compute_lookup": {
+          "mode": "formula",
+          "lookup_method": null
+        }
+      },
+      "recommended_execution_mode": "pd_split",
+      "confidence": "low",
+      "confidence_reasons": [
+        "decision_margin_below_5_percent"
+      ],
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    }
+  ],
+  "summary": {
+    "total_requests": 8,
+    "colocated_wins": 5,
+    "pd_split_wins": 3
+  }
+}

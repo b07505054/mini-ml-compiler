@@ -207,13 +207,36 @@ Cost components and their sources:
 
 | Component | Formula | Source label |
 |---|---|---|
-| `compute_ms` | `PREFILL_MS_PER_TOKEN × prompt + DECODE_MS_PER_TOKEN × output` | `formula_synthetic` |
+| `compute_ms` | GPU proxy lookup (prefill + decode_step × output_tokens) OR `PREFILL_MS_PER_TOKEN × prompt + DECODE_MS_PER_TOKEN × output` | `gpu_measured_proxy` / `formula_synthetic` |
 | `kv_transfer_ms` | `kv_transfer_mb / PD_BANDWIDTH_MB_PER_MS` (pd_split only) | `bandwidth_formula` / `not_applicable` |
 | `queue_ms` | `QUEUE_MS_PER_PROMPT_TOKEN × prompt` (colocated); scaled + coordination overhead (pd_split) | `heuristic_queue_model` |
 | `replay_gain_ms` | `REPLAY_GAIN_MS` if replay_safe, else 0 | `heuristic_cuda_graph_replay_gain` |
 | `memory_penalty_ms` | `max(0, kv_mb − threshold) × MEMORY_PENALTY_FACTOR` | `heuristic_memory_pressure` |
 
 `total_ms = compute_ms + kv_transfer_ms + queue_ms − replay_gain_ms + memory_penalty_ms`
+
+Each per-request entry also includes:
+- `compute_lookup` — describes how `compute_ms` was derived: `{"mode": "formula"|"gpu_proxy", "lookup_method": null|"nearest_neighbor", ...}`
+- `confidence_reasons` — list of labels explaining the confidence level, e.g. `["decision_margin_below_5_percent"]`. When GPU proxy mode is active and confidence is `low`, the reason `"proxy_model_mismatch_can_dominate_small_policy_margins"` is appended.
+
+**Optional GPU proxy calibration:** Pass `--gpu-batch-scaling-artifact PATH` to replace the
+`formula_synthetic` compute path with nearest-neighbor lookup from a measured GPU batch-scaling
+artifact. When active, `cost_sources["compute_ms"]` becomes `"gpu_measured_proxy"` and the
+report gains `gpu_batch_scaling_artifact`, `compute_cost_source`, `compute_calibration_truth_boundary`,
+`artifact_hardware`, `artifact_truth_boundary`, `lookup_method`, and `proxy_model_note` at the
+top level.
+
+The GPU lookup uses `batch_size=1` rows only and selects the nearest bucket by token count (ties
+broken toward the smaller bucket). `compute_ms = prefill_ms + decode_step_ms × output_tokens`
+where `decode_step_ms` is looked up at `avg_decode_context_tokens = int(prompt + output / 2)`.
+
+**Architecture mismatch note:** The current artifact (`gpu_decode_batch_scaling_gtx1650maxq.json`)
+was measured on a synthetic transformer with `hidden_size=4096`; tiny-gpt uses `hidden_size=768`.
+The latencies (~128–1185 ms prefill, ~13 ms per decode step) reflect the larger model. With real
+GPU compute dominating at these scales, all 8 requests produce `low` confidence regardless of
+colocated vs pd_split — revealing that queue/transfer differences are noise relative to actual GPU
+compute at this model size. The `compute_calibration_truth_boundary` and `proxy_model_note` fields
+record this explicitly.
 
 Confidence is computed from the relative cost margin:
 `diff_pct = abs(pd_total − col_total) / min(pd_total, col_total)`
@@ -267,6 +290,18 @@ python3 tools/generate_vllm_serving_plan.py
 ```bash
 python3 tools/compiler_serving_cost_model.py
 ```
+
+Optional: calibrate `compute_ms` using the measured GPU batch-scaling artifact from `heterogeneous-inference-runtime`:
+
+```bash
+python3 tools/compiler_serving_cost_model.py \
+  --gpu-batch-scaling-artifact ../heterogeneous-inference-runtime/results/llm_runtime_artifacts/gpu_decode_batch_scaling_gtx1650maxq.json
+```
+
+Note: the artifact was measured on `hidden_size=4096`; tiny-gpt is `hidden_size=768`. The output
+`compute_calibration_truth_boundary` records this. With GPU proxy active, all requests produce
+`low` confidence because proxy compute (~1000–7200 ms) dominates total_ms by >99%, making
+queue/transfer differences negligible. Recommendations (colocated vs pd_split) are unchanged.
 
 **Step 3 — Run the planner with the cost report (E, cost-driven mode):**
 
@@ -335,5 +370,11 @@ python3 -m unittest tests.test_compiler_serving_cost_model -v
 - **Not a measured serving benchmark.** `compiler_serving_cost_report.json` uses
   token-count formulas and assumed bandwidth constants. No GPU profiling, vLLM
   benchmarking, or actual KV transfer measurement backs any value in it.
+- **Not cross-model direct calibration.** The `--gpu-batch-scaling-artifact` path connects to a
+  measured synthetic transformer with `hidden_size=4096`, not tiny-gpt. The measured latency
+  values are for that larger model and are explicitly labeled `"gpu_measured_proxy"`. This is not
+  direct tiny-gpt profiling, not Qwen profiling, and not a measured vLLM serving benchmark.
+  `compute_calibration_truth_boundary` in the artifact records the mismatch.
 - **Not connected to heterogeneous-inference-runtime or mini-llm-serving-runtime-demo.**
   This is a standalone compiler artifact generation tool inside `ml-graph-compiler-runtime`.
+  The GPU artifact is consumed by path reference only; nothing is imported from the sibling repo.
