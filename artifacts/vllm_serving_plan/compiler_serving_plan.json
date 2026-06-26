@@ -1,0 +1,274 @@
+{
+  "schema_version": "0.1",
+  "artifact_type": "compiler_serving_plan",
+  "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+  "model": "tiny-gpt",
+  "thresholds": {
+    "kv_transfer_colocated_override_mb": 25.0,
+    "kv_layout_paged_threshold_mb": 15.0
+  },
+  "decision_mode": "cost_report_driven",
+  "per_request_decisions": [
+    {
+      "request_id": "r0",
+      "prompt_tokens": 32,
+      "output_tokens": 64,
+      "execution_mode": "colocated",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": false,
+      "final_pd_split_decision": false,
+      "cuda_graph_bucket": {
+        "bucket_id": 0,
+        "batch_size": 1,
+        "context_bucket": 128,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "contiguous",
+      "estimated_kv_transfer_mb": 0.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "high",
+      "cost_summary": {
+        "colocated_total_ms": 9.38,
+        "pd_split_total_ms": 10.996,
+        "decision_margin_ms": 1.616,
+        "decision_margin_pct": 0.1723
+      },
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r1",
+      "prompt_tokens": 64,
+      "output_tokens": 128,
+      "execution_mode": "colocated",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": false,
+      "final_pd_split_decision": false,
+      "cuda_graph_bucket": {
+        "bucket_id": 1,
+        "batch_size": 1,
+        "context_bucket": 256,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "contiguous",
+      "estimated_kv_transfer_mb": 0.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "medium",
+      "cost_summary": {
+        "colocated_total_ms": 20.26,
+        "pd_split_total_ms": 21.492,
+        "decision_margin_ms": 1.232,
+        "decision_margin_pct": 0.0608
+      },
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r2",
+      "prompt_tokens": 256,
+      "output_tokens": 128,
+      "execution_mode": "pd_split",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": true,
+      "final_pd_split_decision": true,
+      "cuda_graph_bucket": {
+        "bucket_id": 2,
+        "batch_size": 1,
+        "context_bucket": 512,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "contiguous",
+      "estimated_kv_transfer_mb": 13.5,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 39.46,
+        "pd_split_total_ms": 38.9505,
+        "decision_margin_ms": 0.5095,
+        "decision_margin_pct": 0.0131
+      },
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    },
+    {
+      "request_id": "r3",
+      "prompt_tokens": 512,
+      "output_tokens": 256,
+      "execution_mode": "pd_split",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": true,
+      "final_pd_split_decision": true,
+      "cuda_graph_bucket": {
+        "bucket_id": 3,
+        "batch_size": 1,
+        "context_bucket": 1024,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "paged",
+      "estimated_kv_transfer_mb": 27.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 81.02,
+        "pd_split_total_ms": 78.001,
+        "decision_margin_ms": 3.019,
+        "decision_margin_pct": 0.0387
+      },
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    },
+    {
+      "request_id": "r4",
+      "prompt_tokens": 48,
+      "output_tokens": 320,
+      "execution_mode": "colocated",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": false,
+      "final_pd_split_decision": false,
+      "cuda_graph_bucket": {
+        "bucket_id": 2,
+        "batch_size": 1,
+        "context_bucket": 512,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "contiguous",
+      "estimated_kv_transfer_mb": 0.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 41.7,
+        "pd_split_total_ms": 43.124,
+        "decision_margin_ms": 1.424,
+        "decision_margin_pct": 0.0341
+      },
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r5",
+      "prompt_tokens": 128,
+      "output_tokens": 384,
+      "execution_mode": "colocated",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": false,
+      "final_pd_split_decision": false,
+      "cuda_graph_bucket": {
+        "bucket_id": 2,
+        "batch_size": 1,
+        "context_bucket": 512,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "paged",
+      "estimated_kv_transfer_mb": 0.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 57.53,
+        "pd_split_total_ms": 57.994,
+        "decision_margin_ms": 0.464,
+        "decision_margin_pct": 0.0081
+      },
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r6",
+      "prompt_tokens": 16,
+      "output_tokens": 512,
+      "execution_mode": "colocated",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": false,
+      "final_pd_split_decision": false,
+      "cuda_graph_bucket": {
+        "bucket_id": 3,
+        "batch_size": 1,
+        "context_bucket": 1024,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "paged",
+      "estimated_kv_transfer_mb": 0.0,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 61.7181,
+        "pd_split_total_ms": 63.5261,
+        "decision_margin_ms": 1.808,
+        "decision_margin_pct": 0.0293
+      },
+      "cost_explanation": [
+        "colocated_lower_total_cost",
+        "pd_coordination_overhead_exceeds_queue_savings"
+      ]
+    },
+    {
+      "request_id": "r7",
+      "prompt_tokens": 384,
+      "output_tokens": 192,
+      "execution_mode": "pd_split",
+      "decision_source": "compiler_serving_cost_report",
+      "input_pd_split_candidate": true,
+      "final_pd_split_decision": true,
+      "cuda_graph_bucket": {
+        "bucket_id": 3,
+        "batch_size": 1,
+        "context_bucket": 1024,
+        "replay_safe": true
+      },
+      "replay_safe": true,
+      "replay_fallback_reason": null,
+      "kv_layout": "paged",
+      "estimated_kv_transfer_mb": 20.25,
+      "truth_boundary": "compiler_serving_plan_simulated_not_online_vllm_control",
+      "confidence": "low",
+      "cost_summary": {
+        "colocated_total_ms": 60.2025,
+        "pd_split_total_ms": 58.4383,
+        "decision_margin_ms": 1.7642,
+        "decision_margin_pct": 0.0302
+      },
+      "cost_explanation": [
+        "pd_split_lower_total_cost",
+        "pd_reduces_queue_delay_for_large_prompt",
+        "kv_transfer_cost_included_in_pd_estimate"
+      ]
+    }
+  ],
+  "summary": {
+    "total_requests": 8,
+    "colocated_count": 5,
+    "pd_split_count": 3,
+    "fallback_count": 0,
+    "replay_safe_count": 8
+  },
+  "cost_report_path": "artifacts/vllm_serving_plan/compiler_serving_cost_report.json",
+  "cost_model_version": "0.1",
+  "cost_model_truth_boundary": "heuristic_cost_model_not_measured_vllm_benchmark"
+}
