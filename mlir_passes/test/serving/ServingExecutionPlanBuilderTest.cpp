@@ -1,7 +1,8 @@
 // CTest unit test for ServingExecutionPlanBuilder.
 // Pure C++. No GoogleTest. No Python. No JSON. No plugin loading.
 // Compiles ServingPhaseAnalysisPass, KVLayoutPlanningPass,
-// ReplayEligibilityPass, and ServingExecutionPlanBuilder directly.
+// ReplayEligibilityPass, ExecutionProviderPlanningPass, and
+// ServingExecutionPlanBuilder directly.
 
 #include "serving/ServingExecutionPlan.h"
 #include "serving/ServingExecutionPlanBuilder.h"
@@ -16,16 +17,17 @@
 #include <cassert>
 #include <cstdio>
 
-// MLIR module with two serving functions:
+// ---------------------------------------------------------------------------
+// Module 1: unconstrained (no target.* attrs).
 //
-//   @prefill  -- dynamic tensor shape, kv_cache.role="producer"
-//     Expected: serving.policy="colocated", kv.layout=Paged, replay.eligible=false
+//   @prefill  -- dynamic tensor shape, producer role
+//     kv.layout=Paged, replay.eligible=false
+//     EP: constraint_conflict (paged KV, cpu not paged-compatible)
 //
-//   @decode   -- static tensor shape, kv_cache.role="consumer"
-//     Expected: kv.layout=Contiguous, replay.eligible=true, bucket="decode_static"
-//
-// Module attrs: num_layers=12, hidden_size=768, prompt_tokens=128, output_tokens=64
-//   kv_mb = 12 * 2 * 768 * 2 * 192 / 1MB ≈ 6.75
+//   @decode   -- static tensor shape, consumer role
+//     kv.layout=Contiguous, replay.eligible=true, bucket="decode_static"
+//     EP: default_policy, primary="cpu"
+// ---------------------------------------------------------------------------
 static const char kTestModule[] = R"mlir(
 module attributes {
   llm.model = "tiny-gpt",
@@ -54,23 +56,57 @@ module attributes {
 }
 )mlir";
 
-int main() {
-  mlir::MLIRContext ctx;
-  ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect>();
+// ---------------------------------------------------------------------------
+// Module 2: constrained (preferred_backend = "coreml", static decode).
+//
+//   @decode_constrained  -- static, consumer role -> contiguous KV
+//     EP: target_preferred, primary="coreml", fallback=["metal","cpu"]
+//         required_precision="fp16", requires_replay=true
+// ---------------------------------------------------------------------------
+static const char kConstrainedModule[] = R"mlir(
+module attributes {
+  llm.model = "tiny-gpt",
+  llm.num_layers = 12 : i64,
+  llm.hidden_size = 768 : i64,
+  target.preferred_backend = "coreml",
+  target.allowed_backends = ["coreml", "metal", "cpu"],
+  target.supported_precisions = ["fp16", "int8"]
+} {
+  func.func @decode_constrained(%token: tensor<1xi32>) -> tensor<1x768xf16> {
+    %0 = "llm.attention_decode"(%token, %token, %token) {
+      kv_cache.role = "consumer",
+      serving.phase = "decode",
+      serving.prompt_tokens = 128 : i64,
+      serving.output_tokens = 64 : i64
+    } : (tensor<1xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1x768xf16>
+    return %0 : tensor<1x768xf16>
+  }
+}
+)mlir";
 
-  auto module = mlir::parseSourceString<mlir::ModuleOp>(kTestModule, &ctx);
+static mlir::OwningOpRef<mlir::ModuleOp>
+runFourPassPipeline(const char *src, mlir::MLIRContext &ctx) {
+  auto module = mlir::parseSourceString<mlir::ModuleOp>(src, &ctx);
   assert(module && "MLIR parse failed");
-
   mlir::PassManager pm(&ctx);
-  // addNestedPass constructs passes directly — no plugin loading needed.
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createServingPhaseAnalysisPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createKVLayoutPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createReplayEligibilityPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createExecutionProviderPlanningPass());
   assert(pm.run(module.get()).succeeded() && "PassManager run failed");
+  return module;
+}
+
+int main() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  ctx.loadDialect<mlir::func::FuncDialect>();
+
+  auto module = runFourPassPipeline(kTestModule, ctx);
 
   mlir::hir::ServingExecutionPlan plan =
       mlir::hir::ServingExecutionPlanBuilder::build(module.get());
@@ -111,12 +147,27 @@ int main() {
   assert(fp_prefill.replay_plan.cuda_graph_bucket.empty()
          && "prefill cuda_graph_bucket should be empty");
 
-  // All 3 passes contributed attrs.
-  assert(fp_prefill.source_passes.size() == 3
+  // All 4 passes contributed attrs.
+  assert(fp_prefill.source_passes.size() == 4
          && fp_prefill.source_passes[0] == "serving-phase-analysis"
          && fp_prefill.source_passes[1] == "kv-layout-planning"
          && fp_prefill.source_passes[2] == "replay-eligibility"
+         && fp_prefill.source_passes[3] == "execution-provider-planning"
          && "source_passes mismatch");
+
+  // EP: paged KV, no allowed_backends -> constraint_conflict, cpu fallback.
+  assert(fp_prefill.backend_execution_plan.primary_backend == "cpu"
+         && "EP primary should be cpu for constraint_conflict");
+  assert(fp_prefill.backend_execution_plan.decision_source == "constraint_conflict"
+         && "EP decision_source mismatch");
+  assert(fp_prefill.backend_execution_plan.required_precision == "fp16"
+         && "EP required_precision mismatch");
+  assert(fp_prefill.backend_execution_plan.required_kv_layout == "paged"
+         && "EP required_kv_layout mismatch");
+  assert(fp_prefill.backend_execution_plan.requires_replay == false
+         && "EP requires_replay should be false for prefill");
+  assert(fp_prefill.backend_execution_plan.fallback_chain.empty()
+         && "EP fallback_chain should be empty for constraint_conflict");
 
   // -----------------------------------------------------------------------
   // @decode assertions
@@ -138,6 +189,53 @@ int main() {
   assert(fp_decode.replay_plan.cuda_graph_bucket == "decode_static"
          && "cuda_graph_bucket mismatch");
 
+  // EP: contiguous KV, no allowed_backends -> default_policy, cpu.
+  assert(fp_decode.backend_execution_plan.primary_backend == "cpu"
+         && "EP primary should be cpu for default_policy");
+  assert(fp_decode.backend_execution_plan.decision_source == "default_policy"
+         && "EP decision_source mismatch");
+  assert(fp_decode.backend_execution_plan.required_kv_layout == "contiguous"
+         && "EP required_kv_layout mismatch");
+  assert(fp_decode.backend_execution_plan.requires_replay == true
+         && "EP requires_replay should be true for eligible static decode");
+
+  // -----------------------------------------------------------------------
+  // Module 2: constrained (target_preferred -> coreml, static decode).
+  // -----------------------------------------------------------------------
+  std::puts("  [PASS] unconstrained module");
+
+  auto module2 = runFourPassPipeline(kConstrainedModule, ctx);
+  mlir::hir::ServingExecutionPlan plan2 =
+      mlir::hir::ServingExecutionPlanBuilder::build(module2.get());
+
+  assert(plan2.function_plans.size() == 1 && "expected 1 function plan");
+
+  const mlir::hir::FunctionExecutionPlan &fp_c = plan2.function_plans[0];
+  assert(fp_c.function_name == "decode_constrained" && "function_name mismatch");
+
+  // EP: target_preferred -> coreml; fallback = [metal, cpu].
+  assert(fp_c.backend_execution_plan.primary_backend == "coreml"
+         && "EP primary should be coreml (target_preferred)");
+  assert(fp_c.backend_execution_plan.decision_source == "target_preferred"
+         && "EP decision_source mismatch");
+  assert(fp_c.backend_execution_plan.required_precision == "fp16"
+         && "EP required_precision should be first of supported_precisions");
+  assert(fp_c.backend_execution_plan.required_kv_layout == "contiguous"
+         && "EP required_kv_layout mismatch");
+  assert(fp_c.backend_execution_plan.requires_replay == true
+         && "EP requires_replay should be true for eligible static decode");
+  assert(fp_c.backend_execution_plan.fallback_chain.size() == 2
+         && fp_c.backend_execution_plan.fallback_chain[0] == "metal"
+         && fp_c.backend_execution_plan.fallback_chain[1] == "cpu"
+         && "EP fallback_chain mismatch");
+
+  // source_passes includes execution-provider-planning.
+  bool hasEP = false;
+  for (const auto &p : fp_c.source_passes)
+    if (p == "execution-provider-planning") { hasEP = true; break; }
+  assert(hasEP && "source_passes should include execution-provider-planning");
+
+  std::puts("  [PASS] constrained module (target_preferred)");
   std::puts("ServingExecutionPlanBuilderTest: PASS");
   return 0;
 }

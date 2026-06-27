@@ -41,6 +41,20 @@ struct ReplayPlan {
   std::string cuda_graph_bucket; // empty if not eligible
 };
 
+// Compiler-produced execution provider plan. Populated by
+// ExecutionProviderPlanningPass. Encodes static backend selection decisions
+// derived from target.* module attrs and prior-pass kv.* / replay.* attrs.
+// Runtime is responsible for dynamic dispatch, availability checks, and
+// thermal overrides.
+struct BackendExecutionPlan {
+  std::string primary_backend;                   // "coreml", "metal", "cuda", "cpu", etc.
+  std::vector<std::string> fallback_chain;       // ordered fallbacks, excluding primary
+  std::string decision_source;                   // closed-set tag
+  std::string required_precision;                // "fp16", "fp32", "int8", etc.
+  std::string required_kv_layout;                // "paged", "contiguous", or "unknown"
+  bool requires_replay = false;                  // copy of replay.eligible
+};
+
 struct FunctionExecutionPlan {
   std::string function_name;
   ServingPhase serving_phase   = ServingPhase::Unknown;
@@ -48,6 +62,7 @@ struct FunctionExecutionPlan {
   CostSummary cost_summary;
   KVPlan kv_plan;
   ReplayPlan replay_plan;
+  BackendExecutionPlan backend_execution_plan;
   CompilerProvenance provenance;
   std::vector<std::string> source_passes; // passes that contributed attrs
 };

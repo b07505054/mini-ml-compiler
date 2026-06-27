@@ -8,19 +8,35 @@
 //   | FileCheck %s
 //
 // The named pipeline composes:
-//   1. serving-phase-analysis  -> serving.* attrs (policy, costs, confidence, provenance)
-//   2. kv-layout-planning      -> kv.* attrs (layout, byte_estimate_mb, truth_boundary)
-//   3. replay-eligibility      -> replay.* attrs (eligible, cuda_graph_bucket, truth_boundary)
+//   1. serving-phase-analysis         -> serving.* attrs
+//   2. kv-layout-planning             -> kv.* attrs
+//   3. replay-eligibility             -> replay.* attrs
+//   4. execution-provider-planning    -> execution_provider.* attrs
 //
 // Attribute order on func.func output (MLIR dict, alphabetical):
+//   execution_provider.decision_source, execution_provider.fallback_chain,
+//   execution_provider.primary, execution_provider.required_kv_layout,
+//   execution_provider.required_precision, execution_provider.requires_replay,
+//   execution_provider.truth_boundary,
 //   kv.byte_estimate_mb, kv.layout, kv.truth_boundary,
 //   replay.cuda_graph_bucket, replay.eligible, replay.truth_boundary,
 //   serving.colocated_total_ms, serving.confidence, serving.cost_source,
 //   serving.decision_margin_ms, serving.decision_margin_pct,
 //   serving.pd_split_total_ms, serving.policy, serving.truth_boundary
+//
+// No target.* module attrs -> default_policy for decode, constraint_conflict
+// for prefill (paged KV default candidate "cpu" is not paged-compatible).
 
 // Prefill: colocated policy, paged KV layout, not replay-eligible.
+// Execution provider: constraint_conflict (cpu not paged-KV-compatible).
 // CHECK-LABEL: func.func @prefill
+// CHECK-SAME:  execution_provider.decision_source = "constraint_conflict"
+// CHECK-SAME:  execution_provider.fallback_chain = []
+// CHECK-SAME:  execution_provider.primary = "cpu"
+// CHECK-SAME:  execution_provider.required_kv_layout = "paged"
+// CHECK-SAME:  execution_provider.required_precision = "fp16"
+// CHECK-SAME:  execution_provider.requires_replay = false
+// CHECK-SAME:  execution_provider.truth_boundary = "compiler_execution_provider_plan_not_runtime_dispatch"
 // CHECK-SAME:  kv.byte_estimate_mb
 // CHECK-SAME:  kv.layout = "paged"
 // CHECK-SAME:  kv.truth_boundary = "static_formula_estimate_not_measured_memory"
@@ -33,7 +49,13 @@
 // CHECK-SAME:  serving.truth_boundary = "estimated_cost_not_measured_latency"
 
 // Static decode: contiguous KV layout, replay-eligible.
+// Execution provider: default_policy (no target constraints, contiguous KV).
 // CHECK-LABEL: func.func @decode
+// CHECK-SAME:  execution_provider.decision_source = "default_policy"
+// CHECK-SAME:  execution_provider.fallback_chain = []
+// CHECK-SAME:  execution_provider.primary = "cpu"
+// CHECK-SAME:  execution_provider.required_kv_layout = "contiguous"
+// CHECK-SAME:  execution_provider.requires_replay = true
 // CHECK-SAME:  kv.layout = "contiguous"
 // CHECK-SAME:  replay.cuda_graph_bucket = "decode_static"
 // CHECK-SAME:  replay.eligible = true

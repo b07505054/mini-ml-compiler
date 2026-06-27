@@ -31,7 +31,16 @@
 
 // -- @prefill ----------------------------------------------------------------
 // Budget constraint forces contiguous despite producer (paged) role.
+// No target.allowed_backends -> EP defaults to cpu, decision_source=default_policy.
+// kv.layout="contiguous" (budget override) -> KV filter not applied.
 // CHECK-LABEL: func.func @prefill
+// CHECK-SAME:  execution_provider.decision_source = "default_policy"
+// CHECK-SAME:  execution_provider.fallback_chain = []
+// CHECK-SAME:  execution_provider.primary = "cpu"
+// CHECK-SAME:  execution_provider.required_kv_layout = "contiguous"
+// CHECK-SAME:  execution_provider.required_precision = "fp16"
+// CHECK-SAME:  execution_provider.requires_replay = false
+// CHECK-SAME:  execution_provider.truth_boundary = "compiler_execution_provider_plan_not_runtime_dispatch"
 // CHECK-SAME:  kv.byte_estimate_mb
 // CHECK-SAME:  kv.layout = "contiguous"
 // CHECK-SAME:  kv.layout_reason = "memory_budget_constrained"
@@ -45,6 +54,13 @@
 // Static decode would be replay-eligible without the target constraint.
 // target.static_shape_support=false overrides to ineligible.
 // CHECK-LABEL: func.func @decode_static
+// CHECK-SAME:  execution_provider.decision_source = "default_policy"
+// CHECK-SAME:  execution_provider.fallback_chain = []
+// CHECK-SAME:  execution_provider.primary = "cpu"
+// CHECK-SAME:  execution_provider.required_kv_layout = "contiguous"
+// CHECK-SAME:  execution_provider.required_precision = "fp16"
+// CHECK-SAME:  execution_provider.requires_replay = false
+// CHECK-SAME:  execution_provider.truth_boundary = "compiler_execution_provider_plan_not_runtime_dispatch"
 // CHECK-SAME:  kv.layout = "contiguous"
 // CHECK-SAME:  kv.layout_reason = "memory_budget_constrained"
 // CHECK-SAME:  kv.truth_boundary = "static_formula_estimate_not_measured_memory"

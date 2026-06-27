@@ -1286,8 +1286,8 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
       });
 
-  // Registers kv-layout-planning (standalone wrapper) and
-  // serving-optimization-pipeline (serving-phase-analysis + kv-layout-planning).
+  // Registers kv-layout-planning, replay-eligibility, execution-provider-planning
+  // standalone wrappers and serving-optimization-pipeline (four-pass).
   registerServingOptimizationPipeline();
 }
 

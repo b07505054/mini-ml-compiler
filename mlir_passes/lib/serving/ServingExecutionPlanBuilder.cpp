@@ -115,6 +115,32 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
     if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("replay.cuda_graph_bucket"))
       fp.replay_plan.cuda_graph_bucket = a.getValue().str();
 
+    // Backend execution plan from ExecutionProviderPlanningPass (present when
+    // that pass has run).
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+            "execution_provider.primary")) {
+      fp.backend_execution_plan.primary_backend = a.getValue().str();
+      fp.source_passes.push_back("execution-provider-planning");
+    }
+    if (auto a = funcOp->getAttrOfType<mlir::ArrayAttr>(
+            "execution_provider.fallback_chain")) {
+      for (mlir::Attribute elem : a)
+        if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+          fp.backend_execution_plan.fallback_chain.push_back(s.getValue().str());
+    }
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+            "execution_provider.decision_source"))
+      fp.backend_execution_plan.decision_source = a.getValue().str();
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+            "execution_provider.required_precision"))
+      fp.backend_execution_plan.required_precision = a.getValue().str();
+    if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+            "execution_provider.required_kv_layout"))
+      fp.backend_execution_plan.required_kv_layout = a.getValue().str();
+    if (auto a = funcOp->getAttrOfType<mlir::BoolAttr>(
+            "execution_provider.requires_replay"))
+      fp.backend_execution_plan.requires_replay = a.getValue();
+
     plan.function_plans.push_back(std::move(fp));
   });
 

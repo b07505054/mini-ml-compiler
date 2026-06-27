@@ -23,14 +23,22 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());
       });
 
-  // Three-pass serving pipeline.
+  static PassPipelineRegistration<> executionProviderPipeline(
+      "execution-provider-planning",
+      "Produce an execution provider plan for serving functions",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createExecutionProviderPlanningPass());
+      });
+
+  // Four-pass serving pipeline.
   static PassPipelineRegistration<> servingOptPipeline(
       "serving-optimization-pipeline",
-      "HIR serving pipeline: phase/cost, KV layout, replay eligibility",
+      "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
         pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());
+        pm.addNestedPass<func::FuncOp>(createExecutionProviderPlanningPass());
       });
 }
 

@@ -213,4 +213,37 @@ def ReplayEligibility
   let constructor = "mlir::hir::createReplayEligibilityPass()";
 }
 
+def ExecutionProviderPlanning
+    : Pass<"execution-provider-planning", "mlir::func::FuncOp"> {
+  let summary = "Produce an execution provider plan for serving functions based on target constraints";
+  let description = [{
+    Consumes target.* module attributes (produced by a TargetLowering step
+    outside compiler core) and prior-pass func.func attributes (kv.layout,
+    replay.eligible) to emit a compiler-produced execution provider plan:
+
+      execution_provider.primary          -- primary backend: "coreml", "cuda", etc.
+      execution_provider.fallback_chain   -- ordered fallback providers (ArrayAttr)
+      execution_provider.decision_source  -- closed-set tag explaining the decision
+      execution_provider.required_precision -- first supported precision or "fp16"
+      execution_provider.required_kv_layout -- copy of kv.layout or "unknown"
+      execution_provider.requires_replay  -- copy of replay.eligible or false
+      execution_provider.truth_boundary   -- always "compiler_execution_provider_plan_not_runtime_dispatch"
+
+    Decision logic (strict priority order):
+      1. candidate list = target.allowed_backends; absent/empty -> ["cpu"], default_policy
+      2. if kv.layout == "paged": filter candidates to paged-compatible set (cuda, vllm);
+         empty result -> constraint_conflict, primary = "cpu"
+      3. if preferred in filtered candidates -> target_preferred
+         if preferred present but filtered out -> kv_layout_constraint
+         else -> allowed_backends_default (or keep default_policy)
+      4. fallback_chain = remaining filtered candidates in order, excluding primary
+
+    Truth boundary: the pass emits a compiler-derived static plan. Runtime is
+    responsible for dynamic dispatch, availability checks, and thermal overrides.
+
+    Intended to run after ReplayEligibilityPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createExecutionProviderPlanningPass()";
+}
+
 #endif // HIR_FUSION_PASSES

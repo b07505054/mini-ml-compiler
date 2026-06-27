@@ -394,6 +394,14 @@ run_filecheck \
   --pass-pipeline='builtin.module(serving-optimization-pipeline)'
 
 run_filecheck \
+  "execution-provider-planning: target-aware backend selection with fallback chain" \
+  "$REPO_ROOT/mlir_passes/test/serving/execution_provider_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(serving-optimization-pipeline)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

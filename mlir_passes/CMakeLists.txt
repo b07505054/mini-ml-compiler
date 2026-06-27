@@ -49,6 +49,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingPipeline.cpp
   lib/serving/TargetConstraints.cpp
+  lib/serving/ExecutionProviderPlanningPass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -96,6 +97,7 @@ add_executable(ServingExecutionPlanBuilderTest
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
+  lib/serving/ExecutionProviderPlanningPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   test/serving/ServingExecutionPlanBuilderTest.cpp
 )
