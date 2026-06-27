@@ -155,3 +155,70 @@ target_link_libraries(TargetConstraintsTest
 )
 add_test(NAME TargetConstraintsTest
          COMMAND TargetConstraintsTest)
+
+# ---------------------------------------------------------------------------
+# compile-for-target: driver tool
+#
+# Wires: TargetDeviceProfile JSON → TargetConstraints → serving passes →
+#        ServingExecutionPlanBuilder → ServingExecutionPlanExporter →
+#        canonical artifact + summary artifact.
+#
+# Follows the same direct-source pattern as ServingExecutionPlanBuilderTest
+# (no HIRServingCore static library to avoid MODULE duplicate-symbol issues).
+# JSON construction is entirely owned by ServingExecutionPlanExporter; main.cpp
+# never constructs llvm::json types directly.
+# ---------------------------------------------------------------------------
+set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+add_executable(compile-for-target
+  lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/KVLayoutPlanningPass.cpp
+  lib/serving/ReplayEligibilityPass.cpp
+  lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/ServingExecutionPlanBuilder.cpp
+  lib/serving/ServingExecutionPlanExporter.cpp
+  lib/serving/TargetConstraints.cpp
+  tools/compile-for-target/main.cpp
+)
+llvm_update_compile_flags(compile-for-target)
+add_dependencies(compile-for-target HIRFusionPassIncGen)
+target_include_directories(compile-for-target
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(compile-for-target PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(compile-for-target
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+    LLVMSupport
+)
+
+# ---------------------------------------------------------------------------
+# CTest: CompileForTargetTest
+# Runs compile-for-target on the A17 Pro profile + tiny_gpt_serving.mlir,
+# then greps both output artifacts for required fields.
+# Writes output to build dir; does not modify the repo artifact.
+# ---------------------------------------------------------------------------
+set(_CFT_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_serving_plan_iphone.json")
+set(_CFT_SUMMARY   "${CMAKE_CURRENT_BINARY_DIR}/serving_execution_plan_summary.json")
+
+add_test(NAME CompileForTargetTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DMLIR=${REPO_ROOT}/mlir/tiny_gpt_serving.mlir
+    -DOUT=${_CFT_CANONICAL}
+    -DSUMMARY=${_CFT_SUMMARY}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCompileForTargetTest.cmake
+)
+set_tests_properties(CompileForTargetTest PROPERTIES
+  DEPENDS compile-for-target
+)

@@ -1,4 +1,4 @@
-tiny_gpt_serving.mlirmodule attributes {
+module attributes {
   llm.model = "tiny-gpt",
   llm.num_layers = 12 : i64,
   llm.hidden_size = 768 : i64,
