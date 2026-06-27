@@ -387,6 +387,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(serving-optimization-pipeline)'
 
 run_filecheck \
+  "target constraints: budget forces contiguous layout; static_shape_support=false overrides replay" \
+  "$REPO_ROOT/mlir_passes/test/serving/target_constraints.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(serving-optimization-pipeline)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

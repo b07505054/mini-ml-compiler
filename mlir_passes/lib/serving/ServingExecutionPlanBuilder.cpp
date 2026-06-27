@@ -60,6 +60,8 @@ ServingPhase inferServingPhase(mlir::func::FuncOp funcOp) {
 ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
   ServingExecutionPlan plan;
 
+  if (auto a = module->getAttrOfType<mlir::StringAttr>("target.profile_id"))
+    plan.target_profile_id = a.getValue().str();
   if (auto a = module->getAttrOfType<mlir::StringAttr>("llm.model"))
     plan.model_name = a.getValue().str();
   if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.num_layers"))

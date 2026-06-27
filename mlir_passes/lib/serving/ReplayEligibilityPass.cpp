@@ -53,10 +53,24 @@ struct ReplayEligibilityPass
     if (!hasPrefill && !hasDecode)
       return;
 
-    // Eligibility rules (prefill check takes priority over decode).
+    // Read optional target.static_shape_support from the enclosing module.
+    // Absent or true → existing shape-detection logic governs.
+    // False → target cannot support static-shape replay; force ineligible.
+    bool targetStaticShapeUnsupported = false;
+    if (Operation *parent = funcOp->getParentOp()) {
+      if (auto a = parent->getAttrOfType<BoolAttr>("target.static_shape_support"))
+        targetStaticShapeUnsupported = !a.getValue();
+    }
+
+    // Eligibility rules.
     bool eligible = false;
     StringRef bucket = "";
-    if (!hasPrefill && hasDecode && !hasDynamicDims) {
+    StringRef overrideReason = "";
+
+    if (targetStaticShapeUnsupported) {
+      // Target constraint overrides shape analysis.
+      overrideReason = "target_static_shape_unsupported";
+    } else if (!hasPrefill && hasDecode && !hasDynamicDims) {
       eligible = true;
       bucket   = "decode_static";
     }
@@ -64,6 +78,9 @@ struct ReplayEligibilityPass
     funcOp->setAttr("replay.eligible", BoolAttr::get(context, eligible));
     funcOp->setAttr("replay.cuda_graph_bucket",
                     StringAttr::get(context, bucket));
+    if (!overrideReason.empty())
+      funcOp->setAttr("replay.override_reason",
+                      StringAttr::get(context, overrideReason));
     funcOp->setAttr("replay.truth_boundary",
                     StringAttr::get(context,
                         "static_shape_replay_eligibility_not_cuda_graph_capture"));

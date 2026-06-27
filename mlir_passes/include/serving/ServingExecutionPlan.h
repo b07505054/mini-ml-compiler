@@ -53,6 +53,7 @@ struct FunctionExecutionPlan {
 };
 
 struct ServingExecutionPlan {
+  std::string target_profile_id; // "" if no target.profile_id module attr present
   std::string model_name;
   int64_t num_layers  = 0;
   int64_t hidden_size = 0;

@@ -27,14 +27,22 @@ struct KVLayoutPlanningPass
     func::FuncOp funcOp = getOperation();
     MLIRContext *context = funcOp.getContext();
 
-    // Read model-level attrs from the enclosing module.
+    // Read model-level and target constraint attrs from the enclosing module.
     int64_t numLayers  = 0;
     int64_t hiddenSize = 0;
+    double memoryBudgetMb = 0.0;
+    bool hasBudgetConstraint = false;
     if (Operation *parent = funcOp->getParentOp()) {
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.num_layers"))
         numLayers = a.getInt();
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.hidden_size"))
         hiddenSize = a.getInt();
+      // Optional: target.memory_budget_mb from a TargetLowering step.
+      // Absent → unconstrained; existing producer/consumer logic governs.
+      if (auto a = parent->getAttrOfType<FloatAttr>("target.memory_budget_mb")) {
+        memoryBudgetMb = a.getValueAsDouble();
+        hasBudgetConstraint = true;
+      }
     }
 
     // Walk for llm.attention_* ops and collect KV role + sequence dims.
@@ -68,9 +76,20 @@ struct KVLayoutPlanningPass
                 * static_cast<double>(promptTokens + outputTokens)
                 / (1024.0 * 1024.0);
 
+    // KV layout decision.
+    // Budget constraint (from target.memory_budget_mb) takes priority over
+    // producer/consumer role. Absent constraint → existing role-based logic.
+    const bool budgetConstrained =
+        hasBudgetConstraint && (kvMb > memoryBudgetMb * 0.4);
+    StringRef layout = budgetConstrained
+                           ? "contiguous"
+                           : (isProducer ? "paged" : "contiguous");
+
     Type f64 = Float64Type::get(context);
-    funcOp->setAttr("kv.layout",
-                    StringAttr::get(context, isProducer ? "paged" : "contiguous"));
+    funcOp->setAttr("kv.layout", StringAttr::get(context, layout));
+    if (budgetConstrained)
+      funcOp->setAttr("kv.layout_reason",
+                      StringAttr::get(context, "memory_budget_constrained"));
     funcOp->setAttr("kv.byte_estimate_mb",
                     FloatAttr::get(f64, kvMb));
     funcOp->setAttr("kv.truth_boundary",
