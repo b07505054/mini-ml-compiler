@@ -1,0 +1,45 @@
+{
+  "NOT_A_RUNTIME_INPUT": "Runtime consumes serving_execution_plan_iphone.json. This file is documentation only.",
+  "artifact_type": "serving_execution_plan_summary",
+  "backend_summary": {
+    "tiny_gpt_decode": {
+      "decision_source": "target_preferred",
+      "fallback_chain": [
+        "metal",
+        "cpu"
+      ],
+      "primary_backend": "coreml"
+    },
+    "tiny_gpt_prefill": {
+      "decision_source": "constraint_conflict",
+      "fallback_chain": [],
+      "primary_backend": "cpu"
+    }
+  },
+  "compiler_passes": [
+    "serving-phase-analysis",
+    "kv-layout-planning",
+    "replay-eligibility",
+    "execution-provider-planning"
+  ],
+  "compiler_version": "hir-compiler-0.1",
+  "function_count": 2,
+  "generation_timestamp": "2026-06-27T19:50:29Z",
+  "kv_layout_summary": {
+    "tiny_gpt_decode": "contiguous",
+    "tiny_gpt_prefill": "paged"
+  },
+  "model_name": "tiny-gpt",
+  "replay_summary": {
+    "tiny_gpt_decode": true,
+    "tiny_gpt_prefill": false
+  },
+  "schema_version": "1.0.0",
+  "target_profile_id": "apple-a17pro-mobile",
+  "truth_boundaries": {
+    "backend_decisions": "compiler_execution_provider_plan_not_runtime_dispatch",
+    "device_profile": "declared_device_profile_not_measured_silicon_performance",
+    "kv_estimates": "static_formula_estimate_not_measured_memory",
+    "replay_eligibility": "static_shape_replay_eligibility_not_cuda_graph_capture"
+  }
+}
