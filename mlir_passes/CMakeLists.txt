@@ -48,6 +48,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingPipeline.cpp
+  lib/serving/TargetConstraints.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -123,3 +124,32 @@ target_link_libraries(ServingExecutionPlanBuilderTest
 )
 add_test(NAME ServingExecutionPlanBuilderTest
          COMMAND ServingExecutionPlanBuilderTest)
+
+# ---------------------------------------------------------------------------
+# CTest: TargetConstraints unit test
+# Exercises TargetConstraints::fromModule and ::attachToModule directly.
+# No passes, no plugin loading, no Python, no JSON.
+# ---------------------------------------------------------------------------
+add_executable(TargetConstraintsTest
+  lib/serving/TargetConstraints.cpp
+  test/serving/TargetConstraintsTest.cpp
+)
+llvm_update_compile_flags(TargetConstraintsTest)
+target_include_directories(TargetConstraintsTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(TargetConstraintsTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(TargetConstraintsTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRSupport
+)
+add_test(NAME TargetConstraintsTest
+         COMMAND TargetConstraintsTest)
