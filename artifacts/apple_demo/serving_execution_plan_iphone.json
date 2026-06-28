@@ -13,7 +13,7 @@
       "cost_summary": {
         "colocated_total_ms": 20.48,
         "confidence": "low",
-        "cost_source": "formula_synthetic",
+        "cost_source": "target_profile_formula_estimate",
         "decision_margin_ms": 0.74525000000000219,
         "decision_margin_pct": 3.6389160156250107,
         "pd_split_total_ms": 21.225250000000003,
@@ -28,7 +28,7 @@
         "truth_boundary": "static_formula_estimate_not_measured_memory"
       },
       "provenance": {
-        "cost_source": "formula_synthetic",
+        "cost_source": "target_profile_formula_estimate",
         "truth_boundary": "estimated_cost_not_measured_latency"
       },
       "replay_plan": {
@@ -60,7 +60,7 @@
       "cost_summary": {
         "colocated_total_ms": 20.48,
         "confidence": "low",
-        "cost_source": "formula_synthetic",
+        "cost_source": "target_profile_formula_estimate",
         "decision_margin_ms": 0.74525000000000219,
         "decision_margin_pct": 3.6389160156250107,
         "pd_split_total_ms": 21.225250000000003,
@@ -75,7 +75,7 @@
         "truth_boundary": "static_formula_estimate_not_measured_memory"
       },
       "provenance": {
-        "cost_source": "formula_synthetic",
+        "cost_source": "target_profile_formula_estimate",
         "truth_boundary": "estimated_cost_not_measured_latency"
       },
       "replay_plan": {

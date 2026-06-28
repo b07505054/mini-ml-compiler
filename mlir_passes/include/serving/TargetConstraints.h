@@ -35,11 +35,20 @@ struct TargetConstraints {
   std::vector<std::string> paged_kv_compatible_backends; // target.paged_kv_compatible_backends (ArrayAttr)
                                                          // Empty = no backend supports paged KV on this target.
 
+  // Serving cost constants (target.prefill_ms_per_token, etc.).
+  // Absent → ServingPhaseAnalysisPass falls back to built-in formula defaults.
+  double prefill_ms_per_token   = 0.0; // target.prefill_ms_per_token
+  double decode_ms_per_token    = 0.0; // target.decode_ms_per_token
+  double pd_bandwidth_mb_per_ms = 0.0; // target.pd_bandwidth_mb_per_ms
+
   // Presence flags: set only when the corresponding attr was found in the
   // module.  Needed for fields whose zero/false value is a valid constraint.
-  bool has_memory_budget        = false;
-  bool has_static_shape_support = false;
-  bool has_frame_latency_budget = false;
+  bool has_memory_budget           = false;
+  bool has_static_shape_support    = false;
+  bool has_frame_latency_budget    = false;
+  bool has_prefill_ms_per_token    = false;
+  bool has_decode_ms_per_token     = false;
+  bool has_pd_bandwidth_mb_per_ms  = false;
 
   // Read target.* attrs from a ModuleOp.  Absent attrs leave fields at their
   // defaults and leave presence flags false.

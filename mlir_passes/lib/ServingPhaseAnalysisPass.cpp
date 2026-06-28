@@ -16,11 +16,13 @@ namespace {
 #define GEN_PASS_DEF_SERVINGPHASEANALYSIS
 #include "FusionPasses.h.inc"
 
-// Cost constants matching compiler_serving_cost_model.py formula mode.
+// Default cost constants (formula-calibration estimates).
+// Used when the target profile does not supply target.prefill_ms_per_token /
+// target.decode_ms_per_token / target.pd_bandwidth_mb_per_ms module attrs.
 // Truth boundary: estimated; not measured latency for any specific model or hardware.
-static constexpr double kPrefillMsPerToken     = 0.08;
-static constexpr double kDecodeMsPerToken      = 0.12;
-static constexpr double kPdBandwidthMbPerMs    = 24.0;
+static constexpr double kDefaultPrefillMsPerToken  = 0.08;
+static constexpr double kDefaultDecodeMsPerToken   = 0.12;
+static constexpr double kDefaultPdBandwidthMbPerMs = 24.0;
 static constexpr double kQueueMsPerPromptToken = 0.02;
 static constexpr double kPdSplitQueueFactor    = 0.4;
 static constexpr double kPdCoordinationMs      = 2.0;
@@ -39,19 +41,24 @@ struct ServingCostBreakdown {
 };
 
 static ServingCostBreakdown computeColocatedCost(int64_t promptTokens,
-                                                  int64_t outputTokens) {
-  double compute = kPrefillMsPerToken * static_cast<double>(promptTokens)
-                 + kDecodeMsPerToken  * static_cast<double>(outputTokens);
+                                                  int64_t outputTokens,
+                                                  double prefillMsPerToken,
+                                                  double decodeMsPerToken) {
+  double compute = prefillMsPerToken * static_cast<double>(promptTokens)
+                 + decodeMsPerToken  * static_cast<double>(outputTokens);
   double queue   = kQueueMsPerPromptToken * static_cast<double>(promptTokens);
   return {compute, queue, 0.0, compute + queue};
 }
 
 static ServingCostBreakdown computePdSplitCost(int64_t promptTokens,
-                                                int64_t outputTokens,
-                                                int64_t numLayers,
-                                                int64_t hiddenSize) {
-  double compute = kPrefillMsPerToken * static_cast<double>(promptTokens)
-                 + kDecodeMsPerToken  * static_cast<double>(outputTokens);
+                                               int64_t outputTokens,
+                                               int64_t numLayers,
+                                               int64_t hiddenSize,
+                                               double prefillMsPerToken,
+                                               double decodeMsPerToken,
+                                               double pdBandwidthMbPerMs) {
+  double compute = prefillMsPerToken * static_cast<double>(promptTokens)
+                 + decodeMsPerToken  * static_cast<double>(outputTokens);
   double queue   = kQueueMsPerPromptToken * static_cast<double>(promptTokens)
                  * kPdSplitQueueFactor + kPdCoordinationMs;
   double kvMb    = static_cast<double>(numLayers) * 2.0
@@ -59,7 +66,7 @@ static ServingCostBreakdown computePdSplitCost(int64_t promptTokens,
                  * kDtypeBytes
                  * static_cast<double>(promptTokens + outputTokens)
                  / (1024.0 * 1024.0);
-  double kvXfer  = kvMb / kPdBandwidthMbPerMs;
+  double kvXfer  = kvMb / pdBandwidthMbPerMs;
   return {compute, queue, kvXfer, compute + queue + kvXfer};
 }
 
@@ -76,11 +83,32 @@ struct ServingPhaseAnalysisPass
     // Read model attributes from the enclosing module.
     int64_t numLayers  = kDefaultNumLayers;
     int64_t hiddenSize = kDefaultHiddenSize;
-    if (Operation *parent = funcOp->getParentOp()) {
+    Operation *parent  = funcOp->getParentOp();
+    if (parent) {
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.num_layers"))
         numLayers = a.getInt();
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.hidden_size"))
         hiddenSize = a.getInt();
+    }
+
+    // Read target-profile cost constants. Fall back to defaults when absent.
+    double prefillMsPerToken  = kDefaultPrefillMsPerToken;
+    double decodeMsPerToken   = kDefaultDecodeMsPerToken;
+    double pdBandwidthMbPerMs = kDefaultPdBandwidthMbPerMs;
+    bool hasTargetCostAttrs   = false;
+    if (parent) {
+      if (auto a = parent->getAttrOfType<FloatAttr>("target.prefill_ms_per_token")) {
+        prefillMsPerToken  = a.getValueAsDouble();
+        hasTargetCostAttrs = true;
+      }
+      if (auto a = parent->getAttrOfType<FloatAttr>("target.decode_ms_per_token")) {
+        decodeMsPerToken   = a.getValueAsDouble();
+        hasTargetCostAttrs = true;
+      }
+      if (auto a = parent->getAttrOfType<FloatAttr>("target.pd_bandwidth_mb_per_ms")) {
+        pdBandwidthMbPerMs = a.getValueAsDouble();
+        hasTargetCostAttrs = true;
+      }
     }
 
     // Walk nested ops for llm.attention_prefill or llm.attention_decode.
@@ -103,9 +131,14 @@ struct ServingPhaseAnalysisPass
     if (!hasServingOp)
       return;
 
-    ServingCostBreakdown col = computeColocatedCost(promptTokens, outputTokens);
+    ServingCostBreakdown col = computeColocatedCost(promptTokens, outputTokens,
+                                                     prefillMsPerToken,
+                                                     decodeMsPerToken);
     ServingCostBreakdown pd  = computePdSplitCost(promptTokens, outputTokens,
-                                                   numLayers, hiddenSize);
+                                                   numLayers, hiddenSize,
+                                                   prefillMsPerToken,
+                                                   decodeMsPerToken,
+                                                   pdBandwidthMbPerMs);
 
     double marginMs  = std::abs(pd.total_ms - col.total_ms);
     double minTotal  = std::min(col.total_ms, pd.total_ms);
@@ -122,6 +155,14 @@ struct ServingPhaseAnalysisPass
     else
       confidence = "high";
 
+    // cost_source tracks whether costs came from the target profile or defaults.
+    StringRef costSource = hasTargetCostAttrs
+        ? StringRef("target_profile_formula_estimate")
+        : StringRef("formula_synthetic");
+    StringRef costCalibration = hasTargetCostAttrs
+        ? StringRef("target_profile")
+        : StringRef("default_constants");
+
     Type f64 = Float64Type::get(context);
     funcOp->setAttr("serving.policy",
                     StringAttr::get(context, policy));
@@ -135,8 +176,10 @@ struct ServingPhaseAnalysisPass
                     FloatAttr::get(f64, marginPct));
     funcOp->setAttr("serving.confidence",
                     StringAttr::get(context, confidence));
+    funcOp->setAttr("serving.cost_calibration",
+                    StringAttr::get(context, costCalibration));
     funcOp->setAttr("serving.cost_source",
-                    StringAttr::get(context, "formula_synthetic"));
+                    StringAttr::get(context, costSource));
     funcOp->setAttr("serving.truth_boundary",
                     StringAttr::get(context,
                                     "estimated_cost_not_measured_latency"));

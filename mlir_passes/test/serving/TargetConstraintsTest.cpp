@@ -42,6 +42,9 @@ static void testUnconstrained() {
   assert(tc.allowed_backends.empty()                && "allowed_backends should be empty");
   assert(tc.supported_precisions.empty()            && "supported_precisions should be empty");
   assert(tc.paged_kv_compatible_backends.empty()    && "paged_kv_compatible_backends should be empty when attr absent");
+  assert(!tc.has_prefill_ms_per_token               && "has_prefill_ms_per_token should be false when attr absent");
+  assert(!tc.has_decode_ms_per_token                && "has_decode_ms_per_token should be false when attr absent");
+  assert(!tc.has_pd_bandwidth_mb_per_ms             && "has_pd_bandwidth_mb_per_ms should be false when attr absent");
 
   std::puts("  [PASS] testUnconstrained");
 }
@@ -90,7 +93,10 @@ static void testFullProfile() {
       target.preferred_backend = "cuda",
       target.allowed_backends = ["cuda", "cpu"],
       target.supported_precisions = ["fp32", "fp16", "bf16"],
-      target.paged_kv_compatible_backends = ["cuda", "vllm"]
+      target.paged_kv_compatible_backends = ["cuda", "vllm"],
+      target.prefill_ms_per_token = 8.000000e-02 : f64,
+      target.decode_ms_per_token = 1.200000e-01 : f64,
+      target.pd_bandwidth_mb_per_ms = 2.400000e+01 : f64
     } {}
   )mlir", ctx);
 
@@ -119,6 +125,13 @@ static void testFullProfile() {
   assert(tc.paged_kv_compatible_backends[0] == "cuda"  && "paged_kv_compatible_backends[0] mismatch");
   assert(tc.paged_kv_compatible_backends[1] == "vllm"  && "paged_kv_compatible_backends[1] mismatch");
 
+  assert(tc.has_prefill_ms_per_token                    && "has_prefill_ms_per_token should be true");
+  assert(tc.prefill_ms_per_token == 0.08                && "prefill_ms_per_token mismatch");
+  assert(tc.has_decode_ms_per_token                     && "has_decode_ms_per_token should be true");
+  assert(tc.decode_ms_per_token == 0.12                 && "decode_ms_per_token mismatch");
+  assert(tc.has_pd_bandwidth_mb_per_ms                  && "has_pd_bandwidth_mb_per_ms should be true");
+  assert(tc.pd_bandwidth_mb_per_ms == 24.0              && "pd_bandwidth_mb_per_ms mismatch");
+
   std::puts("  [PASS] testFullProfile");
 }
 
@@ -142,6 +155,12 @@ static void testRoundtrip() {
   original.allowed_backends              = {"metal", "cpu"};
   original.supported_precisions          = {"fp16", "int8"};
   original.paged_kv_compatible_backends  = {"metal"};
+  original.prefill_ms_per_token          = 0.09;
+  original.has_prefill_ms_per_token      = true;
+  original.decode_ms_per_token           = 0.14;
+  original.has_decode_ms_per_token       = true;
+  original.pd_bandwidth_mb_per_ms        = 22.0;
+  original.has_pd_bandwidth_mb_per_ms    = true;
 
   original.attachToModule(m.get(), &ctx);
 
@@ -165,6 +184,15 @@ static void testRoundtrip() {
          && "roundtrip: supported_precisions");
   assert(recovered.paged_kv_compatible_backends == original.paged_kv_compatible_backends
          && "roundtrip: paged_kv_compatible_backends");
+  assert(recovered.has_prefill_ms_per_token                    && "roundtrip: has_prefill_ms_per_token");
+  assert(recovered.prefill_ms_per_token == original.prefill_ms_per_token
+         && "roundtrip: prefill_ms_per_token");
+  assert(recovered.has_decode_ms_per_token                     && "roundtrip: has_decode_ms_per_token");
+  assert(recovered.decode_ms_per_token == original.decode_ms_per_token
+         && "roundtrip: decode_ms_per_token");
+  assert(recovered.has_pd_bandwidth_mb_per_ms                  && "roundtrip: has_pd_bandwidth_mb_per_ms");
+  assert(recovered.pd_bandwidth_mb_per_ms == original.pd_bandwidth_mb_per_ms
+         && "roundtrip: pd_bandwidth_mb_per_ms");
 
   std::puts("  [PASS] testRoundtrip");
 }
@@ -225,6 +253,72 @@ static void testPagedKVCompatibleBackends() {
   std::puts("  [PASS] testPagedKVCompatibleBackends");
 }
 
+// ---------------------------------------------------------------------------
+// Case 6: serving cost fields — roundtrip and absent-field behavior.
+// Validates that target-profile cost constants flow through
+// TargetConstraints without hardcoding specific values.
+// ---------------------------------------------------------------------------
+static void testServingCostFields() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+
+  // 6a: No cost attrs → has_* false; values remain at zero defaults.
+  {
+    auto m = parseModule(R"mlir(module attributes { llm.model = "tiny-gpt" } {})mlir", ctx);
+    mlir::hir::TargetConstraints tc =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(!tc.has_prefill_ms_per_token    && "6a: has_prefill_ms_per_token should be false");
+    assert(!tc.has_decode_ms_per_token     && "6a: has_decode_ms_per_token should be false");
+    assert(!tc.has_pd_bandwidth_mb_per_ms  && "6a: has_pd_bandwidth_mb_per_ms should be false");
+  }
+
+  // 6b: Cost attrs present → values read correctly.
+  {
+    auto m = parseModule(R"mlir(
+      module attributes {
+        target.prefill_ms_per_token = 8.000000e-02 : f64,
+        target.decode_ms_per_token = 1.200000e-01 : f64,
+        target.pd_bandwidth_mb_per_ms = 2.400000e+01 : f64
+      } {}
+    )mlir", ctx);
+    mlir::hir::TargetConstraints tc =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(tc.has_prefill_ms_per_token             && "6b: has_prefill_ms_per_token");
+    assert(tc.prefill_ms_per_token == 0.08         && "6b: prefill_ms_per_token");
+    assert(tc.has_decode_ms_per_token              && "6b: has_decode_ms_per_token");
+    assert(tc.decode_ms_per_token == 0.12          && "6b: decode_ms_per_token");
+    assert(tc.has_pd_bandwidth_mb_per_ms           && "6b: has_pd_bandwidth_mb_per_ms");
+    assert(tc.pd_bandwidth_mb_per_ms == 24.0       && "6b: pd_bandwidth_mb_per_ms");
+  }
+
+  // 6c: Roundtrip — attachToModule then fromModule recovers the same values.
+  {
+    auto m = parseModule("module {}", ctx);
+    mlir::hir::TargetConstraints original;
+    original.prefill_ms_per_token       = 0.10;
+    original.has_prefill_ms_per_token   = true;
+    original.decode_ms_per_token        = 0.15;
+    original.has_decode_ms_per_token    = true;
+    original.pd_bandwidth_mb_per_ms     = 20.0;
+    original.has_pd_bandwidth_mb_per_ms = true;
+    original.attachToModule(m.get(), &ctx);
+
+    mlir::hir::TargetConstraints recovered =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(recovered.has_prefill_ms_per_token                       && "6c: has_prefill_ms_per_token");
+    assert(recovered.prefill_ms_per_token == original.prefill_ms_per_token
+           && "6c: prefill_ms_per_token");
+    assert(recovered.has_decode_ms_per_token                        && "6c: has_decode_ms_per_token");
+    assert(recovered.decode_ms_per_token == original.decode_ms_per_token
+           && "6c: decode_ms_per_token");
+    assert(recovered.has_pd_bandwidth_mb_per_ms                     && "6c: has_pd_bandwidth_mb_per_ms");
+    assert(recovered.pd_bandwidth_mb_per_ms == original.pd_bandwidth_mb_per_ms
+           && "6c: pd_bandwidth_mb_per_ms");
+  }
+
+  std::puts("  [PASS] testServingCostFields");
+}
+
 int main() {
   std::puts("TargetConstraintsTest:");
   testUnconstrained();
@@ -232,6 +326,7 @@ int main() {
   testFullProfile();
   testRoundtrip();
   testPagedKVCompatibleBackends();
+  testServingCostFields();
   std::puts("TargetConstraintsTest: PASS");
   return 0;
 }

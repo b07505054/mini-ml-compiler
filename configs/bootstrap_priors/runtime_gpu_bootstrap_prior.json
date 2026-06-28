@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "compiler_cost_bootstrap_prior",
+  "description": "LLM serving cost constants bootstrapped from the heterogeneous-inference-runtime project's GPU prefill/decode simulation artifacts. These are NOT measurements on any Apple device. They serve as calibration priors when a device-specific benchmark is unavailable.",
+  "source": {
+    "project": "heterogeneous-inference-runtime",
+    "artifact": "results/llm_runtime_artifacts/prefill_decode_benchmark.json",
+    "model": "tiny-gpt",
+    "prompt_tokens": 1024,
+    "generated_tokens": 128,
+    "cost_model_source": "gpu_batch_scaling_artifact",
+    "gpu_batch_scaling_artifact": "results/llm_runtime_artifacts/gpu_decode_batch_scaling_gtx1650maxq.json",
+    "gpu_batch_scaling_hardware": "NVIDIA GTX 1650 Max-Q",
+    "gpu_batch_scaling_status": "measured",
+    "gpu_batch_scaling_truth_boundary": "synthetic transformer workload measured on GTX 1650 Max-Q CUDA 12.4 fp16; hidden_size=4096 n_heads=32; different architecture and model config than Apple A16"
+  },
+  "cost_constants": {
+    "prefill_ms_per_token": 0.0374,
+    "prefill_ms_per_token_derivation": "38.316 ms / 1024 tokens from source artifact prefill_latency_ms",
+    "decode_ms_per_token": 2.615,
+    "decode_ms_per_token_derivation": "avg_decode_latency_ms from source artifact; traces to Metal plan_benchmark_results calibrated from GTX 1650 batch scaling"
+  },
+  "omitted_constants": {
+    "pd_bandwidth_mb_per_ms": "not_provided",
+    "pd_bandwidth_mb_per_ms_reason": "No bandwidth measurement exists in the runtime project artifacts; compiler built-in default will apply"
+  },
+  "truth_boundary": "not_measured_on_target_iphone_bootstrapped_from_gpu_runtime_simulation",
+  "intended_use": "Bootstrap prior for first-generation Apple device compiler target profiles pending real on-device benchmark calibration"
+}

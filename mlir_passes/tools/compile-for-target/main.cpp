@@ -81,6 +81,13 @@ struct TargetDeviceProfile {
   bool        staticShapeSupport = true;
   std::vector<std::string> supportedPrecisions;
   std::vector<std::string> pagedKVCompatibleBackends;
+  // Formula-calibration cost estimates forwarded to TargetConstraints.
+  double prefillMsPerToken    = 0.0;
+  double decodeMsPerToken     = 0.0;
+  double pdBandwidthMbPerMs   = 0.0;
+  bool   hasPrefillMsPerToken  = false;
+  bool   hasDecodeMsPerToken   = false;
+  bool   hasPdBandwidthMbPerMs = false;
   std::string truthBoundary;
 };
 
@@ -130,6 +137,22 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
   // Absent field in profile → empty list → no backend supports paged KV on
   // this target → constraint_conflict for any prefill (producer) function.
   tc.paged_kv_compatible_backends = prof.pagedKVCompatibleBackends;
+
+  // Serving cost constants: forward from profile when present so
+  // ServingPhaseAnalysisPass uses hardware-calibrated estimates instead of
+  // built-in formula defaults.
+  if (prof.hasPrefillMsPerToken) {
+    tc.prefill_ms_per_token    = prof.prefillMsPerToken;
+    tc.has_prefill_ms_per_token = true;
+  }
+  if (prof.hasDecodeMsPerToken) {
+    tc.decode_ms_per_token    = prof.decodeMsPerToken;
+    tc.has_decode_ms_per_token = true;
+  }
+  if (prof.hasPdBandwidthMbPerMs) {
+    tc.pd_bandwidth_mb_per_ms    = prof.pdBandwidthMbPerMs;
+    tc.has_pd_bandwidth_mb_per_ms = true;
+  }
 
   return tc;
 }
@@ -190,6 +213,19 @@ parseDeviceProfile(llvm::StringRef path) {
       if (auto s = elem.getAsString())
         prof.pagedKVCompatibleBackends.push_back(s->str());
     }
+  }
+
+  if (auto v = obj->getNumber("prefillMsPerToken")) {
+    prof.prefillMsPerToken    = *v;
+    prof.hasPrefillMsPerToken = true;
+  }
+  if (auto v = obj->getNumber("decodeMsPerToken")) {
+    prof.decodeMsPerToken    = *v;
+    prof.hasDecodeMsPerToken = true;
+  }
+  if (auto v = obj->getNumber("pdBandwidthMbPerMs")) {
+    prof.pdBandwidthMbPerMs    = *v;
+    prof.hasPdBandwidthMbPerMs = true;
   }
 
   if (auto v = obj->getString("truthBoundary"))

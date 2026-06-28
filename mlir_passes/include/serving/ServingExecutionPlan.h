@@ -70,8 +70,10 @@ struct FunctionExecutionPlan {
 struct ServingExecutionPlan {
   std::string target_profile_id; // "" if no target.profile_id module attr present
   std::string model_name;
-  int64_t num_layers  = 0;
-  int64_t hidden_size = 0;
+  int64_t num_layers           = 0;
+  int64_t hidden_size          = 0;
+  int64_t num_attention_heads  = 0; // 0 if absent (e.g. tiny-gpt fixture)
+  int64_t num_kv_heads         = 0; // 0 if absent; non-zero signals GQA
   std::vector<FunctionExecutionPlan> function_plans;
 };
 

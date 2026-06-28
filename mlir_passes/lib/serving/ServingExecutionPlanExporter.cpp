@@ -186,6 +186,10 @@ llvm::Error ServingExecutionPlanExporter::exportToFile(
   root["model_name"]        = plan.model_name;
   root["num_layers"]        = plan.num_layers;
   root["hidden_size"]       = plan.hidden_size;
+  if (plan.num_attention_heads > 0)
+    root["num_attention_heads"] = plan.num_attention_heads;
+  if (plan.num_kv_heads > 0)
+    root["num_kv_heads"] = plan.num_kv_heads;
   root["function_plans"]    = std::move(functionPlans);
 
   return writeJSON(llvm::json::Value(std::move(root)), outPath);

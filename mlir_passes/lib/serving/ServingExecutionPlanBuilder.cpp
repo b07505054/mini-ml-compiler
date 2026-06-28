@@ -68,6 +68,10 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
     plan.num_layers = a.getInt();
   if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.hidden_size"))
     plan.hidden_size = a.getInt();
+  if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.num_attention_heads"))
+    plan.num_attention_heads = a.getInt();
+  if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.num_key_value_heads"))
+    plan.num_kv_heads = a.getInt();
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     // Only collect functions annotated by a serving pass.

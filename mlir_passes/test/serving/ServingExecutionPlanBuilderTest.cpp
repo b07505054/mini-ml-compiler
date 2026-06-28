@@ -114,6 +114,33 @@ module attributes {
 }
 )mlir";
 
+// ---------------------------------------------------------------------------
+// Module 4: target profile cost attrs → cost_source = "target_profile_formula_estimate".
+//
+// Exercises the target-driven cost path in ServingPhaseAnalysisPass.
+// Uses values that differ from the defaults to confirm they are applied.
+// ---------------------------------------------------------------------------
+static const char kProfileCostModule[] = R"mlir(
+module attributes {
+  llm.model = "profile-cost-model",
+  llm.num_layers = 12 : i64,
+  llm.hidden_size = 768 : i64,
+  target.prefill_ms_per_token = 1.000000e-01 : f64,
+  target.decode_ms_per_token = 1.500000e-01 : f64,
+  target.pd_bandwidth_mb_per_ms = 2.000000e+01 : f64
+} {
+  func.func @prefill_profile(%tokens: tensor<?xi32>) -> tensor<?x768xf16> {
+    %0 = "llm.attention_prefill"(%tokens, %tokens, %tokens) {
+      kv_cache.role = "producer",
+      serving.phase = "prefill",
+      serving.prompt_tokens = 128 : i64,
+      serving.output_tokens = 64 : i64
+    } : (tensor<?xi32>, tensor<?xi32>, tensor<?xi32>) -> tensor<?x768xf16>
+    return %0 : tensor<?x768xf16>
+  }
+}
+)mlir";
+
 static mlir::OwningOpRef<mlir::ModuleOp>
 runFourPassPipeline(const char *src, mlir::MLIRContext &ctx) {
   auto module = mlir::parseSourceString<mlir::ModuleOp>(src, &ctx);
@@ -305,6 +332,39 @@ int main() {
          && "EP requires_replay should be false for prefill");
 
   std::puts("  [PASS] Apple paged-KV target (kv_layout_constraint/metal)");
+
+  // -----------------------------------------------------------------------
+  // Module 4: target profile cost attrs drive cost_source.
+  // cost_source must be "target_profile_formula_estimate" (not
+  // "formula_synthetic") when target.prefill_ms_per_token etc. are present.
+  // colocated_total_ms must reflect profile values (0.10/0.15 ≠ 0.08/0.12).
+  // -----------------------------------------------------------------------
+  auto module4 = runFourPassPipeline(kProfileCostModule, ctx);
+  mlir::hir::ServingExecutionPlan plan4 =
+      mlir::hir::ServingExecutionPlanBuilder::build(module4.get());
+
+  assert(plan4.function_plans.size() == 1 && "expected 1 function plan");
+
+  const mlir::hir::FunctionExecutionPlan &fp4 = plan4.function_plans[0];
+  assert(fp4.function_name == "prefill_profile" && "function_name mismatch");
+  assert(fp4.serving_phase == mlir::hir::ServingPhase::Prefill
+         && "serving_phase should be Prefill");
+
+  // cost_source must reflect the profile-driven path.
+  assert(fp4.provenance.cost_source == "target_profile_formula_estimate"
+         && "cost_source should be target_profile_formula_estimate");
+
+  // colocated_total_ms = 0.10*128 + 0.15*64 + 0.02*128 = 24.96
+  // Must differ from the default-constants result (20.48).
+  assert(fp4.cost_summary.colocated_total_ms > 24.0 &&
+         fp4.cost_summary.colocated_total_ms < 26.0
+         && "colocated_total_ms should reflect profile cost values (~24.96)");
+
+  // truth_boundary unchanged regardless of cost source.
+  assert(fp4.provenance.truth_boundary == "estimated_cost_not_measured_latency"
+         && "truth_boundary mismatch");
+
+  std::puts("  [PASS] profile-driven cost model (target_profile_formula_estimate)");
   std::puts("ServingExecutionPlanBuilderTest: PASS");
   return 0;
 }

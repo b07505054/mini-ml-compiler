@@ -55,6 +55,8 @@ assert_contains("${OUT}" "\"decision_source\": \"target_preferred\"")
 assert_contains("${OUT}" "\"kv_plan\"")
 assert_contains("${OUT}" "\"replay_plan\"")
 assert_contains("${OUT}" "\"source_passes\"")
+# Profile provides cost attrs → cost_source must be target_profile_formula_estimate.
+assert_contains("${OUT}" "\"cost_source\": \"target_profile_formula_estimate\"")
 
 # --- Summary artifact checks ---
 assert_contains("${SUMMARY}" "\"artifact_type\": \"serving_execution_plan_summary\"")

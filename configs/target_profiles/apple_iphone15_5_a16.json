@@ -1,0 +1,18 @@
+{
+  "profileId": "apple-iphone15-5-a16",
+  "modelIdentifier": "iPhone15,5",
+  "chipName": "A16",
+  "metalMaxWorkingSetMB": 4096,
+  "configuredComputeUnits": "CPU+GPU+ANE",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp16"
+  ],
+  "pagedKVCompatibleBackends": [],
+  "prefillMsPerToken": 0.0374,
+  "decodeMsPerToken": 2.615,
+  "costSource": "runtime_project_gpu_bootstrap_prior",
+  "costCalibrationSource": "heterogeneous-inference-runtime/results/llm_runtime_artifacts/prefill_decode_benchmark.json",
+  "costCalibrationTruthBoundary": "not_measured_on_target_iphone_bootstrapped_from_gpu_runtime_simulation",
+  "truthBoundary": "declared_device_profile_not_measured_silicon_performance"
+}

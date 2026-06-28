@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1",
+  "model_name": "qwen2.5-0.5b",
+  "source": "declared_model_config_not_full_weight_import",
+  "truth_boundary": "declared_model_config_not_full_graph_import",
+  "num_layers": 24,
+  "hidden_size": 896,
+  "intermediate_size": 4864,
+  "num_attention_heads": 14,
+  "num_key_value_heads": 2,
+  "max_position_embeddings": 32768,
+  "vocab_size": 151936,
+  "dtype": "fp16",
+  "architecture_notes": [
+    "GQA: 14 query heads, 2 KV heads — 7:1 ratio reduces KV cache vs full MHA",
+    "head_dim = hidden_size / num_attention_heads = 896 / 14 = 64",
+    "kv_proj_dim = num_key_value_heads * head_dim = 2 * 64 = 128"
+  ]
+}

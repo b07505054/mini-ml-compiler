@@ -24,7 +24,7 @@
   ],
   "compiler_version": "hir-compiler-0.1",
   "function_count": 2,
-  "generation_timestamp": "2026-06-27T19:50:29Z",
+  "generation_timestamp": "2026-06-28T05:45:37Z",
   "kv_layout_summary": {
     "tiny_gpt_decode": "contiguous",
     "tiny_gpt_prefill": "paged"
@@ -35,7 +35,7 @@
     "tiny_gpt_prefill": false
   },
   "schema_version": "1.0.0",
-  "target_profile_id": "apple-a17pro-mobile",
+  "target_profile_id": "apple-iphone15-5-a16",
   "truth_boundaries": {
     "backend_decisions": "compiler_execution_provider_plan_not_runtime_dispatch",
     "device_profile": "declared_device_profile_not_measured_silicon_performance",

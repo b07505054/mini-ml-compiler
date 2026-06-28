@@ -48,6 +48,19 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
         tc.paged_kv_compatible_backends.push_back(s.getValue().str());
   }
 
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>("target.prefill_ms_per_token")) {
+    tc.prefill_ms_per_token    = a.getValueAsDouble();
+    tc.has_prefill_ms_per_token = true;
+  }
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>("target.decode_ms_per_token")) {
+    tc.decode_ms_per_token    = a.getValueAsDouble();
+    tc.has_decode_ms_per_token = true;
+  }
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>("target.pd_bandwidth_mb_per_ms")) {
+    tc.pd_bandwidth_mb_per_ms    = a.getValueAsDouble();
+    tc.has_pd_bandwidth_mb_per_ms = true;
+  }
+
   return tc;
 }
 
@@ -100,6 +113,16 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
     op->setAttr("target.paged_kv_compatible_backends",
                 mlir::ArrayAttr::get(ctx, elems));
   }
+
+  if (has_prefill_ms_per_token)
+    op->setAttr("target.prefill_ms_per_token",
+                mlir::FloatAttr::get(f64, prefill_ms_per_token));
+  if (has_decode_ms_per_token)
+    op->setAttr("target.decode_ms_per_token",
+                mlir::FloatAttr::get(f64, decode_ms_per_token));
+  if (has_pd_bandwidth_mb_per_ms)
+    op->setAttr("target.pd_bandwidth_mb_per_ms",
+                mlir::FloatAttr::get(f64, pd_bandwidth_mb_per_ms));
 }
 
 } // namespace mlir::hir
