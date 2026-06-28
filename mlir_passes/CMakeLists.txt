@@ -53,6 +53,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ExecutionProviderPlanningPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
+  lib/serving/CVShapeInferencePass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -346,6 +347,31 @@ if(MLIR_OPT_BIN)
       -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVFrontendNormalizationTest.cmake
   )
   set_tests_properties(CVFrontendNormalizationTest PROPERTIES
+    DEPENDS HIRMatMulBiasReluFusionPass
+  )
+endif()
+
+# ---------------------------------------------------------------------------
+# CTest: CVShapeInferenceTest
+# Runs mlir-opt with cv-shape-inference on the dedicated small-shape test
+# file and checks that num_elements, bytes_estimate, and function summary
+# attrs are emitted correctly.
+# No compile-for-target step (no CV plan builder yet).
+# Skipped if mlir-opt is not found.
+# ---------------------------------------------------------------------------
+set(_CVSI_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/cv_shape_inference_integration")
+set(_CVSI_NORM_OUT "${_CVSI_INT_DIR}/cv_shape_inferred.mlir")
+
+if(MLIR_OPT_BIN)
+  add_test(NAME CVShapeInferenceTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DINPUT_MLIR=${CMAKE_CURRENT_SOURCE_DIR}/test/serving/cv_shape_inference.mlir
+      -DNORM_OUT=${_CVSI_NORM_OUT}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVShapeInferenceTest.cmake
+  )
+  set_tests_properties(CVShapeInferenceTest PROPERTIES
     DEPENDS HIRMatMulBiasReluFusionPass
   )
 endif()

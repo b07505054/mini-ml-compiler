@@ -1300,6 +1300,13 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createCVFrontendNormalizationPass());
       });
 
+  static PassPipelineRegistration<> cvShapeInferencePipeline(
+      "cv-shape-inference",
+      "Annotate pseudo-CV ops with static shape-derived size metadata",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVShapeInferencePass());
+      });
+
   // QuantizationPlanningPass is module-scoped: it reads/writes module attrs
   // and optionally annotates linalg.matmul ops inside functions.
   static PassPipelineRegistration<> quantizationPlanningPipeline(

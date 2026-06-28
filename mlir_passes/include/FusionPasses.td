@@ -368,4 +368,42 @@ def CVFrontendNormalization
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def CVShapeInference
+    : Pass<"cv-shape-inference", "mlir::func::FuncOp"> {
+  let summary = "Annotate pseudo-CV ops with static shape-derived size metadata";
+  let description = [{
+    Walks a func.func for ops whose name starts with "cv.". For each such op
+    with exactly one fully-static ranked tensor result, attaches:
+
+      cv.num_elements                  = N : i64
+      cv.bytes_estimate                = N : i64  (fp16 assumed, 2 bytes/element)
+      cv.shape_inference.truth_boundary
+        = "static_ranked_tensor_shape_metadata_not_runtime_allocation"
+
+    After the walk, annotates the enclosing func.func with:
+
+      cv.shape_inference.status                = "completed"
+      cv.shape_inference.annotated_ops         = N : i64
+      cv.shape_inference.skipped_ops           = N : i64
+      cv.shape_inference.total_bytes_estimate  = N : i64
+      cv.shape_inference.truth_boundary
+        = "static_ranked_tensor_shape_metadata_not_runtime_allocation"
+
+    The pass returns early without annotating the function if it contains no
+    cv.* ops at all.
+
+    Skip policy: ops with zero or multiple results, non-ranked result types,
+    or any dynamic dimension are counted as skipped. The pass never calls
+    signalPassFailure() for skipped ops.
+
+    Dtype assumption: fp16 (2 bytes/element). This pass does not read
+    quantization.plan_dtype; dtype coupling is deferred to a later pass.
+
+    Truth boundary: metadata is derived from static tensor type shapes only.
+    No runtime allocation, no buffer assignment, no execution plan.
+  }];
+  let constructor = "mlir::hir::createCVShapeInferencePass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 #endif // HIR_FUSION_PASSES
