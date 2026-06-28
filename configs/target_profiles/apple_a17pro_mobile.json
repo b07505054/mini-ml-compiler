@@ -6,5 +6,6 @@
   "configuredComputeUnits": "CPU+GPU+ANE",
   "staticShapeSupport": true,
   "supportedPrecisions": ["fp16"],
+  "pagedKVCompatibleBackends": [],
   "truthBoundary": "declared_device_profile_not_measured_silicon_performance"
 }

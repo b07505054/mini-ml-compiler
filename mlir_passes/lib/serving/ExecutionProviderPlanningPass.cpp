@@ -5,6 +5,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 
+#include "llvm/ADT/StringSet.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,11 +16,6 @@ namespace {
 
 #define GEN_PASS_DEF_EXECUTIONPROVIDERPLANNING
 #include "FusionPasses.h.inc"
-
-// Backends that can execute paged attention (paged KV layout).
-static bool isPagedKVCompatible(llvm::StringRef backend) {
-  return backend == "cuda" || backend == "vllm";
-}
 
 struct ExecutionProviderPlanningPass
     : impl::ExecutionProviderPlanningBase<ExecutionProviderPlanningPass> {
@@ -103,16 +100,29 @@ struct ExecutionProviderPlanningPass
 
     // -----------------------------------------------------------------------
     // Step 3: KV layout compatibility filter.
-    // Paged KV requires a backend that supports paged attention (cuda, vllm).
+    // Paged KV requires a backend declared in target.paged_kv_compatible_backends.
+    // Compatibility is a target property, not a compiler invariant: the set
+    // comes from the device profile and is absent for targets where no paged-KV
+    // runtime exists (e.g. the Apple A17 Pro currently has an empty set).
+    // Absent attr → empty set → constraint_conflict for any paged-KV function.
     // -----------------------------------------------------------------------
     if (kvLayout == "paged") {
+      llvm::StringSet<> pagedKVSet;
+      if (parent) {
+        if (auto a = parent->getAttrOfType<mlir::ArrayAttr>(
+                "target.paged_kv_compatible_backends")) {
+          for (mlir::Attribute elem : a)
+            if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+              pagedKVSet.insert(s.getValue());
+        }
+      }
+
       std::vector<std::string> filtered;
       for (const auto &c : candidates) {
-        if (isPagedKVCompatible(c))
+        if (pagedKVSet.count(c))
           filtered.push_back(c);
       }
       if (filtered.empty()) {
-        // No candidate is paged-KV-compatible: emit constraint_conflict.
         emitPlan(funcOp, context, "cpu", {}, "constraint_conflict",
                  precision, kvLayout, requiresReplay);
         return;

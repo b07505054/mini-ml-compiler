@@ -84,6 +84,36 @@ module attributes {
 }
 )mlir";
 
+// ---------------------------------------------------------------------------
+// Module 3: Apple-style target with paged_kv_compatible_backends=["metal"].
+//
+//   @prefill_apple  -- dynamic, producer role -> paged KV
+//     paged_kv_compatible_backends=["metal"]: coreml/cpu filtered out.
+//     preferred "coreml" was in original allowed but removed by KV filter.
+//     EP: kv_layout_constraint, primary="metal", fallback=[]
+// ---------------------------------------------------------------------------
+static const char kApplePagedKVModule[] = R"mlir(
+module attributes {
+  llm.model = "tiny-gpt",
+  llm.num_layers = 12 : i64,
+  llm.hidden_size = 768 : i64,
+  target.preferred_backend = "coreml",
+  target.allowed_backends = ["coreml", "metal", "cpu"],
+  target.supported_precisions = ["fp16"],
+  target.paged_kv_compatible_backends = ["metal"]
+} {
+  func.func @prefill_apple(%tokens: tensor<?xi32>) -> tensor<?x768xf16> {
+    %0 = "llm.attention_prefill"(%tokens, %tokens, %tokens) {
+      kv_cache.role = "producer",
+      serving.phase = "prefill",
+      serving.prompt_tokens = 128 : i64,
+      serving.output_tokens = 64 : i64
+    } : (tensor<?xi32>, tensor<?xi32>, tensor<?xi32>) -> tensor<?x768xf16>
+    return %0 : tensor<?x768xf16>
+  }
+}
+)mlir";
+
 static mlir::OwningOpRef<mlir::ModuleOp>
 runFourPassPipeline(const char *src, mlir::MLIRContext &ctx) {
   auto module = mlir::parseSourceString<mlir::ModuleOp>(src, &ctx);
@@ -236,6 +266,45 @@ int main() {
   assert(hasEP && "source_passes should include execution-provider-planning");
 
   std::puts("  [PASS] constrained module (target_preferred)");
+
+  // -----------------------------------------------------------------------
+  // Module 3: Apple target with paged_kv_compatible_backends=["metal"].
+  // Prefill (paged KV) with coreml preferred but metal paged-KV-capable.
+  // Expected: kv_layout_constraint, primary=metal.
+  // This validates that paged-KV compatibility is profile-driven, not
+  // hardcoded as cuda/vllm in the compiler.
+  // -----------------------------------------------------------------------
+  auto module3 = runFourPassPipeline(kApplePagedKVModule, ctx);
+  mlir::hir::ServingExecutionPlan plan3 =
+      mlir::hir::ServingExecutionPlanBuilder::build(module3.get());
+
+  assert(plan3.function_plans.size() == 1 && "expected 1 function plan");
+
+  const mlir::hir::FunctionExecutionPlan &fp_apple = plan3.function_plans[0];
+  assert(fp_apple.function_name == "prefill_apple" && "function_name mismatch");
+  assert(fp_apple.serving_phase == mlir::hir::ServingPhase::Prefill
+         && "serving_phase should be Prefill");
+
+  // KV: producer -> paged.
+  assert(fp_apple.kv_plan.layout == mlir::hir::KVLayout::Paged
+         && "kv_layout should be Paged for producer role");
+
+  // EP: paged KV filter keeps only "metal" (from paged_kv_compatible_backends).
+  // preferred "coreml" was in allowed but removed by filter -> kv_layout_constraint.
+  assert(fp_apple.backend_execution_plan.primary_backend == "metal"
+         && "EP primary should be metal (only paged-KV-compatible backend)");
+  assert(fp_apple.backend_execution_plan.decision_source == "kv_layout_constraint"
+         && "EP decision_source should be kv_layout_constraint");
+  assert(fp_apple.backend_execution_plan.fallback_chain.empty()
+         && "EP fallback_chain should be empty (metal is the only paged-KV backend)");
+  assert(fp_apple.backend_execution_plan.required_kv_layout == "paged"
+         && "EP required_kv_layout should be paged");
+  assert(fp_apple.backend_execution_plan.required_precision == "fp16"
+         && "EP required_precision should be fp16");
+  assert(fp_apple.backend_execution_plan.requires_replay == false
+         && "EP requires_replay should be false for prefill");
+
+  std::puts("  [PASS] Apple paged-KV target (kv_layout_constraint/metal)");
   std::puts("ServingExecutionPlanBuilderTest: PASS");
   return 0;
 }

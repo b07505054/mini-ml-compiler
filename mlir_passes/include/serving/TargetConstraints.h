@@ -30,8 +30,10 @@ struct TargetConstraints {
   bool        static_shape_support = true; // target.static_shape_support
   double      frame_latency_budget_ms = 0.0; // target.frame_latency_budget_ms
   std::string preferred_backend;        // target.preferred_backend — "" if absent
-  std::vector<std::string> allowed_backends;     // target.allowed_backends (ArrayAttr)
-  std::vector<std::string> supported_precisions; // target.supported_precisions (ArrayAttr)
+  std::vector<std::string> allowed_backends;            // target.allowed_backends (ArrayAttr)
+  std::vector<std::string> supported_precisions;        // target.supported_precisions (ArrayAttr)
+  std::vector<std::string> paged_kv_compatible_backends; // target.paged_kv_compatible_backends (ArrayAttr)
+                                                         // Empty = no backend supports paged KV on this target.
 
   // Presence flags: set only when the corresponding attr was found in the
   // module.  Needed for fields whose zero/false value is a valid constraint.

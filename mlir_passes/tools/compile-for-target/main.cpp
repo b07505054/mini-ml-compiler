@@ -80,6 +80,7 @@ struct TargetDeviceProfile {
   std::string configuredComputeUnits;
   bool        staticShapeSupport = true;
   std::vector<std::string> supportedPrecisions;
+  std::vector<std::string> pagedKVCompatibleBackends;
   std::string truthBoundary;
 };
 
@@ -124,6 +125,11 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
       tc.supported_precisions = {"fp16"};
     }
   }
+
+  // Paged KV compatibility is a target property, not a compiler invariant.
+  // Absent field in profile → empty list → no backend supports paged KV on
+  // this target → constraint_conflict for any prefill (producer) function.
+  tc.paged_kv_compatible_backends = prof.pagedKVCompatibleBackends;
 
   return tc;
 }
@@ -176,6 +182,13 @@ parseDeviceProfile(llvm::StringRef path) {
     for (const auto &elem : *arr) {
       if (auto s = elem.getAsString())
         prof.supportedPrecisions.push_back(s->str());
+    }
+  }
+
+  if (auto *arr = obj->getArray("pagedKVCompatibleBackends")) {
+    for (const auto &elem : *arr) {
+      if (auto s = elem.getAsString())
+        prof.pagedKVCompatibleBackends.push_back(s->str());
     }
   }
 

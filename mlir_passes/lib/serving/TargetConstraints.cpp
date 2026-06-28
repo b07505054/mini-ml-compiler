@@ -42,6 +42,12 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
         tc.supported_precisions.push_back(s.getValue().str());
   }
 
+  if (auto a = op->getAttrOfType<mlir::ArrayAttr>("target.paged_kv_compatible_backends")) {
+    for (mlir::Attribute elem : a)
+      if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+        tc.paged_kv_compatible_backends.push_back(s.getValue().str());
+  }
+
   return tc;
 }
 
@@ -81,6 +87,17 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
     for (const auto &p : supported_precisions)
       elems.push_back(mlir::StringAttr::get(ctx, p));
     op->setAttr("target.supported_precisions",
+                mlir::ArrayAttr::get(ctx, elems));
+  }
+
+  // Always emit target.paged_kv_compatible_backends — even when empty — so
+  // passes can distinguish "profile says no paged-KV backends" from
+  // "profile was not lowered" (which leaves the attr absent).
+  {
+    llvm::SmallVector<mlir::Attribute> elems;
+    for (const auto &b : paged_kv_compatible_backends)
+      elems.push_back(mlir::StringAttr::get(ctx, b));
+    op->setAttr("target.paged_kv_compatible_backends",
                 mlir::ArrayAttr::get(ctx, elems));
   }
 }
