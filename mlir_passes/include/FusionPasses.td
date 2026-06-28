@@ -246,4 +246,47 @@ def ExecutionProviderPlanning
   let constructor = "mlir::hir::createExecutionProviderPlanningPass()";
 }
 
+def LLMFrontendNormalization
+    : Pass<"llm-frontend-normalization", "mlir::func::FuncOp"> {
+  let summary = "Normalize simplified LLM attention graph patterns to canonical serving-aware IR";
+  let description = [{
+    Detects simplified pseudo-LLM attention graph patterns using a set of
+    recognizable op names:
+
+      llm.q_proj, llm.k_proj, llm.v_proj
+      llm.attention_scores, llm.attention_output
+      llm.kv_cache_write  (prefill signal — KV producer)
+      llm.kv_cache_read   (decode  signal — KV consumer)
+
+    When the attention pattern is detected, the entire function body is
+    rewritten to canonical serving-aware IR:
+
+      kv_cache_write present -> llm.attention_prefill, kv_cache.role = "producer"
+      kv_cache_read  present -> llm.attention_decode,  kv_cache.role = "consumer"
+
+    The canonical op carries the standard serving attributes:
+
+      kv_cache.role, serving.phase, serving.prompt_tokens, serving.output_tokens
+      frontend.source          = "llm_graph_pattern"
+      frontend.truth_boundary  = "attention_pattern_simplified_not_full_transformer_lowering"
+      frontend.normalized_from = "simplified_llm_attention_graph"
+
+    The function signature and return type are preserved. The rewritten body
+    contains exactly two ops: the canonical attention op and a return.
+
+    The enclosing func.func is also annotated with frontend.source and
+    frontend.truth_boundary so downstream passes can identify normalized input.
+
+    Output is identical in structure to qwen-to-serving-mlir canonical IR.
+    The serving-optimization-pipeline cannot distinguish Path A (qwen-to-serving-mlir)
+    from Path B (this pass).
+
+    Truth boundary: input ops are simplified pseudo-LLM ops, not real
+    StableHLO/Torch/ONNX graph patterns. No weight import, no operator
+    lowering, no shape propagation across projections.
+  }];
+  let constructor = "mlir::hir::createLLMFrontendNormalizationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 #endif // HIR_FUSION_PASSES

@@ -402,6 +402,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(serving-optimization-pipeline)'
 
 run_filecheck \
+  "llm-frontend-normalization rewrites raw attention graph to canonical serving IR" \
+  "$REPO_ROOT/mlir_passes/test/serving/llm_frontend_normalization.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(llm-frontend-normalization)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

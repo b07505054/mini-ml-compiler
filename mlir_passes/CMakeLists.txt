@@ -50,6 +50,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ServingPipeline.cpp
   lib/serving/TargetConstraints.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/LLMFrontendNormalizationPass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -222,3 +223,103 @@ add_test(NAME CompileForTargetTest
 set_tests_properties(CompileForTargetTest PROPERTIES
   DEPENDS compile-for-target
 )
+
+# ---------------------------------------------------------------------------
+# qwen-to-serving-mlir: Qwen model-spec frontend
+#
+# Reads configs/models/qwen_0_5b_spec.json and emits serving-aware MLIR text.
+# Does not import weights or lower operators.
+# Truth boundary: declared model config -> serving-aware IR.
+# ---------------------------------------------------------------------------
+add_executable(qwen-to-serving-mlir
+  tools/qwen-to-serving-mlir/main.cpp
+)
+llvm_update_compile_flags(qwen-to-serving-mlir)
+target_include_directories(qwen-to-serving-mlir
+  PRIVATE
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(qwen-to-serving-mlir PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(qwen-to-serving-mlir
+  PRIVATE
+    LLVMSupport
+)
+
+# ---------------------------------------------------------------------------
+# CTest: QwenToServingMlirTest
+# Runs qwen-to-serving-mlir and checks output MLIR for required attrs/ops.
+# ---------------------------------------------------------------------------
+set(_QWEN_MLIR_UNIT "${CMAKE_CURRENT_BINARY_DIR}/qwen_0_5b_unit.mlir")
+
+add_test(NAME QwenToServingMlirTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:qwen-to-serving-mlir>
+    -DSPEC=${REPO_ROOT}/configs/models/qwen_0_5b_spec.json
+    -DOUT=${_QWEN_MLIR_UNIT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenToServingMlirTest.cmake
+)
+set_tests_properties(QwenToServingMlirTest PROPERTIES
+  DEPENDS qwen-to-serving-mlir
+)
+
+# ---------------------------------------------------------------------------
+# CTest: QwenCompileForTargetTest
+# End-to-end: qwen-to-serving-mlir -> compile-for-target -> JSON artifact check.
+# Writes to a separate subdirectory to avoid summary file collision with
+# CompileForTargetTest (which also writes serving_execution_plan_summary.json).
+# ---------------------------------------------------------------------------
+set(_QWEN_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/qwen_integration")
+set(_QWEN_INT_MLIR "${_QWEN_INT_DIR}/qwen_0_5b.mlir")
+set(_QWEN_INT_JSON "${_QWEN_INT_DIR}/qwen_serving_plan.json")
+
+add_test(NAME QwenCompileForTargetTest
+  COMMAND ${CMAKE_COMMAND}
+    -DQWEN_TOOL=$<TARGET_FILE:qwen-to-serving-mlir>
+    -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+    -DSPEC=${REPO_ROOT}/configs/models/qwen_0_5b_spec.json
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DMLIR_OUT=${_QWEN_INT_MLIR}
+    -DJSON_OUT=${_QWEN_INT_JSON}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenCompileForTargetTest.cmake
+)
+set_tests_properties(QwenCompileForTargetTest PROPERTIES
+  DEPENDS "qwen-to-serving-mlir;compile-for-target"
+)
+
+# ---------------------------------------------------------------------------
+# CTest: LLMFrontendNormalizationTest
+# Two-step integration: mlir-opt (normalization pass) -> compile-for-target.
+# Requires mlir-opt from the LLVM build. Skipped if mlir-opt is not found.
+# ---------------------------------------------------------------------------
+find_program(MLIR_OPT_BIN
+  NAMES mlir-opt
+  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  DOC "Path to mlir-opt (required for LLMFrontendNormalizationTest)"
+)
+
+set(_LLMFN_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/llm_frontend_norm_integration")
+set(_LLMFN_NORM_MLIR "${_LLMFN_INT_DIR}/normalized.mlir")
+set(_LLMFN_JSON      "${_LLMFN_INT_DIR}/raw_qwen_frontend_serving_plan.json")
+
+if(MLIR_OPT_BIN)
+  add_test(NAME LLMFrontendNormalizationTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+      -DRAW_MLIR=${REPO_ROOT}/mlir/raw_qwen_frontend_input.mlir
+      -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+      -DNORM_OUT=${_LLMFN_NORM_MLIR}
+      -DJSON_OUT=${_LLMFN_JSON}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunLLMFrontendNormalizationTest.cmake
+  )
+  set_tests_properties(LLMFrontendNormalizationTest PROPERTIES
+    DEPENDS "HIRMatMulBiasReluFusionPass;compile-for-target"
+  )
+else()
+  message(STATUS
+    "mlir-opt not found; LLMFrontendNormalizationTest will not be added. "
+    "Set MLIR_OPT_BIN or ensure mlir-opt is in PATH."
+  )
+endif()

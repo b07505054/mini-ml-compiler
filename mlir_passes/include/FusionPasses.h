@@ -14,5 +14,6 @@ std::unique_ptr<::mlir::Pass> createServingPhaseAnalysisPass();
 std::unique_ptr<::mlir::Pass> createKVLayoutPlanningPass();
 std::unique_ptr<::mlir::Pass> createReplayEligibilityPass();
 std::unique_ptr<::mlir::Pass> createExecutionProviderPlanningPass();
+std::unique_ptr<::mlir::Pass> createLLMFrontendNormalizationPass();
 
 } // namespace mlir::hir

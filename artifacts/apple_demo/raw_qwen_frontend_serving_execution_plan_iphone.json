@@ -1,0 +1,104 @@
+{
+  "artifact_type": "serving_execution_plan",
+  "function_plans": [
+    {
+      "backend_execution_plan": {
+        "decision_source": "constraint_conflict",
+        "fallback_chain": [],
+        "primary_backend": "cpu",
+        "required_kv_layout": "paged",
+        "required_precision": "fp16",
+        "requires_replay": false
+      },
+      "cost_summary": {
+        "colocated_total_ms": 51.200000000000003,
+        "confidence": "low",
+        "cost_source": "formula_synthetic",
+        "decision_margin_ms": 2.3940000000000055,
+        "decision_margin_pct": 4.9051346145965775,
+        "pd_split_total_ms": 48.805999999999997,
+        "policy": "pd_split"
+      },
+      "execution_mode": "pd_split",
+      "function_name": "raw_qwen_prefill_graph",
+      "kv_plan": {
+        "kv_byte_estimate_mb": 42,
+        "layout": "paged",
+        "layout_reason": "",
+        "truth_boundary": "static_formula_estimate_not_measured_memory"
+      },
+      "provenance": {
+        "cost_source": "formula_synthetic",
+        "truth_boundary": "estimated_cost_not_measured_latency"
+      },
+      "replay_plan": {
+        "cuda_graph_bucket": "",
+        "override_reason": "",
+        "replay_eligible": false,
+        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
+      },
+      "serving_phase": "prefill",
+      "source_passes": [
+        "serving-phase-analysis",
+        "kv-layout-planning",
+        "replay-eligibility",
+        "execution-provider-planning"
+      ]
+    },
+    {
+      "backend_execution_plan": {
+        "decision_source": "target_preferred",
+        "fallback_chain": [
+          "metal",
+          "cpu"
+        ],
+        "primary_backend": "coreml",
+        "required_kv_layout": "contiguous",
+        "required_precision": "fp16",
+        "requires_replay": true
+      },
+      "cost_summary": {
+        "colocated_total_ms": 0.12,
+        "confidence": "high",
+        "cost_source": "formula_synthetic",
+        "decision_margin_ms": 2.00341796875,
+        "decision_margin_pct": 1669.5149739583335,
+        "pd_split_total_ms": 2.1234179687500001,
+        "policy": "colocated"
+      },
+      "execution_mode": "colocated",
+      "function_name": "raw_qwen_decode_graph",
+      "kv_plan": {
+        "kv_byte_estimate_mb": 0.08203125,
+        "layout": "contiguous",
+        "layout_reason": "",
+        "truth_boundary": "static_formula_estimate_not_measured_memory"
+      },
+      "provenance": {
+        "cost_source": "formula_synthetic",
+        "truth_boundary": "estimated_cost_not_measured_latency"
+      },
+      "replay_plan": {
+        "cuda_graph_bucket": "decode_static",
+        "override_reason": "",
+        "replay_eligible": true,
+        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
+      },
+      "serving_phase": "decode",
+      "source_passes": [
+        "serving-phase-analysis",
+        "kv-layout-planning",
+        "replay-eligibility",
+        "execution-provider-planning"
+      ]
+    }
+  ],
+  "hidden_size": 896,
+  "model_name": "qwen2.5-0.5b",
+  "num_attention_heads": 14,
+  "num_kv_heads": 2,
+  "num_layers": 24,
+  "schema_version": "1.0.0",
+  "target_profile_id": "apple-a17pro-mobile",
+  "truth_boundary": "declared_device_profile_not_measured_silicon_performance"
+}

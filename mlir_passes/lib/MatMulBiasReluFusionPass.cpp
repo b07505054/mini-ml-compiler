@@ -1286,6 +1286,13 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
       });
 
+  static PassPipelineRegistration<> llmFrontendNormPipeline(
+      "llm-frontend-normalization",
+      "Normalize simplified LLM attention graph to canonical serving-aware IR",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createLLMFrontendNormalizationPass());
+      });
+
   // Registers kv-layout-planning, replay-eligibility, execution-provider-planning
   // standalone wrappers and serving-optimization-pipeline (four-pass).
   registerServingOptimizationPipeline();
