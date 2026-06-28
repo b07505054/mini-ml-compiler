@@ -145,6 +145,52 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
             "execution_provider.requires_replay"))
       fp.backend_execution_plan.requires_replay = a.getValue();
 
+    // Quantization plan: prefer func-level attrs (quantization.effective_dtype /
+    // quantization.dtype_bytes emitted by ServingPhaseAnalysisPass after Commit B),
+    // then fall back to module-level attrs from QuantizationPlanningPass.
+    {
+      auto &qp = fp.quantization_plan;
+
+      // plan_dtype: func effective_dtype → module plan_dtype → default "fp16".
+      if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+              "quantization.effective_dtype"))
+        qp.plan_dtype = a.getValue().str();
+      else if (auto a = module->getAttrOfType<mlir::StringAttr>(
+              "quantization.plan_dtype"))
+        qp.plan_dtype = a.getValue().str();
+      else
+        qp.plan_dtype = "fp16";
+
+      // plan_source: only on the module (set by QuantizationPlanningPass).
+      if (auto a = module->getAttrOfType<mlir::StringAttr>(
+              "quantization.plan_source"))
+        qp.plan_source = a.getValue().str();
+      else
+        qp.plan_source = "default_dtype";
+
+      // dtype_bytes: func attr (post-cost-connect) → default 2.0.
+      if (auto a = funcOp->getAttrOfType<mlir::FloatAttr>(
+              "quantization.dtype_bytes"))
+        qp.dtype_bytes = a.getValueAsDouble();
+      else
+        qp.dtype_bytes = 2.0;
+
+      // truth_boundary: func attr → module attr → standard default.
+      if (auto a = funcOp->getAttrOfType<mlir::StringAttr>(
+              "quantization.truth_boundary"))
+        qp.truth_boundary = a.getValue().str();
+      else if (auto a = module->getAttrOfType<mlir::StringAttr>(
+              "quantization.truth_boundary"))
+        qp.truth_boundary = a.getValue().str();
+      else
+        qp.truth_boundary =
+            "precision_selection_from_target_profile_not_calibrated";
+
+      // Track QuantizationPlanningPass only when it actually ran on the module.
+      if (module->getAttr("quantization.plan_dtype"))
+        fp.source_passes.push_back("quantization-planning");
+    }
+
     plan.function_plans.push_back(std::move(fp));
   });
 

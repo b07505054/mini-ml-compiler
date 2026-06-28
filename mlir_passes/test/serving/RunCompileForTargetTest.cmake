@@ -57,6 +57,11 @@ assert_contains("${OUT}" "\"replay_plan\"")
 assert_contains("${OUT}" "\"source_passes\"")
 # Profile provides cost attrs → cost_source must be target_profile_formula_estimate.
 assert_contains("${OUT}" "\"cost_source\": \"target_profile_formula_estimate\"")
+# Quantization plan is now included in every function plan.
+assert_contains("${OUT}" "\"quantization_plan\"")
+assert_contains("${OUT}" "\"plan_dtype\"")
+assert_contains("${OUT}" "\"dtype_bytes\"")
+assert_contains("${OUT}" "precision_selection_from_target_profile_not_calibrated")
 
 # --- Summary artifact checks ---
 assert_contains("${SUMMARY}" "\"artifact_type\": \"serving_execution_plan_summary\"")

@@ -78,4 +78,10 @@ assert_contains("${JSON_OUT}" "\"source_passes\"")
 # --- GQA metadata in artifact ---
 assert_contains("${JSON_OUT}" "\"num_kv_heads\": 2")
 
+# --- Quantization plan: present in every function plan ---
+assert_contains("${JSON_OUT}" "\"quantization_plan\"")
+assert_contains("${JSON_OUT}" "\"plan_dtype\"")
+assert_contains("${JSON_OUT}" "\"dtype_bytes\"")
+assert_contains("${JSON_OUT}" "precision_selection_from_target_profile_not_calibrated")
+
 message(STATUS "QwenCompileForTargetTest: PASS")

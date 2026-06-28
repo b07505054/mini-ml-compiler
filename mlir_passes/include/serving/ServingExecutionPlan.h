@@ -41,6 +41,18 @@ struct ReplayPlan {
   std::string cuda_graph_bucket; // empty if not eligible
 };
 
+// Compiler-side quantization decision. Populated by the builder from
+// quantization.effective_dtype / quantization.dtype_bytes on func ops
+// (emitted by ServingPhaseAnalysisPass) and from module-level
+// quantization.plan_* attrs (emitted by QuantizationPlanningPass when it ran).
+// dtype_bytes and plan_dtype are used by downstream KV cost estimates.
+struct QuantizationPlan {
+  std::string plan_dtype;        // e.g. "fp16", "int8"
+  std::string plan_source;       // e.g. "target_profile", "default_dtype"
+  double dtype_bytes = 2.0;      // bytes per element for cost/memory formulas
+  std::string truth_boundary;
+};
+
 // Compiler-produced execution provider plan. Populated by
 // ExecutionProviderPlanningPass. Encodes static backend selection decisions
 // derived from target.* module attrs and prior-pass kv.* / replay.* attrs.
@@ -62,6 +74,7 @@ struct FunctionExecutionPlan {
   CostSummary cost_summary;
   KVPlan kv_plan;
   ReplayPlan replay_plan;
+  QuantizationPlan quantization_plan;
   BackendExecutionPlan backend_execution_plan;
   CompilerProvenance provenance;
   std::vector<std::string> source_passes; // passes that contributed attrs

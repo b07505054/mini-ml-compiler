@@ -204,7 +204,20 @@ int main() {
   assert(fp_prefill.replay_plan.cuda_graph_bucket.empty()
          && "prefill cuda_graph_bucket should be empty");
 
-  // All 4 passes contributed attrs.
+  // Quantization plan: no quantization-planning in pipeline; ServingPhaseAnalysisPass
+  // emits quantization.effective_dtype="fp16" and quantization.dtype_bytes=2.0 as
+  // defaults when quantization.plan_dtype is absent on the module.
+  assert(fp_prefill.quantization_plan.plan_dtype == "fp16"
+         && "quantization plan_dtype should default to fp16");
+  assert(fp_prefill.quantization_plan.plan_source == "default_dtype"
+         && "quantization plan_source should be default_dtype (no quantization-planning ran)");
+  assert(fp_prefill.quantization_plan.dtype_bytes == 2.0
+         && "quantization dtype_bytes should default to 2.0 (fp16)");
+  assert(!fp_prefill.quantization_plan.truth_boundary.empty()
+         && "quantization truth_boundary should be non-empty");
+
+  // All 4 serving passes contributed attrs; quantization-planning was not in the
+  // pipeline so source_passes should still be exactly 4 entries.
   assert(fp_prefill.source_passes.size() == 4
          && fp_prefill.source_passes[0] == "serving-phase-analysis"
          && fp_prefill.source_passes[1] == "kv-layout-planning"

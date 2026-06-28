@@ -140,6 +140,13 @@ static llvm::json::Object buildFunctionPlanObject(
   bep["required_kv_layout"]   = fp.backend_execution_plan.required_kv_layout;
   bep["requires_replay"]      = fp.backend_execution_plan.requires_replay;
 
+  // quantization_plan
+  llvm::json::Object qplan;
+  qplan["plan_dtype"]     = fp.quantization_plan.plan_dtype;
+  qplan["plan_source"]    = fp.quantization_plan.plan_source;
+  qplan["dtype_bytes"]    = fp.quantization_plan.dtype_bytes;
+  qplan["truth_boundary"] = fp.quantization_plan.truth_boundary;
+
   // provenance
   llvm::json::Object prov;
   prov["truth_boundary"] = fp.provenance.truth_boundary;
@@ -157,6 +164,7 @@ static llvm::json::Object buildFunctionPlanObject(
   obj["cost_summary"]           = std::move(cost);
   obj["kv_plan"]                = std::move(kv);
   obj["replay_plan"]            = std::move(replay);
+  obj["quantization_plan"]      = std::move(qplan);
   obj["backend_execution_plan"] = std::move(bep);
   obj["provenance"]             = std::move(prov);
   obj["source_passes"]          = std::move(passes);
@@ -216,6 +224,7 @@ llvm::Error ServingExecutionPlanExporter::exportSummaryToFile(
   llvm::json::Object backendSummary;
   llvm::json::Object kvLayoutSummary;
   llvm::json::Object replaySummary;
+  llvm::json::Object quantizationSummary;
 
   for (const auto &fp : plan.function_plans) {
     llvm::json::Array fallback;
@@ -227,9 +236,10 @@ llvm::Error ServingExecutionPlanExporter::exportSummaryToFile(
     bep["fallback_chain"]   = std::move(fallback);
     bep["decision_source"]  = fp.backend_execution_plan.decision_source;
 
-    backendSummary[fp.function_name]   = std::move(bep);
-    kvLayoutSummary[fp.function_name]  = toString(fp.kv_plan.layout);
-    replaySummary[fp.function_name]    = fp.replay_plan.replay_eligible;
+    backendSummary[fp.function_name]       = std::move(bep);
+    kvLayoutSummary[fp.function_name]      = toString(fp.kv_plan.layout);
+    replaySummary[fp.function_name]        = fp.replay_plan.replay_eligible;
+    quantizationSummary[fp.function_name]  = fp.quantization_plan.plan_dtype;
   }
 
   // Truth boundaries block.
@@ -242,6 +252,8 @@ llvm::Error ServingExecutionPlanExporter::exportSummaryToFile(
       "static_shape_replay_eligibility_not_cuda_graph_capture";
   truthBoundaries["backend_decisions"] =
       "compiler_execution_provider_plan_not_runtime_dispatch";
+  truthBoundaries["quantization"] =
+      "precision_selection_from_target_profile_not_calibrated";
 
   llvm::json::Object root;
   root["schema_version"]      = "1.0.0";
@@ -255,10 +267,11 @@ llvm::Error ServingExecutionPlanExporter::exportSummaryToFile(
   root["generation_timestamp"] = utcTimestamp();
   root["compiler_version"]    = "hir-compiler-0.1";
   root["compiler_passes"]     = std::move(passes);
-  root["backend_summary"]     = std::move(backendSummary);
-  root["kv_layout_summary"]   = std::move(kvLayoutSummary);
-  root["replay_summary"]      = std::move(replaySummary);
-  root["truth_boundaries"]    = std::move(truthBoundaries);
+  root["backend_summary"]        = std::move(backendSummary);
+  root["kv_layout_summary"]      = std::move(kvLayoutSummary);
+  root["replay_summary"]         = std::move(replaySummary);
+  root["quantization_summary"]   = std::move(quantizationSummary);
+  root["truth_boundaries"]       = std::move(truthBoundaries);
 
   return writeJSON(llvm::json::Value(std::move(root)), summaryPath);
 }
