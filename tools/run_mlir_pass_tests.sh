@@ -418,6 +418,14 @@ run_filecheck \
   --pass-pipeline='builtin.module(llm-frontend-normalization)'
 
 run_filecheck \
+  "quantization cost effect: plan_dtype drives kv.dtype_bytes and quantization.dtype_bytes" \
+  "$REPO_ROOT/mlir_passes/test/serving/quantization_cost_effect.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantization-planning,serving-phase-analysis,kv-layout-planning)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

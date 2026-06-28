@@ -1,102 +1,55 @@
 {
-  "artifact_type": "serving_execution_plan",
-  "function_plans": [
+  "schema_version": "0.1",
+  "artifact_type": "artifact_provenance",
+  "compiler": {
+    "name": "ml-graph-compiler-runtime",
+    "version": "0.4.0",
+    "git_commit": "a6d16bf2"
+  },
+  "pass_pipeline": [
+    "canonicalize",
+    "matmul_bias_relu_fusion",
+    "hir_lowering",
+    "backend_placement",
+    "memory_planning"
+  ],
+  "created_at_utc": "2026-06-28T18:09:11.930050+00:00",
+  "outputs": [
     {
-      "backend_execution_plan": {
-        "decision_source": "constraint_conflict",
-        "fallback_chain": [],
-        "primary_backend": "cpu",
-        "required_kv_layout": "paged",
-        "required_precision": "fp16",
-        "requires_replay": false
-      },
-      "cost_summary": {
-        "colocated_total_ms": 20.48,
-        "confidence": "low",
-        "cost_source": "formula_synthetic",
-        "decision_margin_ms": 0.74525000000000219,
-        "decision_margin_pct": 3.6389160156250107,
-        "pd_split_total_ms": 21.225250000000003,
-        "policy": "colocated"
-      },
-      "execution_mode": "colocated",
-      "function_name": "tiny_gpt_prefill",
-      "kv_plan": {
-        "kv_byte_estimate_mb": 0,
-        "layout": "paged",
-        "layout_reason": "",
-        "truth_boundary": "static_formula_estimate_not_measured_memory"
-      },
-      "provenance": {
-        "cost_source": "formula_synthetic",
-        "truth_boundary": "estimated_cost_not_measured_latency"
-      },
-      "replay_plan": {
-        "cuda_graph_bucket": "",
-        "override_reason": "",
-        "replay_eligible": false,
-        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
-      },
-      "serving_phase": "prefill",
-      "source_passes": [
-        "serving-phase-analysis",
-        "kv-layout-planning",
-        "replay-eligibility",
-        "execution-provider-planning"
-      ]
+      "path": "llm_graph_ir.json",
+      "sha256": "d04203a5c4f68e0a8ff3f55e76fc29b4cee80c9b37b8ff8e89e4fed76c6bbf61"
     },
     {
-      "backend_execution_plan": {
-        "decision_source": "target_preferred",
-        "fallback_chain": [
-          "metal",
-          "cpu"
-        ],
-        "primary_backend": "coreml",
-        "required_kv_layout": "contiguous",
-        "required_precision": "fp16",
-        "requires_replay": true
-      },
-      "cost_summary": {
-        "colocated_total_ms": 20.48,
-        "confidence": "low",
-        "cost_source": "formula_synthetic",
-        "decision_margin_ms": 0.74525000000000219,
-        "decision_margin_pct": 3.6389160156250107,
-        "pd_split_total_ms": 21.225250000000003,
-        "policy": "colocated"
-      },
-      "execution_mode": "colocated",
-      "function_name": "tiny_gpt_decode",
-      "kv_plan": {
-        "kv_byte_estimate_mb": 0,
-        "layout": "contiguous",
-        "layout_reason": "",
-        "truth_boundary": "static_formula_estimate_not_measured_memory"
-      },
-      "provenance": {
-        "cost_source": "formula_synthetic",
-        "truth_boundary": "estimated_cost_not_measured_latency"
-      },
-      "replay_plan": {
-        "cuda_graph_bucket": "decode_static",
-        "override_reason": "",
-        "replay_eligible": true,
-        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
-      },
-      "serving_phase": "decode",
-      "source_passes": [
-        "serving-phase-analysis",
-        "kv-layout-planning",
-        "replay-eligibility",
-        "execution-provider-planning"
-      ]
+      "path": "serving_execution_plan.json",
+      "sha256": "f03f057a2f9a441a1838e99f376b789ea9b7d1d305fca35e7028cd0240e94f31"
+    },
+    {
+      "path": "kv_cache_plan.json",
+      "sha256": "76df1f2abafb9c087f4f7fa8e17ec629aaa6446f5fbfaa9fc60f2934d7e15528"
+    },
+    {
+      "path": "memory_plan.json",
+      "sha256": "ca63ce59205d0f13d81227fb2e63595f3be5100106f9f810161d660775abb336"
+    },
+    {
+      "path": "scheduling_plan.json",
+      "sha256": "77e8b6f66ecc5e8bd4af89c25905ea682e3e68f72e0dfcf277aa6b15223a4971"
+    },
+    {
+      "path": "candidate_execution_plans.json",
+      "sha256": "30316ef41468efea69eca9e3c97e7578349a31e4f7d43557fc4db26281577cad"
+    },
+    {
+      "path": "serving_framework_contract.json",
+      "sha256": "a0ccda1b563b5d5fb07aec49709a43cddc5d90aa83b9170d980ce94ca4338f3c"
+    },
+    {
+      "path": "memory_timeline.json",
+      "sha256": "99a146ff671d170c4ff97ffb8a9362b34a0093d7a4cde2ca3c2f611aa751cf5a"
+    },
+    {
+      "path": "validation_manifest.json",
+      "sha256": "4e6bceaf5f4155d8345fc0a1fdfc66a88d144437f012cf60ddb62d9b966dd087"
     }
-  ],
-  "hidden_size": 768,
-  "model_name": "tiny-gpt",
-  "num_layers": 12,
-  "schema_version": "1.0.0",
-  "target_profile_id": "apple-a17pro-mobile",
-  "truth_boundary": "declared_device_profile_not_measured_silicon_performance"
+  ]
 }

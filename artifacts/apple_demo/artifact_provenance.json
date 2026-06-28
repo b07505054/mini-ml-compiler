@@ -4,7 +4,7 @@
   "compiler": {
     "name": "ml-graph-compiler-runtime",
     "version": "0.4.0",
-    "git_commit": "730a96d6"
+    "git_commit": "a6d16bf2"
   },
   "pass_pipeline": [
     "canonicalize",
@@ -13,28 +13,7 @@
     "backend_placement",
     "memory_planning"
   ],
-  "created_at_utc": "2026-06-25T05:11:43.335231+00:00",
-  "a16_target_artifacts": {
-    "description": "A16 compiler target profile and serving plan generated from real iPhone15,5 device profile export. Cost constants bootstrapped from heterogeneous-inference-runtime GPU simulation artifacts, not measured on A16 silicon.",
-    "device_profile_source": "~/Desktop/target_device_profile.json (real device export from iPhone15,5 A16)",
-    "bootstrap_prior_source": "configs/bootstrap_priors/runtime_gpu_bootstrap_prior.json",
-    "cost_truth_boundary": "not_measured_on_target_iphone_bootstrapped_from_gpu_runtime_simulation",
-    "device_truth_boundary": "declared_device_profile_not_measured_silicon_performance",
-    "outputs": [
-      {
-        "path": "configs/bootstrap_priors/runtime_gpu_bootstrap_prior.json",
-        "sha256": "66696220ee26f16e56eef28d7ad6ddffa2e0286c3c9365c78a10a913e9a15542"
-      },
-      {
-        "path": "configs/target_profiles/apple_iphone15_5_a16.json",
-        "sha256": "7fdfacbcc3e63bc3a4d908d9753cdc8a7a22b280b54dfd2eaf8f24a4ebdac35a"
-      },
-      {
-        "path": "artifacts/apple_demo/serving_execution_plan_iphone15_5.json",
-        "sha256": "11cf39dc3baa4f3be79d465ad84004a28d9ed7f4ca34f305b071bb2acce03eca"
-      }
-    ]
-  },
+  "created_at_utc": "2026-06-28T18:09:11.930050+00:00",
   "outputs": [
     {
       "path": "llm_graph_ir.json",

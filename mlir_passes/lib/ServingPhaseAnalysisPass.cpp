@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "QuantizationUtils.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -26,7 +27,6 @@ static constexpr double kDefaultPdBandwidthMbPerMs = 24.0;
 static constexpr double kQueueMsPerPromptToken = 0.02;
 static constexpr double kPdSplitQueueFactor    = 0.4;
 static constexpr double kPdCoordinationMs      = 2.0;
-static constexpr double kDtypeBytes            = 2.0; // fp16
 
 static constexpr int64_t kDefaultNumLayers    = 12;
 static constexpr int64_t kDefaultHiddenSize   = 768;
@@ -56,14 +56,15 @@ static ServingCostBreakdown computePdSplitCost(int64_t promptTokens,
                                                int64_t hiddenSize,
                                                double prefillMsPerToken,
                                                double decodeMsPerToken,
-                                               double pdBandwidthMbPerMs) {
+                                               double pdBandwidthMbPerMs,
+                                               double dtypeBytes) {
   double compute = prefillMsPerToken * static_cast<double>(promptTokens)
                  + decodeMsPerToken  * static_cast<double>(outputTokens);
   double queue   = kQueueMsPerPromptToken * static_cast<double>(promptTokens)
                  * kPdSplitQueueFactor + kPdCoordinationMs;
   double kvMb    = static_cast<double>(numLayers) * 2.0
                  * static_cast<double>(hiddenSize)
-                 * kDtypeBytes
+                 * dtypeBytes
                  * static_cast<double>(promptTokens + outputTokens)
                  / (1024.0 * 1024.0);
   double kvXfer  = kvMb / pdBandwidthMbPerMs;
@@ -90,6 +91,11 @@ struct ServingPhaseAnalysisPass
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.hidden_size"))
         hiddenSize = a.getInt();
     }
+
+    // Read quantization plan dtype from QuantizationPlanningPass output.
+    // Falls back to fp16 / 2.0 when quantization.plan_dtype is absent.
+    std::string effectiveDtype = getPlanDtype(parent).str();
+    double dtypeBytes = dtypeBytesFromPlan(parent);
 
     // Read target-profile cost constants. Fall back to defaults when absent.
     double prefillMsPerToken  = kDefaultPrefillMsPerToken;
@@ -138,7 +144,8 @@ struct ServingPhaseAnalysisPass
                                                    numLayers, hiddenSize,
                                                    prefillMsPerToken,
                                                    decodeMsPerToken,
-                                                   pdBandwidthMbPerMs);
+                                                   pdBandwidthMbPerMs,
+                                                   dtypeBytes);
 
     double marginMs  = std::abs(pd.total_ms - col.total_ms);
     double minTotal  = std::min(col.total_ms, pd.total_ms);
@@ -183,6 +190,17 @@ struct ServingPhaseAnalysisPass
     funcOp->setAttr("serving.truth_boundary",
                     StringAttr::get(context,
                                     "estimated_cost_not_measured_latency"));
+
+    // Propagate the quantization dtype decision to the function level so that
+    // downstream serving passes and plan readers can see which dtype was used
+    // in cost calculations without re-reading the module attr.
+    funcOp->setAttr("quantization.effective_dtype",
+                    StringAttr::get(context, effectiveDtype));
+    funcOp->setAttr("quantization.dtype_bytes",
+                    FloatAttr::get(f64, dtypeBytes));
+    funcOp->setAttr("quantization.truth_boundary",
+                    StringAttr::get(context,
+                        "precision_selection_from_target_profile_not_calibrated"));
   }
 };
 

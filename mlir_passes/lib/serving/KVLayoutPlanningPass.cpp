@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "QuantizationUtils.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -13,9 +14,6 @@ namespace {
 
 #define GEN_PASS_DEF_KVLAYOUTPLANNING
 #include "FusionPasses.h.inc"
-
-// fp16 dtype: 2 bytes per element.
-static constexpr double kDtypeBytes = 2.0;
 
 struct KVLayoutPlanningPass
     : impl::KVLayoutPlanningBase<KVLayoutPlanningPass> {
@@ -32,7 +30,8 @@ struct KVLayoutPlanningPass
     int64_t hiddenSize = 0;
     double memoryBudgetMb = 0.0;
     bool hasBudgetConstraint = false;
-    if (Operation *parent = funcOp->getParentOp()) {
+    Operation *parent = funcOp->getParentOp();
+    if (parent) {
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.num_layers"))
         numLayers = a.getInt();
       if (auto a = parent->getAttrOfType<IntegerAttr>("llm.hidden_size"))
@@ -44,6 +43,9 @@ struct KVLayoutPlanningPass
         hasBudgetConstraint = true;
       }
     }
+
+    // Read plan dtype from QuantizationPlanningPass output (module attr).
+    double dtypeBytes = dtypeBytesFromPlan(parent);
 
     // Walk for llm.attention_* ops and collect KV role + sequence dims.
     bool hasAttentionOp = false;
@@ -72,7 +74,7 @@ struct KVLayoutPlanningPass
     double kvMb = static_cast<double>(numLayers)
                 * 2.0
                 * static_cast<double>(hiddenSize)
-                * kDtypeBytes
+                * dtypeBytes
                 * static_cast<double>(promptTokens + outputTokens)
                 / (1024.0 * 1024.0);
 
@@ -92,6 +94,8 @@ struct KVLayoutPlanningPass
                       StringAttr::get(context, "memory_budget_constrained"));
     funcOp->setAttr("kv.byte_estimate_mb",
                     FloatAttr::get(f64, kvMb));
+    funcOp->setAttr("kv.dtype_bytes",
+                    FloatAttr::get(f64, dtypeBytes));
     funcOp->setAttr("kv.truth_boundary",
                     StringAttr::get(context,
                         "static_formula_estimate_not_measured_memory"));
