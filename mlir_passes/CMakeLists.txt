@@ -52,6 +52,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/TargetConstraints.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
+  lib/serving/CVFrontendNormalizationPass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -322,5 +323,29 @@ else()
   message(STATUS
     "mlir-opt not found; LLMFrontendNormalizationTest will not be added. "
     "Set MLIR_OPT_BIN or ensure mlir-opt is in PATH."
+  )
+endif()
+
+# ---------------------------------------------------------------------------
+# CTest: CVFrontendNormalizationTest
+# Runs mlir-opt with cv-frontend-normalization on cv_raw_yoloseg.mlir, then
+# checks the normalized output for expected func.func attrs.
+# No compile-for-target step (no CV plan builder yet).
+# Skipped if mlir-opt is not found.
+# ---------------------------------------------------------------------------
+set(_CVFN_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/cv_frontend_norm_integration")
+set(_CVFN_NORM_OUT "${_CVFN_INT_DIR}/cv_normalized.mlir")
+
+if(MLIR_OPT_BIN)
+  add_test(NAME CVFrontendNormalizationTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DRAW_MLIR=${REPO_ROOT}/mlir/cv_raw_yoloseg.mlir
+      -DNORM_OUT=${_CVFN_NORM_OUT}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVFrontendNormalizationTest.cmake
+  )
+  set_tests_properties(CVFrontendNormalizationTest PROPERTIES
+    DEPENDS HIRMatMulBiasReluFusionPass
   )
 endif()

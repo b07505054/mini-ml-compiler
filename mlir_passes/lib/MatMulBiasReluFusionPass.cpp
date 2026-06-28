@@ -1293,6 +1293,13 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createLLMFrontendNormalizationPass());
       });
 
+  static PassPipelineRegistration<> cvFrontendNormPipeline(
+      "cv-frontend-normalization",
+      "Detect and annotate pseudo-CV YOLOSeg-like graph patterns",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVFrontendNormalizationPass());
+      });
+
   // QuantizationPlanningPass is module-scoped: it reads/writes module attrs
   // and optionally annotates linalg.matmul ops inside functions.
   static PassPipelineRegistration<> quantizationPlanningPipeline(

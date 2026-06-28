@@ -426,6 +426,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(quantization-planning,serving-phase-analysis,kv-layout-planning)'
 
 run_filecheck \
+  "cv-frontend-normalization: detects YOLOSeg-like pattern and emits cv.frontend.* planning attrs" \
+  "$REPO_ROOT/mlir_passes/test/serving/cv_frontend_normalization.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(cv-frontend-normalization)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

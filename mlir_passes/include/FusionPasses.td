@@ -332,4 +332,40 @@ def LLMFrontendNormalization
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def CVFrontendNormalization
+    : Pass<"cv-frontend-normalization", "mlir::func::FuncOp"> {
+  let summary = "Detect and annotate pseudo-CV YOLOSeg-like graph patterns";
+  let description = [{
+    Walks a func.func looking for pseudo-CV ops representing a YOLOSeg-style
+    architecture. Detect gate: the function must contain at least one cv.conv2d,
+    at least one cv.detect_head, and at least one cv.prototype_head. If the gate
+    fails, the function is skipped without annotation or error.
+
+    When the gate passes, annotates the enclosing func.func with:
+
+      cv.frontend.kind                 = "raw_pseudo_cv_mlir"
+      cv.frontend.model_family         = "yoloseg"
+      cv.frontend.normalization_status = "detected_not_rewritten"
+      cv.frontend.truth_boundary
+        = "raw_pseudo_cv_mlir_not_full_onnx_importer"
+      cv.frontend.conv2d_count         = N : i64
+      cv.frontend.batch_norm_count     = N : i64
+      cv.frontend.silu_count           = N : i64
+      cv.frontend.upsample_count       = N : i64
+      cv.frontend.concat_count         = N : i64
+      cv.frontend.detect_head_count    = N : i64
+      cv.frontend.prototype_head_count = N : i64
+
+    The function body is left intact. No op rewrites are performed.
+    Downstream CV planning passes consume the func.func attrs emitted here.
+
+    Truth boundary: raw_pseudo_cv_mlir_not_full_onnx_importer
+    (inputs are hand-written pseudo-CV ops, not real ONNX-imported YOLOSeg
+    nodes; no weights imported; shapes are plausible but not verified against
+    an actual YOLOSeg ONNX export).
+  }];
+  let constructor = "mlir::hir::createCVFrontendNormalizationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 #endif // HIR_FUSION_PASSES

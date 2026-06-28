@@ -16,5 +16,6 @@ std::unique_ptr<::mlir::Pass> createReplayEligibilityPass();
 std::unique_ptr<::mlir::Pass> createExecutionProviderPlanningPass();
 std::unique_ptr<::mlir::Pass> createLLMFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createQuantizationPlanningPass();
+std::unique_ptr<::mlir::Pass> createCVFrontendNormalizationPass();
 
 } // namespace mlir::hir
