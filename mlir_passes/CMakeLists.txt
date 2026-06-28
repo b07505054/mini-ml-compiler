@@ -56,6 +56,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
   lib/serving/CVExecutionDomainPlanningPass.cpp
+  lib/serving/CVExecutionPlanBuilder.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -161,6 +162,45 @@ target_link_libraries(TargetConstraintsTest
 )
 add_test(NAME TargetConstraintsTest
          COMMAND TargetConstraintsTest)
+
+# ---------------------------------------------------------------------------
+# CTest: CVExecutionPlanBuilder unit test
+# Runs the four CV planning passes, then builds an in-memory typed plan.
+# No exporter, JSON, artifact generation, or pass registration.
+# ---------------------------------------------------------------------------
+add_executable(CVExecutionPlanBuilderTest
+  lib/serving/CVFrontendNormalizationPass.cpp
+  lib/serving/CVShapeInferencePass.cpp
+  lib/serving/CVMemoryPlanningPass.cpp
+  lib/serving/CVExecutionDomainPlanningPass.cpp
+  lib/serving/CVExecutionPlanBuilder.cpp
+  test/serving/CVExecutionPlanBuilderTest.cpp
+)
+llvm_update_compile_flags(CVExecutionPlanBuilderTest)
+add_dependencies(CVExecutionPlanBuilderTest
+  HIRFusionPassIncGen
+)
+target_include_directories(CVExecutionPlanBuilderTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(CVExecutionPlanBuilderTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(CVExecutionPlanBuilderTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+)
+add_test(NAME CVExecutionPlanBuilderTest
+         COMMAND CVExecutionPlanBuilderTest)
 
 # ---------------------------------------------------------------------------
 # compile-for-target: driver tool
