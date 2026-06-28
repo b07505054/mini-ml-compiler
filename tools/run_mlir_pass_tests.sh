@@ -359,6 +359,14 @@ run_filecheck \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
+  "quantization-planning: precision selection from target profile and default fallback" \
+  "$REPO_ROOT/mlir_passes/test/quantization_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantization-planning)'
+
+run_filecheck \
   "serving phase analysis: default constants and target-profile cost attrs" \
   "$REPO_ROOT/mlir_passes/test/serving_phase_analysis.mlir" \
   --split-input-file \

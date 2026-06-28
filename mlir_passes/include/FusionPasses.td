@@ -246,6 +246,49 @@ def ExecutionProviderPlanning
   let constructor = "mlir::hir::createExecutionProviderPlanningPass()";
 }
 
+def QuantizationPlanning
+    : Pass<"quantization-planning", "mlir::ModuleOp"> {
+  let summary = "Compiler-side precision selection for the HIR serving pipeline";
+  let description = [{
+    Reads model dtype intent (llm.dtype) and target precision support
+    (target.supported_precisions) from the MLIR module. Emits a single
+    compiler-side precision decision as module-level attributes:
+
+      quantization.plan_dtype    -- chosen precision: "fp16", "int8", etc.
+      quantization.plan_source   -- "target_profile" or "default_dtype"
+      quantization.truth_boundary
+        = "precision_selection_from_target_profile_not_calibrated"
+
+    Decision priority (first matching rule wins):
+      1. llm.dtype is in target.supported_precisions -> use llm.dtype,
+         plan_source = "target_profile"
+      2. target.supported_precisions is non-empty     -> use first element,
+         plan_source = "target_profile"
+      3. llm.dtype is non-empty (no supported list)   -> use llm.dtype,
+         plan_source = "default_dtype"
+      4. default                                       -> "fp16",
+         plan_source = "default_dtype"
+
+    If plan_dtype == "int8", annotates eligible linalg.matmul ops with:
+
+      quantization.candidate = "int8"
+      profile.quantized_path  = "faster"
+
+    This enables the existing shouldUseQuantizedMatMul() path in
+    MatMulBiasReluFusionPass without modifying that pass.
+
+    This pass does NOT:
+      - insert hir.quantize or hir.dequantize ops
+      - generate scale or zero_point values
+      - modify the runtime, execution plan schema, or JSON exporter
+
+    Truth boundary: precision selection is derived from target profile
+    metadata only. No calibration data, measured quantization speedup,
+    or runtime validation is performed.
+  }];
+  let constructor = "mlir::hir::createQuantizationPlanningPass()";
+}
+
 def LLMFrontendNormalization
     : Pass<"llm-frontend-normalization", "mlir::func::FuncOp"> {
   let summary = "Normalize simplified LLM attention graph patterns to canonical serving-aware IR";

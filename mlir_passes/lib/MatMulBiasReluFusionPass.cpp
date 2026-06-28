@@ -1293,6 +1293,15 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createLLMFrontendNormalizationPass());
       });
 
+  // QuantizationPlanningPass is module-scoped: it reads/writes module attrs
+  // and optionally annotates linalg.matmul ops inside functions.
+  static PassPipelineRegistration<> quantizationPlanningPipeline(
+      "quantization-planning",
+      "Compiler-side precision selection for the HIR serving pipeline",
+      [](OpPassManager &pm) {
+        pm.addPass(createQuantizationPlanningPass());
+      });
+
   // Registers kv-layout-planning, replay-eligibility, execution-provider-planning
   // standalone wrappers and serving-optimization-pipeline (four-pass).
   registerServingOptimizationPipeline();
