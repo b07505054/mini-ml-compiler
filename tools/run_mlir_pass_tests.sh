@@ -440,6 +440,20 @@ run_filecheck \
   --pass-pipeline='builtin.module(cv-shape-inference)'
 
 run_filecheck \
+  "cv-memory-planning: assigns compiler buffer slots with linear lifetime reuse" \
+  "$REPO_ROOT/mlir_passes/test/serving/cv_memory_planning.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(cv-memory-planning)'
+
+run_filecheck \
+  "cv-execution-domain-planning: classifies pseudo-CV ops into portable accelerated/host/fallback execution domains" \
+  "$REPO_ROOT/mlir_passes/test/serving/cv_execution_domain_planning.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(cv-execution-domain-planning)'
+
+run_filecheck \
   "affine loop tiling" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_tiling.mlir" \
   --affine-loop-tile="tile-sizes=32,32,32"

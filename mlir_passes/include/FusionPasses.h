@@ -18,5 +18,7 @@ std::unique_ptr<::mlir::Pass> createLLMFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createQuantizationPlanningPass();
 std::unique_ptr<::mlir::Pass> createCVFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createCVShapeInferencePass();
+std::unique_ptr<::mlir::Pass> createCVMemoryPlanningPass();
+std::unique_ptr<::mlir::Pass> createCVExecutionDomainPlanningPass();
 
 } // namespace mlir::hir

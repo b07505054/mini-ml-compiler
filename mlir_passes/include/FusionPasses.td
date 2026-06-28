@@ -406,4 +406,124 @@ def CVShapeInference
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def CVMemoryPlanning
+    : Pass<"cv-memory-planning", "mlir::func::FuncOp"> {
+  let summary = "Assign compiler buffer slots to pseudo-CV ops using linear lifetime reuse";
+  let description = [{
+    Walks the entry block of a func.func in order, collecting plannable cv.*
+    ops (ops whose name starts with "cv.", with exactly one result and a
+    cv.bytes_estimate i64 attr). Computes SSA-based lifetimes and allocates
+    compiler buffer slots with a linear first-fit reuse policy.
+
+    Single-block assumption: iterates funcOp.getBody().front() only. Functions
+    with control flow or nested regions are not handled in this version.
+
+    Dependency: reads cv.bytes_estimate (set by CVShapeInferencePass). Ops
+    without cv.bytes_estimate are counted as skipped_ops and receive no buffer
+    assignment.
+
+    Algorithm (two-phase):
+      Phase 1 — Lifetime analysis:
+        For each plannable op at index i, lifetime_begin = i, lifetime_end = i.
+        For each user of the op's result: if the user is also plannable,
+        lifetime_end = max(lifetime_end, user_index).
+
+      Phase 2 — Buffer allocation (linear first-fit reuse):
+        For each plannable op in block order, call selectReusableBuffer to find
+        the first pool entry where entry.freedAt < lifetime_begin and
+        entry.sizeBytes >= bytes_estimate. If found, reuse that buffer slot and
+        update its freedAt. Otherwise allocate a new buffer at nextOffset.
+
+    Per-op attrs (plannable ops only):
+      cv.buffer_id                       = N : i64
+      cv.buffer_offset                   = N : i64
+      cv.lifetime_begin                  = N : i64
+      cv.lifetime_end                    = N : i64
+      cv.memory_plan.truth_boundary
+        = "static_compiler_memory_plan_not_runtime_allocation"
+      cv.memory_plan_reason
+        = "linear_lifetime_reuse_from_static_shape_metadata"
+      cv.reuse_group                     = N : i64  (= buffer_id; shared by reuse partners)
+
+    Function-level attrs (set when at least one cv.* op is present):
+      cv.memory_plan.buffer_count        = N : i64
+      cv.memory_plan.peak_memory_bytes   = N : i64
+      cv.memory_plan.planned_ops         = N : i64
+      cv.memory_plan.reused_buffer_count = N : i64
+      cv.memory_plan.skipped_ops         = N : i64
+      cv.memory_plan.status              = "completed"
+      cv.memory_plan.total_allocated_bytes = N : i64
+      cv.memory_plan.truth_boundary
+        = "static_compiler_memory_plan_not_runtime_allocation"
+
+    Skip policy: ops without cv.bytes_estimate or with != 1 result are
+    skipped. Dead outputs (no plannable cv.* consumer) are still allocated;
+    their lifetime_end = lifetime_begin.
+
+    Truth boundary: buffer assignments are static compiler-side metadata
+    derived from SSA lifetimes and annotated byte estimates. No runtime
+    allocation, no device memory assignment, no execution plan.
+  }];
+  let constructor = "mlir::hir::createCVMemoryPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CVExecutionDomainPlanning
+    : Pass<"cv-execution-domain-planning", "mlir::func::FuncOp"> {
+  let summary = "Classify pseudo-CV ops into portable execution domains";
+  let description = [{
+    Walks a func.func for ops whose name starts with "cv." and classifies
+    each into a portable execution domain using op name only:
+
+      accelerated -- tensor-heavy, regular data-parallel computation
+                     structurally suitable for accelerator-class execution
+      host        -- irregular post-processing or control-flow-like operations
+                     structurally suitable for host/CPU execution
+      fallback    -- unknown cv.* op; classified conservatively for host fallback
+
+    This pass is target-portable. It does NOT assign Metal, CPU, CUDA,
+    CoreML, ANE, or any concrete runtime backend. Execution domain values
+    are abstract compiler classifications only.
+
+    Concrete backend binding happens in a later CVExecutionPlanBuilder pass
+    that maps (execution_domain + target_profile) to a concrete backend:
+      accelerated + apple_profile  -> metal
+      accelerated + cuda_profile   -> cuda
+      accelerated + mobile_profile -> npu
+      host + apple_profile         -> cpu
+
+    Gate: if no cv.* ops are present, returns without setting function attrs.
+
+    Policy (op name -> domain):
+      accelerated: cv.conv2d, cv.batch_norm, cv.silu, cv.upsample, cv.concat
+      host:        cv.detect_head, cv.prototype_head
+      fallback:    all other cv.* ops
+
+    classifyExecutionDomain() is the only place containing this policy.
+
+    Per-op attrs (every cv.* op):
+      cv.execution_domain
+        = "accelerated" | "host" | "fallback"
+      cv.execution_domain.truth_boundary
+        = "static_execution_domain_classification_not_target_mapping"
+      cv.execution_domain_reason
+        = "accelerated_tensor_policy" | "host_postprocess_policy"
+        | "fallback_unknown_cv_op"
+
+    Function-level attrs (set when gate passes):
+      cv.execution_domain_plan.accelerated_ops = N : i64
+      cv.execution_domain_plan.fallback_ops     = N : i64
+      cv.execution_domain_plan.host_ops         = N : i64
+      cv.execution_domain_plan.planned_ops      = N : i64
+      cv.execution_domain_plan.status           = "completed"
+      cv.execution_domain_plan.truth_boundary
+        = "static_execution_domain_classification_not_target_mapping"
+
+    Truth boundary: domain classification is a compiler-side structural
+    judgment. No runtime backend is selected or dispatched by this pass.
+  }];
+  let constructor = "mlir::hir::createCVExecutionDomainPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 #endif // HIR_FUSION_PASSES

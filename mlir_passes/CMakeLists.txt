@@ -54,6 +54,8 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/LLMFrontendNormalizationPass.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
+  lib/serving/CVMemoryPlanningPass.cpp
+  lib/serving/CVExecutionDomainPlanningPass.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
@@ -372,6 +374,62 @@ if(MLIR_OPT_BIN)
       -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVShapeInferenceTest.cmake
   )
   set_tests_properties(CVShapeInferenceTest PROPERTIES
+    DEPENDS HIRMatMulBiasReluFusionPass
+  )
+endif()
+
+# ---------------------------------------------------------------------------
+# CTest: CVMemoryPlanningTest
+# Primary: runs cv-memory-planning on the dedicated small-shape test file and
+#   checks buffer assignment, lifetime, and reuse attrs.
+# Secondary smoke: runs cv-shape-inference,cv-memory-planning on
+#   cv_raw_yoloseg.mlir and checks for "completed" status.
+# Skipped if mlir-opt is not found.
+# ---------------------------------------------------------------------------
+set(_CVMP_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/cv_memory_planning_integration")
+set(_CVMP_PLAN_OUT "${_CVMP_INT_DIR}/cv_memory_planned.mlir")
+set(_CVMP_SMOKE_OUT "${_CVMP_INT_DIR}/cv_yoloseg_memory_planned.mlir")
+
+if(MLIR_OPT_BIN)
+  add_test(NAME CVMemoryPlanningTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DINPUT_MLIR=${CMAKE_CURRENT_SOURCE_DIR}/test/serving/cv_memory_planning.mlir
+      -DPLAN_OUT=${_CVMP_PLAN_OUT}
+      -DYOLOSEG_MLIR=${REPO_ROOT}/mlir/cv_raw_yoloseg.mlir
+      -DSMOKE_OUT=${_CVMP_SMOKE_OUT}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVMemoryPlanningTest.cmake
+  )
+  set_tests_properties(CVMemoryPlanningTest PROPERTIES
+    DEPENDS HIRMatMulBiasReluFusionPass
+  )
+endif()
+
+# ---------------------------------------------------------------------------
+# CTest: CVExecutionDomainPlanningTest
+# Primary: runs cv-execution-domain-planning on the dedicated test file and
+#   checks that execution domain classification attrs are emitted correctly.
+# Secondary smoke: runs the full 4-pass CV pipeline on cv_raw_yoloseg.mlir
+#   and checks for "completed" status.
+# Skipped if mlir-opt is not found.
+# ---------------------------------------------------------------------------
+set(_CVEDP_INT_DIR   "${CMAKE_CURRENT_BINARY_DIR}/cv_execution_domain_planning_integration")
+set(_CVEDP_PLAN_OUT  "${_CVEDP_INT_DIR}/cv_execution_domain_planned.mlir")
+set(_CVEDP_SMOKE_OUT "${_CVEDP_INT_DIR}/cv_yoloseg_execution_domain_planned.mlir")
+
+if(MLIR_OPT_BIN)
+  add_test(NAME CVExecutionDomainPlanningTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DINPUT_MLIR=${CMAKE_CURRENT_SOURCE_DIR}/test/serving/cv_execution_domain_planning.mlir
+      -DPLAN_OUT=${_CVEDP_PLAN_OUT}
+      -DYOLOSEG_MLIR=${REPO_ROOT}/mlir/cv_raw_yoloseg.mlir
+      -DSMOKE_OUT=${_CVEDP_SMOKE_OUT}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVExecutionDomainPlanningTest.cmake
+  )
+  set_tests_properties(CVExecutionDomainPlanningTest PROPERTIES
     DEPENDS HIRMatMulBiasReluFusionPass
   )
 endif()

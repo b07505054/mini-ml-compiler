@@ -1307,6 +1307,20 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createCVShapeInferencePass());
       });
 
+  static PassPipelineRegistration<> cvMemoryPlanningPipeline(
+      "cv-memory-planning",
+      "Assign compiler buffer slots to pseudo-CV ops using linear lifetime reuse",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVMemoryPlanningPass());
+      });
+
+  static PassPipelineRegistration<> cvExecutionDomainPlanningPipeline(
+      "cv-execution-domain-planning",
+      "Classify pseudo-CV ops into portable accelerated/host/fallback execution domains",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVExecutionDomainPlanningPass());
+      });
+
   // QuantizationPlanningPass is module-scoped: it reads/writes module attrs
   // and optionally annotates linalg.matmul ops inside functions.
   static PassPipelineRegistration<> quantizationPlanningPipeline(
