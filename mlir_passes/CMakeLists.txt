@@ -203,6 +203,47 @@ add_test(NAME CVExecutionPlanBuilderTest
          COMMAND CVExecutionPlanBuilderTest)
 
 # ---------------------------------------------------------------------------
+# CTest: CVExecutionPlanExporter unit test
+# Builds a typed CV plan, exports JSON, and checks schema sentinel fields.
+# No artifact generator CLI, pass registration, or backend mapping.
+# ---------------------------------------------------------------------------
+add_executable(CVExecutionPlanExporterTest
+  lib/serving/CVFrontendNormalizationPass.cpp
+  lib/serving/CVShapeInferencePass.cpp
+  lib/serving/CVMemoryPlanningPass.cpp
+  lib/serving/CVExecutionDomainPlanningPass.cpp
+  lib/serving/CVExecutionPlanBuilder.cpp
+  lib/serving/CVExecutionPlanExporter.cpp
+  test/serving/CVExecutionPlanExporterTest.cpp
+)
+llvm_update_compile_flags(CVExecutionPlanExporterTest)
+add_dependencies(CVExecutionPlanExporterTest
+  HIRFusionPassIncGen
+)
+target_include_directories(CVExecutionPlanExporterTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(CVExecutionPlanExporterTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(CVExecutionPlanExporterTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+    LLVMSupport
+)
+add_test(NAME CVExecutionPlanExporterTest
+         COMMAND CVExecutionPlanExporterTest)
+
+# ---------------------------------------------------------------------------
 # compile-for-target: driver tool
 #
 # Wires: TargetDeviceProfile JSON → TargetConstraints → serving passes →
