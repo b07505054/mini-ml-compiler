@@ -1,5 +1,6 @@
 // CTest unit test for CVExecutionPlanExporter.
 
+#include "CV/IR/CVDialect.h"
 #include "serving/CVExecutionPlan.h"
 #include "serving/CVExecutionPlanBuilder.h"
 #include "serving/CVExecutionPlanExporter.h"
@@ -64,7 +65,7 @@ static bool contains(const std::string &text, const char *needle) {
 int main() {
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect>();
+  ctx.loadDialect<mlir::func::FuncDialect, mlir::cv::CVDialect>();
 
   auto module = runCVPipeline(kCVModule, ctx);
   mlir::hir::CVExecutionPlan plan =

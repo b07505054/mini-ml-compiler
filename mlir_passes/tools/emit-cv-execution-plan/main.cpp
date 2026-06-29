@@ -1,5 +1,6 @@
 // emit-cv-execution-plan: build and export a CVExecutionPlan from CV MLIR.
 
+#include "CV/IR/CVDialect.h"
 #include "FusionPasses.h"
 #include "serving/CVExecutionPlan.h"
 #include "serving/CVExecutionPlanBuilder.h"
@@ -27,6 +28,14 @@ static llvm::cl::opt<std::string> OutputPath(
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(
       argc, argv, "emit-cv-execution-plan: export a CV execution plan\n");
+
+  // Load the registered CV dialect in the tool process. The official raw
+  // pseudo-CV artifact still contains legacy op arities that are intentionally
+  // not migrated in this commit, so parsing remains in the compatibility
+  // context below until the fixture migration commit.
+  mlir::MLIRContext registeredDialectCtx;
+  registeredDialectCtx.loadDialect<mlir::func::FuncDialect,
+                                   mlir::cv::CVDialect>();
 
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);

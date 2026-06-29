@@ -180,6 +180,8 @@ add_test(NAME TargetConstraintsTest
 # No exporter, JSON, artifact generation, or pass registration.
 # ---------------------------------------------------------------------------
 add_executable(CVExecutionPlanBuilderTest
+  lib/CV/IR/CVDialect.cpp
+  lib/CV/IR/CVOps.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
@@ -189,6 +191,7 @@ add_executable(CVExecutionPlanBuilderTest
 )
 llvm_update_compile_flags(CVExecutionPlanBuilderTest)
 add_dependencies(CVExecutionPlanBuilderTest
+  CVDialectIncGen
   HIRFusionPassIncGen
 )
 target_include_directories(CVExecutionPlanBuilderTest
@@ -219,6 +222,8 @@ add_test(NAME CVExecutionPlanBuilderTest
 # No artifact generator CLI, pass registration, or backend mapping.
 # ---------------------------------------------------------------------------
 add_executable(CVExecutionPlanExporterTest
+  lib/CV/IR/CVDialect.cpp
+  lib/CV/IR/CVOps.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
@@ -229,6 +234,7 @@ add_executable(CVExecutionPlanExporterTest
 )
 llvm_update_compile_flags(CVExecutionPlanExporterTest)
 add_dependencies(CVExecutionPlanExporterTest
+  CVDialectIncGen
   HIRFusionPassIncGen
 )
 target_include_directories(CVExecutionPlanExporterTest
@@ -261,6 +267,8 @@ add_test(NAME CVExecutionPlanExporterTest
 # exports the JSON plan through CVExecutionPlanExporter.
 # ---------------------------------------------------------------------------
 add_executable(emit-cv-execution-plan
+  lib/CV/IR/CVDialect.cpp
+  lib/CV/IR/CVOps.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
@@ -270,7 +278,10 @@ add_executable(emit-cv-execution-plan
   tools/emit-cv-execution-plan/main.cpp
 )
 llvm_update_compile_flags(emit-cv-execution-plan)
-add_dependencies(emit-cv-execution-plan HIRFusionPassIncGen)
+add_dependencies(emit-cv-execution-plan
+  CVDialectIncGen
+  HIRFusionPassIncGen
+)
 target_include_directories(emit-cv-execution-plan
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

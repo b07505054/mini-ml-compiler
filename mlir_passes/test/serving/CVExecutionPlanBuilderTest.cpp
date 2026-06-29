@@ -1,6 +1,7 @@
 // CTest unit test for CVExecutionPlanBuilder.
 // Pure C++. No JSON. No exporter. No plugin loading.
 
+#include "CV/IR/CVDialect.h"
 #include "serving/CVExecutionPlan.h"
 #include "serving/CVExecutionPlanBuilder.h"
 #include "FusionPasses.h"
@@ -105,7 +106,7 @@ runDomainOnlyPipeline(const char *src, mlir::MLIRContext &ctx) {
 int main() {
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect>();
+  ctx.loadDialect<mlir::func::FuncDialect, mlir::cv::CVDialect>();
 
   auto fullModule = runFullCVPipeline(kFullPipelineModule, ctx);
   mlir::hir::CVExecutionPlan plan =
