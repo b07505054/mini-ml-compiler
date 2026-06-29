@@ -55,6 +55,24 @@ inline std::string op_type_to_string(OpType t) {
 
         case OpType::FusedConvBatchNormReLU:
             return "FusedConvBatchNormReLU";
+
+        case OpType::Embedding:
+            return "Embedding";
+
+        case OpType::RMSNorm:
+            return "RMSNorm";
+
+        case OpType::QKVProjection:
+            return "QKVProjection";
+
+        case OpType::KVCacheWrite:
+            return "KVCacheWrite";
+
+        case OpType::KVCacheRead:
+            return "KVCacheRead";
+
+        case OpType::MLP:
+            return "MLP";
     }
 
     return "Unknown";

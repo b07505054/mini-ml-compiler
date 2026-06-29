@@ -229,6 +229,9 @@ endif()
 add_executable(run_cv_graph_demo apps/run_cv_graph_demo.cpp)
 target_link_libraries(run_cv_graph_demo mlcompiler)
 
+add_executable(run_llm_graph_demo apps/run_llm_graph_demo.cpp)
+target_link_libraries(run_llm_graph_demo mlcompiler)
+
 add_executable(
     run_dynamic_cv_planning_demo
     apps/run_dynamic_cv_planning_demo.cpp
@@ -238,3 +241,19 @@ target_link_libraries(
     run_dynamic_cv_planning_demo
     mlcompiler
 )
+
+# Frontend GraphBuilder unit tests
+add_executable(test_cv_graph_builder
+    tests/frontend/test_cv_graph_builder.cpp)
+target_link_libraries(test_cv_graph_builder mlcompiler)
+add_test(NAME cv_graph_builder COMMAND test_cv_graph_builder)
+
+add_executable(test_llm_graph_builder
+    tests/frontend/test_llm_graph_builder.cpp)
+target_link_libraries(test_llm_graph_builder mlcompiler)
+add_test(NAME llm_graph_builder COMMAND test_llm_graph_builder)
+
+add_executable(test_backend_placement
+    tests/frontend/test_backend_placement.cpp)
+target_link_libraries(test_backend_placement mlcompiler)
+add_test(NAME backend_placement COMMAND test_backend_placement)

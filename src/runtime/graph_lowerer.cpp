@@ -50,7 +50,25 @@ std::string GraphLowerer::lowered_type_for_op(
 
         case OpType::FusedConvBatchNormReLU:
             return "LoweredFusedConvBatchNormReLU";
-            
+
+        case OpType::Embedding:
+            return "LoweredEmbedding";
+
+        case OpType::RMSNorm:
+            return "LoweredRMSNorm";
+
+        case OpType::QKVProjection:
+            return "LoweredQKVProjection";
+
+        case OpType::KVCacheWrite:
+            return "LoweredKVCacheWrite";
+
+        case OpType::KVCacheRead:
+            return "LoweredKVCacheRead";
+
+        case OpType::MLP:
+            return "LoweredMLP";
+
         default:
             return "LoweredGenericOp";
     }
@@ -67,7 +85,9 @@ std::string GraphLowerer::backend_for_op(
         op == OpType::FusedMatMulAddReLU ||
         op == OpType::FusedConvBatchNormReLU ||
         op == OpType::FusedAttention ||
-        op == OpType::TiledAttention
+        op == OpType::TiledAttention ||
+        op == OpType::QKVProjection ||
+        op == OpType::MLP
     ) {
         return "Metal";
     }
@@ -97,10 +117,13 @@ LoweredGraph GraphLowerer::lower(
                 node.op
             );
 
-        op.backend =
-            backend_for_op(
-                node.op
-            );
+        if (node.assigned_backend == BackendKind::Metal) {
+            op.backend = "Metal";
+        } else if (node.assigned_backend == BackendKind::CPU) {
+            op.backend = "CPU";
+        } else {
+            op.backend = backend_for_op(node.op);
+        }
 
         op.inputs =
             node.inputs;

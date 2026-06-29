@@ -3,6 +3,15 @@
 #include <string>
 #include <vector>
 
+// Backend target for a node in the graph IR.
+// Unknown means no placement decision has been recorded yet; downstream
+// passes (GraphLowerer) fall back to their own op-type classification.
+enum class BackendKind {
+    Unknown,
+    CPU,
+    Metal,
+};
+
 enum class OpType {
     Input,
     MatMul,
@@ -21,13 +30,22 @@ enum class OpType {
     Flatten,
     Linear,
     FusedConvBatchNormReLU,
-    };
+
+    // LLM serving ops — added for LLMGraphBuilder
+    Embedding,       // vocabulary embedding lookup
+    RMSNorm,         // RMS layer normalization
+    QKVProjection,   // fused Q/K/V linear projection
+    KVCacheWrite,    // write K/V to cache (prefill path)
+    KVCacheRead,     // read K/V from cache (decode path)
+    MLP,             // feed-forward / MLP block
+};
 
 struct Node {
     std::string name;
     OpType op;
     std::vector<int> inputs;
     std::vector<int> outputs;
+    BackendKind assigned_backend = BackendKind::Unknown;
 
     Node() = default;
 

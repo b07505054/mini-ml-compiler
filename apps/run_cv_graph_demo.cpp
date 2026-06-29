@@ -1,3 +1,4 @@
+#include "frontend/cv_graph_builder.h"
 #include "ir/graph.h"
 #include "pass/pass_manager.h"
 #include "pass/canonicalization_pass.h"
@@ -17,106 +18,8 @@
 #include "runtime/runtime_replanner.hpp"
 
 int main() {
-    Graph graph;
-
-    int input = graph.add_tensor(
-        Tensor("input", {1, 3, 224, 224})
-    );
-
-    int conv_weight = graph.add_tensor(
-        Tensor("conv_weight", {16, 3, 3, 3})
-    );
-
-    int bn_param = graph.add_tensor(
-        Tensor("bn_param", {16})
-    );
-
-    int conv_out = graph.add_tensor(
-        Tensor("conv_out", {1, 16, 222, 222})
-    );
-
-    int bn_out = graph.add_tensor(
-        Tensor("bn_out", {1, 16, 222, 222})
-    );
-
-    int relu_out = graph.add_tensor(
-        Tensor("relu_out", {1, 16, 222, 222})
-    );
-
-    int pool_out = graph.add_tensor(
-        Tensor("pool_out", {1, 16, 111, 111})
-    );
-
-    int flat_out = graph.add_tensor(
-        Tensor("flat_out", {1, 197136})
-    );
-
-    int linear_weight = graph.add_tensor(
-        Tensor("linear_weight", {197136, 10})
-    );
-
-    int logits = graph.add_tensor(
-        Tensor("logits", {1, 10})
-    );
-
-    graph.get_tensor(input).persistent = true;
-    graph.get_tensor(conv_weight).persistent = true;
-    graph.get_tensor(bn_param).persistent = true;
-    graph.get_tensor(linear_weight).persistent = true;
-
-    graph.add_node(
-        Node(
-            "conv1",
-            OpType::Conv2D,
-            {input, conv_weight},
-            {conv_out}
-        )
-    );
-
-    graph.add_node(
-        Node(
-            "bn1",
-            OpType::BatchNorm,
-            {conv_out, bn_param},
-            {bn_out}
-        )
-    );
-
-    graph.add_node(
-        Node(
-            "relu1",
-            OpType::ReLU,
-            {bn_out},
-            {relu_out}
-        )
-    );
-
-    graph.add_node(
-        Node(
-            "pool1",
-            OpType::MaxPool,
-            {relu_out},
-            {pool_out}
-        )
-    );
-
-    graph.add_node(
-        Node(
-            "flatten",
-            OpType::Flatten,
-            {pool_out},
-            {flat_out}
-        )
-    );
-
-    graph.add_node(
-        Node(
-            "linear",
-            OpType::Linear,
-            {flat_out, linear_weight},
-            {logits}
-        )
-    );
+    CVGraphBuilder builder;
+    Graph graph = builder.build();
 
     std::cout << "=== CV Graph Compiler Demo ===\n";
 

@@ -117,22 +117,24 @@ const char* BackendPlacementPass::name() const {
 void BackendPlacementPass::run(Graph& graph) {
     std::cout << "[BackendPlacementPass] Assigning backend placement\n";
 
-    for (const auto& node : graph.nodes) {
+    for (auto& node : graph.nodes) {
         if (
-            node.op == OpType::MatMul ||
-            node.op == OpType::Linear ||
-            node.op == OpType::Conv2D ||
-            node.op == OpType::FusedMatMulBias ||
-            node.op == OpType::FusedMatMulAddReLU ||
-            node.op == OpType::FusedConvBatchNormReLU
-        ){
-            std::cout << "  "
-                      << node.name
-                      << " -> MockGPU/Metal candidate\n";
+            node.op == OpType::MatMul                  ||
+            node.op == OpType::Linear                  ||
+            node.op == OpType::Conv2D                  ||
+            node.op == OpType::FusedMatMulBias         ||
+            node.op == OpType::FusedMatMulAddReLU      ||
+            node.op == OpType::FusedConvBatchNormReLU  ||
+            node.op == OpType::FusedAttention          ||
+            node.op == OpType::TiledAttention          ||
+            node.op == OpType::QKVProjection           ||
+            node.op == OpType::MLP
+        ) {
+            node.assigned_backend = BackendKind::Metal;
+            std::cout << "  " << node.name << " -> Metal\n";
         } else {
-            std::cout << "  "
-                      << node.name
-                      << " -> CPU fallback\n";
+            node.assigned_backend = BackendKind::CPU;
+            std::cout << "  " << node.name << " -> CPU\n";
         }
     }
 }
