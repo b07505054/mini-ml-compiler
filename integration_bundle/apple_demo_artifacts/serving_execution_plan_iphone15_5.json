@@ -1,0 +1,102 @@
+{
+  "artifact_type": "serving_execution_plan",
+  "function_plans": [
+    {
+      "backend_execution_plan": {
+        "decision_source": "constraint_conflict",
+        "fallback_chain": [],
+        "primary_backend": "cpu",
+        "required_kv_layout": "paged",
+        "required_precision": "fp16",
+        "requires_replay": false
+      },
+      "cost_summary": {
+        "colocated_total_ms": 174.70720000000003,
+        "confidence": "low",
+        "cost_source": "target_profile_formula_estimate",
+        "decision_margin_ms": 0.74524999999999864,
+        "decision_margin_pct": 0.42657085683932805,
+        "pd_split_total_ms": 175.45245000000003,
+        "policy": "colocated"
+      },
+      "execution_mode": "colocated",
+      "function_name": "tiny_gpt_prefill",
+      "kv_plan": {
+        "kv_byte_estimate_mb": 0,
+        "layout": "paged",
+        "layout_reason": "",
+        "truth_boundary": "static_formula_estimate_not_measured_memory"
+      },
+      "provenance": {
+        "cost_source": "target_profile_formula_estimate",
+        "truth_boundary": "estimated_cost_not_measured_latency"
+      },
+      "replay_plan": {
+        "cuda_graph_bucket": "",
+        "override_reason": "",
+        "replay_eligible": false,
+        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
+      },
+      "serving_phase": "prefill",
+      "source_passes": [
+        "serving-phase-analysis",
+        "kv-layout-planning",
+        "replay-eligibility",
+        "execution-provider-planning"
+      ]
+    },
+    {
+      "backend_execution_plan": {
+        "decision_source": "target_preferred",
+        "fallback_chain": [
+          "metal",
+          "cpu"
+        ],
+        "primary_backend": "coreml",
+        "required_kv_layout": "contiguous",
+        "required_precision": "fp16",
+        "requires_replay": true
+      },
+      "cost_summary": {
+        "colocated_total_ms": 174.70720000000003,
+        "confidence": "low",
+        "cost_source": "target_profile_formula_estimate",
+        "decision_margin_ms": 0.74524999999999864,
+        "decision_margin_pct": 0.42657085683932805,
+        "pd_split_total_ms": 175.45245000000003,
+        "policy": "colocated"
+      },
+      "execution_mode": "colocated",
+      "function_name": "tiny_gpt_decode",
+      "kv_plan": {
+        "kv_byte_estimate_mb": 0,
+        "layout": "contiguous",
+        "layout_reason": "",
+        "truth_boundary": "static_formula_estimate_not_measured_memory"
+      },
+      "provenance": {
+        "cost_source": "target_profile_formula_estimate",
+        "truth_boundary": "estimated_cost_not_measured_latency"
+      },
+      "replay_plan": {
+        "cuda_graph_bucket": "decode_static",
+        "override_reason": "",
+        "replay_eligible": true,
+        "truth_boundary": "static_shape_replay_eligibility_not_cuda_graph_capture"
+      },
+      "serving_phase": "decode",
+      "source_passes": [
+        "serving-phase-analysis",
+        "kv-layout-planning",
+        "replay-eligibility",
+        "execution-provider-planning"
+      ]
+    }
+  ],
+  "hidden_size": 768,
+  "model_name": "tiny-gpt",
+  "num_layers": 12,
+  "schema_version": "1.0.0",
+  "target_profile_id": "apple-iphone15-5-a16",
+  "truth_boundary": "declared_device_profile_not_measured_silicon_performance"
+}
