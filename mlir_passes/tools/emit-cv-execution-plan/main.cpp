@@ -30,7 +30,6 @@ int main(int argc, char **argv) {
       argc, argv, "emit-cv-execution-plan: export a CV execution plan\n");
 
   mlir::MLIRContext ctx;
-  ctx.allowUnregisteredDialects(true);
   ctx.loadDialect<mlir::func::FuncDialect, mlir::cv::CVDialect>();
 
   auto module = mlir::parseSourceFile<mlir::ModuleOp>(InputPath, &ctx);
