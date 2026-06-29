@@ -29,17 +29,9 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(
       argc, argv, "emit-cv-execution-plan: export a CV execution plan\n");
 
-  // Load the registered CV dialect in the tool process. The official raw
-  // pseudo-CV artifact still contains legacy op arities that are intentionally
-  // not migrated in this commit, so parsing remains in the compatibility
-  // context below until the fixture migration commit.
-  mlir::MLIRContext registeredDialectCtx;
-  registeredDialectCtx.loadDialect<mlir::func::FuncDialect,
-                                   mlir::cv::CVDialect>();
-
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect>();
+  ctx.loadDialect<mlir::func::FuncDialect, mlir::cv::CVDialect>();
 
   auto module = mlir::parseSourceFile<mlir::ModuleOp>(InputPath, &ctx);
   if (!module) {

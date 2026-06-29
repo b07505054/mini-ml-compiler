@@ -20,8 +20,9 @@ func.func @cv_dialect_smoke(%x: tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16> {
       : (tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16>
   %e = cv.concat %c, %d {cv.source_op = "Concat_0"}
       : (tensor<1x4x2x2xf16>, tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16>
-  %f = cv.detect_head %e {cv.source_op = "Detect_0"}
-      : (tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16>
+  %f = cv.detect_head %c, %d, %e {cv.source_op = "Detect_0"}
+      : (tensor<1x4x2x2xf16>, tensor<1x4x2x2xf16>, tensor<1x4x2x2xf16>)
+        -> tensor<1x4x2x2xf16>
   %g = cv.prototype_head %f {cv.source_op = "Proto_0"}
       : (tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16>
   return %g : tensor<1x4x2x2xf16>

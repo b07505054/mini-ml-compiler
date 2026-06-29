@@ -30,8 +30,16 @@ def CV_UpsampleOp : CV_UnaryTensorOp<"upsample"> {
   let summary = "Compiler-internal CV upsample marker";
 }
 
-def CV_DetectHeadOp : CV_UnaryTensorOp<"detect_head"> {
+def CV_DetectHeadOp : CV_Op<"detect_head", [Pure]> {
   let summary = "Compiler-internal CV detection head marker";
+
+  let arguments = (ins Variadic<AnyTensor>:$inputs);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $inputs attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def CV_PrototypeHeadOp : CV_UnaryTensorOp<"prototype_head"> {
