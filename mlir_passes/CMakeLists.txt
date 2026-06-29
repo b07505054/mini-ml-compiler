@@ -25,6 +25,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 add_definitions(${LLVM_DEFINITIONS})
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/HIR/IR)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/CV/IR)
 
 set(LLVM_TARGET_DEFINITIONS include/HIR/IR/HIROps.td)
 mlir_tablegen(include/HIR/IR/HIROps.h.inc -gen-op-decls)
@@ -33,6 +34,13 @@ mlir_tablegen(include/HIR/IR/HIROpsDialect.h.inc -gen-dialect-decls -dialect=hir
 mlir_tablegen(include/HIR/IR/HIROpsDialect.cpp.inc -gen-dialect-defs -dialect=hir)
 add_public_tablegen_target(HIRDialectIncGen)
 
+set(LLVM_TARGET_DEFINITIONS include/CV/IR/CVOps.td)
+mlir_tablegen(include/CV/IR/CVOps.h.inc -gen-op-decls)
+mlir_tablegen(include/CV/IR/CVOps.cpp.inc -gen-op-defs)
+mlir_tablegen(include/CV/IR/CVOpsDialect.h.inc -gen-dialect-decls -dialect=cv)
+mlir_tablegen(include/CV/IR/CVOpsDialect.cpp.inc -gen-dialect-defs -dialect=cv)
+add_public_tablegen_target(CVDialectIncGen)
+
 set(LLVM_TARGET_DEFINITIONS include/FusionPasses.td)
 mlir_tablegen(include/FusionPasses.h.inc -gen-pass-decls)
 add_public_tablegen_target(HIRFusionPassIncGen)
@@ -40,6 +48,8 @@ add_public_tablegen_target(HIRFusionPassIncGen)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_library(HIRMatMulBiasReluFusionPass MODULE
+  lib/CV/IR/CVDialect.cpp
+  lib/CV/IR/CVOps.cpp
   lib/HIR/IR/HIRDialect.cpp
   lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
@@ -61,6 +71,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
 
 add_dependencies(HIRMatMulBiasReluFusionPass
+  CVDialectIncGen
   HIRDialectIncGen
   HIRFusionPassIncGen
 )
@@ -439,6 +450,17 @@ set(_LLMFN_NORM_MLIR "${_LLMFN_INT_DIR}/normalized.mlir")
 set(_LLMFN_JSON      "${_LLMFN_INT_DIR}/raw_qwen_frontend_serving_plan.json")
 
 if(MLIR_OPT_BIN)
+  add_test(NAME CVDialectOpsTest
+    COMMAND ${CMAKE_COMMAND}
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/test/cv/cv_dialect_ops.mlir
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/cv/RunCVDialectOpsTest.cmake
+  )
+  set_tests_properties(CVDialectOpsTest PROPERTIES
+    DEPENDS HIRMatMulBiasReluFusionPass
+  )
+
   add_test(NAME LLMFrontendNormalizationTest
     COMMAND ${CMAKE_COMMAND}
       -DMLIR_OPT=${MLIR_OPT_BIN}

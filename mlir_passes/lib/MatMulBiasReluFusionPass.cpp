@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "CV/IR/CVDialect.h"
 #include "HIR/IR/HIRDialect.h"
 #include "HIR/IR/HIROps.h"
 
@@ -1354,6 +1355,7 @@ mlirGetDialectPluginInfo() {
       "HIRDialect",
       LLVM_VERSION_STRING,
       [](mlir::DialectRegistry *registry) {
+        registry->insert<mlir::cv::CVDialect>();
         registry->insert<mlir::hir::HIRDialect>();
       }};
 }
