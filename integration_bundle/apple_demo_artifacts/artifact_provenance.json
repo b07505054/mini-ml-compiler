@@ -4,7 +4,7 @@
   "compiler": {
     "name": "ml-graph-compiler-runtime",
     "version": "0.4.0",
-    "git_commit": "69b233a2"
+    "git_commit": "677ace53"
   },
   "pass_pipeline": [
     "canonicalize",
@@ -13,7 +13,7 @@
     "backend_placement",
     "memory_planning"
   ],
-  "created_at_utc": "2026-06-28T18:50:45.791236+00:00",
+  "created_at_utc": "2026-06-29T18:34:53.250553+00:00",
   "outputs": [
     {
       "path": "llm_graph_ir.json",

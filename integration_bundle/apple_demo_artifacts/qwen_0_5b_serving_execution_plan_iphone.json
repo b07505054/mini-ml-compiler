@@ -31,6 +31,12 @@
         "cost_source": "target_profile_formula_estimate",
         "truth_boundary": "estimated_cost_not_measured_latency"
       },
+      "quantization_plan": {
+        "dtype_bytes": 2,
+        "plan_dtype": "fp16",
+        "plan_source": "default_dtype",
+        "truth_boundary": "precision_selection_from_target_profile_not_calibrated"
+      },
       "replay_plan": {
         "cuda_graph_bucket": "",
         "override_reason": "",
@@ -77,6 +83,12 @@
       "provenance": {
         "cost_source": "target_profile_formula_estimate",
         "truth_boundary": "estimated_cost_not_measured_latency"
+      },
+      "quantization_plan": {
+        "dtype_bytes": 2,
+        "plan_dtype": "fp16",
+        "plan_source": "default_dtype",
+        "truth_boundary": "precision_selection_from_target_profile_not_calibrated"
       },
       "replay_plan": {
         "cuda_graph_bucket": "decode_static",
