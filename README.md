@@ -1,16 +1,49 @@
-## CV Graph Compiler and Runtime Infrastructure
+## ML Graph Compiler and Runtime Infrastructure
 
-Implemented a compiler-runtime simulation pipeline for CV-oriented heterogeneous inference execution, backend-aware scheduling, graph lowering, memory planning, adaptive runtime orchestration, and runtime-feedback-driven execution replanning.
+This repository is a prototype compiler/runtime systems project. It contains a
+custom C++ graph runtime for educational compiler/runtime experiments, a
+separate real MLIR pass plugin, LLM serving artifact generation, and a new
+MLIR CV compiler path that lowers CV dialect IR into a runtime-facing execution
+plan artifact.
 
-Implemented compiler-runtime infrastructure inspired by:
+The important boundary: the MLIR compiler work is implemented as compiler
+infrastructure and artifact generation. ONNX import, backend kernel mapping,
+dynamic-shape support, and PocketChef visualization of the CV plan are future
+work.
 
-- TensorRT
-- XLA
-- TVM
-- MLIR-based runtimes
-- heterogeneous inference runtimes
-- LLM compiler/runtime planning systems
-- vLLM / SGLang / Triton Server / TensorRT serving decisions
+## Latest Milestones
+
+Implemented in the recent compiler work:
+
+- Registered `cv` MLIR dialect with seven CV operations.
+- Added variadic `cv.detect_head` parsing/printing support.
+- Loaded the CV dialect in CV tool/test contexts so the artifact tool parses
+  through the registered dialect path.
+- Added Phase 1 CV compiler passes:
+  `CVFrontendNormalizationPass`, `CVShapeInferencePass`,
+  `CVMemoryPlanningPass`, and `CVExecutionDomainPlanningPass`.
+- Added `CVExecutionPlanBuilder` and `CVExecutionPlanExporter`.
+- Added `emit-cv-execution-plan`.
+- Added the checked-in `artifacts/apple_demo/cv_execution_plan.json` artifact.
+- Kept the LLM compiler/serving path separate from the CV compiler path.
+
+Future work remains: ONNX importer, more CV operators, dynamic shape support,
+backend mapping, and PocketChef visualization.
+
+## Repository Layout
+
+- `include/`, `src/`: custom C++ graph IR, runtime, kernels, planners, and
+  toy compiler passes.
+- `apps/`: C++ demos, runtime experiments, and platform-specific harnesses.
+- `mlir_passes/`: real MLIR C++ dialects, passes, tools, and FileCheck/CTest
+  coverage. This includes both HIR/LLM work and the CV dialect/compiler path.
+- `mlir/`: small MLIR input examples, including raw CV and LLM inputs.
+- `tools/`: artifact generation, validation, and optional frontend probes.
+- `artifacts/apple_demo/`: generated or checked-in demo artifacts, including
+  `cv_execution_plan.json` and LLM serving plans.
+- `integration_bundle/apple_demo_artifacts/`: copied artifacts for downstream
+  demo consumption.
+- `docs/`: architecture, data-flow, design, future-work, and case-study notes.
 
 The LLM artifact path now emits a `serving_framework_contract.json` alongside
 the execution plan. This contract names the serving policies and metrics a
@@ -40,9 +73,54 @@ that case as skipped rather than fabricating the artifact or failing baseline
 validation. Run the MLIR pipeline first when validating the Metal RMSNorm
 dispatch path itself.
 
-### CV Graph Pipeline
+### Current CV Compiler Pipeline
 
-Implemented a CV inference graph including:
+The current MLIR CV path is:
+
+```text
+ONNX (future)
+  ->
+CV Dialect
+  ->
+CVFrontendNormalizationPass
+  ->
+CVShapeInferencePass
+  ->
+CVMemoryPlanningPass
+  ->
+CVExecutionDomainPlanningPass
+  ->
+CVExecutionPlanBuilder
+  ->
+CVExecutionPlanExporter
+  ->
+emit-cv-execution-plan
+  ->
+artifacts/apple_demo/cv_execution_plan.json
+```
+
+Implemented CV dialect/compiler components:
+
+- `cv` dialect registration.
+- Seven CV operations covering the raw CV graph shape used by this milestone.
+- Variadic `detect_head` support.
+- Frontend normalization metadata.
+- Static shape metadata for supported CV ops.
+- Tensor lifetime and memory-planning metadata.
+- Execution-domain planning metadata.
+- Runtime-facing JSON export through the `emit-cv-execution-plan` tool.
+
+Not currently claimed:
+
+- ONNX import.
+- A complete CV operator set.
+- Dynamic-shape compilation.
+- Final backend/kernel dispatch mapping for the CV plan.
+- PocketChef visualization of `cv_execution_plan.json`.
+
+### Legacy Toy CV Graph Pipeline
+
+The custom C++ graph runtime also includes a CV inference graph demo:
 
 ```text
 Conv2D

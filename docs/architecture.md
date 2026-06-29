@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is a prototype ML graph compiler/runtime used to demonstrate compiler passes, graph lowering, heterogeneous runtime planning, memory planning, and LLM serving artifact generation. It is not a production inference runtime. The code mixes implemented C++ runtime components, real MLIR pass plugin infrastructure, Python artifact tooling, demos, benchmark harnesses, and simulated planning outputs.
+This repository is a prototype ML graph compiler/runtime used to demonstrate compiler passes, graph lowering, heterogeneous runtime planning, memory planning, CV execution-plan generation, and LLM serving artifact generation. It is not a production inference runtime. The code mixes implemented C++ runtime components, real MLIR pass plugin infrastructure, Python artifact tooling, demos, benchmark harnesses, and simulated planning outputs.
 
 Assumptions for this handoff:
 
@@ -80,10 +80,54 @@ Implemented separately in `mlir_passes/`.
 
 - This is real MLIR C++ plugin infrastructure.
 - It defines a `hir` dialect with runtime-facing fused ops and quantization-related ops.
+- It defines a registered `cv` dialect for the current CV compiler milestone.
 - It includes passes for canonicalization, matmul-bias-ReLU fusion detection, RMSNorm kernel selection, HIR lowering, and verification.
+- It includes CV compiler passes for frontend normalization, shape inference, memory planning, and execution-domain planning.
 - FileCheck tests under `mlir_passes/test/` cover positive and negative pass behavior.
 
 This module is independent of the custom toy `Graph` IR. The bridge to the runtime story is through generated MLIR/text and JSON artifacts.
+
+### CV Compiler Path
+
+Current implemented flow:
+
+```text
+CV Dialect
+  -> CVFrontendNormalizationPass
+  -> CVShapeInferencePass
+  -> CVMemoryPlanningPass
+  -> CVExecutionDomainPlanningPass
+  -> CVExecutionPlanBuilder
+  -> CVExecutionPlanExporter
+  -> emit-cv-execution-plan
+  -> artifacts/apple_demo/cv_execution_plan.json
+```
+
+The frontend source before the CV dialect is future ONNX import:
+
+```text
+ONNX (future)
+  -> CV Dialect
+```
+
+Implemented:
+
+- Registered `cv` dialect.
+- Seven CV operations for the raw CV graph milestone.
+- Variadic `cv.detect_head`.
+- Registered parsing path in CV tool/test contexts.
+- Four Phase 1 CV compiler passes.
+- C++ execution-plan builder/exporter.
+- CLI artifact emission through `emit-cv-execution-plan`.
+- Checked-in `cv_execution_plan.json` artifact.
+
+Future work:
+
+- ONNX importer.
+- More CV operators.
+- Dynamic-shape handling.
+- Backend/kernel mapping.
+- PocketChef visualization.
 
 ### Python Tooling
 
@@ -114,6 +158,7 @@ Implemented:
 - Execution plan and lowered graph data structures with JSON export.
 - Cost-based planner that consumes `CostReport` entries and estimated models.
 - Real MLIR plugin structure, HIR dialect, pass registration, TableGen-generated op/pass declarations, and FileCheck tests.
+- Registered CV dialect, Phase 1 CV pass pipeline, CV execution-plan builder/exporter, and CV execution-plan artifact emission.
 - Python artifact generation and validation for LLM serving plans.
 
 Simulated, partial, or demo-only:
@@ -122,6 +167,6 @@ Simulated, partial, or demo-only:
 - Generic `MetalBackend` logs dispatch and device info but does not execute graph kernels.
 - Runtime replanning uses simple overload observations and predefined fallback assignments.
 - CV and LLM runtime timelines are trace artifacts rather than traces from a production scheduler.
+- The CV execution plan is a compiler artifact; it is not yet evidence of ONNX import, dynamic-shape support, backend kernel dispatch, or PocketChef visualization.
 - Candidate serving plan latency and throughput numbers in artifact generation are estimated demo values.
 - OpenXLA/IREE/Torch-MLIR paths are conditional probes and may skip if tools are absent.
-

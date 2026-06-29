@@ -59,6 +59,43 @@ Implemented: MLIR pass plugin and FileCheck-oriented tests.
 
 Simulated or artifact-level: dispatch from MLIR output into the general heterogeneous runtime is represented through JSON plans and demo harnesses.
 
+## CV Compiler Artifact Flow
+
+The implemented CV compiler path is MLIR-first and separate from the older
+custom C++ CV graph demo:
+
+```text
+ONNX (future)
+  -> CV Dialect
+  -> CVFrontendNormalizationPass
+  -> CVShapeInferencePass
+  -> CVMemoryPlanningPass
+  -> CVExecutionDomainPlanningPass
+  -> CVExecutionPlanBuilder
+  -> CVExecutionPlanExporter
+  -> emit-cv-execution-plan
+  -> artifacts/apple_demo/cv_execution_plan.json
+```
+
+Current inputs:
+
+- MLIR CV dialect examples/tests.
+- Raw CV graph-shaped MLIR under `mlir/`.
+
+Current outputs:
+
+- Compiler annotations from frontend normalization, shape inference, memory
+  planning, and execution-domain planning.
+- A runtime-facing CV execution-plan JSON artifact.
+
+Future inputs/outputs:
+
+- ONNX import into the CV dialect.
+- Additional CV operators.
+- Dynamic-shape metadata.
+- Backend/kernel mapping.
+- PocketChef visualization of the exported plan.
+
 ## LLM Serving Artifact Flow
 
 Documented pipeline:
@@ -78,6 +115,8 @@ Generated artifact structures include:
 
 - `llm_graph_ir.json`: model metadata, operator list, request workload.
 - `serving_execution_plan.json`: prefill/decode phases and runtime contract.
+- `cv_execution_plan.json`: CV compiler artifact emitted from the registered
+  CV dialect/pass/exporter path.
 - `kv_cache_plan.json`: block size, block count, token capacity, dtype, allocation policy, prefix cache metadata.
 - `memory_plan.json`: estimated prefill/decode memory, KV memory, temporary buffers, budget fit.
 - `scheduling_plan.json`: queues, batch size, decode step size, dashboard signals.
@@ -129,4 +168,3 @@ Rules for interpreting metrics:
 - `PlannerCandidate` and `PlannerOpCost`: candidate backend assignments and estimated/observed cost breakdowns.
 - `LLMRequest`: serving request state for scheduler demos.
 - KV cache structures: block-based allocation metadata for serving simulations.
-

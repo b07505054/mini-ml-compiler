@@ -4,11 +4,14 @@ This directory contains real MLIR C++ pass infrastructure, separate from the
 project's custom toy graph IR.
 
 The plugin currently contains MLIR compiler passes for canonicalization,
-fusion detection, lowering, and verification:
+fusion detection, lowering, verification, serving-plan generation, and CV
+execution-plan generation:
 
 - `hir` dialect: defines typed runtime-facing fused ops such as
   `hir.fused_matmul_bias_relu`, `hir.fused_rmsnorm`, `hir.quantize`,
   `hir.dequantize`, `hir.qmatmul`, and `hir.fused_qmatmul_bias_relu`.
+- `cv` dialect: defines the current CV compiler IR, including seven CV ops and
+  variadic `cv.detect_head` support for the raw CV graph milestone.
 
 - `hir-canonicalize`: rewrites small tensor-level canonical forms before
   optimization.
@@ -19,6 +22,11 @@ fusion detection, lowering, and verification:
 - `hir-fusion-lowering`: lowers annotated fusion candidates into typed HIR
   dialect ops.
 - `hir-verify-fused-ops`: verifies invariants on emitted HIR fused ops.
+- `cv-frontend-normalization`: normalizes raw CV frontend metadata.
+- `cv-shape-inference`: attaches static shape metadata for supported CV ops.
+- `cv-memory-planning`: attaches tensor lifetime and allocation metadata.
+- `cv-execution-domain-planning`: assigns execution-domain metadata for the
+  current CV plan export path.
 
 The canonicalization pass performs real IR rewrites with MLIR
 `OpRewritePattern`, `PatternRewriter`, `RewritePatternSet`, and the greedy
@@ -259,6 +267,24 @@ grep 'fused_matmul_add_relu' trace/mlir_execution_plan.json
 The JSON bridge also attaches a lightweight cost model with estimated FLOPs,
 memory traffic, and arithmetic intensity so the fused op can be consumed by
 backend placement or scheduling heuristics.
+
+The CV compiler artifact path is separate from the HIR fusion bridge:
+
+```text
+CV dialect input
+  -> cv-frontend-normalization
+  -> cv-shape-inference
+  -> cv-memory-planning
+  -> cv-execution-domain-planning
+  -> CVExecutionPlanBuilder
+  -> CVExecutionPlanExporter
+  -> emit-cv-execution-plan
+  -> artifacts/apple_demo/cv_execution_plan.json
+```
+
+This path proves the registered CV dialect and Phase 1 CV analysis/export
+pipeline. It does not yet claim ONNX import, dynamic shapes, backend kernel
+mapping, or PocketChef visualization.
 
 The C++ `CostBasedPlanner` consumes the compiler `CostReport` instead of
 discarding it. Planner candidates now estimate each op from FLOPs, bytes moved,

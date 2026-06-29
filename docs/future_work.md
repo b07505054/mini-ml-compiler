@@ -1,5 +1,22 @@
 # Future Work
 
+## Completed Recently
+
+CV compiler Phase 1 work has moved out of future work:
+
+- `CVFrontendNormalizationPass`
+- `CVShapeInferencePass`
+- `CVMemoryPlanningPass`
+- `CVExecutionDomainPlanningPass`
+- `CVExecutionPlanBuilder`
+- `CVExecutionPlanExporter`
+- `emit-cv-execution-plan`
+- `artifacts/apple_demo/cv_execution_plan.json`
+- Registered `cv` dialect
+- Seven CV operations
+- Variadic `cv.detect_head`
+- Registered CV parsing path in CV tool contexts
+
 ## Near-Term Handoff Tasks
 
 - Add a short contributor workflow that says which demos/tests to run for common changes.
@@ -34,6 +51,14 @@
 - Consider generating runtime JSON from a formal schema instead of ad hoc parsing.
 - Keep HIR verifier tests close to every new attribute or lowering rule.
 
+## CV Compiler Future Work
+
+- ONNX importer.
+- More CV operators.
+- Dynamic-shape support.
+- Backend/kernel mapping.
+- PocketChef visualization of the CV execution plan.
+
 ## LLM Serving Artifact Work
 
 - Label estimated latency, throughput, memory, and pressure metrics inside generated artifacts.
@@ -48,4 +73,3 @@
 - Add regeneration instructions for each PNG and JSON family.
 - Add a dependency matrix for CMake, Python, MLIR, Metal, CUDA, IREE, Torch-MLIR, and optional benchmark tools.
 - Add a glossary for custom IR, HIR, lowered graph, execution plan, trace, artifact, and integration bundle.
-
