@@ -244,6 +244,56 @@ add_test(NAME CVExecutionPlanExporterTest
          COMMAND CVExecutionPlanExporterTest)
 
 # ---------------------------------------------------------------------------
+# emit-cv-execution-plan: CV artifact generator CLI
+#
+# Reads CV MLIR, runs the CV planning pipeline, builds CVExecutionPlan, and
+# exports the JSON plan through CVExecutionPlanExporter.
+# ---------------------------------------------------------------------------
+add_executable(emit-cv-execution-plan
+  lib/serving/CVFrontendNormalizationPass.cpp
+  lib/serving/CVShapeInferencePass.cpp
+  lib/serving/CVMemoryPlanningPass.cpp
+  lib/serving/CVExecutionDomainPlanningPass.cpp
+  lib/serving/CVExecutionPlanBuilder.cpp
+  lib/serving/CVExecutionPlanExporter.cpp
+  tools/emit-cv-execution-plan/main.cpp
+)
+llvm_update_compile_flags(emit-cv-execution-plan)
+add_dependencies(emit-cv-execution-plan HIRFusionPassIncGen)
+target_include_directories(emit-cv-execution-plan
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(emit-cv-execution-plan PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(emit-cv-execution-plan
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+    LLVMSupport
+)
+
+set(_CV_PLAN_TOOL_DIR "${CMAKE_CURRENT_BINARY_DIR}/cv_execution_plan_artifact_tool")
+set(_CV_PLAN_TOOL_OUT "${_CV_PLAN_TOOL_DIR}/cv_execution_plan.json")
+
+add_test(NAME CVExecutionPlanArtifactToolTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:emit-cv-execution-plan>
+    -DINPUT_MLIR=${CMAKE_CURRENT_SOURCE_DIR}/../mlir/cv_raw_yoloseg.mlir
+    -DOUT=${_CV_PLAN_TOOL_OUT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCVExecutionPlanArtifactToolTest.cmake
+)
+set_tests_properties(CVExecutionPlanArtifactToolTest PROPERTIES
+  DEPENDS emit-cv-execution-plan
+)
+
+# ---------------------------------------------------------------------------
 # compile-for-target: driver tool
 #
 # Wires: TargetDeviceProfile JSON → TargetConstraints → serving passes →
