@@ -1,15 +1,60 @@
 ## ML Graph Compiler and Runtime Infrastructure
 
-This repository is a prototype compiler/runtime systems project. It contains a
-custom C++ graph runtime for educational compiler/runtime experiments, a
-separate real MLIR pass plugin, LLM serving artifact generation, and a new
-MLIR CV compiler path that lowers CV dialect IR into a runtime-facing execution
-plan artifact.
+This repository is a prototype compiler/runtime systems project with two
+separate tracks:
 
-The important boundary: the MLIR compiler work is implemented as compiler
-infrastructure and artifact generation. ONNX import, backend kernel mapping,
-dynamic-shape support, and PocketChef visualization of the CV plan are future
-work.
+1. **MLIR compiler track**: real MLIR dialects, compiler passes, verification,
+   lowering metadata, and runtime-facing execution-plan/artifact export.
+2. **Legacy/local C++ runtime demo harness**: a small custom graph runtime used
+   for demos, benchmark bridges, memory-planning experiments, kernel-registry
+   examples, and backend-sandbox experiments.
+
+The important boundary: the MLIR compiler track is the primary compiler story.
+It owns HIR/CV/Serving dialects, compiler passes, quantization planning, INT8
+island propagation, Q/DQ canonicalization, fusion/lowering,
+capability-gated operator-selection metadata, verification, and execution-plan
+or artifact export.
+
+The C++ runtime code in this repository is not the production distributed
+runtime story. New runtime/deployment features should go to the sibling
+`heterogeneous-inference-runtime` project, which is the intended home for
+distributed scheduling, prefill/decode split planning, backend dispatch,
+runtime simulation, cost modeling, and runtime artifact consumption.
+
+Clean architecture boundary:
+
+```text
+Model / MLIR input
+  ->
+MLIR Compiler Track
+  ->
+Execution Plan / Artifact
+  ->
+heterogeneous-inference-runtime
+  ->
+Runtime scheduling / backend dispatch / validation
+```
+
+ONNX import, backend kernel mapping, dynamic-shape support, and PocketChef
+visualization of the CV plan are future work.
+
+### Honest Claims / Not Claimed
+
+Honest claims:
+
+- The compiler exports runtime-facing metadata and artifacts.
+- Quantization support is implemented at the compiler-pass metadata/legality
+  level.
+- The local C++ runtime is a demo harness and benchmark bridge.
+
+Not claimed:
+
+- Full INT8 graph runtime execution.
+- Production calibration or automatic quantization-parameter generation.
+- Complete ONNX import.
+- Generic Metal backend execution for all quantized kernels.
+- The C++ runtime harness and the Python runtime project are one production
+  system.
 
 ## Latest Milestones
 

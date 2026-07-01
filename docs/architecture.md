@@ -2,7 +2,61 @@
 
 ## Purpose
 
-This repository is a prototype ML graph compiler/runtime used to demonstrate compiler passes, graph lowering, heterogeneous runtime planning, memory planning, CV execution-plan generation, and LLM serving artifact generation. It is not a production inference runtime. The code mixes implemented C++ runtime components, real MLIR pass plugin infrastructure, Python artifact tooling, demos, benchmark harnesses, and simulated planning outputs.
+This repository is a prototype ML graph compiler/runtime used to demonstrate
+compiler passes, graph lowering, memory planning, CV execution-plan generation,
+and runtime-facing artifact export. It is not a production inference runtime.
+The code mixes implemented C++ demo-runtime components, real MLIR pass plugin
+infrastructure, Python artifact tooling, demos, benchmark harnesses, and
+simulated planning outputs.
+
+The project should be read as two separate tracks:
+
+1. **MLIR compiler track**: the primary compiler architecture. It owns
+   HIR/CV/Serving dialects, compiler passes, quantization planning, INT8 island
+   propagation, Q/DQ canonicalization, fusion/lowering,
+   capability-gated operator-selection metadata, verification, and
+   execution-plan/artifact export.
+2. **Legacy/local C++ runtime demo harness**: a custom graph runtime used for
+   local demos, benchmark bridges, memory-planning experiments, kernel-registry
+   examples, and backend-sandbox experiments. It is useful evidence for
+   compiler/runtime contracts, but it is not the production distributed runtime
+   story.
+
+New runtime/deployment features should go to the sibling
+`heterogeneous-inference-runtime` repository. That project is the intended home
+for distributed scheduling, prefill/decode split planning, backend dispatch,
+runtime simulation, cost modeling, and runtime artifact consumption.
+
+Clean architecture boundary:
+
+```text
+Model / MLIR input
+  ->
+MLIR Compiler Track
+  ->
+Execution Plan / Artifact
+  ->
+heterogeneous-inference-runtime
+  ->
+Runtime scheduling / backend dispatch / validation
+```
+
+Honest claims:
+
+- This compiler repo exports runtime-facing metadata and artifacts.
+- Quantization is currently implemented at the compiler-pass
+  metadata/legality level.
+- The C++ runtime inside this repo is a local demo harness and benchmark
+  bridge.
+
+Not claimed:
+
+- Full INT8 graph runtime execution.
+- Production calibration.
+- Complete ONNX import.
+- Generic Metal backend execution for all quantized kernels.
+- The C++ runtime harness and the Python runtime project are one production
+  system.
 
 Assumptions for this handoff:
 
@@ -55,6 +109,13 @@ Implemented behavior: CPU dispatch, CPU kernels for supported ops, mock GPU disp
 
 Simulated or partial behavior: generic Metal backend execution, GPU execution through `MockGPUBackend`, runtime replan decisions, many latency/throughput fields in JSON artifacts, and full serving runtime behavior.
 
+Boundary: this runtime directory is a local demo harness and benchmark bridge.
+It is useful for showing how compiler metadata can meet memory planning,
+kernel registration, scheduling, and backend sandboxing, but it should not be
+described as the production distributed runtime layer. Runtime artifact
+consumption, backend dispatch, distributed scheduling, PD split, cost modeling,
+and runtime simulation belong in `heterogeneous-inference-runtime`.
+
 ### Kernels
 
 Implemented in `include/kernels/` and `src/kernels/`.
@@ -82,6 +143,8 @@ Implemented separately in `mlir_passes/`.
 - It defines a `hir` dialect with runtime-facing fused ops and quantization-related ops.
 - It defines a registered `cv` dialect for the current CV compiler milestone.
 - It includes passes for canonicalization, matmul-bias-ReLU fusion detection, RMSNorm kernel selection, HIR lowering, and verification.
+- It includes quantization planning, conservative INT8 island propagation, safe
+  Q/DQ canonicalization, and capability-gated INT8 operator-selection metadata.
 - It includes CV compiler passes for frontend normalization, shape inference, memory planning, and execution-domain planning.
 - FileCheck tests under `mlir_passes/test/` cover positive and negative pass behavior.
 
