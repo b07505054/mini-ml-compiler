@@ -53,6 +53,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/HIR/IR/HIRDialect.cpp
   lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
+  lib/QuantizationCompilerPasses.cpp
   lib/QuantizationPlanningPass.cpp
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp

@@ -58,4 +58,8 @@ def CV_ConcatOp : CV_Op<"concat", [Pure]> {
   }];
 }
 
+def CV_CustomOp : CV_UnaryTensorOp<"custom_op"> {
+  let summary = "Compiler-internal CV fallback-domain test marker";
+}
+
 #endif // CV_OPS

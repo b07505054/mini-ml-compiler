@@ -21,7 +21,7 @@
 //
 // Shape arithmetic for @has_skip:
 //   cv.silu output tensor<1x4x2x2xf16>: 16 elements, 32 bytes  -> annotated
-//   cv.pooling output tensor<1x4x?x?xf16>: dynamic dims         -> skipped
+//   cv.conv2d output tensor<1x4x?x?xf16>: dynamic dims          -> skipped
 
 // ---------------------------------------------------------------------------
 // Case 1: @tiny_cv — two static ops; full function annotation expected.
@@ -40,11 +40,11 @@
 // CHECK-SAME:  cv.shape_inference.total_bytes_estimate = 64 : i64
 // CHECK-SAME:  cv.shape_inference.truth_boundary = "static_ranked_tensor_shape_metadata_not_runtime_allocation"
 // Per-op checks for cv.conv2d (elements=16, bytes=32):
-// CHECK: "cv.conv2d"
+// CHECK: cv.conv2d
 // CHECK: cv.bytes_estimate = 32 : i64
 // CHECK: cv.num_elements = 16 : i64
 // Per-op checks for cv.silu (elements=16, bytes=32):
-// CHECK: "cv.silu"
+// CHECK: cv.silu
 // CHECK: cv.bytes_estimate = 32 : i64
 // CHECK: cv.num_elements = 16 : i64
 
@@ -86,8 +86,8 @@ module {
     %s = "cv.silu"(%x) {
       cv.source_op = "Mul"
     } : (tensor<1x4x2x2xf16>) -> tensor<1x4x2x2xf16>
-    %p = "cv.pooling"(%x) {
-      cv.source_op = "Pool"
+    %p = "cv.conv2d"(%x) {
+      cv.source_op = "ConvDynamic"
     } : (tensor<1x4x2x2xf16>) -> tensor<1x4x?x?xf16>
     return %s, %p : tensor<1x4x2x2xf16>, tensor<1x4x?x?xf16>
   }

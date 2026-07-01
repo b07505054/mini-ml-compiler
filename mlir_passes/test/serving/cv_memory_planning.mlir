@@ -47,21 +47,21 @@
 // CHECK-SAME:  cv.memory_plan.total_allocated_bytes = 64 : i64
 // CHECK-SAME:  cv.memory_plan.truth_boundary = "static_compiler_memory_plan_not_runtime_allocation"
 // Per-op: %a (index 0, B0, not reused).
-// CHECK: "cv.conv2d"
+// CHECK: cv.conv2d
 // CHECK: cv.buffer_id = 0 : i64
 // CHECK: cv.buffer_offset = 0 : i64
 // CHECK: cv.lifetime_begin = 0 : i64
 // CHECK: cv.lifetime_end = 1 : i64
 // CHECK: cv.reuse_group = 0 : i64
 // Per-op: %b (index 1, B1, not reused).
-// CHECK: "cv.silu"
+// CHECK: cv.silu
 // CHECK: cv.buffer_id = 1 : i64
 // CHECK: cv.buffer_offset = 32 : i64
 // CHECK: cv.lifetime_begin = 1 : i64
 // CHECK: cv.lifetime_end = 2 : i64
 // CHECK: cv.reuse_group = 1 : i64
 // Per-op: %c (index 2, reuses B0).
-// CHECK: "cv.upsample"
+// CHECK: cv.upsample
 // CHECK: cv.buffer_id = 0 : i64
 // CHECK: cv.buffer_offset = 0 : i64
 // CHECK: cv.lifetime_begin = 2 : i64
@@ -91,19 +91,19 @@
 // CHECK-SAME:  cv.memory_plan.reused_buffer_count = 1 : i64
 // CHECK-SAME:  cv.memory_plan.total_allocated_bytes = 64 : i64
 // Per-op: %a (index 0, B0, lifetime extended to 2 by fan-out consumer %c).
-// CHECK: "cv.conv2d"
+// CHECK: cv.conv2d
 // CHECK: cv.buffer_id = 0 : i64
 // CHECK: cv.buffer_offset = 0 : i64
 // CHECK: cv.lifetime_begin = 0 : i64
 // CHECK: cv.lifetime_end = 2 : i64
 // Per-op: %b (index 1, B1, freed at t=1).
-// CHECK: "cv.silu"
+// CHECK: cv.silu
 // CHECK: cv.buffer_id = 1 : i64
 // CHECK: cv.buffer_offset = 32 : i64
 // CHECK: cv.lifetime_begin = 1 : i64
 // CHECK: cv.lifetime_end = 1 : i64
 // Per-op: %c (index 2, reuses B1 from %b; reuse_group=1 proves sharing).
-// CHECK: "cv.upsample"
+// CHECK: cv.upsample
 // CHECK: cv.buffer_id = 1 : i64
 // CHECK: cv.buffer_offset = 32 : i64
 // CHECK: cv.lifetime_begin = 2 : i64
@@ -124,7 +124,7 @@
 // CHECK-SAME:  cv.memory_plan.skipped_ops = 1 : i64
 // CHECK-SAME:  cv.memory_plan.status = "completed"
 // CHECK-SAME:  cv.memory_plan.total_allocated_bytes = 32 : i64
-// CHECK: "cv.conv2d"
+// CHECK: cv.conv2d
 // CHECK: cv.buffer_id = 0 : i64
 // CHECK: cv.lifetime_begin = 0 : i64
 // CHECK: cv.lifetime_end = 0 : i64

@@ -14,7 +14,7 @@ func.func @main(
   %add = linalg.map
       ins(%mm, %bias : tensor<16x64xf32>, tensor<16x64xf32>)
       outs(%empty : tensor<16x64xf32>)
-      (%x: f32, %b: f32) {
+      (%x: f32, %b: f32, %out: f32) {
     %y = arith.addf %x, %b : f32
     linalg.yield %y : f32
   }
@@ -23,7 +23,7 @@ func.func @main(
   %relu = linalg.map
       ins(%add : tensor<16x64xf32>)
       outs(%empty : tensor<16x64xf32>)
-      (%x: f32) {
+      (%x: f32, %out: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }

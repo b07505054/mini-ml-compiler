@@ -1331,6 +1331,29 @@ void registerFusionPasses() {
         pm.addPass(createQuantizationPlanningPass());
       });
 
+  static PassPipelineRegistration<> quantCanonicalizationPipeline(
+      "hir-quant-canonicalize",
+      "Eliminate redundant HIR quantize/dequantize boundaries",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(
+            createHIRQuantCanonicalizationPass());
+      });
+
+  static PassPipelineRegistration<> quantPropagationPipeline(
+      "hir-quant-propagate",
+      "Annotate conservative INT8-capable islands",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createHIRQuantPropagationPass());
+      });
+
+  static PassPipelineRegistration<> int8OperatorSelectionPipeline(
+      "hir-int8-operator-selection",
+      "Select INT8 execution metadata using a small capability table",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(
+            createHIRINT8OperatorSelectionPass());
+      });
+
   // Registers kv-layout-planning, replay-eligibility, execution-provider-planning
   // standalone wrappers and serving-optimization-pipeline (four-pass).
   registerServingOptimizationPipeline();

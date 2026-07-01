@@ -118,6 +118,55 @@ Not currently claimed:
 - Final backend/kernel dispatch mapping for the CV plan.
 - PocketChef visualization of `cv_execution_plan.json`.
 
+### Quantization Compiler Pipeline Status
+
+The MLIR/HIR compiler path now includes a small, test-covered quantization
+pipeline:
+
+```text
+import / canonicalize
+  ->
+quantization-planning
+  ->
+hir-quant-propagate
+  ->
+hir-quant-canonicalize
+  ->
+fusion / lowering
+  ->
+layout legality boundary
+  ->
+hir-int8-operator-selection
+  ->
+verification / execution-plan export
+```
+
+Implemented:
+
+- Conservative INT8 island metadata propagation through INT8-candidate
+  MatMul, ReLU, and reshape/cast ops.
+- Safe Q/DQ and DQ/Q elimination when quantization metadata is identical.
+- A deterministic capability-table pass for INT8 selection metadata, with
+  fallback reasons for unsupported backend, illegal layout, illegal shape, or
+  profile metadata that does not favor INT8.
+- FileCheck coverage for positive and negative cases.
+
+Still not claimed:
+
+- Calibration or automatic quantization-parameter generation.
+- Full layout rewrite such as NCHW/NHWC conversion.
+- Runtime INT8 dispatch through the custom C++ graph executor.
+- Arbitrary graph-wide quantization propagation.
+
+Honest interview wording:
+
+> I implemented a real MLIR/HIR quantization compiler slice: quantization
+> planning, conservative INT8 island propagation, safe Q/DQ cleanup, and
+> capability-gated INT8 operator-selection metadata with negative tests. It is
+> still a compiler pipeline prototype: the runtime-facing artifacts can carry
+> INT8 decisions, but the custom C++ runtime does not yet execute a full INT8
+> graph.
+
 ### Legacy Toy CV Graph Pipeline
 
 The custom C++ graph runtime also includes a CV inference graph demo:

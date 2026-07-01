@@ -289,6 +289,57 @@ def QuantizationPlanning
   let constructor = "mlir::hir::createQuantizationPlanningPass()";
 }
 
+def HIRQuantCanonicalization
+    : Pass<"hir-quant-canonicalize", "mlir::func::FuncOp"> {
+  let summary = "Eliminate redundant HIR quantize/dequantize boundaries";
+  let description = [{
+    Performs conservative Q/DQ cleanup when adjacent HIR quantization ops carry
+    identical quantization metadata:
+
+      hir.dequantize(hir.quantize(x)) -> x
+      hir.quantize(hir.dequantize(x)) -> x
+
+    The rewrite requires matching scale, zero_point, quantized_dtype, and
+    quantization.mode attributes. Mismatched metadata leaves the boundary in
+    place.
+  }];
+  let constructor = "mlir::hir::createHIRQuantCanonicalizationPass()";
+}
+
+def HIRQuantPropagation
+    : Pass<"hir-quant-propagate", "mlir::func::FuncOp"> {
+  let summary = "Annotate conservative INT8-capable islands";
+  let description = [{
+    Forms metadata-only INT8 islands through a small safe op set:
+
+      linalg.matmul with quantization.candidate = "int8"
+      ReLU-shaped linalg.map
+      tensor reshape/cast ops
+
+    Unsupported ops are left unannotated and therefore break the island. The
+    pass does not reorder graph operations, insert Q/DQ ops, or claim runtime
+    dispatch.
+  }];
+  let constructor = "mlir::hir::createHIRQuantPropagationPass()";
+}
+
+def HIRINT8OperatorSelection
+    : Pass<"hir-int8-operator-selection", "mlir::func::FuncOp"> {
+  let summary = "Select INT8 execution metadata using a small capability table";
+  let description = [{
+    Uses a deterministic compiler capability table keyed by op, precision,
+    backend, layout, and simple shape legality. The pass annotates INT8-capable
+    ops with selection metadata only; it does not lower to runtime kernels.
+
+    INT8 is selected only when:
+      - the op is in a quantized island or explicitly marked as an INT8 candidate
+      - the backend capability table supports INT8 for the op
+      - layout and shape/alignment constraints are legal
+      - profile metadata is absent or says the INT8 path is faster
+  }];
+  let constructor = "mlir::hir::createHIRINT8OperatorSelectionPass()";
+}
+
 def LLMFrontendNormalization
     : Pass<"llm-frontend-normalization", "mlir::func::FuncOp"> {
   let summary = "Normalize simplified LLM attention graph patterns to canonical serving-aware IR";

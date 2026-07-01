@@ -127,6 +127,33 @@ run_filecheck \
   "HIR INT8 quant ops parse and verify" \
   "$REPO_ROOT/mlir_passes/test/hir_quant_ops.mlir"
 
+run_filecheck \
+  "HIR Q/DQ canonicalization eliminates safe redundant boundaries" \
+  "$REPO_ROOT/mlir_passes/test/hir_quant_canonicalize.mlir" \
+  --split-input-file \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-quant-canonicalize)'
+
+run_verify_diagnostics \
+  "HIR Q/DQ canonicalization rejects invalid quantized dtype before rewrite" \
+  "$REPO_ROOT/mlir_passes/test/hir_quant_canonicalize_invalid_dtype.mlir"
+
+run_filecheck \
+  "HIR quant propagation forms conservative INT8 islands" \
+  "$REPO_ROOT/mlir_passes/test/hir_quant_propagation.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-quant-propagate)'
+
+run_filecheck \
+  "HIR INT8 operator selection uses capability/layout/profile gates" \
+  "$REPO_ROOT/mlir_passes/test/hir_int8_operator_selection.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-quant-propagate,hir-int8-operator-selection)'
+
 run_verify_diagnostics \
   "HIR dialect verifier rejects invalid metadata" \
   "$REPO_ROOT/mlir_passes/test/hir_dialect_verifier_invalid.mlir"

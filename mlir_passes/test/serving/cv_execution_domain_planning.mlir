@@ -42,16 +42,16 @@
 // CHECK-SAME:  cv.execution_domain_plan.status = "completed"
 // CHECK-SAME:  cv.execution_domain_plan.truth_boundary = "static_execution_domain_classification_not_target_mapping"
 // Accelerated op: cv.conv2d -> domain="accelerated", reason="accelerated_tensor_policy"
-// CHECK: "cv.conv2d"
+// CHECK: cv.conv2d
 // CHECK: cv.execution_domain = "accelerated"
 // CHECK: cv.execution_domain.truth_boundary = "static_execution_domain_classification_not_target_mapping"
 // CHECK: cv.execution_domain_reason = "accelerated_tensor_policy"
 // Host op: cv.detect_head -> domain="host", reason="host_postprocess_policy"
-// CHECK: "cv.detect_head"
+// CHECK: cv.detect_head
 // CHECK: cv.execution_domain = "host"
 // CHECK: cv.execution_domain_reason = "host_postprocess_policy"
 // Fallback op: cv.custom_op -> domain="fallback", reason="fallback_unknown_cv_op"
-// CHECK: "cv.custom_op"
+// CHECK: cv.custom_op
 // CHECK: cv.execution_domain = "fallback"
 // CHECK: cv.execution_domain_reason = "fallback_unknown_cv_op"
 

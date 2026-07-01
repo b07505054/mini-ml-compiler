@@ -122,6 +122,39 @@ hir.fused_qmatmul_bias_relu
 hir.dequantize
 ```
 
+The quantization compiler pipeline now has three small graph-level passes:
+
+```text
+quantization-planning
+  -> hir-quant-propagate
+  -> hir-quant-canonicalize
+  -> fusion / lowering
+  -> hir-int8-operator-selection
+  -> verification / artifact export
+```
+
+Implemented behavior:
+
+- `hir-quant-propagate` forms metadata-only INT8-capable islands through
+  conservative ops: INT8-candidate `linalg.matmul`, ReLU-shaped `linalg.map`,
+  and tensor reshape/cast ops.
+- Unsupported ops are left unannotated and break INT8 island continuity.
+- `hir-quant-canonicalize` eliminates adjacent Q/DQ or DQ/Q pairs only when
+  `scale`, `zero_point`, `quantized_dtype`, and `quantization.mode` match.
+- `hir-int8-operator-selection` uses a deterministic capability table for
+  `matmul_bias_relu`, `matmul`, `relu`, and `reshape`, gated by backend,
+  layout, shape alignment, and optional profile metadata.
+- Illegal layout or unsupported backend records a fallback selection reason
+  instead of pretending INT8 dispatch is available.
+
+Not implemented:
+
+- Calibration-derived scale/zero-point generation.
+- A full layout optimizer or NCHW/NHWC rewrite pass.
+- Runtime execution of the selected INT8 operator metadata through the custom
+  C++ graph runtime.
+- General quantization propagation through arbitrary arithmetic.
+
 The quantized ops verify INT8 dtype metadata, scale, zero point, per-channel
 activation quantization metadata, and mobile accelerator layout constraints:
 

@@ -31,9 +31,9 @@
 // CHECK-SAME:  cv.frontend.truth_boundary = "raw_pseudo_cv_mlir_not_full_onnx_importer"
 // CHECK-SAME:  cv.frontend.upsample_count = 1 : i64
 // Body ops must be preserved (detect-and-annotate, no rewrite).
-// CHECK:       "cv.conv2d"
-// CHECK:       "cv.detect_head"
-// CHECK:       "cv.prototype_head"
+// CHECK:       cv.conv2d
+// CHECK:       cv.detect_head
+// CHECK:       cv.prototype_head
 
 // ---------------------------------------------------------------------------
 // Case 2: Backbone-only function — gate fails; no cv.frontend.* attrs emitted.
