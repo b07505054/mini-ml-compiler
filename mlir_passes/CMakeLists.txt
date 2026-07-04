@@ -62,6 +62,13 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ServingPipeline.cpp
   lib/serving/TargetConstraints.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/RepresentationPlanningPass.cpp
+  lib/serving/LayoutPlanningPass.cpp
+  lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/KernelAvailabilityPlanningPass.cpp
+  lib/serving/LoweringDecisionPlanningPass.cpp
+  lib/serving/CandidateGenerationPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
@@ -335,6 +342,13 @@ add_executable(compile-for-target
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/RepresentationPlanningPass.cpp
+  lib/serving/LayoutPlanningPass.cpp
+  lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/KernelAvailabilityPlanningPass.cpp
+  lib/serving/LoweringDecisionPlanningPass.cpp
+  lib/serving/CandidateGenerationPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingExecutionPlanExporter.cpp
   lib/serving/TargetConstraints.cpp
@@ -380,6 +394,46 @@ add_test(NAME CompileForTargetTest
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCompileForTargetTest.cmake
 )
 set_tests_properties(CompileForTargetTest PROPERTIES
+  DEPENDS compile-for-target
+)
+
+# ---------------------------------------------------------------------------
+# CTest: QuantStrategyExportTest
+# Verifies per_op_quantization_decisions appear in the exported JSON when
+# QuantizationStrategyPlanningPass has run (Commit H).
+# ---------------------------------------------------------------------------
+set(_QSE_OUT "${CMAKE_CURRENT_BINARY_DIR}/quant_strategy_plan.json")
+
+add_test(NAME QuantStrategyExportTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DMLIR=${REPO_ROOT}/mlir/quant_strategy_serving.mlir
+    -DOUT=${_QSE_OUT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQuantStrategyExportTest.cmake
+)
+set_tests_properties(QuantStrategyExportTest PROPERTIES
+  DEPENDS compile-for-target
+)
+
+# ---------------------------------------------------------------------------
+# CTest: LoweringDecisionExportTest
+# Verifies per_op_lowering_decisions appear in the exported JSON when
+# LoweringDecisionPlanningPass has run (Commit K).
+# Covers: direct_lower, rewrite_then_lower, fallback_backend, unsupported.
+# dequant_then_lower is covered by ServingExecutionPlanBuilderTest.
+# ---------------------------------------------------------------------------
+set(_LDE_OUT "${CMAKE_CURRENT_BINARY_DIR}/lowering_decision_plan.json")
+
+add_test(NAME LoweringDecisionExportTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/lowering_decision_export_test.json
+    -DMLIR=${REPO_ROOT}/mlir/lowering_decision_export_test.mlir
+    -DOUT=${_LDE_OUT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunLoweringDecisionExportTest.cmake
+)
+set_tests_properties(LoweringDecisionExportTest PROPERTIES
   DEPENDS compile-for-target
 )
 
@@ -598,3 +652,45 @@ if(MLIR_OPT_BIN)
     DEPENDS HIRMatMulBiasReluFusionPass
   )
 endif()
+
+# ---------------------------------------------------------------------------
+# CTest: TargetProfileValidationTest
+# Pure-Python: validates all 5 deployment-family profile JSON files.
+# Checks: JSON validity, required fields, no unknown cost fields, and
+# representative_devices metadata is present (ignored safely by the parser).
+# Does not require mlir-opt or the plugin.
+# ---------------------------------------------------------------------------
+find_program(PYTHON3_BIN
+  NAMES python3 python
+  DOC "Path to Python 3 (required for TargetProfileValidationTest)"
+)
+
+if(PYTHON3_BIN)
+  add_test(NAME TargetProfileValidationTest
+    COMMAND "${PYTHON3_BIN}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/test/serving/validate_target_profiles.py"
+  )
+endif()
+
+# ---------------------------------------------------------------------------
+# CTest: NvidiaProfileLoweringTest
+# Runs compile-for-target with nvidia_datacenter_gpu.json and verifies that
+# backendCapabilities are lowered to target.backend_capabilities.* attrs in
+# the annotated MLIR dump.  Also confirms unknown cost fields are absent.
+# ---------------------------------------------------------------------------
+set(_NVIDA_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/nvidia_profile_lowering")
+set(_NVIDIA_JSON    "${_NVIDA_INT_DIR}/nvidia_serving_plan.json")
+set(_NVIDIA_MLIR    "${_NVIDA_INT_DIR}/nvidia_annotated.mlir")
+
+add_test(NAME NvidiaProfileLoweringTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/nvidia_datacenter_gpu.json
+    -DMLIR=${REPO_ROOT}/mlir/tiny_gpt_serving.mlir
+    -DOUT=${_NVIDIA_JSON}
+    -DDUMP_MLIR=${_NVIDIA_MLIR}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunNvidiaProfileLoweringTest.cmake
+)
+set_tests_properties(NvidiaProfileLoweringTest PROPERTIES
+  DEPENDS compile-for-target
+)

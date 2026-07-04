@@ -1,0 +1,284 @@
+{
+  "profileId": "edge-npu-mobile",
+  "representative_devices": [
+    "Qualcomm QNN / Hexagon class",
+    "Arm Compute Library / Arm NN class",
+    "Generic edge NPU class"
+  ],
+  "configuredComputeUnits": "CUSTOM-NPU",
+  "staticShapeSupport": false,
+  "supportedPrecisions": [
+    "int8",
+    "fp16",
+    "fp32"
+  ],
+  "pagedKVCompatibleBackends": [],
+  "truthBoundary": "declared_deployment_family_profile_not_measured_silicon_performance",
+  "backendCapabilities": [
+    {
+      "backendName": "npu",
+      "backendApi": "qnn",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "relu",
+        "add",
+        "softmax",
+        "reshape"
+      ],
+      "supportedDtypes": [
+        "int8",
+        "uint8",
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "int32",
+        "fp16"
+      ],
+      "supportedQuantModes": [
+        "static_int8",
+        "dynamic_int8",
+        "int4_weight_only"
+      ],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "OHWI"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "reshape",
+        "softmax"
+      ],
+      "supportsLayoutTransform": false,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": true,
+      "supportsFusionPatterns": [
+        "conv_bias_relu"
+      ],
+      "allowedQuantGranularity": [
+        "per_tensor",
+        "per_channel"
+      ],
+      "requiredWeightQuantMode": "static_int8",
+      "maxSupportedRank": 4,
+      "requiresStaticShape": true,
+      "requiresConstantWeight": true,
+      "unsupportedOps": [
+        "gather",
+        "scatter",
+        "topk",
+        "sort"
+      ],
+      "fallbackBackend": "cpu",
+      "preferredDtypes": [
+        "int8",
+        "uint8"
+      ],
+      "acceptableDtypes": [
+        "fp16"
+      ],
+      "preferredFusionPatterns": [
+        "conv_bias_relu"
+      ],
+      "runtimeModelMemoryHierarchy": "tcm_plus_ddr",
+      "runtimeModelSourceLevel": "public_docs",
+      "runtimeModelTruthBoundary": "tcm_documented_in_hexagon_sdk_ddr_assumed_cache_details_not_public",
+      "costModelKind": "pending",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "npu_cost_model_not_yet_implemented_depends_on_hexagon_generation",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "dtype_from_qualcomm_qnn_sdk_docs_layout_from_nhwc_public_preference_cost_unknown",
+      "sourceNotes": {
+        "supportedDtypes": "Qualcomm AI Hub and QNN SDK documentation list INT8, UINT8, FP16 as primary inference precisions for Hexagon NPU. Source: developer.qualcomm.com",
+        "supportsLayoutTransform": "false: compiler does not insert layout transforms before NPU dispatch on this class of device. Layout must be pre-arranged or handled by the NPU SDK.",
+        "requiresStaticShape": "Hexagon NPU requires static tensor shapes for firmware compilation. Source: Qualcomm QNN SDK documentation.",
+        "unsupportedOps": "Partial list of ops not in standard Hexagon NPU firmware. Operator coverage varies by SDK version and device generation. CPU/GPU fallback expected.",
+        "runtimeModelMemoryHierarchy": "TCM (Tightly Coupled Memory) documented in Qualcomm Hexagon SDK. DDR is the external memory. Specific sizes not inventied.",
+        "hexagonNote": "Internal Hexagon ISA, DSP configuration, and exact SRAM layout are not publicly documented. Operator coverage is partial; CPU/GPU fallback is expected for unsupported ops.",
+        "costFields": "All cost fields absent. NPU throughput depends on Hexagon generation, quantization quality, operator coverage, and SDK version."
+      }
+    },
+    {
+      "backendName": "gpu",
+      "backendApi": "opencl",
+      "supportedOps": [
+        "conv2d",
+        "matmul",
+        "relu",
+        "add",
+        "softmax",
+        "reshape"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "OHWI"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "softmax",
+        "reshape"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "conv_bias_relu"
+      ],
+      "requiresStaticShape": false,
+      "requiresConstantWeight": false,
+      "fallbackBackend": "cpu",
+      "preferredDtypes": [
+        "fp16"
+      ],
+      "acceptableDtypes": [
+        "fp32"
+      ],
+      "runtimeModelMemoryHierarchy": "shared_unified_memory",
+      "runtimeModelSourceLevel": "declared_profile",
+      "runtimeModelTruthBoundary": "edge_gpu_memory_hierarchy_assumed_unified_details_not_public",
+      "costModelKind": "pending",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "cost_model_not_yet_implemented_depends_on_opencl_driver",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "edge_gpu_opencl_fallback_declared_profile_cost_unknown"
+    },
+    {
+      "backendName": "cpu",
+      "backendApi": "arm_compute",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16",
+        "int8",
+        "uint8"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "static_int8"
+      ],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "OHWI"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "conv_bias_relu",
+        "matmul_bias_relu"
+      ],
+      "requiresStaticShape": false,
+      "requiresConstantWeight": false,
+      "preferredDtypes": [
+        "fp16",
+        "int8"
+      ],
+      "acceptableDtypes": [
+        "fp32",
+        "uint8"
+      ],
+      "preferredFusionPatterns": [
+        "conv_bias_relu"
+      ],
+      "runtimeModelMemoryHierarchy": "l1_l2_cache_ddr",
+      "runtimeModelSourceLevel": "public_docs",
+      "runtimeModelTruthBoundary": "cache_hierarchy_qualitative_from_arm_cortex_docs_sizes_not_inventied",
+      "costModelKind": "roofline",
+      "costModelInputs": "m_n_k_batch_dtype",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "cost_model_not_yet_implemented_pending_measurement",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "dtype_from_arm_compute_library_docs_layout_nhwc_preference_documented_cost_unknown"
+    }
+  ],
+  "kernelLibraries": [
+    {
+      "opType": "conv2d",
+      "kernelName": "qnn_conv2d",
+      "backend": "npu",
+      "kernelLibrary": "qnn_sdk",
+      "supportedDtypes": [
+        "int8",
+        "int16"
+      ],
+      "supportedLayouts": [
+        "NHWC"
+      ],
+      "supportedQuantModes": [
+        "static_int8",
+        "dynamic_int8"
+      ],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": true,
+      "supportsFusion": true,
+      "fusionPatterns": [
+        "conv2d_relu"
+      ],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "cpu",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "qnn_declared_op_coverage_not_runtime_verified"
+    },
+    {
+      "opType": "matmul",
+      "kernelName": "qnn_matmul",
+      "backend": "npu",
+      "kernelLibrary": "qnn_sdk",
+      "supportedDtypes": [
+        "int8"
+      ],
+      "supportedLayouts": [],
+      "supportedQuantModes": [
+        "static_int8"
+      ],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": true,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [
+        "fp16_to_int8_quant"
+      ],
+      "fallbackKernel": "",
+      "fallbackBackend": "cpu",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "qnn_declared_op_coverage_not_runtime_verified"
+    }
+  ]
+}

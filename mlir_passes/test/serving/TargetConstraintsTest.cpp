@@ -319,6 +319,256 @@ static void testServingCostFields() {
   std::puts("  [PASS] testServingCostFields");
 }
 
+// ---------------------------------------------------------------------------
+// Case 7: BackendCapability — unknown cost and alignment fields are absent.
+//
+// This is the primary invariant: a cost value of std::nullopt must produce NO
+// attr in the MLIR module. The attr must be absent, not present with value 0.0.
+// 0.0 means the operation is free. Absent means we don't know what it costs.
+// ---------------------------------------------------------------------------
+static void testBackendCapabilityUnknownFieldsAbsent() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  auto m = parseModule("module {}", ctx);
+
+  mlir::hir::TargetConstraints tc;
+  mlir::hir::BackendCapability cap;
+  cap.backend_name     = "cpu";
+  cap.backend_api      = "arm_compute";
+  cap.supported_dtypes = {"fp32", "fp16"};
+  cap.source_level     = "public_docs";
+  cap.truth_boundary   = "test_boundary";
+  // All cost fields and alignment fields left as std::nullopt (unknown).
+  tc.backend_capabilities = {cap};
+  tc.attachToModule(m.get(), &ctx);
+
+  mlir::Operation *op = m->getOperation();
+
+  // Cost attrs must be ABSENT — not present at zero.
+  assert(!op->getAttr("target.backend_capabilities.cpu.layout_transform_cost_ms")
+         && "layout_transform_cost_ms: unknown must be absent, not 0.0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.cast_cost_ms")
+         && "cast_cost_ms: unknown must be absent, not 0.0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.quantize_cost_ms")
+         && "quantize_cost_ms: unknown must be absent, not 0.0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.dequantize_cost_ms")
+         && "dequantize_cost_ms: unknown must be absent, not 0.0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.requantize_cost_ms")
+         && "requantize_cost_ms: unknown must be absent, not 0.0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.backend_transfer_cost_ms")
+         && "backend_transfer_cost_ms: unknown must be absent, not 0.0");
+
+  // Alignment attrs must also be ABSENT when nullopt.
+  assert(!op->getAttr("target.backend_capabilities.cpu.required_k_alignment")
+         && "required_k_alignment: nullopt must be absent, not 0");
+  assert(!op->getAttr("target.backend_capabilities.cpu.required_n_alignment")
+         && "required_n_alignment: nullopt must be absent, not 0");
+
+  // Non-cost attrs that ARE always emitted must be present.
+  assert(op->getAttr("target.backend_capabilities.cpu.backend_api")
+         && "backend_api must be present");
+  assert(op->getAttr("target.backend_capabilities.cpu.supported_dtypes")
+         && "supported_dtypes must be present");
+  assert(op->getAttr("target.backend_capabilities.cpu.source_level")
+         && "source_level must be present");
+  assert(op->getAttr("target.backend_capabilities.cpu.truth_boundary")
+         && "truth_boundary must be present");
+
+  std::puts("  [PASS] testBackendCapabilityUnknownFieldsAbsent");
+}
+
+// ---------------------------------------------------------------------------
+// Case 8: BackendCapability — roundtrip for a fully populated entry.
+// ---------------------------------------------------------------------------
+static void testBackendCapabilityRoundtrip() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  auto m = parseModule("module {}", ctx);
+
+  mlir::hir::BackendCapability original;
+  original.backend_name                   = "tensor_core";
+  original.backend_api                    = "cuda";
+  original.supported_ops                  = {"matmul", "conv2d"};
+  original.supported_dtypes               = {"fp16", "bf16", "int8"};
+  original.accumulation_dtypes            = {"fp32"};
+  original.supported_quant_modes          = {"static_int8"};
+  original.preferred_activation_layouts   = {"NHWC"};
+  original.preferred_weight_layouts       = {"blocked_kc", "KN"};
+  original.layout_agnostic_ops            = {"relu", "add"};
+  original.supports_layout_transform      = true;
+  original.supports_cast                  = true;
+  original.supports_dequant_boundary      = true;
+  original.supports_requantize            = false;
+  original.supports_fusion_patterns       = {"matmul_bias_relu"};
+  original.required_k_alignment           = 16;
+  original.required_n_alignment           = 16;
+  original.source_level                   = "public_docs";
+  original.truth_boundary                 = "dtype_from_nvidia_whitepaper";
+  // Leave all cost fields as nullopt — unknown.
+
+  mlir::hir::TargetConstraints tc;
+  tc.backend_capabilities = {original};
+  tc.attachToModule(m.get(), &ctx);
+
+  mlir::hir::TargetConstraints recovered =
+      mlir::hir::TargetConstraints::fromModule(m.get());
+
+  assert(recovered.backend_capabilities.size() == 1
+         && "roundtrip: should recover 1 capability");
+  const auto &r = recovered.backend_capabilities[0];
+
+  assert(r.backend_name == "tensor_core"           && "roundtrip: backend_name");
+  assert(r.backend_api  == "cuda"                  && "roundtrip: backend_api");
+  assert(r.supported_ops.size() == 2               && "roundtrip: supported_ops size");
+  assert(r.supported_ops[0] == "matmul"            && "roundtrip: supported_ops[0]");
+  assert(r.supported_dtypes.size() == 3            && "roundtrip: supported_dtypes size");
+  assert(r.supported_dtypes[0] == "fp16"           && "roundtrip: supported_dtypes[0]");
+  assert(r.accumulation_dtypes.size() == 1         && "roundtrip: accumulation_dtypes");
+  assert(r.accumulation_dtypes[0] == "fp32"        && "roundtrip: accumulation_dtypes[0]");
+  assert(r.preferred_activation_layouts.size() == 1
+         && "roundtrip: preferred_activation_layouts size");
+  assert(r.preferred_activation_layouts[0] == "NHWC"
+         && "roundtrip: preferred_activation_layouts[0]");
+  assert(r.preferred_weight_layouts.size() == 2    && "roundtrip: preferred_weight_layouts size");
+  assert(r.layout_agnostic_ops.size() == 2         && "roundtrip: layout_agnostic_ops size");
+  assert(r.supports_layout_transform == true       && "roundtrip: supports_layout_transform");
+  assert(r.supports_cast == true                   && "roundtrip: supports_cast");
+  assert(r.supports_dequant_boundary == true       && "roundtrip: supports_dequant_boundary");
+  assert(r.supports_requantize == false            && "roundtrip: supports_requantize");
+  assert(r.supports_fusion_patterns.size() == 1   && "roundtrip: supports_fusion_patterns size");
+  assert(r.required_k_alignment.has_value()        && "roundtrip: required_k_alignment has value");
+  assert(*r.required_k_alignment == 16             && "roundtrip: required_k_alignment value");
+  assert(r.required_n_alignment.has_value()        && "roundtrip: required_n_alignment has value");
+  assert(*r.required_n_alignment == 16             && "roundtrip: required_n_alignment value");
+  assert(r.source_level == "public_docs"           && "roundtrip: source_level");
+  assert(r.truth_boundary == "dtype_from_nvidia_whitepaper" && "roundtrip: truth_boundary");
+
+  // All cost fields must come back as nullopt (were never set).
+  assert(!r.layout_transform_cost_ms.has_value()   && "roundtrip: layout_transform_cost_ms absent");
+  assert(!r.cast_cost_ms.has_value()               && "roundtrip: cast_cost_ms absent");
+  assert(!r.requantize_cost_ms.has_value()         && "roundtrip: requantize_cost_ms absent");
+  assert(!r.backend_transfer_cost_ms.has_value()   && "roundtrip: backend_transfer_cost_ms absent");
+
+  std::puts("  [PASS] testBackendCapabilityRoundtrip");
+}
+
+// ---------------------------------------------------------------------------
+// Case 9: BackendCapability — known cost fields roundtrip correctly.
+// Ensures setCostIfKnown does emit an attr when value is set.
+// ---------------------------------------------------------------------------
+static void testBackendCapabilityKnownCostRoundtrip() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  auto m = parseModule("module {}", ctx);
+
+  mlir::hir::BackendCapability cap;
+  cap.backend_name             = "custom_npu";
+  cap.backend_api              = "iree_hal";
+  cap.source_level             = "declared_profile";
+  cap.truth_boundary           = "test";
+  cap.layout_transform_cost_ms = 0.05;   // known, non-zero
+  cap.cast_cost_ms             = 0.0;    // known, explicitly free
+  cap.backend_transfer_cost_ms = 1.2;
+
+  mlir::hir::TargetConstraints tc;
+  tc.backend_capabilities = {cap};
+  tc.attachToModule(m.get(), &ctx);
+
+  mlir::hir::TargetConstraints recovered =
+      mlir::hir::TargetConstraints::fromModule(m.get());
+  assert(recovered.backend_capabilities.size() == 1 && "case 9: size");
+  const auto &r = recovered.backend_capabilities[0];
+
+  assert(r.layout_transform_cost_ms.has_value()         && "9: layout_transform_cost_ms present");
+  assert(*r.layout_transform_cost_ms == 0.05            && "9: layout_transform_cost_ms value");
+  assert(r.cast_cost_ms.has_value()                     && "9: cast_cost_ms present");
+  assert(*r.cast_cost_ms == 0.0                         && "9: cast_cost_ms is 0.0 (free, not unknown)");
+  assert(r.backend_transfer_cost_ms.has_value()         && "9: backend_transfer_cost_ms present");
+  assert(*r.backend_transfer_cost_ms == 1.2             && "9: backend_transfer_cost_ms value");
+  assert(!r.quantize_cost_ms.has_value()                && "9: quantize_cost_ms still absent");
+
+  std::puts("  [PASS] testBackendCapabilityKnownCostRoundtrip");
+}
+
+// ---------------------------------------------------------------------------
+// Case 10: BackendCapability — multiple backends roundtrip preserving order.
+// ---------------------------------------------------------------------------
+static void testBackendCapabilityMultipleBackends() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  auto m = parseModule("module {}", ctx);
+
+  mlir::hir::BackendCapability coreml;
+  coreml.backend_name    = "coreml";
+  coreml.backend_api     = "coreml";
+  coreml.supported_dtypes = {"fp16", "int8"};
+  coreml.preferred_activation_layouts = {"abstracted_by_coreml"};
+  coreml.source_level    = "public_docs";
+  coreml.truth_boundary  = "coreml_test";
+
+  mlir::hir::BackendCapability cpu;
+  cpu.backend_name       = "cpu";
+  cpu.backend_api        = "arm_compute";
+  cpu.supported_dtypes   = {"fp32", "fp16", "int8"};
+  cpu.preferred_activation_layouts = {"NHWC"};
+  cpu.required_k_alignment = 32;
+  cpu.source_level       = "public_docs";
+  cpu.truth_boundary     = "cpu_test";
+
+  mlir::hir::TargetConstraints tc;
+  tc.backend_capabilities = {coreml, cpu};
+  tc.attachToModule(m.get(), &ctx);
+
+  mlir::hir::TargetConstraints recovered =
+      mlir::hir::TargetConstraints::fromModule(m.get());
+
+  assert(recovered.backend_capabilities.size() == 2
+         && "10: should recover 2 backends");
+  assert(recovered.backend_capabilities[0].backend_name == "coreml"
+         && "10: first backend is coreml");
+  assert(recovered.backend_capabilities[0].preferred_activation_layouts[0]
+         == "abstracted_by_coreml"
+         && "10: coreml activation layout");
+  assert(!recovered.backend_capabilities[0].required_k_alignment.has_value()
+         && "10: coreml has no k_alignment");
+
+  assert(recovered.backend_capabilities[1].backend_name == "cpu"
+         && "10: second backend is cpu");
+  assert(recovered.backend_capabilities[1].required_k_alignment.has_value()
+         && "10: cpu has k_alignment");
+  assert(*recovered.backend_capabilities[1].required_k_alignment == 32
+         && "10: cpu k_alignment is 32");
+  assert(!recovered.backend_capabilities[1].required_n_alignment.has_value()
+         && "10: cpu has no n_alignment declared");
+
+  std::puts("  [PASS] testBackendCapabilityMultipleBackends");
+}
+
+// ---------------------------------------------------------------------------
+// Case 11: BackendCapability — profile without backendCapabilities field.
+// Module with no "target.backend_capability_names" attr must yield empty list.
+// Validates backward compatibility with pre-schema profiles.
+// ---------------------------------------------------------------------------
+static void testBackendCapabilityAbsentWhenNotDeclared() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+  auto m = parseModule(R"mlir(
+    module attributes {
+      target.profile_id = "apple-a17pro-mobile",
+      target.preferred_backend = "coreml"
+    } {}
+  )mlir", ctx);
+
+  mlir::hir::TargetConstraints tc =
+      mlir::hir::TargetConstraints::fromModule(m.get());
+
+  assert(tc.backend_capabilities.empty()
+         && "11: pre-schema profile must yield empty backend_capabilities");
+  assert(tc.profile_id == "apple-a17pro-mobile" && "11: other fields still read correctly");
+
+  std::puts("  [PASS] testBackendCapabilityAbsentWhenNotDeclared");
+}
+
 int main() {
   std::puts("TargetConstraintsTest:");
   testUnconstrained();
@@ -327,6 +577,11 @@ int main() {
   testRoundtrip();
   testPagedKVCompatibleBackends();
   testServingCostFields();
+  testBackendCapabilityUnknownFieldsAbsent();
+  testBackendCapabilityRoundtrip();
+  testBackendCapabilityKnownCostRoundtrip();
+  testBackendCapabilityMultipleBackends();
+  testBackendCapabilityAbsentWhenNotDeclared();
   std::puts("TargetConstraintsTest: PASS");
   return 0;
 }

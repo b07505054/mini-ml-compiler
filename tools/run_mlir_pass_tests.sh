@@ -438,6 +438,62 @@ run_filecheck \
   --pass-pipeline='builtin.module(serving-optimization-pipeline)'
 
 run_filecheck \
+  "representation-planning: effective dtype and layout from backend capability attrs" \
+  "$REPO_ROOT/mlir_passes/test/serving/representation_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(representation-planning-pipeline)'
+
+run_filecheck \
+  "layout-planning: layout propagation with agnostic ops and transform boundary detection" \
+  "$REPO_ROOT/mlir_passes/test/serving/layout_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(layout-planning-pipeline)'
+
+run_filecheck \
+  "boundary-planning: cast, layout transform, dequant, and unsupported boundary detection" \
+  "$REPO_ROOT/mlir_passes/test/serving/boundary_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(boundary-planning-pipeline)'
+
+run_filecheck \
+  "quantization-strategy: weight_only_int8, fp16 fallback, accuracy-sensitive, dequant boundary" \
+  "$REPO_ROOT/mlir_passes/test/serving/quantization_strategy.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantization-strategy-planning-pipeline)'
+
+run_filecheck \
+  "kernel-availability: exact match lowerable, fallback_required, rewrite_candidate, arm-style match, coreml no-ANE-internals" \
+  "$REPO_ROOT/mlir_passes/test/serving/kernel_availability.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(kernel-availability-planning-pipeline)'
+
+run_filecheck \
+  "lowering-decision: direct_lower, rewrite_then_lower, dequant_then_lower, fallback_backend, unsupported" \
+  "$REPO_ROOT/mlir_passes/test/serving/lowering_decision.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(lowering-decision-planning-pipeline)'
+
+run_filecheck \
+  "candidate-generation: dtype variants, layout variants, unsupported-op/static-shape/constant-weight constraint marking" \
+  "$REPO_ROOT/mlir_passes/test/serving/candidate_generation.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(candidate-generation-pipeline)'
+
+run_filecheck \
   "llm-frontend-normalization rewrites raw attention graph to canonical serving IR" \
   "$REPO_ROOT/mlir_passes/test/serving/llm_frontend_normalization.mlir" \
   --allow-unregistered-dialect \

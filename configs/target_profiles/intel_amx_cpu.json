@@ -1,0 +1,57 @@
+{
+  "profileId": "intel-amx-cpu",
+  "configuredComputeUnits": "AMX",
+  "staticShapeSupport": true,
+  "supportedPrecisions": ["fp32", "bf16", "int8"],
+  "pagedKVCompatibleBackends": [],
+  "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "backendCapabilities": [
+    {
+      "backendName": "amx",
+      "backendApi": "custom_runtime",
+      "supportedOps": ["matmul"],
+      "supportedDtypes": ["bf16", "int8"],
+      "accumulationDtypes": ["fp32"],
+      "supportedQuantModes": ["static_int8"],
+      "preferredActivationLayouts": ["NCHW"],
+      "preferredWeightLayouts": ["blocked_kc"],
+      "layoutAgnosticOps": [],
+      "supportsLayoutTransform": false,
+      "supportsCast": false,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": ["matmul_bias_relu"],
+      "requiredKAlignment": 32,
+      "requiredNAlignment": 16,
+      "sourceLevel": "public_docs",
+      "truthBoundary": "dtype_from_intel_amx_isa_extension_docs_alignment_from_tile_config_spec_cost_unknown",
+      "sourceNotes": {
+        "supportedDtypes": "Intel Architecture Instruction Set Extensions Programming Reference documents AMX-BF16 and AMX-INT8 as separate ISA extensions introduced with Sapphire Rapids. FP32 is not a supported AMX tile dtype; FP32 is produced as an accumulator result type only.",
+        "accumulationDtypes": "TDPBF16PS instruction accumulates BF16 tiles into FP32. TDPBSSD/TDPBSUD/TDPBUSD/TDPBUUD instructions accumulate INT8 tiles into INT32, which is then usable as FP32 via reinterpret or convert. Source: Intel ISA reference.",
+        "requiredKAlignment": "AMX tile configuration: INT8 VNNI packs 4 bytes per inner-product element across 8 columns, requiring K divisible by 32. Source: Intel AMX Programming Model documentation.",
+        "requiredNAlignment": "AMX tile dimensions require N divisible by 16 for BF16 and INT8. Source: Intel Architecture ISA Extensions reference.",
+        "supportedOps": "AMX TMUL unit accelerates matrix multiply only. All other ops fall back to the CPU SIMD path (see cpu fallback entry below).",
+        "layoutAgnosticOps": "Empty: AMX does not execute elementwise ops. Elementwise ops are handled by the cpu fallback backend.",
+        "costFields": "All cost fields absent. AMX throughput is tile-configuration- and problem-size-dependent. Not published as fixed values."
+      }
+    },
+    {
+      "backendName": "cpu",
+      "backendApi": "custom_runtime",
+      "supportedOps": ["relu", "add", "softmax", "reshape", "gather", "gelu", "layernorm", "rmsnorm"],
+      "supportedDtypes": ["fp32", "fp16", "bf16"],
+      "accumulationDtypes": ["fp32"],
+      "supportedQuantModes": [],
+      "preferredActivationLayouts": ["NCHW"],
+      "preferredWeightLayouts": ["OIHW"],
+      "layoutAgnosticOps": ["relu", "add", "softmax", "reshape", "gather", "gelu", "layernorm", "rmsnorm"],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "cpu_simd_fallback_declared_for_non_matmul_ops_not_benchmarked"
+    }
+  ]
+}

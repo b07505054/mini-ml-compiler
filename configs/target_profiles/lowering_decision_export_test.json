@@ -1,0 +1,111 @@
+{
+  "profileId": "lowering-decision-export-test",
+  "representative_devices": [
+    "Synthetic single-backend CPU profile for LoweringDecisionPlanningPass export tests"
+  ],
+  "configuredComputeUnits": "CPU",
+  "staticShapeSupport": true,
+  "supportedPrecisions": ["fp32", "fp16", "int8"],
+  "pagedKVCompatibleBackends": ["cpu"],
+  "truthBoundary": "test_profile_not_production_lowering_decision_export",
+  "backendCapabilities": [
+    {
+      "backendName": "cpu",
+      "backendApi": "test_cpu",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "softmax",
+        "gelu",
+        "rms_norm"
+      ],
+      "supportedDtypes": ["fp32", "fp16", "int8"],
+      "accumulationDtypes": ["fp32"],
+      "supportedQuantModes": ["weight_only", "static_int8"],
+      "preferredActivationLayouts": [],
+      "preferredWeightLayouts": [],
+      "layoutAgnosticOps": ["matmul", "softmax", "gelu", "rms_norm"],
+      "supportsLayoutTransform": false,
+      "supportsCast": false,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [],
+      "allowedQuantGranularity": ["per_channel"],
+      "requiredWeightQuantMode": "weight_only_int8",
+      "maxSupportedRank": 4,
+      "requiresStaticShape": false,
+      "requiresConstantWeight": false,
+      "unsupportedOps": [],
+      "fallbackBackend": "cpu",
+      "preferredDtypes": ["fp16"],
+      "acceptableDtypes": ["fp32"],
+      "runtimeModelMemoryHierarchy": "l1_l2_cache_ddr",
+      "runtimeModelSourceLevel": "declared_profile",
+      "runtimeModelTruthBoundary": "test_profile_not_production",
+      "costModelKind": "pending",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "test_profile_not_production",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "test_profile_not_production_lowering_decision_export",
+      "sourceNotes": {
+        "purpose": "Synthetic profile engineered for LoweringDecisionPlanningPass export CTest. Not representative of any real hardware."
+      }
+    }
+  ],
+  "kernelLibraries": [
+    {
+      "opType": "matmul",
+      "kernelName": "test_cpu_matmul_fp16",
+      "backend": "cpu",
+      "kernelLibrary": "test_cpu_lib",
+      "supportedDtypes": ["fp16"],
+      "supportedLayouts": [],
+      "supportedQuantModes": [],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "kernel_availability_static_library_model_not_runtime_verified"
+    },
+    {
+      "opType": "conv2d",
+      "kernelName": "test_cpu_conv2d_fp32",
+      "backend": "cpu",
+      "kernelLibrary": "test_cpu_lib",
+      "supportedDtypes": ["fp32"],
+      "supportedLayouts": [],
+      "supportedQuantModes": [],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": ["fp16_to_fp32_cast"],
+      "fallbackKernel": "",
+      "fallbackBackend": "",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "kernel_availability_static_library_model_not_runtime_verified"
+    },
+    {
+      "opType": "softmax",
+      "kernelName": "test_cpu_softmax_fp32",
+      "backend": "cpu",
+      "kernelLibrary": "test_cpu_lib",
+      "supportedDtypes": ["fp32"],
+      "supportedLayouts": [],
+      "supportedQuantModes": [],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "cpu_ref",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "kernel_availability_static_library_model_not_runtime_verified"
+    }
+  ]
+}

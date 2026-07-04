@@ -157,17 +157,69 @@ static llvm::json::Object buildFunctionPlanObject(
   for (const auto &p : fp.source_passes)
     passes.push_back(p);
 
+  // per_op_quantization_decisions: export quant.* attrs collected by the builder.
+  // Empty array when QuantizationStrategyPlanningPass did not run.
+  llvm::json::Array opQuantDecisions;
+  for (const auto &d : fp.per_op_quant_decisions) {
+    llvm::json::Object entry;
+    entry["op_name"]                  = d.op_name;
+    entry["op_type"]                  = d.op_type;
+    entry["backend"]                  = d.backend;
+    entry["strategy"]                 = d.strategy;
+    entry["weight_dtype"]             = d.weight_dtype;
+    entry["activation_dtype"]         = d.activation_dtype;
+    entry["accumulation_dtype"]       = d.accumulation_dtype;
+    entry["output_dtype"]             = d.output_dtype;
+    entry["granularity"]              = d.granularity;
+    entry["activation_quant_mode"]    = d.activation_quant_mode;
+    entry["weight_quant_mode"]        = d.weight_quant_mode;
+    entry["requires_dequant_boundary"] = d.requires_dequant_boundary;
+    entry["requires_requant_boundary"] = d.requires_requant_boundary;
+    entry["decision_reason"]          = d.decision_reason;
+    entry["fallback_reason"]          = d.fallback_reason;
+    entry["accuracy_risk"]            = d.accuracy_risk;
+    entry["truth_boundary"]           = d.truth_boundary;
+    opQuantDecisions.push_back(std::move(entry));
+  }
+
+  // per_op_lowering_decisions: export lowering.* and kernel.* provenance fields.
+  // Empty array when LoweringDecisionPlanningPass did not run.
+  llvm::json::Array opLoweringDecisions;
+  for (const auto &d : fp.per_op_lowering_decisions) {
+    llvm::json::Object entry;
+    entry["op_name"]                = d.op_name;
+    entry["op_type"]                = d.op_type;
+    entry["backend"]                = d.backend;
+    entry["kernel_library"]         = d.kernel_library;
+    entry["kernel_name"]            = d.kernel_name;
+    entry["kernel_exists"]          = d.kernel_exists;
+    entry["kernel_lowering_status"] = d.kernel_lowering_status;
+    entry["lowering_decision"]      = d.lowering_decision;
+    entry["target_backend"]         = d.target_backend;
+    entry["target_kernel_library"]  = d.target_kernel_library;
+    entry["target_kernel"]          = d.target_kernel;
+    entry["required_rewrite"]       = d.required_rewrite;
+    entry["requires_dequant"]       = d.requires_dequant;
+    entry["requires_layout_transform"] = d.requires_layout_transform;
+    entry["requires_cast"]          = d.requires_cast;
+    entry["reason"]                 = d.reason;
+    entry["truth_boundary"]         = d.truth_boundary;
+    opLoweringDecisions.push_back(std::move(entry));
+  }
+
   llvm::json::Object obj;
-  obj["function_name"]          = fp.function_name;
-  obj["serving_phase"]          = toString(fp.serving_phase);
-  obj["execution_mode"]         = toString(fp.execution_mode);
-  obj["cost_summary"]           = std::move(cost);
-  obj["kv_plan"]                = std::move(kv);
-  obj["replay_plan"]            = std::move(replay);
-  obj["quantization_plan"]      = std::move(qplan);
-  obj["backend_execution_plan"] = std::move(bep);
-  obj["provenance"]             = std::move(prov);
-  obj["source_passes"]          = std::move(passes);
+  obj["function_name"]                 = fp.function_name;
+  obj["serving_phase"]                 = toString(fp.serving_phase);
+  obj["execution_mode"]                = toString(fp.execution_mode);
+  obj["cost_summary"]                  = std::move(cost);
+  obj["kv_plan"]                       = std::move(kv);
+  obj["replay_plan"]                   = std::move(replay);
+  obj["quantization_plan"]             = std::move(qplan);
+  obj["backend_execution_plan"]        = std::move(bep);
+  obj["per_op_quantization_decisions"] = std::move(opQuantDecisions);
+  obj["per_op_lowering_decisions"]     = std::move(opLoweringDecisions);
+  obj["provenance"]                    = std::move(prov);
+  obj["source_passes"]                 = std::move(passes);
 
   return obj;
 }

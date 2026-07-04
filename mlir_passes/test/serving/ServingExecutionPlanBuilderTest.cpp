@@ -141,6 +141,125 @@ module attributes {
 }
 )mlir";
 
+// ---------------------------------------------------------------------------
+// Module 5: pre-annotated lowering decisions covering all 5 decision values.
+//
+// Does NOT run any pipeline passes. serving.policy pre-annotated so the
+// builder includes the function. lowering.* and kernel.* attrs pre-annotated
+// to cover all 5 LoweringDecisionPlanningPass outcomes:
+//   op_0  direct_lower
+//   op_1  rewrite_then_lower
+//   op_2  dequant_then_lower   (unreachable through compile-for-target due to
+//                               weight_only_int8 fp16-activation invariant)
+//   op_3  fallback_backend
+//   op_4  unsupported
+// ---------------------------------------------------------------------------
+static const char kLoweringDecisionModule[] = R"mlir(
+module attributes {
+  llm.model = "lowering-decision-builder-test",
+  llm.num_layers = 1 : i64,
+  llm.hidden_size = 64 : i64
+} {
+  func.func @prefill(%x: tensor<1x64xf16>) -> tensor<1x64xf16>
+    attributes {
+      serving.policy = "colocated",
+      serving.phase  = "prefill"
+    } {
+    %a = "hir.matmul"(%x, %x) {
+      kernel.backend         = "cpu",
+      kernel.exists          = true,
+      kernel.fallback_backend = "cpu_simd",
+      kernel.library         = "cpu_blas",
+      kernel.lowering_status = "lowerable",
+      kernel.name            = "cpu_matmul_fp16",
+      lowering.decision      = "direct_lower",
+      lowering.reason        = "kernel_available_for_op_dtype_layout",
+      lowering.required_rewrite = "",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = false,
+      lowering.requires_layout_transform = false,
+      lowering.target_backend = "cpu",
+      lowering.target_kernel  = "cpu_matmul_fp16",
+      lowering.target_kernel_library = "cpu_blas",
+      lowering.truth_boundary = "lowering_decision_export_static_not_backend_codegen_verified"
+    } : (tensor<1x64xf16>, tensor<1x64xf16>) -> tensor<1x64xf16>
+    %b = "hir.conv2d"(%a, %a) {
+      kernel.backend         = "cpu",
+      kernel.exists          = false,
+      kernel.fallback_backend = "",
+      kernel.library         = "cpu_blas",
+      kernel.lowering_status = "rewrite_candidate",
+      kernel.name            = "cpu_conv2d_fp32",
+      lowering.decision      = "rewrite_then_lower",
+      lowering.reason        = "rewrite_then_lower_via_fp16_to_fp32_cast",
+      lowering.required_rewrite = "fp16_to_fp32_cast",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = false,
+      lowering.requires_layout_transform = false,
+      lowering.target_backend = "cpu",
+      lowering.target_kernel  = "cpu_conv2d_fp32",
+      lowering.target_kernel_library = "cpu_blas",
+      lowering.truth_boundary = "lowering_decision_export_static_not_backend_codegen_verified"
+    } : (tensor<1x64xf16>, tensor<1x64xf16>) -> tensor<1x64xf16>
+    %c = "hir.softmax"(%b) {
+      kernel.backend         = "cpu",
+      kernel.exists          = false,
+      kernel.fallback_backend = "cpu_ref",
+      kernel.library         = "",
+      kernel.lowering_status = "fallback_required",
+      kernel.name            = "",
+      lowering.decision      = "dequant_then_lower",
+      lowering.reason        = "dequant_required_before_fallback_to_cpu_ref",
+      lowering.required_rewrite = "",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = true,
+      lowering.requires_layout_transform = false,
+      lowering.target_backend = "cpu_ref",
+      lowering.target_kernel  = "",
+      lowering.target_kernel_library = "",
+      lowering.truth_boundary = "lowering_decision_export_static_not_backend_codegen_verified"
+    } : (tensor<1x64xf16>) -> tensor<1x64xf16>
+    %d = "hir.gelu"(%c) {
+      kernel.backend         = "cpu",
+      kernel.exists          = false,
+      kernel.fallback_backend = "cpu_ref",
+      kernel.library         = "",
+      kernel.lowering_status = "fallback_required",
+      kernel.name            = "",
+      lowering.decision      = "fallback_backend",
+      lowering.reason        = "fallback_to_cpu_ref",
+      lowering.required_rewrite = "",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = false,
+      lowering.requires_layout_transform = false,
+      lowering.target_backend = "cpu_ref",
+      lowering.target_kernel  = "",
+      lowering.target_kernel_library = "",
+      lowering.truth_boundary = "lowering_decision_export_static_not_backend_codegen_verified"
+    } : (tensor<1x64xf16>) -> tensor<1x64xf16>
+    %e = "hir.rms_norm"(%d) {
+      kernel.backend         = "cpu",
+      kernel.exists          = false,
+      kernel.fallback_backend = "",
+      kernel.library         = "",
+      kernel.lowering_status = "unsupported",
+      kernel.name            = "",
+      lowering.decision      = "unsupported",
+      lowering.reason        = "no_kernel_no_rewrite_no_fallback",
+      lowering.required_rewrite = "",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = false,
+      lowering.requires_layout_transform = false,
+      lowering.target_backend = "cpu",
+      lowering.target_kernel  = "",
+      lowering.target_kernel_library = "",
+      lowering.truth_boundary = "lowering_decision_export_static_not_backend_codegen_verified"
+    } : (tensor<1x64xf16>) -> tensor<1x64xf16>
+    return %e : tensor<1x64xf16>
+  }
+}
+)mlir";
+
 static mlir::OwningOpRef<mlir::ModuleOp>
 runFourPassPipeline(const char *src, mlir::MLIRContext &ctx) {
   auto module = mlir::parseSourceString<mlir::ModuleOp>(src, &ctx);
@@ -378,6 +497,72 @@ int main() {
          && "truth_boundary mismatch");
 
   std::puts("  [PASS] profile-driven cost model (target_profile_formula_estimate)");
+
+  // -----------------------------------------------------------------------
+  // Module 5: per_op_lowering_decisions — all 5 decision values.
+  // No passes run; lowering.* and kernel.* attrs are pre-annotated.
+  // Covers dequant_then_lower which is unreachable through compile-for-target.
+  // -----------------------------------------------------------------------
+  auto module5 =
+      mlir::parseSourceString<mlir::ModuleOp>(kLoweringDecisionModule, &ctx);
+  assert(module5 && "MLIR parse failed for lowering-decision module");
+
+  mlir::hir::ServingExecutionPlan plan5 =
+      mlir::hir::ServingExecutionPlanBuilder::build(module5.get());
+
+  assert(plan5.function_plans.size() == 1 && "expected 1 function plan");
+  const mlir::hir::FunctionExecutionPlan &fp5 = plan5.function_plans[0];
+
+  assert(fp5.function_name == "prefill" && "function_name mismatch");
+  assert(fp5.per_op_lowering_decisions.size() == 5
+         && "expected 5 per_op_lowering_decisions");
+
+  const auto &ld = fp5.per_op_lowering_decisions;
+
+  // op_0: direct_lower (hir.matmul)
+  assert(ld[0].op_type           == "hir.matmul"      && "op_0 op_type mismatch");
+  assert(ld[0].lowering_decision == "direct_lower"    && "op_0 decision mismatch");
+  assert(ld[0].kernel_exists     == true              && "op_0 kernel_exists mismatch");
+  assert(ld[0].target_backend    == "cpu"             && "op_0 target_backend mismatch");
+  assert(ld[0].target_kernel     == "cpu_matmul_fp16" && "op_0 target_kernel mismatch");
+  assert(ld[0].requires_dequant  == false             && "op_0 requires_dequant mismatch");
+
+  // op_1: rewrite_then_lower (hir.conv2d)
+  assert(ld[1].op_type           == "hir.conv2d"         && "op_1 op_type mismatch");
+  assert(ld[1].lowering_decision == "rewrite_then_lower" && "op_1 decision mismatch");
+  assert(ld[1].required_rewrite  == "fp16_to_fp32_cast"  && "op_1 required_rewrite mismatch");
+  assert(ld[1].kernel_exists     == false                && "op_1 kernel_exists mismatch");
+
+  // op_2: dequant_then_lower (hir.softmax)
+  assert(ld[2].op_type           == "hir.softmax"         && "op_2 op_type mismatch");
+  assert(ld[2].lowering_decision == "dequant_then_lower"  && "op_2 decision mismatch");
+  assert(ld[2].requires_dequant  == true                  && "op_2 requires_dequant mismatch");
+  assert(ld[2].target_backend    == "cpu_ref"             && "op_2 target_backend mismatch");
+
+  // op_3: fallback_backend (hir.gelu)
+  assert(ld[3].op_type           == "hir.gelu"         && "op_3 op_type mismatch");
+  assert(ld[3].lowering_decision == "fallback_backend" && "op_3 decision mismatch");
+  assert(ld[3].requires_dequant  == false              && "op_3 requires_dequant mismatch");
+  assert(ld[3].target_backend    == "cpu_ref"          && "op_3 target_backend mismatch");
+
+  // op_4: unsupported (hir.rms_norm)
+  assert(ld[4].op_type           == "hir.rms_norm" && "op_4 op_type mismatch");
+  assert(ld[4].lowering_decision == "unsupported"  && "op_4 decision mismatch");
+  assert(ld[4].target_kernel.empty()               && "op_4 target_kernel should be empty");
+
+  // Truth boundary propagated to all entries.
+  for (const auto &entry : ld)
+    assert(entry.truth_boundary ==
+               "lowering_decision_export_static_not_backend_codegen_verified"
+           && "truth_boundary mismatch");
+
+  // Pass tracked in source_passes.
+  bool hasLoweringPass = false;
+  for (const auto &p : fp5.source_passes)
+    if (p == "lowering-decision-planning") { hasLoweringPass = true; break; }
+  assert(hasLoweringPass && "source_passes should include lowering-decision-planning");
+
+  std::puts("  [PASS] per_op_lowering_decisions (all 5 decision values incl. dequant_then_lower)");
   std::puts("ServingExecutionPlanBuilderTest: PASS");
   return 0;
 }

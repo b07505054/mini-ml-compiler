@@ -246,6 +246,308 @@ def ExecutionProviderPlanning
   let constructor = "mlir::hir::createExecutionProviderPlanningPass()";
 }
 
+def RepresentationPlanning
+    : Pass<"representation-planning", "mlir::func::FuncOp"> {
+  let summary = "Planning-only: annotate func with effective dtype and layout from backend capabilities";
+  let description = [{
+    Consumes execution_provider.primary (from ExecutionProviderPlanningPass),
+    quantization.plan_dtype (module-level), and
+    target.backend_capabilities.{backend}.* module attrs to emit
+    planning-only representation metadata on each func.func:
+
+      representation.effective_dtype             -- dtype to use for this func
+      representation.effective_dtype_source      -- "target_profile", "fallback_first_supported", etc.
+      representation.preferred_activation_layout -- preferred_activation_layouts[0] or "unknown"
+      representation.preferred_weight_layout     -- preferred_weight_layouts[0] or "unknown"
+      representation.source_backend              -- backend name from execution_provider.primary
+      representation.truth_boundary              -- always "representation_plan_static_not_validated_against_kernel_performance"
+
+    When the plan dtype is not supported by the backend, also emits:
+      representation.conflict_reason             -- "backend_lacks_plan_dtype" or "backend_capability_missing"
+      representation.conflict_fallback_dtype     -- the dtype chosen instead (dtype-conflict path only)
+
+    Decision rules (in priority order):
+      1. execution_provider.primary absent -> skip this func (no annotation).
+      2. Backend not in target.backend_capability_names ->
+           effective_dtype = quantization.plan_dtype (or "fp16"), layouts = "unknown",
+           conflict_reason = "backend_capability_missing".
+      3. plan_dtype in supported_dtypes ->
+           effective_dtype = plan_dtype, source = "target_profile".
+      4. plan_dtype not in supported_dtypes ->
+           effective_dtype = supported_dtypes[0], source = "fallback_first_supported",
+           conflict_reason = "backend_lacks_plan_dtype".
+
+    This pass does NOT insert cast, dequant, layout_transform, or any ops.
+    It is annotation-only and must run after ExecutionProviderPlanningPass.
+
+    Truth boundary: representation_plan_static_not_validated_against_kernel_performance.
+
+    Intended to run after ExecutionProviderPlanningPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createRepresentationPlanningPass()";
+}
+
+def LayoutPlanning
+    : Pass<"layout-planning", "mlir::func::FuncOp"> {
+  let summary = "Planning-only: annotate ops with layout assignment from backend capabilities";
+  let description = [{
+    Reads representation.preferred_activation_layout and representation.source_backend
+    from func.func (set by RepresentationPlanningPass), and
+    target.backend_capabilities.{backend}.layout_agnostic_ops from the module,
+    to emit planning-only layout metadata on each non-terminator op in the
+    function body entry block.
+
+    Emitted per non-terminator op:
+      layout.required_input_layout  -- layout this op requires its activation inputs to be in
+      layout.effective_layout       -- layout of this op's activation output
+      layout.layout_source          -- "backend_preference" or "layout_agnostic_propagation"
+      layout.transform_required     -- true only at the first layout-changing boundary
+      layout.truth_boundary         -- always "layout_planning_static_cost_model_not_measured_kernel_performance"
+
+    Layout propagation rules (applied in entry-block op order):
+      1. Start with layout.initial_layout from func (default "NCHW").
+      2. For each non-terminator op:
+         - Extract short op name (everything after the last '.').
+         - If short name is in layout_agnostic_ops:
+             effective_layout = current_layout, transform_required = false,
+             layout_source = "layout_agnostic_propagation"
+         - Otherwise:
+             effective_layout = preferred_activation_layout, transform_required = (current_layout != effective_layout),
+             layout_source = "backend_preference"
+         - current_layout = effective_layout after each op.
+
+    Also reads representation.preferred_weight_layout (available for future extension;
+    weight layout planning is out of scope for this pass).
+
+    This pass does NOT insert hir.layout_transform ops or modify the graph.
+    It is annotation-only and must run after RepresentationPlanningPass.
+    Only the entry block is processed; multi-block functions are not yet supported.
+
+    Truth boundary: layout_planning_static_cost_model_not_measured_kernel_performance.
+
+    Intended to run after RepresentationPlanningPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createLayoutPlanningPass()";
+}
+
+def QuantizationStrategyPlanning
+    : Pass<"quantization-strategy-planning", "mlir::func::FuncOp"> {
+  let summary = "Per-op quantization strategy annotation for the HIR serving pipeline";
+  let description = [{
+    Reads target.backend_capabilities.{backend}.*, representation.*, boundary.*,
+    quantization.plan_dtype (module-level), and op type/shape/constant-weight
+    information. For each quantizable or accuracy-sensitive op in the entry block,
+    emits planning-only quant.* strategy metadata.
+
+    Quantizable ops: matmul, conv, linear, dense, gemm, dot, fc families.
+    Accuracy-sensitive ops: softmax, norm, rmsnorm, layernorm, batchnorm,
+    groupnorm, embedding — always fall back to fp16 with accuracy_risk="medium".
+
+    Strategy selection (first matching rule wins):
+      1. Accuracy-sensitive op         -> fp16_fallback, fallback_reason=accuracy_sensitive_op
+      2. weights_are_constant=false    -> fp16_fallback, fallback_reason=requires_constant_weight
+      3. Backend supports int8 weight  -> weight_only_int8
+           weight_dtype=int8, activation_dtype=fp16 (Rule 1: prefer weight-only)
+           accumulation_dtype from backend accumulation_dtypes or fp32 (Rule 4)
+      4. Backend lacks all int8        -> fp16_fallback, fallback_reason=backend_lacks_activation_int8
+
+    Rule 6: op result type is quantized and func effective_dtype is float
+            -> requires_dequant_boundary=true.
+    Rule 7: requires_requant_boundary not yet detectable statically -> always false.
+
+    Emitted per quantizable/accuracy-sensitive op:
+      quant.strategy, quant.weight_dtype, quant.activation_dtype,
+      quant.accumulation_dtype, quant.output_dtype, quant.granularity,
+      quant.activation_quant_mode, quant.weight_quant_mode,
+      quant.requires_dequant_boundary, quant.requires_requant_boundary,
+      quant.backend, quant.decision_reason, quant.fallback_reason,
+      quant.accuracy_risk, quant.truth_boundary
+
+    This pass does NOT insert hir.quantize/dequantize/requantize ops.
+    No calibration data is used or generated.
+    Absent calibration -> accuracy_risk="unknown" for quantized, "medium" for
+    accuracy-sensitive, "low" for fp16 fallback.
+
+    Truth boundary: quantization_strategy_static_not_accuracy_calibrated.
+    Must run after RepresentationPlanningPass and BoundaryPlanningPass.
+  }];
+  let constructor = "mlir::hir::createQuantizationStrategyPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def KernelAvailabilityPlanning
+    : Pass<"kernel-availability-planning", "mlir::func::FuncOp"> {
+  let summary = "Per-op kernel availability annotation from the KernelLibraryCapability schema";
+  let description = [{
+    Reads target.kernel_libraries.{backend} (ArrayAttr of DictionaryAttr) from
+    the module, and quant.*, layout.*, representation.* attrs from the func and
+    ops. For each non-terminator op in the entry block, matches against the
+    declared kernel library and emits:
+
+      kernel.backend             -- backend used for matching
+      kernel.decision_reason     -- match outcome tag
+      kernel.exists              -- true if an exact kernel was found
+      kernel.fallback_backend    -- declared fallback backend (may be empty)
+      kernel.library             -- kernel_library name (empty if no exact match)
+      kernel.lowering_status     -- lowerable | rewrite_candidate | fallback_required | unsupported
+      kernel.name                -- kernel_name (empty if no exact match)
+      kernel.required_rewrite    -- rewrite pattern name (empty if not rewrite_candidate)
+      kernel.truth_boundary      -- from matched entry or kTruth constant
+
+    Matching rules (first match wins):
+      1. Exact match: op_type + dtype + layout + quant_mode all match (or list empty)
+         -> lowerable.
+      2. Op type found, no exact match, rewrite_patterns non-empty
+         -> rewrite_candidate.
+      3. Op type found, no exact match, fallback_backend declared
+         -> fallback_required.
+      4. Op type found, no exact match, no rewrite or fallback
+         -> unsupported.
+      5. Op type not found in kernel library at all
+         -> unsupported.
+
+    This pass does NOT rewrite IR, lower code, or insert any ops.
+    Ops without a kernel entry are annotated as unsupported.
+    Ops in modules with no target.kernel_libraries.{backend} are skipped.
+
+    Truth boundary: kernel_availability_static_library_model_not_runtime_verified.
+    Must run after RepresentationPlanningPass, LayoutPlanningPass, and
+    QuantizationStrategyPlanningPass.
+  }];
+  let constructor = "mlir::hir::createKernelAvailabilityPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def LoweringDecisionPlanning
+    : Pass<"lowering-decision-planning", "mlir::func::FuncOp"> {
+  let summary = "Per-op final lowering decision from kernel.* and boundary.* attrs";
+  let description = [{
+    Consumes kernel.* attrs (from KernelAvailabilityPlanningPass) and
+    boundary.* attrs (from BoundaryPlanningPass) to produce the final
+    per-op lowering decision. Reads but does not modify kernel.* or boundary.*
+    attrs. Does not rewrite IR, insert ops, or lower code.
+
+    Inputs per op:
+      kernel.lowering_status  -- lowerable | rewrite_candidate | fallback_required | unsupported
+      kernel.required_rewrite -- rewrite pattern name (if rewrite_candidate)
+      kernel.fallback_backend -- declared fallback backend (if fallback_required)
+      kernel.library          -- kernel library name
+      kernel.name             -- kernel name
+      kernel.backend          -- primary backend
+      boundary.dequant_required         -- true when dequant boundary is needed
+      boundary.cast_required            -- true when precision cast is needed
+      boundary.layout_transform_required -- true when layout transform is needed
+
+    Decision rules (first matching rule wins):
+      1. kernel.lowering_status = lowerable
+         -> lowering.decision = direct_lower
+      2. kernel.lowering_status = rewrite_candidate
+         -> lowering.decision = rewrite_then_lower
+      3. kernel.lowering_status = fallback_required AND boundary.dequant_required = true
+         -> lowering.decision = dequant_then_lower
+      4. kernel.lowering_status = fallback_required AND kernel.fallback_backend non-empty
+         -> lowering.decision = fallback_backend
+      5. No match (unsupported or absent kernel status)
+         -> lowering.decision = unsupported
+
+    Emitted per non-terminator op (only when kernel.lowering_status is present):
+      lowering.decision             -- direct_lower | rewrite_then_lower | dequant_then_lower
+                                       | fallback_backend | unsupported
+      lowering.reason               -- human-readable decision tag
+      lowering.required_rewrite     -- rewrite pattern (rewrite_then_lower only, else "")
+      lowering.requires_cast        -- from boundary.cast_required
+      lowering.requires_dequant     -- from boundary.dequant_required
+      lowering.requires_layout_transform -- from boundary.layout_transform_required
+      lowering.target_backend       -- backend selected for lowering
+      lowering.target_kernel        -- kernel name (direct/rewrite) or "" (fallback/unsupported)
+      lowering.target_kernel_library -- kernel library (direct/rewrite) or ""
+      lowering.truth_boundary       -- lowering_decision_static_not_backend_codegen_verified
+
+    Ops without kernel.lowering_status are skipped (KernelAvailabilityPlanningPass did not run).
+    Truth boundary: lowering_decision_static_not_backend_codegen_verified.
+    Must run after KernelAvailabilityPlanningPass and BoundaryPlanningPass.
+  }];
+  let constructor = "mlir::hir::createLoweringDecisionPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CandidateGeneration
+    : Pass<"candidate-generation", "mlir::func::FuncOp"> {
+  let summary = "Generate execution candidates from expanded BackendCapability schema";
+  let description = [{
+    Reads target.backend_capabilities.{backend}.* from the module and
+    representation.* / layout.* / boundary.* from the func and ops.
+    For each backend, generates dtype variants (preferred → acceptable →
+    supported, deduplicated), layout variants (preferred → acceptable,
+    deduplicated), and selects primary quant_mode and fusion_pattern.
+
+    Each candidate captures:
+      candidate_id, backend, backend_api, dtype, accumulation_dtype,
+      activation_layout, weight_layout, quant_mode, fusion_pattern,
+      fallback_backend, requires_cast, requires_dequant,
+      requires_layout_transform, constraint_status, failed_constraints,
+      source_level, truth_boundary.
+
+    Level 2 constraint checks applied (fail → mark, do NOT discard):
+      requires_static_shape   — fail when func has dynamic tensor shapes
+      requires_constant_weight — fail when representation.weights_are_constant = false
+      unsupported_ops          — fail when any op in func body matches
+      required_activation_quant_mode / required_weight_quant_mode
+      allowed_quant_granularity (recorded; not yet enforced)
+
+    Cost is NOT evaluated. No winner is chosen. No IR is rewritten.
+
+    Output: func.func attribute
+      candidates = ArrayAttr of DictionaryAttr, one entry per candidate
+      candidates.count = total candidate count
+      candidates.truth_boundary = "candidate_generation_static_constraints_not_cost_evaluated"
+
+    Truth boundary: candidate_generation_static_constraints_not_cost_evaluated
+  }];
+  let constructor = "mlir::hir::createCandidateGenerationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def BoundaryPlanning
+    : Pass<"boundary-planning", "mlir::func::FuncOp"> {
+  let summary = "Planning-only: annotate ops with boundary materialization requirements from backend capabilities";
+  let description = [{
+    Reads representation.effective_dtype and representation.source_backend from func.func
+    (set by RepresentationPlanningPass), layout.transform_required per-op (set by
+    LayoutPlanningPass), op result element dtype from IR types, and
+    target.backend_capabilities.{backend}.{supports_cast, supports_dequant_boundary,
+    supports_layout_transform} from the module.
+
+    Emitted per non-terminator op:
+      boundary.cast_required                -- true if float precision cast is needed and backend supports it
+      boundary.dequant_required             -- true if dequantization boundary is needed and backend supports it
+      boundary.layout_transform_required    -- true if layout transform is needed and backend supports it
+      boundary.materialization_required     -- true if any boundary can be materialized
+      boundary.reason                       -- comma-separated summary of decisions
+      boundary.truth_boundary               -- always "boundary_planning_only_no_ir_materialization"
+      boundary.unsupported_reason           -- (optional) comma-separated list of needed-but-unsupported boundaries
+
+    Decision rules:
+      1. Cast: op first result element dtype differs from effective_dtype, both are float
+         (f16/f32/bf16), and backend supports_cast.
+      2. Layout transform: layout.transform_required == true (from LayoutPlanningPass)
+         and backend supports_layout_transform.
+      3. Dequant: effective_dtype is quantized (i8/i4) and op first result is float,
+         and backend supports_dequant_boundary.
+      4. For needed but unsupported boundaries, emit boundary.unsupported_reason and
+         leave the _required flag false.
+
+    This pass does NOT insert hir.cast, hir.dequantize, or hir.layout_transform ops.
+    It is annotation-only and must run after LayoutPlanningPass.
+    Only the entry block is processed.
+
+    Truth boundary: boundary_planning_only_no_ir_materialization.
+
+    Intended to run after LayoutPlanningPass in serving-optimization-pipeline.
+  }];
+  let constructor = "mlir::hir::createBoundaryPlanningPass()";
+}
+
 def QuantizationPlanning
     : Pass<"quantization-planning", "mlir::ModuleOp"> {
   let summary = "Compiler-side precision selection for the HIR serving pipeline";

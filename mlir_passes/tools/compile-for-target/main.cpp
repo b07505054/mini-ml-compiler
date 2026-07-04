@@ -40,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -74,6 +75,96 @@ static llvm::cl::opt<std::string> DumpAnnotatedMlir(
 // and CPU count are parsed for provenance only and not forwarded to the compiler.
 // ---------------------------------------------------------------------------
 
+// Per-kernel library entry as declared in the profile JSON.
+// Maps 1:1 to KernelLibraryCapability in TargetConstraints.h.
+struct KernelLibraryProfile {
+  std::string op_type;
+  std::string kernel_name;
+  std::string backend;
+  std::string kernel_library;
+  std::vector<std::string> supported_dtypes;
+  std::vector<std::string> supported_layouts;
+  std::vector<std::string> supported_quant_modes;
+  std::optional<int64_t>   required_m_alignment;
+  std::optional<int64_t>   required_n_alignment;
+  std::optional<int64_t>   required_k_alignment;
+  bool supports_dynamic_shape    = true;
+  bool requires_constant_weight  = false;
+  bool supports_fusion           = false;
+  std::vector<std::string> fusion_patterns;
+  std::vector<std::string> rewrite_patterns;
+  std::string fallback_kernel;
+  std::string fallback_backend;
+  std::string source_level;
+  std::string truth_boundary;
+};
+
+// Per-backend capability as declared in the profile JSON.
+// Maps 1:1 to BackendCapability in TargetConstraints.h.
+// camelCase field names match the JSON schema; snake_case is used in TargetConstraints.
+struct BackendCapabilityProfile {
+  std::string backend_name;
+  std::string backend_api;
+  std::vector<std::string> supported_ops;
+  std::vector<std::string> supported_dtypes;
+  std::vector<std::string> accumulation_dtypes;
+  std::vector<std::string> supported_quant_modes;
+  std::vector<std::string> preferred_activation_layouts;
+  std::vector<std::string> preferred_weight_layouts;
+  std::vector<std::string> layout_agnostic_ops;
+  bool supports_layout_transform = false;
+  bool supports_cast             = false;
+  bool supports_dequant_boundary = false;
+  bool supports_requantize       = false;
+  std::vector<std::string> supports_fusion_patterns;
+
+  // Level 2: Hardware Constraints
+  std::optional<int64_t> required_k_alignment;
+  std::optional<int64_t> required_n_alignment;
+  std::optional<int64_t> required_m_alignment;
+  std::vector<std::string> allowed_quant_granularity;
+  std::string required_activation_quant_mode;
+  std::string required_weight_quant_mode;
+  std::optional<int64_t>  max_supported_rank;
+  std::optional<bool>     requires_static_shape;
+  std::optional<bool>     requires_constant_weight;
+  std::vector<std::string> unsupported_ops;
+  std::string fallback_backend;
+
+  // Level 3: Hardware Preferences
+  std::vector<std::string> acceptable_activation_layouts;
+  std::vector<std::string> acceptable_weight_layouts;
+  std::vector<std::string> preferred_dtypes;
+  std::vector<std::string> acceptable_dtypes;
+  std::vector<std::string> preferred_fusion_patterns;
+
+  // Level 4: Runtime Model (planning-only)
+  std::string runtime_model_launch_overhead;
+  std::string runtime_model_dma_transfer;
+  std::string runtime_model_memory_hierarchy;
+  std::string runtime_model_occupancy;
+  std::string runtime_model_register_pressure;
+  std::string runtime_model_shared_memory;
+  std::string runtime_model_source_level;
+  std::string runtime_model_truth_boundary;
+
+  // Level 5: Cost Model Placeholder (planning-only)
+  std::string cost_model_kind;
+  std::string cost_model_inputs;
+  std::string cost_model_source_level;
+  std::string cost_model_truth_boundary;
+
+  // Legacy cost params: std::nullopt = unknown. 0.0 = free. Distinct.
+  std::optional<double> layout_transform_cost_ms;
+  std::optional<double> cast_cost_ms;
+  std::optional<double> quantize_cost_ms;
+  std::optional<double> dequantize_cost_ms;
+  std::optional<double> requantize_cost_ms;
+  std::optional<double> backend_transfer_cost_ms;
+  std::string source_level;
+  std::string truth_boundary;
+};
+
 struct TargetDeviceProfile {
   std::string profileId;
   double      metalMaxWorkingSetMB = 0.0;
@@ -89,6 +180,10 @@ struct TargetDeviceProfile {
   bool   hasDecodeMsPerToken   = false;
   bool   hasPdBandwidthMbPerMs = false;
   std::string truthBoundary;
+  // Per-backend hardware capability declarations.
+  std::vector<BackendCapabilityProfile> backendCapabilities;
+  // Kernel library capability declarations (Layer 3: actual kernel availability).
+  std::vector<KernelLibraryProfile> kernelLibraries;
 };
 
 // ---------------------------------------------------------------------------
@@ -119,6 +214,18 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
   } else if (cu == "CPU") {
     tc.preferred_backend = "cpu";
     tc.allowed_backends  = {"cpu"};
+  } else if (cu == "CUDA") {
+    tc.preferred_backend = "cuda";
+    tc.allowed_backends  = {"cuda", "cpu"};
+  } else if (cu == "CPU+GPU-ARM") {
+    tc.preferred_backend = "arm_compute";
+    tc.allowed_backends  = {"arm_compute", "cpu"};
+  } else if (cu == "AMX") {
+    tc.preferred_backend = "amx";
+    tc.allowed_backends  = {"amx", "cpu"};
+  } else if (cu == "CUSTOM-NPU") {
+    tc.preferred_backend = "iree_hal";
+    tc.allowed_backends  = {"iree_hal", "cpu"};
   }
   // Unknown/absent configuredComputeUnits: leave unconstrained.
 
@@ -152,6 +259,98 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
   if (prof.hasPdBandwidthMbPerMs) {
     tc.pd_bandwidth_mb_per_ms    = prof.pdBandwidthMbPerMs;
     tc.has_pd_bandwidth_mb_per_ms = true;
+  }
+
+  // Lower per-backend capability declarations.
+  // Cost fields and alignment fields preserve nullopt → absent in MLIR attrs.
+  for (const auto &bp : prof.backendCapabilities) {
+    mlir::hir::BackendCapability cap;
+    cap.backend_name                   = bp.backend_name;
+    cap.backend_api                    = bp.backend_api;
+    cap.supported_ops                  = bp.supported_ops;
+    cap.supported_dtypes               = bp.supported_dtypes;
+    cap.accumulation_dtypes            = bp.accumulation_dtypes;
+    cap.supported_quant_modes          = bp.supported_quant_modes;
+    cap.preferred_activation_layouts   = bp.preferred_activation_layouts;
+    cap.preferred_weight_layouts       = bp.preferred_weight_layouts;
+    cap.layout_agnostic_ops            = bp.layout_agnostic_ops;
+    cap.supports_layout_transform      = bp.supports_layout_transform;
+    cap.supports_cast                  = bp.supports_cast;
+    cap.supports_dequant_boundary      = bp.supports_dequant_boundary;
+    cap.supports_requantize            = bp.supports_requantize;
+    cap.supports_fusion_patterns       = bp.supports_fusion_patterns;
+
+    // Level 2
+    cap.required_k_alignment           = bp.required_k_alignment;
+    cap.required_n_alignment           = bp.required_n_alignment;
+    cap.required_m_alignment           = bp.required_m_alignment;
+    cap.allowed_quant_granularity      = bp.allowed_quant_granularity;
+    cap.required_activation_quant_mode = bp.required_activation_quant_mode;
+    cap.required_weight_quant_mode     = bp.required_weight_quant_mode;
+    cap.max_supported_rank             = bp.max_supported_rank;
+    cap.requires_static_shape          = bp.requires_static_shape;
+    cap.requires_constant_weight       = bp.requires_constant_weight;
+    cap.unsupported_ops                = bp.unsupported_ops;
+    cap.fallback_backend               = bp.fallback_backend;
+
+    // Level 3
+    cap.acceptable_activation_layouts  = bp.acceptable_activation_layouts;
+    cap.acceptable_weight_layouts      = bp.acceptable_weight_layouts;
+    cap.preferred_dtypes               = bp.preferred_dtypes;
+    cap.acceptable_dtypes              = bp.acceptable_dtypes;
+    cap.preferred_fusion_patterns      = bp.preferred_fusion_patterns;
+
+    // Level 4
+    cap.runtime_model_launch_overhead   = bp.runtime_model_launch_overhead;
+    cap.runtime_model_dma_transfer      = bp.runtime_model_dma_transfer;
+    cap.runtime_model_memory_hierarchy  = bp.runtime_model_memory_hierarchy;
+    cap.runtime_model_occupancy         = bp.runtime_model_occupancy;
+    cap.runtime_model_register_pressure = bp.runtime_model_register_pressure;
+    cap.runtime_model_shared_memory     = bp.runtime_model_shared_memory;
+    cap.runtime_model_source_level      = bp.runtime_model_source_level;
+    cap.runtime_model_truth_boundary    = bp.runtime_model_truth_boundary;
+
+    // Level 5
+    cap.cost_model_kind            = bp.cost_model_kind;
+    cap.cost_model_inputs          = bp.cost_model_inputs;
+    cap.cost_model_source_level    = bp.cost_model_source_level;
+    cap.cost_model_truth_boundary  = bp.cost_model_truth_boundary;
+
+    // Legacy cost params
+    cap.layout_transform_cost_ms       = bp.layout_transform_cost_ms;
+    cap.cast_cost_ms                   = bp.cast_cost_ms;
+    cap.quantize_cost_ms               = bp.quantize_cost_ms;
+    cap.dequantize_cost_ms             = bp.dequantize_cost_ms;
+    cap.requantize_cost_ms             = bp.requantize_cost_ms;
+    cap.backend_transfer_cost_ms       = bp.backend_transfer_cost_ms;
+    cap.source_level                   = bp.source_level;
+    cap.truth_boundary                 = bp.truth_boundary;
+    tc.backend_capabilities.push_back(std::move(cap));
+  }
+
+  // Lower kernel library declarations.
+  for (const auto &kp : prof.kernelLibraries) {
+    mlir::hir::KernelLibraryCapability ke;
+    ke.op_type                  = kp.op_type;
+    ke.kernel_name              = kp.kernel_name;
+    ke.backend                  = kp.backend;
+    ke.kernel_library           = kp.kernel_library;
+    ke.supported_dtypes         = kp.supported_dtypes;
+    ke.supported_layouts        = kp.supported_layouts;
+    ke.supported_quant_modes    = kp.supported_quant_modes;
+    ke.required_m_alignment     = kp.required_m_alignment;
+    ke.required_n_alignment     = kp.required_n_alignment;
+    ke.required_k_alignment     = kp.required_k_alignment;
+    ke.supports_dynamic_shape   = kp.supports_dynamic_shape;
+    ke.requires_constant_weight = kp.requires_constant_weight;
+    ke.supports_fusion          = kp.supports_fusion;
+    ke.fusion_patterns          = kp.fusion_patterns;
+    ke.rewrite_patterns         = kp.rewrite_patterns;
+    ke.fallback_kernel          = kp.fallback_kernel;
+    ke.fallback_backend         = kp.fallback_backend;
+    ke.source_level             = kp.source_level;
+    ke.truth_boundary           = kp.truth_boundary;
+    tc.kernel_library_capabilities.push_back(std::move(ke));
   }
 
   return tc;
@@ -230,6 +429,172 @@ parseDeviceProfile(llvm::StringRef path) {
 
   if (auto v = obj->getString("truthBoundary"))
     prof.truthBoundary = v->str();
+
+  // Parse backendCapabilities array.
+  // Missing cost and alignment fields → std::nullopt (unknown, not zero).
+  if (auto *caps = obj->getArray("backendCapabilities")) {
+    auto readStrings = [](const llvm::json::Object *o,
+                          llvm::StringRef key) -> std::vector<std::string> {
+      std::vector<std::string> result;
+      if (auto *arr = o->getArray(key))
+        for (const auto &elem : *arr)
+          if (auto s = elem.getAsString())
+            result.push_back(s->str());
+      return result;
+    };
+
+    for (const auto &capElem : *caps) {
+      const llvm::json::Object *co = capElem.getAsObject();
+      if (!co)
+        continue;
+
+      BackendCapabilityProfile bp;
+      if (auto v = co->getString("backendName"))  bp.backend_name = v->str();
+      if (auto v = co->getString("backendApi"))   bp.backend_api  = v->str();
+
+      bp.supported_ops                = readStrings(co, "supportedOps");
+      bp.supported_dtypes             = readStrings(co, "supportedDtypes");
+      bp.accumulation_dtypes          = readStrings(co, "accumulationDtypes");
+      bp.supported_quant_modes        = readStrings(co, "supportedQuantModes");
+      bp.preferred_activation_layouts = readStrings(co, "preferredActivationLayouts");
+      bp.preferred_weight_layouts     = readStrings(co, "preferredWeightLayouts");
+      bp.layout_agnostic_ops          = readStrings(co, "layoutAgnosticOps");
+      bp.supports_fusion_patterns     = readStrings(co, "supportsFusionPatterns");
+
+      if (auto v = co->getBoolean("supportsLayoutTransform"))
+        bp.supports_layout_transform = *v;
+      if (auto v = co->getBoolean("supportsCast"))
+        bp.supports_cast = *v;
+      if (auto v = co->getBoolean("supportsDequantBoundary"))
+        bp.supports_dequant_boundary = *v;
+      if (auto v = co->getBoolean("supportsRequantize"))
+        bp.supports_requantize = *v;
+
+      // Level 2: Hardware Constraints
+      if (auto v = co->getInteger("requiredKAlignment"))
+        bp.required_k_alignment = static_cast<int64_t>(*v);
+      if (auto v = co->getInteger("requiredNAlignment"))
+        bp.required_n_alignment = static_cast<int64_t>(*v);
+      if (auto v = co->getInteger("requiredMAlignment"))
+        bp.required_m_alignment = static_cast<int64_t>(*v);
+      bp.allowed_quant_granularity = readStrings(co, "allowedQuantGranularity");
+      if (auto v = co->getString("requiredActivationQuantMode"))
+        bp.required_activation_quant_mode = v->str();
+      if (auto v = co->getString("requiredWeightQuantMode"))
+        bp.required_weight_quant_mode = v->str();
+      if (auto v = co->getInteger("maxSupportedRank"))
+        bp.max_supported_rank = static_cast<int64_t>(*v);
+      if (auto v = co->getBoolean("requiresStaticShape"))
+        bp.requires_static_shape = *v;
+      if (auto v = co->getBoolean("requiresConstantWeight"))
+        bp.requires_constant_weight = *v;
+      bp.unsupported_ops = readStrings(co, "unsupportedOps");
+      if (auto v = co->getString("fallbackBackend"))
+        bp.fallback_backend = v->str();
+
+      // Level 3: Hardware Preferences
+      bp.acceptable_activation_layouts = readStrings(co, "acceptableActivationLayouts");
+      bp.acceptable_weight_layouts     = readStrings(co, "acceptableWeightLayouts");
+      bp.preferred_dtypes              = readStrings(co, "preferredDtypes");
+      bp.acceptable_dtypes             = readStrings(co, "acceptableDtypes");
+      bp.preferred_fusion_patterns     = readStrings(co, "preferredFusionPatterns");
+
+      // Level 4: Runtime Model (planning-only; stored as descriptive strings)
+      if (auto v = co->getString("runtimeModelLaunchOverhead"))
+        bp.runtime_model_launch_overhead = v->str();
+      if (auto v = co->getString("runtimeModelDmaTransfer"))
+        bp.runtime_model_dma_transfer = v->str();
+      if (auto v = co->getString("runtimeModelMemoryHierarchy"))
+        bp.runtime_model_memory_hierarchy = v->str();
+      if (auto v = co->getString("runtimeModelOccupancy"))
+        bp.runtime_model_occupancy = v->str();
+      if (auto v = co->getString("runtimeModelRegisterPressure"))
+        bp.runtime_model_register_pressure = v->str();
+      if (auto v = co->getString("runtimeModelSharedMemory"))
+        bp.runtime_model_shared_memory = v->str();
+      if (auto v = co->getString("runtimeModelSourceLevel"))
+        bp.runtime_model_source_level = v->str();
+      if (auto v = co->getString("runtimeModelTruthBoundary"))
+        bp.runtime_model_truth_boundary = v->str();
+
+      // Level 5: Cost Model Placeholder (planning-only)
+      if (auto v = co->getString("costModelKind"))
+        bp.cost_model_kind = v->str();
+      if (auto v = co->getString("costModelInputs"))
+        bp.cost_model_inputs = v->str();
+      if (auto v = co->getString("costModelSourceLevel"))
+        bp.cost_model_source_level = v->str();
+      if (auto v = co->getString("costModelTruthBoundary"))
+        bp.cost_model_truth_boundary = v->str();
+
+      // Legacy cost params: present → has value; absent → nullopt (unknown, not free).
+      if (auto v = co->getNumber("layoutTransformCostMs"))
+        bp.layout_transform_cost_ms = *v;
+      if (auto v = co->getNumber("castCostMs"))
+        bp.cast_cost_ms = *v;
+      if (auto v = co->getNumber("quantizeCostMs"))
+        bp.quantize_cost_ms = *v;
+      if (auto v = co->getNumber("dequantizeCostMs"))
+        bp.dequantize_cost_ms = *v;
+      if (auto v = co->getNumber("requantizeCostMs"))
+        bp.requantize_cost_ms = *v;
+      if (auto v = co->getNumber("backendTransferCostMs"))
+        bp.backend_transfer_cost_ms = *v;
+
+      if (auto v = co->getString("sourceLevel"))   bp.source_level   = v->str();
+      if (auto v = co->getString("truthBoundary")) bp.truth_boundary = v->str();
+
+      prof.backendCapabilities.push_back(std::move(bp));
+    }
+  }
+
+  // Parse kernelLibraries array (Layer 3: actual kernel availability).
+  if (auto *klibs = obj->getArray("kernelLibraries")) {
+    auto readStrings = [](const llvm::json::Object *o,
+                          llvm::StringRef key) -> std::vector<std::string> {
+      std::vector<std::string> result;
+      if (auto *arr = o->getArray(key))
+        for (const auto &elem : *arr)
+          if (auto s = elem.getAsString()) result.push_back(s->str());
+      return result;
+    };
+
+    for (const auto &kelem : *klibs) {
+      const llvm::json::Object *ko = kelem.getAsObject();
+      if (!ko) continue;
+
+      KernelLibraryProfile kp;
+      if (auto v = ko->getString("opType"))        kp.op_type        = v->str();
+      if (auto v = ko->getString("kernelName"))    kp.kernel_name    = v->str();
+      if (auto v = ko->getString("backend"))       kp.backend        = v->str();
+      if (auto v = ko->getString("kernelLibrary")) kp.kernel_library = v->str();
+
+      kp.supported_dtypes       = readStrings(ko, "supportedDtypes");
+      kp.supported_layouts      = readStrings(ko, "supportedLayouts");
+      kp.supported_quant_modes  = readStrings(ko, "supportedQuantModes");
+
+      if (auto v = ko->getInteger("requiredMAlignment"))
+        kp.required_m_alignment = static_cast<int64_t>(*v);
+      if (auto v = ko->getInteger("requiredNAlignment"))
+        kp.required_n_alignment = static_cast<int64_t>(*v);
+      if (auto v = ko->getInteger("requiredKAlignment"))
+        kp.required_k_alignment = static_cast<int64_t>(*v);
+
+      if (auto v = ko->getBoolean("supportsDynamicShape"))   kp.supports_dynamic_shape   = *v;
+      if (auto v = ko->getBoolean("requiresConstantWeight")) kp.requires_constant_weight = *v;
+      if (auto v = ko->getBoolean("supportsFusion"))         kp.supports_fusion          = *v;
+
+      kp.fusion_patterns   = readStrings(ko, "fusionPatterns");
+      kp.rewrite_patterns  = readStrings(ko, "rewritePatterns");
+
+      if (auto v = ko->getString("fallbackKernel"))  kp.fallback_kernel  = v->str();
+      if (auto v = ko->getString("fallbackBackend")) kp.fallback_backend = v->str();
+      if (auto v = ko->getString("sourceLevel"))     kp.source_level     = v->str();
+      if (auto v = ko->getString("truthBoundary"))   kp.truth_boundary   = v->str();
+
+      prof.kernelLibraries.push_back(std::move(kp));
+    }
+  }
 
   return prof;
 }
@@ -327,7 +692,7 @@ int main(int argc, char **argv) {
   // 4. Attach TargetConstraints as module attrs.
   constraints.attachToModule(module.get(), &ctx);
 
-  // 5. Run the serving-optimization-pipeline (4 passes).
+  // 5. Run the serving-optimization-pipeline (10 passes).
   mlir::PassManager pm(&ctx);
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createServingPhaseAnalysisPass());
@@ -337,6 +702,20 @@ int main(int argc, char **argv) {
       mlir::hir::createReplayEligibilityPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createExecutionProviderPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createRepresentationPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createLayoutPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createBoundaryPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createQuantizationStrategyPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createKernelAvailabilityPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createLoweringDecisionPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createCandidateGenerationPass());
 
   if (pm.run(module.get()).failed()) {
     llvm::errs() << "error: serving pass pipeline failed\n";

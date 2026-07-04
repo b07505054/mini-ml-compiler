@@ -1,0 +1,291 @@
+{
+  "profileId": "intel-ai-server",
+  "representative_devices": [
+    "Gaudi 2",
+    "Gaudi 3",
+    "Xeon AMX"
+  ],
+  "configuredComputeUnits": "AMX",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp32",
+    "bf16",
+    "int8"
+  ],
+  "pagedKVCompatibleBackends": [],
+  "truthBoundary": "declared_deployment_family_profile_not_measured_silicon_performance",
+  "backendCapabilities": [
+    {
+      "backendName": "gaudi",
+      "backendApi": "synapse_ai",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "relu",
+        "gelu",
+        "softmax",
+        "layernorm",
+        "reshape",
+        "gather",
+        "add"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "bf16",
+        "int8",
+        "fp8"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "static_int8",
+        "fp8_e4m3"
+      ],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "RSCK",
+        "KN"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "gelu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "matmul_bias_relu",
+        "matmul_bias_gelu"
+      ],
+      "allowedQuantGranularity": [
+        "per_channel",
+        "per_tensor"
+      ],
+      "requiresStaticShape": false,
+      "requiresConstantWeight": false,
+      "fallbackBackend": "cpu_simd",
+      "acceptableActivationLayouts": [
+        "NHWC",
+        "NCHW"
+      ],
+      "acceptableWeightLayouts": [
+        "RSCK",
+        "KN",
+        "OIHW"
+      ],
+      "preferredDtypes": [
+        "bf16",
+        "fp8"
+      ],
+      "acceptableDtypes": [
+        "fp32",
+        "int8"
+      ],
+      "preferredFusionPatterns": [
+        "matmul_bias_gelu"
+      ],
+      "runtimeModelMemoryHierarchy": "hbm_plus_cache",
+      "runtimeModelSourceLevel": "public_docs",
+      "runtimeModelTruthBoundary": "memory_hierarchy_qualitative_from_intel_gaudi_docs_launch_model_unknown",
+      "costModelKind": "roofline",
+      "costModelInputs": "m_n_k_batch_dtype",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "cost_model_not_yet_implemented_pending_measurement",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "dtype_from_intel_gaudi_developer_docs_layout_declared_profile_cost_unknown",
+      "sourceNotes": {
+        "supportedDtypes": "Intel Gaudi developer documentation (developer.habana.ai) lists BF16, FP32, INT8, and FP8 as supported inference precisions for Gaudi 2 and Gaudi 3.",
+        "backendApi": "Synapse AI is the Gaudi programming framework. Source: Intel Developer Zone and Habana Labs developer documentation.",
+        "costFields": "All cost fields absent. Gaudi throughput depends on operator, tensor sizes, and SynapseAI version."
+      }
+    },
+    {
+      "backendName": "amx",
+      "backendApi": "onednn",
+      "supportedOps": [
+        "matmul",
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "layernorm"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "bf16",
+        "int8"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "static_int8",
+        "dynamic_int8"
+      ],
+      "preferredActivationLayouts": [
+        "NCHW"
+      ],
+      "preferredWeightLayouts": [
+        "OIhw16o16i",
+        "KN"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "softmax",
+        "reshape"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": true,
+      "supportsFusionPatterns": [
+        "matmul_bias_relu",
+        "matmul_bias"
+      ],
+      "requiredKAlignment": 16,
+      "requiredNAlignment": 16,
+      "requiredMAlignment": 16,
+      "allowedQuantGranularity": [
+        "per_channel",
+        "per_tensor"
+      ],
+      "requiredActivationQuantMode": "static_int8",
+      "requiredWeightQuantMode": "static_int8",
+      "maxSupportedRank": 2,
+      "requiresStaticShape": true,
+      "requiresConstantWeight": true,
+      "fallbackBackend": "cpu_simd",
+      "acceptableActivationLayouts": [
+        "NCHW",
+        "NC"
+      ],
+      "acceptableWeightLayouts": [
+        "OIhw16o16i",
+        "KN",
+        "NK"
+      ],
+      "preferredDtypes": [
+        "bf16",
+        "int8"
+      ],
+      "acceptableDtypes": [
+        "fp32"
+      ],
+      "preferredFusionPatterns": [
+        "matmul_bias_relu",
+        "matmul_bias"
+      ],
+      "runtimeModelMemoryHierarchy": "l1_l2_l3_cache",
+      "runtimeModelSourceLevel": "public_docs",
+      "runtimeModelTruthBoundary": "l1_l2_l3_cache_hierarchy_from_intel_cpu_arch_ref_launch_model_unknown",
+      "costModelKind": "tiling_model",
+      "costModelInputs": "m_n_k_tile_config_dtype",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "cost_model_not_yet_implemented_pending_measurement",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "dtype_from_intel_amx_isa_extension_ref_alignment_declared_profile_cost_unknown",
+      "sourceNotes": {
+        "supportedDtypes": "Intel Architecture ISA Extensions Reference: AMX-BF16 and AMX-INT8 tile matrix multiply. BF16 and INT8 documented for Sapphire Rapids and later Xeon generations.",
+        "requiredKAlignment": "declared_profile: 16 aligned to AMX tile row width (512-bit tile = 16 BF16 or 64 INT8 elements per row). Not published as a runtime constraint in Intel docs at this specificity.",
+        "requiresStaticShape": "AMX tile matrix operations require M/N/K to be known at compile time for optimal tile blocking. declared_profile inference from TMUL design.",
+        "costFields": "All cost fields absent. AMX throughput depends on problem size, tile configuration, and oneDNN/compiler version."
+      }
+    },
+    {
+      "backendName": "cpu_simd",
+      "backendApi": "onednn",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "bf16",
+        "int8"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "static_int8"
+      ],
+      "preferredActivationLayouts": [
+        "NCHW"
+      ],
+      "preferredWeightLayouts": [
+        "OIHW"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "matmul_bias_relu"
+      ],
+      "requiresStaticShape": false,
+      "requiresConstantWeight": false,
+      "preferredDtypes": [
+        "bf16",
+        "fp32"
+      ],
+      "acceptableDtypes": [
+        "int8"
+      ],
+      "runtimeModelMemoryHierarchy": "l1_l2_l3_cache",
+      "runtimeModelSourceLevel": "public_docs",
+      "runtimeModelTruthBoundary": "cache_hierarchy_from_intel_cpu_docs_launch_model_unknown",
+      "costModelKind": "roofline",
+      "costModelSourceLevel": "declared_profile",
+      "costModelTruthBoundary": "cost_model_not_yet_implemented_pending_measurement",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "cpu_simd_fallback_declared_for_completeness_operator_coverage_important_cost_unknown"
+    }
+  ],
+  "kernelLibraries": [
+    {
+      "opType": "matmul",
+      "kernelName": "amx_matmul_tmul",
+      "backend": "amx",
+      "kernelLibrary": "intel_amx",
+      "supportedDtypes": [
+        "bf16",
+        "int8"
+      ],
+      "supportedLayouts": [],
+      "supportedQuantModes": [
+        "static_int8",
+        "dynamic_int8"
+      ],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [],
+      "fallbackKernel": "cpu_simd_matmul",
+      "fallbackBackend": "cpu_simd",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "intel_amx_public_docs_matmul_bf16_int8_only"
+    }
+  ]
+}

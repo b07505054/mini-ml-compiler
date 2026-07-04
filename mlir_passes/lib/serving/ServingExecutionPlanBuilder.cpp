@@ -1,6 +1,7 @@
 #include "serving/ServingExecutionPlanBuilder.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -189,6 +190,120 @@ ServingExecutionPlan ServingExecutionPlanBuilder::build(mlir::ModuleOp module) {
       // Track QuantizationPlanningPass only when it actually ran on the module.
       if (module->getAttr("quantization.plan_dtype"))
         fp.source_passes.push_back("quantization-planning");
+    }
+
+    // Per-op quantization strategy decisions from QuantizationStrategyPlanningPass.
+    // Only collect ops that have quant.strategy set (pass did not run → skip).
+    {
+      bool strategyPassRan = false;
+      int opIndex = 0;
+      if (!funcOp.getBody().empty()) {
+        mlir::Block &entry = funcOp.getBody().front();
+        for (mlir::Operation &op : entry.without_terminator()) {
+          auto stratAttr = op.getAttrOfType<mlir::StringAttr>("quant.strategy");
+          if (!stratAttr) { ++opIndex; continue; }
+
+          strategyPassRan = true;
+          OpQuantizationDecision d;
+
+          d.op_name = "op_" + std::to_string(opIndex);
+
+          d.op_type = op.getName().getStringRef().str();
+
+          auto str = [&](llvm::StringRef k) -> std::string {
+            if (auto a = op.getAttrOfType<mlir::StringAttr>(k))
+              return a.getValue().str();
+            return {};
+          };
+          auto boolean = [&](llvm::StringRef k) -> bool {
+            if (auto a = op.getAttrOfType<mlir::BoolAttr>(k))
+              return a.getValue();
+            return false;
+          };
+
+          d.strategy              = stratAttr.getValue().str();
+          d.backend               = str("quant.backend");
+          d.weight_dtype          = str("quant.weight_dtype");
+          d.activation_dtype      = str("quant.activation_dtype");
+          d.accumulation_dtype    = str("quant.accumulation_dtype");
+          d.output_dtype          = str("quant.output_dtype");
+          d.granularity           = str("quant.granularity");
+          d.activation_quant_mode = str("quant.activation_quant_mode");
+          d.weight_quant_mode     = str("quant.weight_quant_mode");
+          d.requires_dequant_boundary = boolean("quant.requires_dequant_boundary");
+          d.requires_requant_boundary = boolean("quant.requires_requant_boundary");
+          d.decision_reason       = str("quant.decision_reason");
+          d.fallback_reason       = str("quant.fallback_reason");
+          d.accuracy_risk         = str("quant.accuracy_risk");
+          d.truth_boundary        = str("quant.truth_boundary");
+          if (d.truth_boundary.empty())
+            d.truth_boundary =
+                "quantization_strategy_export_static_not_accuracy_calibrated";
+
+          fp.per_op_quant_decisions.push_back(std::move(d));
+          ++opIndex;
+        }
+      }
+      if (strategyPassRan)
+        fp.source_passes.push_back("quantization-strategy-planning");
+    }
+
+    // Per-op lowering decisions from LoweringDecisionPlanningPass.
+    // Only collect ops that have lowering.decision set (pass did not run → skip).
+    {
+      bool loweringPassRan = false;
+      int opIndex = 0;
+      if (!funcOp.getBody().empty()) {
+        mlir::Block &entry = funcOp.getBody().front();
+        for (mlir::Operation &op : entry.without_terminator()) {
+          auto decisionAttr = op.getAttrOfType<mlir::StringAttr>("lowering.decision");
+          if (!decisionAttr) { ++opIndex; continue; }
+
+          loweringPassRan = true;
+          OpLoweringDecision d;
+
+          d.op_name = "op_" + std::to_string(opIndex);
+          d.op_type = op.getName().getStringRef().str();
+
+          auto str = [&](llvm::StringRef k) -> std::string {
+            if (auto a = op.getAttrOfType<mlir::StringAttr>(k))
+              return a.getValue().str();
+            return {};
+          };
+          auto boolean = [&](llvm::StringRef k) -> bool {
+            if (auto a = op.getAttrOfType<mlir::BoolAttr>(k))
+              return a.getValue();
+            return false;
+          };
+
+          // Kernel provenance fields (from KernelAvailabilityPlanningPass).
+          d.backend               = str("kernel.backend");
+          d.kernel_library        = str("kernel.library");
+          d.kernel_name           = str("kernel.name");
+          d.kernel_exists         = boolean("kernel.exists");
+          d.kernel_lowering_status = str("kernel.lowering_status");
+
+          // Lowering decision fields (from LoweringDecisionPlanningPass).
+          d.lowering_decision        = decisionAttr.getValue().str();
+          d.target_backend           = str("lowering.target_backend");
+          d.target_kernel_library    = str("lowering.target_kernel_library");
+          d.target_kernel            = str("lowering.target_kernel");
+          d.required_rewrite         = str("lowering.required_rewrite");
+          d.requires_dequant         = boolean("lowering.requires_dequant");
+          d.requires_layout_transform = boolean("lowering.requires_layout_transform");
+          d.requires_cast            = boolean("lowering.requires_cast");
+          d.reason                   = str("lowering.reason");
+          d.truth_boundary           = str("lowering.truth_boundary");
+          if (d.truth_boundary.empty())
+            d.truth_boundary =
+                "lowering_decision_export_static_not_backend_codegen_verified";
+
+          fp.per_op_lowering_decisions.push_back(std::move(d));
+          ++opIndex;
+        }
+      }
+      if (loweringPassRan)
+        fp.source_passes.push_back("lowering-decision-planning");
     }
 
     plan.function_plans.push_back(std::move(fp));

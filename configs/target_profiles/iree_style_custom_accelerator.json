@@ -1,0 +1,52 @@
+{
+  "profileId": "iree-mychip-npu-demo",
+  "configuredComputeUnits": "CUSTOM-NPU",
+  "staticShapeSupport": true,
+  "supportedPrecisions": ["fp16", "int4"],
+  "pagedKVCompatibleBackends": [],
+  "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "backendCapabilities": [
+    {
+      "backendName": "mychip_npu",
+      "backendApi": "iree_hal",
+      "supportedOps": ["matmul", "flash_attention", "conv2d", "relu", "softmax"],
+      "supportedDtypes": ["fp16", "int4"],
+      "accumulationDtypes": ["fp16"],
+      "supportedQuantModes": ["int4_weight_only"],
+      "preferredActivationLayouts": ["NHWC"],
+      "preferredWeightLayouts": ["blocked_kc"],
+      "layoutAgnosticOps": ["relu", "add", "softmax", "reshape"],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": ["flash_attention", "matmul_bias_relu"],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "all_fields_declared_for_demo_not_measured_or_publicly_sourced",
+      "sourceNotes": {
+        "backendApi": "IREE (Intermediate Representation Execution Environment) provides a compiler and runtime for generating code targeting hardware APIs, device architectures, and performance profiles. IREE's HAL (Hardware Abstraction Layer) is the public API surface used here as a reference. Source: openxla.org/iree. This profile models a hypothetical custom NPU that would be targeted via an IREE-style HAL backend.",
+        "allFields": "All capability fields in this entry are declared_profile. This is a demo profile for illustrating how custom accelerators would be registered in the BackendCapability schema. No real 'mychip_npu' silicon exists; no fields are measured or independently verifiable.",
+        "int4_weight_only": "INT4 weight-only quantization is a common mode for on-device LLM serving where weights are stored in INT4 and dequantized to FP16 before compute. Included here as a demo of the quant_mode schema capability, not as a claim about any specific hardware.",
+        "flash_attention": "Included as a supported fusion pattern to demonstrate that the schema can express operation-level fusion capabilities for custom accelerators."
+      }
+    },
+    {
+      "backendName": "cpu",
+      "backendApi": "iree_hal",
+      "supportedOps": ["relu", "add", "reshape", "gather", "softmax"],
+      "supportedDtypes": ["fp32", "fp16"],
+      "accumulationDtypes": ["fp32"],
+      "supportedQuantModes": [],
+      "preferredActivationLayouts": ["NCHW"],
+      "preferredWeightLayouts": ["OIHW"],
+      "layoutAgnosticOps": ["relu", "add", "reshape", "gather", "softmax"],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "cpu_fallback_declared_for_demo_not_benchmarked"
+    }
+  ]
+}

@@ -67,6 +67,54 @@ struct BackendExecutionPlan {
   bool requires_replay = false;                  // copy of replay.eligible
 };
 
+// Per-op quantization strategy decision exported from quant.* MLIR attrs.
+// Populated by ServingExecutionPlanBuilder when QuantizationStrategyPlanningPass
+// has run. Fields mirror quant.* attrs; absent attrs leave fields empty/false.
+struct OpQuantizationDecision {
+  std::string op_name;                    // SSA result name or "op_N" index
+  std::string op_type;                    // e.g. "hir.matmul"
+  std::string backend;
+  std::string strategy;                   // "weight_only_int8" | "fp16_fallback" | ...
+  std::string weight_dtype;
+  std::string activation_dtype;
+  std::string accumulation_dtype;
+  std::string output_dtype;
+  std::string granularity;
+  std::string activation_quant_mode;
+  std::string weight_quant_mode;
+  bool requires_dequant_boundary  = false;
+  bool requires_requant_boundary  = false;
+  std::string decision_reason;
+  std::string fallback_reason;
+  std::string accuracy_risk;
+  std::string truth_boundary;
+};
+
+// Per-op lowering decision exported from lowering.* MLIR attrs.
+// Populated by ServingExecutionPlanBuilder when LoweringDecisionPlanningPass
+// has run. Fields mirror lowering.* attrs; absent attrs leave fields empty/false.
+// kernel.* fields are read from the same op for provenance.
+struct OpLoweringDecision {
+  std::string op_name;              // "op_N" index
+  std::string op_type;              // e.g. "hir.matmul"
+  std::string backend;              // from kernel.backend
+  std::string kernel_library;       // from kernel.library
+  std::string kernel_name;          // from kernel.name
+  bool kernel_exists                = false;  // from kernel.exists
+  std::string kernel_lowering_status;         // from kernel.lowering_status
+  std::string lowering_decision;              // direct_lower | rewrite_then_lower |
+                                              // dequant_then_lower | fallback_backend | unsupported
+  std::string target_backend;       // from lowering.target_backend
+  std::string target_kernel_library; // from lowering.target_kernel_library
+  std::string target_kernel;        // from lowering.target_kernel
+  std::string required_rewrite;     // from lowering.required_rewrite
+  bool requires_dequant             = false;  // from lowering.requires_dequant
+  bool requires_layout_transform    = false;  // from lowering.requires_layout_transform
+  bool requires_cast                = false;  // from lowering.requires_cast
+  std::string reason;               // from lowering.reason
+  std::string truth_boundary;       // from lowering.truth_boundary
+};
+
 struct FunctionExecutionPlan {
   std::string function_name;
   ServingPhase serving_phase   = ServingPhase::Unknown;
@@ -77,7 +125,9 @@ struct FunctionExecutionPlan {
   QuantizationPlan quantization_plan;
   BackendExecutionPlan backend_execution_plan;
   CompilerProvenance provenance;
-  std::vector<std::string> source_passes; // passes that contributed attrs
+  std::vector<std::string> source_passes;                    // passes that contributed attrs
+  std::vector<OpQuantizationDecision> per_op_quant_decisions; // empty if pass did not run
+  std::vector<OpLoweringDecision> per_op_lowering_decisions;  // empty if pass did not run
 };
 
 struct ServingExecutionPlan {

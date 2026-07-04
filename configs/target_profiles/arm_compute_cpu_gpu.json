@@ -1,0 +1,196 @@
+{
+  "profileId": "arm-compute-cpu-gpu",
+  "configuredComputeUnits": "CPU+GPU-ARM",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp32",
+    "fp16",
+    "int8"
+  ],
+  "pagedKVCompatibleBackends": [],
+  "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "backendCapabilities": [
+    {
+      "backendName": "cpu",
+      "backendApi": "arm_compute",
+      "supportedOps": [
+        "matmul",
+        "conv2d",
+        "relu",
+        "add",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16",
+        "int8",
+        "uint8",
+        "bf16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "static_int8",
+        "dynamic_int8"
+      ],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "OHWI"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "reshape",
+        "gather",
+        "softmax"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": true,
+      "supportsRequantize": true,
+      "supportsFusionPatterns": [
+        "matmul_bias_relu",
+        "conv_bn_relu"
+      ],
+      "requiredKAlignment": 32,
+      "requiredNAlignment": 32,
+      "sourceLevel": "public_docs",
+      "truthBoundary": "layout_from_arm_compute_library_docs_dtype_from_acl_reference_alignment_declared_profile_cost_unknown",
+      "sourceNotes": {
+        "preferredActivationLayouts": "Arm Compute Library GitHub reference: NHWC explicitly recommended for CNN convolutions on Cortex-A. NEConvolutionLayer and CLConvolutionLayer document NHWC as preferred layout.",
+        "supportedDtypes": "Arm Compute Library GitHub README and operator support reference list FP32, FP16, INT8, UINT8, and BF16 as supported element types.",
+        "layoutAgnosticOps": "Arm NN operator docs classify elementwise ops (relu, add) and reshape as All/layout-agnostic \u2014 accept NHWC, NCHW, or either. Source: public_docs.",
+        "requiredKAlignment": "declared_profile: 32 derived from NEON 128-bit register = 32 int8 lanes. Project alignment requirement, not a value published in Arm Compute Library docs.",
+        "costFields": "All cost fields absent. Throughput depends on Cortex-A generation, NEON availability, cache hierarchy, and build flags."
+      }
+    },
+    {
+      "backendName": "gpu",
+      "backendApi": "arm_compute",
+      "supportedOps": [
+        "conv2d",
+        "relu",
+        "add",
+        "softmax",
+        "reshape"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [],
+      "preferredActivationLayouts": [
+        "NHWC"
+      ],
+      "preferredWeightLayouts": [
+        "OHWI"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "reshape",
+        "softmax"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "conv_bn_relu"
+      ],
+      "sourceLevel": "public_docs",
+      "truthBoundary": "mali_gpu_layout_from_arm_compute_library_docs_cost_unknown",
+      "sourceNotes": {
+        "preferredActivationLayouts": "Arm Compute Library Mali GPU path (CLConvolutionLayer) uses NHWC for convolution. Documented in Arm Compute Library operator support reference.",
+        "costFields": "All cost fields absent. Mali GPU throughput varies by GPU generation (Mali-G52, G77, G715, etc.) and clock frequency."
+      }
+    }
+  ],
+  "kernelLibraries": [
+    {
+      "opType": "conv2d",
+      "kernelName": "arm_compute_cpu_conv2d",
+      "backend": "cpu",
+      "kernelLibrary": "arm_compute_lib",
+      "supportedDtypes": [
+        "fp32",
+        "fp16",
+        "int8"
+      ],
+      "supportedLayouts": [
+        "NHWC"
+      ],
+      "supportedQuantModes": [
+        "static_int8"
+      ],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": true,
+      "supportsFusion": true,
+      "fusionPatterns": [
+        "conv2d_bias_relu"
+      ],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "arm_compute_lib_op_coverage_github_docs"
+    },
+    {
+      "opType": "matmul",
+      "kernelName": "arm_compute_cpu_matmul",
+      "backend": "cpu",
+      "kernelLibrary": "arm_compute_lib",
+      "supportedDtypes": [
+        "fp32",
+        "fp16"
+      ],
+      "supportedLayouts": [
+        "NHWC"
+      ],
+      "supportedQuantModes": [],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [
+        "transpose_to_NHWC"
+      ],
+      "fallbackKernel": "",
+      "fallbackBackend": "",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "arm_compute_lib_op_coverage_github_docs"
+    },
+    {
+      "opType": "conv2d",
+      "kernelName": "arm_compute_gpu_conv2d",
+      "backend": "gpu",
+      "kernelLibrary": "arm_compute_lib",
+      "supportedDtypes": [
+        "fp16"
+      ],
+      "supportedLayouts": [
+        "NHWC"
+      ],
+      "supportedQuantModes": [],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": true,
+      "supportsFusion": true,
+      "fusionPatterns": [
+        "conv2d_bias_relu"
+      ],
+      "rewritePatterns": [],
+      "fallbackKernel": "arm_compute_cpu_conv2d",
+      "fallbackBackend": "cpu",
+      "sourceLevel": "public_docs",
+      "truthBoundary": "arm_compute_lib_op_coverage_github_docs"
+    }
+  ]
+}

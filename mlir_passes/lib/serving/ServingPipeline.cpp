@@ -30,15 +30,71 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createExecutionProviderPlanningPass());
       });
 
-  // Four-pass serving pipeline.
+  static PassPipelineRegistration<> representationPipeline(
+      "representation-planning-pipeline",
+      "Annotate serving functions with effective dtype and layout from backend capabilities",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createRepresentationPlanningPass());
+      });
+
+  static PassPipelineRegistration<> layoutPipeline(
+      "layout-planning-pipeline",
+      "Annotate ops with layout assignment from backend capabilities",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createLayoutPlanningPass());
+      });
+
+  static PassPipelineRegistration<> boundaryPipeline(
+      "boundary-planning-pipeline",
+      "Annotate ops with boundary materialization requirements from backend capabilities",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createBoundaryPlanningPass());
+      });
+
+  static PassPipelineRegistration<> quantStrategyPipeline(
+      "quantization-strategy-planning-pipeline",
+      "Per-op quantization strategy annotation for the HIR serving pipeline",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createQuantizationStrategyPlanningPass());
+      });
+
+  static PassPipelineRegistration<> kernelAvailPipeline(
+      "kernel-availability-planning-pipeline",
+      "Per-op kernel availability annotation from KernelLibraryCapability schema",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createKernelAvailabilityPlanningPass());
+      });
+
+  static PassPipelineRegistration<> loweringDecisionPipeline(
+      "lowering-decision-planning-pipeline",
+      "Per-op final lowering decision from kernel.* and boundary.* attrs",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createLoweringDecisionPlanningPass());
+      });
+
+  static PassPipelineRegistration<> candidatePipeline(
+      "candidate-generation-pipeline",
+      "Generate execution candidates from expanded BackendCapability schema",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCandidateGenerationPass());
+      });
+
+  // Eleven-pass serving pipeline (mlir-opt standalone; compile-for-target uses its own PM).
   static PassPipelineRegistration<> servingOptPipeline(
       "serving-optimization-pipeline",
-      "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider",
+      "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider, representation, layout, boundary, quant strategy, kernel availability, lowering decision, candidates",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
         pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());
         pm.addNestedPass<func::FuncOp>(createExecutionProviderPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createRepresentationPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createLayoutPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createBoundaryPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createQuantizationStrategyPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createKernelAvailabilityPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createLoweringDecisionPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createCandidateGenerationPass());
       });
 }
 
