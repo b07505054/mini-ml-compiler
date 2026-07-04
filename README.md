@@ -1,38 +1,68 @@
 ## ML Graph Compiler and Runtime Infrastructure
 
-This repository is a prototype compiler/runtime systems project with two
-separate tracks:
+This repository is a prototype **execution-planning ML compiler**. It reuses
+existing MLIR infrastructure for generic graph semantics, lifts
+backend-relevant regions into a decision-oriented HIR, and produces an
+explainable hardware-aware execution plan consumed by heterogeneous runtimes.
 
-1. **MLIR compiler track**: real MLIR dialects, compiler passes, verification,
-   lowering metadata, and runtime-facing execution-plan/artifact export.
-2. **Legacy/local C++ runtime demo harness**: a small custom graph runtime used
+The repository contains two components — one primary, one secondary:
+
+1. **MLIR compiler** (primary): HIR/CV/Serving dialects, the 15-pass
+   hardware-aware serving pipeline, quantization planning, INT8 island
+   propagation, Q/DQ canonicalization, fusion/lowering,
+   capability-gated operator-selection, verification, and execution-plan
+   or artifact export. This is the execution-planning compiler.
+2. **C++ runtime demo harness** (secondary): a small custom graph runtime used
    for demos, benchmark bridges, memory-planning experiments, kernel-registry
-   examples, and backend-sandbox experiments.
+   examples, and backend-sandbox experiments. It is not a parallel compiler
+   track — it is a local demo harness and benchmark bridge.
 
-The important boundary: the MLIR compiler track is the primary compiler story.
-It owns HIR/CV/Serving dialects, compiler passes, quantization planning, INT8
-island propagation, Q/DQ canonicalization, fusion/lowering,
-capability-gated operator-selection metadata, verification, and execution-plan
-or artifact export.
+These are sequential modules in one pipeline, not parallel tracks:
+Frontend → Shared Capability Profiles → Static Optimization → Backend Export.
+The optimization step is the 15-pass serving pipeline described below.
 
 The C++ runtime code in this repository is not the production distributed
 runtime story. New runtime/deployment features should go to the sibling
-`heterogeneous-inference-runtime` project, which is the intended home for
-distributed scheduling, prefill/decode split planning, backend dispatch,
-runtime simulation, cost modeling, and runtime artifact consumption.
+`heterogeneous-inference-runtime` project.
 
-Clean architecture boundary:
+**The compiler produces the theoretical best static solution.
+The runtime produces the best dynamic execution.**
+
+The compiler never performs:
+- runtime scheduling or dynamic execution ordering
+- memory management (allocation, deallocation, arena management)
+- speculative decoding or KV cache management
+- deployment policy (batching, prefill/decode split, SLO enforcement)
+
+Those belong entirely to `heterogeneous-inference-runtime`.
+
+Architecture:
 
 ```text
-Model / MLIR input
+ONNX / model graph
   ->
-MLIR Compiler Track
+Frontend (import / normalize)
   ->
-Execution Plan / Artifact
+Shared capability profiles
+  (HardwareCapability / BackendCapability / KernelLibraryCapability)
+  ->
+Static optimization — Decision Engine (15-pass serving pipeline)
+  ->
+ExecutionPlan  [internal planning artifact]
+  ->
+Backend export
+  |
+  +-- CoreML lane: .mlpackage + compiler_metadata.json
+  |
+  +-- (future: TensorRT, OpenVINO IR, ONNX Runtime, vLLM metadata)
   ->
 heterogeneous-inference-runtime
+  |
+  Model Adapter (loads .mlpackage + compiler_metadata.json)
   ->
-Runtime scheduling / backend dispatch / validation
+Neutral Runtime Graph
+  ->
+Runtime scheduling / backend dispatch / dynamic optimization
 ```
 
 ONNX import, backend kernel mapping, dynamic-shape support, and PocketChef
@@ -42,35 +72,69 @@ visualization of the CV plan are future work.
 
 Honest claims:
 
-- The compiler exports runtime-facing metadata and artifacts.
+- The compiler performs static optimization and exports `.mlpackage` +
+  `compiler_metadata.json` for the current Apple lane.
+- `ExecutionPlan` is an internal planning representation, not the external
+  compiler/runtime boundary.
 - Quantization support is implemented at the compiler-pass metadata/legality
-  level.
+  level (static planning, `declared_profile` truth boundary).
 - The local C++ runtime is a demo harness and benchmark bridge.
+- Compiler and runtime read from the same shared capability profile data.
 
 Not claimed:
 
+- Measured latency, runtime speedup, or deployment performance.
 - Full INT8 graph runtime execution.
 - Production calibration or automatic quantization-parameter generation.
 - Complete ONNX import.
-- Generic Metal backend execution for all quantized kernels.
+- Runtime scheduling, memory management, speculative decoding, or KV cache
+  management — these belong to `heterogeneous-inference-runtime`.
 - The C++ runtime harness and the Python runtime project are one production
   system.
 
 ## Latest Milestones
 
-Implemented in the recent compiler work:
+### 15-Pass Hardware-Aware Serving Pipeline (primary current work)
+
+A complete 15-pass execution-planning pipeline in `mlir_passes/lib/serving/`
+and `mlir_passes/lib/planning/`. Each pass annotates ops with structured
+MLIR attrs without modifying IR structure. No pass selects a winner until
+`PlanSelectionPass`.
+
+| Pass | Attr prefix(es) written |
+|---|---|
+| ServingPhaseAnalysis | `serving.*` |
+| KVLayoutPlanningPass | `kv.*` |
+| ReplayEligibilityPass | `replay.*` |
+| ExecutionProviderPlanningPass | `execution_provider.*` |
+| RepresentationPlanningPass | `representation.*` |
+| LayoutPlanningPass | `layout.*` |
+| BoundaryPlanningPass | `boundary.*` |
+| WeightClassificationPlanningPass | `weight.*` |
+| QuantizationStrategyPlanningPass | `quant.*` |
+| KernelAvailabilityPlanningPass | `kernel.*` |
+| LoweringDecisionPlanningPass | `lowering.*` |
+| QuantizedBoundaryRefinementPass | `boundary.*` (refined) |
+| AlternativeLoweringPlanningPass | `alternative.*` |
+| CandidateGenerationPass | `compiler.candidates.*` |
+| CandidateEvaluationPass | `compiler.evaluated_candidates.*` |
+| PlanSelectionPass | `selected_plan.*`, `compiler.selected_candidates` |
+
+Truth boundaries: every planning attr carries a `truth_boundary` field
+(`public_docs`, `declared_profile`, `measured_profile`, or
+pass-specific static-constraint labels). No claim presents static penalty
+scores as measured hardware latency.
+
+### CV Compiler Pipeline
 
 - Registered `cv` MLIR dialect with seven CV operations.
 - Added variadic `cv.detect_head` parsing/printing support.
-- Loaded the CV dialect in CV tool/test contexts so the artifact tool parses
-  through the registered dialect path.
 - Added Phase 1 CV compiler passes:
   `CVFrontendNormalizationPass`, `CVShapeInferencePass`,
   `CVMemoryPlanningPass`, and `CVExecutionDomainPlanningPass`.
 - Added `CVExecutionPlanBuilder` and `CVExecutionPlanExporter`.
 - Added `emit-cv-execution-plan`.
 - Added the checked-in `artifacts/apple_demo/cv_execution_plan.json` artifact.
-- Kept the LLM compiler/serving path separate from the CV compiler path.
 
 Future work remains: ONNX importer, more CV operators, dynamic shape support,
 backend mapping, and PocketChef visualization.

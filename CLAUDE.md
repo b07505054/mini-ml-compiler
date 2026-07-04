@@ -2,24 +2,261 @@
 
 ## Repository Summary
 
-This repository is a prototype ML graph compiler/runtime. It includes a custom C++ graph IR and runtime demos, CPU kernels, mock/partial heterogeneous backends, memory planning, cost-based backend planning, LLM serving artifact generation, and a separate real MLIR pass plugin for HIR fusion/lowering experiments.
+This repository is a prototype **execution-planning ML compiler**. It reuses existing MLIR infrastructure for generic graph semantics, lifts backend-relevant regions into a decision-oriented HIR, and produces an explainable hardware-aware execution plan consumed by heterogeneous runtimes.
+
+The primary compiler story lives in `mlir_passes/`. The custom C++ runtime in `src/` and `apps/` is a local demo harness and benchmark bridge — it is not the production distributed runtime layer. New runtime/deployment features belong in the sibling `heterogeneous-inference-runtime` project.
 
 Be careful to distinguish implemented behavior from simulations:
 
-- Implemented: custom C++ `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager, memory planner, execution plan structures, cost planner, Python artifact generation/validation, and real MLIR plugin infrastructure.
+- Implemented: HIR/CV/Serving MLIR dialects, 15-pass serving pipeline, custom C++ `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager, memory planner, execution plan structures, cost planner, Python artifact generation/validation.
 - Simulated or partial: `MockGPUBackend`, generic `MetalBackend` graph execution, runtime replanning, many timeline artifacts, and serving latency/throughput values in generated plans.
 
-High-value implemented compiler/runtime evidence now includes:
+High-value implemented compiler evidence:
 
 - HIR dialect ops, verifiers, canonicalization, fusion, conversion, and lowering tests under `mlir_passes/test/`.
+- 15-pass hardware-aware serving pipeline (serving phase → KV layout → replay eligibility → execution provider → representation → layout → boundary → weight classification → quantization strategy → kernel availability → lowering decision → quantized boundary refinement → alternative lowering → candidate generation → candidate evaluation → plan selection).
 - StableHLO-compatible textual subset import for RMSNorm and MatMul-Bias-ReLU patterns.
-- JAX StableHLO export into the local HIR/LLVM pipeline when optional JAX dependencies are installed.
-- Torch-MLIR tiny transformer probe and IREE comparison probe when optional dependencies are installed.
 - HIR RMSNorm executable CPU path via the MLIR execution engine.
 - Apple Silicon MLIR-to-Metal RMSNorm path with a real Metal kernel, generated execution plan, and dispatch validation when the MLIR pipeline has produced the required trace.
 - CPU software-prefetch MatMul-Bias-ReLU backend candidate and benchmark executable.
 
 Assume checked-in traces and artifacts may be stale unless regenerated.
+
+## Architecture
+
+### Execution-Planning Compiler Pipeline
+
+```text
+ONNX / model graph
+  ->
+Frontend (import / normalize)
+  ->
+Shared capability profiles
+  (HardwareCapability / BackendCapability / KernelLibraryCapability)
+  ->
+Static optimization
+  (Decision Engine: 15-pass serving pipeline)
+  ->
+ExecutionPlan  [internal planning artifact]
+  ->
+Backend export
+  |
+  +-- CoreML lane:  .mlpackage + compiler_metadata.json
+  |
+  +-- (future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime package, ...)
+```
+
+`ExecutionPlan` is an **internal** planning representation. It is NOT the final
+external artifact for the CoreML lane or any other lane. The executable compiler
+output for the current Apple lane is:
+
+- **`.mlpackage`** — the compiled CoreML model package
+- **`compiler_metadata.json`** — per-op planning decisions, selected candidates,
+  truth boundaries, and capability provenance
+
+The runtime (`heterogeneous-inference-runtime`) consumes `.mlpackage` and
+`compiler_metadata.json` through its **Model Adapter** layer, which converts
+them into a backend-neutral Runtime Graph for execution.
+
+Hardware Model, Decision Engine, and Backend Export are **sequential modules**
+in one compiler pipeline — not parallel tracks.
+
+### Compiler Responsibility
+
+The compiler owns:
+
+- Import / normalize model graph into MLIR
+- Lift backend-relevant regions into HIR
+- Read shared hardware/backend/kernel capability profiles
+- Run hardware-aware static optimization passes (the Decision Engine)
+- Select per-op execution plans using static penalty scoring
+- Materialize the selected plan into backend artifacts:
+  - Current Apple lane: `.mlpackage` + `compiler_metadata.json`
+  - Future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime package, vLLM metadata
+
+The compiler produces the **theoretical best static solution** given declared
+capability profiles. It has no visibility into runtime state.
+
+### Compiler Does NOT
+
+- Perform runtime scheduling or dynamic execution ordering
+- Manage memory at runtime (no allocation, deallocation, or arena management)
+- Execute kernels or dispatch CUDA/Metal/CoreML APIs
+- Perform speculative decoding or KV cache management
+- Make deployment policy decisions (batching, prefill/decode split, SLO targets)
+- Claim measured latency or runtime speedup unless a benchmark produced them
+- Materialize IR unless a pass explicitly states it does so
+
+Those responsibilities belong entirely to `heterogeneous-inference-runtime`.
+
+### Runtime Responsibility (heterogeneous-inference-runtime)
+
+The runtime owns:
+
+- Load compiler artifacts (`.mlpackage`, `compiler_metadata.json`) via Model Adapter
+- Convert to a backend-neutral Runtime Graph
+- Schedule execution dynamically based on runtime state
+- Dispatch backend kernels (CoreML, CUDA, Metal, CPU)
+- Allocate and manage runtime buffers
+- Perform speculative decoding and KV cache management
+- Apply deployment policy (continuous batching, prefill/decode split, SLO enforcement)
+- Collect runtime traces and measured latency evidence
+- Validate and extend capability profiles with measured data (MeasuredSupport)
+
+### 15-Pass Serving Pipeline
+
+Each pass answers one planning question and writes structured attrs. No pass
+selects a winner until `PlanSelectionPass`. No pass materializes IR.
+
+| Pass | Question answered | truth_boundary |
+|---|---|---|
+| ServingPhaseAnalysis | Prefill or decode? | declared_profile |
+| KVLayoutPlanning | KV cache layout and block size? | declared_profile |
+| ReplayEligibilityPass | CUDA-graph replayable? | declared_profile |
+| ExecutionProviderPlanning | Which backend/API? | declared_profile |
+| RepresentationPlanning | What dtype/layout does the backend expect? | declared_profile |
+| LayoutPlanning | Which specific tensor layout per op? | declared_profile |
+| BoundaryPlanning | Which boundary ops (cast/dequant/layout_transform) required? | declared_profile |
+| WeightClassificationPlanning | Weight tensors constant or runtime-variable? | declared_profile |
+| QuantizationStrategyPlanning | What quantization strategy per op? | declared_profile |
+| KernelAvailabilityPlanning | Does a kernel exist for (op, dtype, layout, quant)? | declared_profile |
+| LoweringDecisionPlanning | Direct lower / fallback / unsupported? | declared_profile |
+| QuantizedBoundaryRefinement | Refine weight dequant after lowering decisions. | declared_profile |
+| AlternativeLoweringPlanning | Legal alternatives when exact kernel is missing? | alternative_lowering_static_not_materialized_not_cost_evaluated |
+| CandidateGenerationPass | What executable candidates exist per op? | candidate_generation_static_constraints_not_cost_evaluated |
+| CandidateEvaluation | Static relative penalty score per candidate? | candidate_evaluation_static_penalty_not_measured_latency |
+| PlanSelection | Which candidate wins? | plan_selection_static_penalty_not_measured_runtime |
+
+### Decision Flow
+
+```text
+Backend selected
+  -> Representation chosen
+  -> Layout planned
+  -> Boundary needs identified
+  -> Weights classified
+  -> Quantization strategy chosen
+  -> Kernel availability checked
+  -> Lowering decision made
+  -> Quantized boundaries refined
+  -> Alternative lowering candidates generated (if exact kernel missing)
+  -> Candidates evaluated with static penalty (no measured latency)
+  -> Plan selected (lowest-penalty evaluated candidate wins)
+  -> Execution plan exported
+```
+
+Fallback is **not** chosen immediately after a kernel miss. It is a last-resort
+candidate considered only after direct kernel, algebraic decomposition,
+representation conversion, and other alternative paths have been found unavailable
+or invalid.
+
+### Hardware Model Layers
+
+Three distinct layers with different scopes and truth_boundary values:
+
+- **HardwareCapability**: theoretical hardware support from public docs or declared device profiles. `truth_boundary = public_docs | declared_profile`.
+- **BackendCapability**: what the backend/API/compiler actually exposes, which may be more restrictive than hardware. `truth_boundary = declared_profile`.
+- **KernelLibraryCapability**: actual kernel availability for a specific (op, dtype, layout, quant_mode) tuple. `truth_boundary = declared_profile | measured_profile`.
+
+No layer claims measured hardware performance unless a benchmark explicitly produced it.
+
+### Materialization Status
+
+Planning is implemented. IR materialization is intentionally deferred.
+
+Planning means (implemented):
+- annotate `selected_plan.*` per op
+- annotate `quant.*`, `kernel.*`, `lowering.*`, `alternative.*`
+- export execution plan JSON / runtime contract
+
+Materialization would mean (deferred):
+- inserting `hir.cast`
+- inserting `hir.dequantize` / `hir.requantize`
+- inserting `hir.layout_transform`
+- replacing `gelu` with primitive ops
+- rewriting graph structure
+
+No pass in the current pipeline materializes IR. IR structure is read-only
+until a future materialization pass explicitly states otherwise.
+
+### Apple/CoreML Quantization Demo
+
+The Apple/CoreML demo demonstrates:
+- Apple/CoreML-style quantization lowering decisions (`declared_profile`)
+- weight classification preventing incorrect `weight_only_int8` on runtime activations
+- kernel availability vs backend capability separation
+- per-op plan selection and export
+
+The demo does NOT claim:
+- real ANE kernel internals or layout proofs
+- measured Core ML performance
+- a CoreML profile as evidence of ANE internal execution
+- fallback is selected immediately after a kernel miss
+
+### Shared Capability Profiles
+
+The compiler and runtime intentionally read from the same capability data. Both
+repositories are currently centered on the same development machine. The three
+shared layers:
+
+- **HardwareCapability** — theoretical hardware support. `truth_boundary = public_docs | declared_profile`. Neither repo may claim measured performance here unless a benchmark produced it.
+- **BackendCapability** — what the backend/API actually exposes, which may be more restrictive than hardware. `truth_boundary = declared_profile`.
+- **KernelLibraryCapability** — actual kernel availability for (op, dtype, layout, quant_mode). `truth_boundary = declared_profile | measured_profile`.
+
+The runtime may extend these with a fourth layer:
+
+- **MeasuredSupport** — runtime-measured latency/throughput evidence collected during execution. `truth_boundary = measured_profile`. This layer belongs to the runtime only; the compiler never writes it.
+
+Neither repository maintains separate hardware truths. All shared profile data
+must be consistent across both.
+
+### Compiler Output Artifacts
+
+The compiler/runtime boundary for the current Apple lane is:
+
+| Artifact | Contents | Consumer |
+|---|---|---|
+| `.mlpackage` | Compiled CoreML model package | Runtime Model Adapter |
+| `compiler_metadata.json` | Per-op planning decisions, selected candidates, truth boundaries, capability provenance | Runtime Model Adapter |
+
+`compiler_metadata.json` must contain, per op:
+- op name and type
+- selected candidate (type, reason, penalty_score)
+- backend, kernel library, and kernel name
+- dtype, layout, and quantization decisions
+- boundary requirements (cast, dequant, layout_transform)
+- fallback path and unsupported reasons
+- `truth_boundary` per planning claim (`public_docs`, `declared_profile`, `measured_profile`, or `unknown`)
+- source pass identification
+
+The `ExecutionPlan` internal representation that feeds the CoreML export step
+is **not** an external artifact. It is a compiler-internal planning structure
+and should not be described as the compiler/runtime boundary.
+
+### Truth Boundary
+
+The compiler makes only static optimization claims:
+
+- No measured latency values unless an explicit benchmark produced them.
+- No runtime speedup claims.
+- No deployment performance claims.
+- No claims about dynamic execution quality (batching efficiency, SLO hit rate, etc.).
+
+Every planning annotation carries a `truth_boundary` field. If no benchmark
+exists, the claim is `declared_profile` or `public_docs` — not `measured_profile`.
+
+### Future Output Lanes
+
+Future compiler work may add backend export lanes without changing the
+optimization pipeline:
+
+- **TensorRT**: serialize selected plans into a TensorRT engine profile
+- **OpenVINO IR**: export to OpenVINO Intermediate Representation
+- **ONNX Runtime**: package as ONNX Runtime optimized model
+- **vLLM deployment metadata**: emit serving-framework policy annotations
+
+Each future lane replaces only the backend export step. The frontend, shared
+capability profiles, and Decision Engine remain unchanged across lanes.
 
 ## Environment Policy
 
