@@ -1,0 +1,275 @@
+{
+  "artifact_type": "vllm_execution_plan",
+  "schema_version": "1.0.0",
+  "plan_id": "qwen_0_5b_gtx1650_v1",
+  "producer": {
+    "repo": "ml-graph-compiler-runtime",
+    "tool": "tools/export_vllm_execution_plan.py",
+    "git_commit": null,
+    "created_at_utc": "2026-07-04T00:00:00+00:00"
+  },
+  "truth_boundary": "Execution planning artifact only; not measured performance.",
+  "planning_provenance": {
+    "planner_layer": "backend_independent_execution_planning",
+    "runtime_target": "vllm",
+    "capability_source": "../ml-platform-capabilities/profiles",
+    "model_weights_modified": false,
+    "backend_modified": false,
+    "performance_measured": false
+  },
+  "source_artifacts": [
+    "configs/models/qwen_0_5b_spec.json",
+    "configs/vllm_serving_request_trace.json",
+    "artifacts/vllm_serving_plan/compiler_serving_plan.json",
+    "artifacts/vllm_serving_plan/kv_cache_layout_plan.json",
+    "artifacts/vllm_serving_plan/cuda_graph_bucket_plan.json",
+    "../ml-platform-capabilities/profiles/hardware/nvidia_gtx1650_maxq.json",
+    "../ml-platform-capabilities/profiles/backend/vllm.json",
+    "../ml-platform-capabilities/profiles/kernels/flashattention2.json",
+    "../ml-platform-capabilities/profiles/kernels/cutlass.json",
+    "../ml-platform-capabilities/profiles/kernels/cublas.json",
+    "../ml-platform-capabilities/profiles/kernels/triton.json",
+    "../ml-platform-capabilities/profiles/kernels/xformers.json"
+  ],
+  "model": {
+    "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+    "tokenizer": "Qwen/Qwen2.5-0.5B-Instruct",
+    "dtype": "float16",
+    "quantization": "none",
+    "trust_remote_code": false
+  },
+  "hardware_profile": {
+    "profile_id": "nvidia_gtx1650_maxq",
+    "gpu_name": "NVIDIA GeForce GTX 1650 Max-Q",
+    "vendor": "NVIDIA",
+    "family": "Turing",
+    "vram_gb": 4,
+    "vram_mb": 4096,
+    "cuda_runtime": "13.2",
+    "compute_capability": "7.5",
+    "single_gpu": true,
+    "capabilities": {
+      "tensor_core_support": "unknown",
+      "fp16": true,
+      "bf16": false,
+      "fp8": false,
+      "nvfp4": false,
+      "mxfp4": false,
+      "int8": false,
+      "int4": false,
+      "multi_gpu": false
+    }
+  },
+  "backend_profile": {
+    "backend": "vllm",
+    "backend_name": "vLLM",
+    "backend_id": "vllm",
+    "backend_api": "OpenAI-compatible HTTP API",
+    "supported_features": [
+      "OpenAI-compatible serving",
+      "continuous batching",
+      "paged attention",
+      "prefix caching",
+      "chunked prefill"
+    ],
+    "supported_quantization": [
+      "none"
+    ],
+    "supported_speculative_decoding": {
+      "supported": false,
+      "measured": false
+    },
+    "supported_prefix_cache": {
+      "supported": true,
+      "measured": false
+    },
+    "supported_chunked_prefill": {
+      "supported": true,
+      "measured": false
+    },
+    "supported_paged_attention": {
+      "supported": true,
+      "measured": false
+    },
+    "supported_tensor_parallel": {
+      "supported": false,
+      "max_size": 1,
+      "measured": false
+    },
+    "supported_pipeline_parallel": {
+      "supported": false,
+      "max_size": 1,
+      "measured": false
+    },
+    "does_not_claim": [
+      "this repo implements vLLM",
+      "this repo modifies vLLM kernels"
+    ]
+  },
+  "kernel_profile": {
+    "providers": [
+      "flashattention2",
+      "cutlass",
+      "cublas",
+      "triton",
+      "xformers"
+    ],
+    "available_kernels": [
+      {
+        "provider": "flashattention2",
+        "operation": "Attention",
+        "availability": "unsupported",
+        "support_status": "unsupported_on_gtx1650_maxq_compute_capability",
+        "supported_precisions": [],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "cutlass",
+        "operation": "MatMul",
+        "availability": "opaque",
+        "support_status": "provider_library_possible_not_integrated_by_this_repo",
+        "supported_precisions": [
+          "float16",
+          "float32"
+        ],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "cutlass",
+        "operation": "FusedKernels",
+        "availability": "opaque",
+        "support_status": "provider_library_possible_not_integrated_by_this_repo",
+        "supported_precisions": [
+          "float16",
+          "float32"
+        ],
+        "supported_features": [
+          "fusion"
+        ],
+        "measured": false
+      },
+      {
+        "provider": "cublas",
+        "operation": "MatMul",
+        "availability": "builtin",
+        "support_status": "cuda_library_provider",
+        "supported_precisions": [
+          "float16",
+          "float32"
+        ],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "triton",
+        "operation": "Attention",
+        "availability": "opaque",
+        "support_status": "observed_fallback_in_vllm_server_log",
+        "supported_precisions": [
+          "float16"
+        ],
+        "supported_features": [
+          "attention"
+        ],
+        "measured": false
+      },
+      {
+        "provider": "triton",
+        "operation": "RMSNorm",
+        "availability": "opaque",
+        "support_status": "provider_kernel_possible_not_integrated_by_this_repo",
+        "supported_precisions": [
+          "float16"
+        ],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "triton",
+        "operation": "Dequant",
+        "availability": "unsupported",
+        "support_status": "not_used_by_phase1_none_quantization",
+        "supported_precisions": [],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "triton",
+        "operation": "Requant",
+        "availability": "unsupported",
+        "support_status": "not_used_by_phase1_none_quantization",
+        "supported_precisions": [],
+        "supported_features": [],
+        "measured": false
+      },
+      {
+        "provider": "xformers",
+        "operation": "Attention",
+        "availability": "opaque",
+        "support_status": "provider_library_possible_not_integrated_by_this_repo",
+        "supported_precisions": [
+          "float16"
+        ],
+        "supported_features": [
+          "attention"
+        ],
+        "measured": false
+      }
+    ]
+  },
+  "workload_profile": {
+    "request_count": 32,
+    "shared_prefix": true,
+    "prompt_len_bucket": "short_to_medium",
+    "output_len": 128
+  },
+  "batch_policy": {
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 2048,
+    "enable_chunked_prefill": true
+  },
+  "prefix_policy": {
+    "enable_prefix_caching": true,
+    "group_by_shared_prefix": true
+  },
+  "memory_policy": {
+    "gpu_memory_utilization": 0.75,
+    "max_model_len": 2048,
+    "block_size": 16,
+    "swap_space": 2
+  },
+  "quantization_policy": {
+    "dtype": "float16",
+    "quantization": "none"
+  },
+  "speculative_policy": {
+    "enabled": false,
+    "draft_model": null,
+    "num_speculative_tokens": null
+  },
+  "runtime_config": {
+    "tensor_parallel_size": 1,
+    "pipeline_parallel_size": 1,
+    "served_model_name": "qwen-0.5b-compiler-plan"
+  },
+  "metrics_schema": {
+    "ttft_ms": true,
+    "tpot_ms": true,
+    "throughput_tok_s": true,
+    "request_latency_ms": true,
+    "gpu_memory_used_mb": true,
+    "prefix_cache_hit_rate": true,
+    "queue_wait_ms": true
+  },
+  "feedback": {
+    "baseline_metrics_artifact": null,
+    "compiler_plan_metrics_artifact": null
+  },
+  "non_claims": [
+    "no_measured_speedup_claim",
+    "no_qwen_weight_modification",
+    "no_vllm_fork_or_scheduler_modification"
+  ]
+}
