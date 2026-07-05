@@ -225,3 +225,216 @@ module attributes {
     return %mm : tensor<1x256xf16>
   }
 }
+
+// -----
+
+// Test N1: weight_only_int8 quant strategy + requires_constant_weight=true +
+// weight.constant_satisfied=true -> exact match -> lowerable.
+// Verifies opQuantMode is derived from quant.strategy ("weight_only_int8" -> "weight_only"),
+// not from quant.activation_quant_mode.
+
+// CHECK-LABEL: @weight_only_constant_satisfied_true
+// CHECK: "compute.matmul"
+// CHECK-SAME: kernel.decision_reason = "exact_kernel_match"
+// CHECK-SAME: kernel.exists = true
+// CHECK-SAME: kernel.lowering_status = "lowerable"
+
+module attributes {
+  target.kernel_libraries.ane_int8 = [{
+    fallback_backend = "cpu",
+    fallback_kernel = "",
+    fusion_patterns = [],
+    kernel_library = "ane_weight_only_lib",
+    kernel_name = "ane_weight_only_matmul",
+    op_type = "matmul",
+    requires_constant_weight = true,
+    rewrite_patterns = [],
+    source_level = "declared_profile",
+    supported_dtypes = ["fp16"],
+    supported_layouts = [],
+    supported_quant_modes = ["weight_only"],
+    supports_dynamic_shape = true,
+    supports_fusion = false,
+    truth_boundary = "kernel_availability_static_library_model_not_runtime_verified"
+  }]
+} {
+  func.func @weight_only_constant_satisfied_true(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.source_backend = "ane_int8" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg0) {
+      quant.activation_dtype = "fp16",
+      quant.strategy = "weight_only_int8",
+      weight.constant_satisfied = true
+    } : (tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %mm : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test N2: weight_only_int8 + requires_constant_weight=true +
+// weight.constant_satisfied=false -> constWeightFailed -> fallback_required.
+// Verifies enforceConstantWeight when weight.constant_satisfied attr is explicitly set.
+
+// CHECK-LABEL: @weight_only_constant_satisfied_false
+// CHECK: "compute.matmul"
+// CHECK-SAME: kernel.decision_reason = "requires_constant_weight_fallback_to_cpu"
+// CHECK-SAME: kernel.exists = false
+// CHECK-SAME: kernel.fallback_backend = "cpu"
+// CHECK-SAME: kernel.lowering_status = "fallback_required"
+
+module attributes {
+  target.kernel_libraries.ane_int8 = [{
+    fallback_backend = "cpu",
+    fallback_kernel = "",
+    fusion_patterns = [],
+    kernel_library = "ane_weight_only_lib",
+    kernel_name = "ane_weight_only_matmul",
+    op_type = "matmul",
+    requires_constant_weight = true,
+    rewrite_patterns = [],
+    source_level = "declared_profile",
+    supported_dtypes = ["fp16"],
+    supported_layouts = [],
+    supported_quant_modes = ["weight_only"],
+    supports_dynamic_shape = true,
+    supports_fusion = false,
+    truth_boundary = "kernel_availability_static_library_model_not_runtime_verified"
+  }]
+} {
+  func.func @weight_only_constant_satisfied_false(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.source_backend = "ane_int8" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg0) {
+      quant.activation_dtype = "fp16",
+      quant.strategy = "weight_only_int8",
+      weight.constant_satisfied = false
+    } : (tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %mm : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test N3: fp16_fallback strategy -> opQuantMode="none" -> empty supported_quant_modes
+// matches any mode -> exact match -> lowerable.
+// Verifies backward compat: fp16_fallback ops find kernels with open quant mode lists.
+
+// CHECK-LABEL: @fp16_fallback_open_quant_modes
+// CHECK: "compute.matmul"
+// CHECK-SAME: kernel.decision_reason = "exact_kernel_match"
+// CHECK-SAME: kernel.exists = true
+// CHECK-SAME: kernel.lowering_status = "lowerable"
+
+module attributes {
+  target.kernel_libraries.cpu = [{
+    fallback_backend = "cpu_ref",
+    fallback_kernel = "",
+    fusion_patterns = [],
+    kernel_library = "cpu_blas",
+    kernel_name = "cpu_matmul_fp16_generic",
+    op_type = "matmul",
+    requires_constant_weight = false,
+    rewrite_patterns = [],
+    source_level = "declared_profile",
+    supported_dtypes = ["fp16"],
+    supported_layouts = [],
+    supported_quant_modes = [],
+    supports_dynamic_shape = true,
+    supports_fusion = false,
+    truth_boundary = "kernel_availability_static_library_model_not_runtime_verified"
+  }]
+} {
+  func.func @fp16_fallback_open_quant_modes(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.source_backend = "cpu" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg0) {
+      quant.activation_dtype = "fp16",
+      quant.strategy = "fp16_fallback"
+    } : (tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %mm : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test N4: static_int8 strategy -> opQuantMode="static_int8" -> matched against
+// supported_quant_modes=["static_int8"] -> exact match -> lowerable.
+// Verifies the static_int8 branch in opQuantMode derivation.
+
+// CHECK-LABEL: @static_int8_quant_mode_match
+// CHECK: "compute.matmul"
+// CHECK-SAME: kernel.decision_reason = "exact_kernel_match"
+// CHECK-SAME: kernel.exists = true
+// CHECK-SAME: kernel.lowering_status = "lowerable"
+
+module attributes {
+  target.kernel_libraries.ane_static = [{
+    fallback_backend = "",
+    fallback_kernel = "",
+    fusion_patterns = [],
+    kernel_library = "ane_static_lib",
+    kernel_name = "ane_static_int8_matmul",
+    op_type = "matmul",
+    requires_constant_weight = false,
+    rewrite_patterns = [],
+    source_level = "declared_profile",
+    supported_dtypes = ["int8"],
+    supported_layouts = [],
+    supported_quant_modes = ["static_int8"],
+    supports_dynamic_shape = true,
+    supports_fusion = false,
+    truth_boundary = "kernel_availability_static_library_model_not_runtime_verified"
+  }]
+} {
+  func.func @static_int8_quant_mode_match(%arg0: tensor<1x256xi8>) -> tensor<1x256xi8>
+    attributes { representation.source_backend = "ane_static" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg0) {
+      quant.activation_dtype = "int8",
+      quant.strategy = "static_int8"
+    } : (tensor<1x256xi8>, tensor<1x256xi8>) -> tensor<1x256xi8>
+    return %mm : tensor<1x256xi8>
+  }
+}
+
+// -----
+
+// Test N5: supports_dynamic_shape=false + op has dynamic result shape ->
+// dynamicShapeFailed -> decision_reason=dynamic_shape_unsupported.
+// Verifies hasDynamicShape detection via ShapedType::hasStaticShape on result types.
+
+// CHECK-LABEL: @dynamic_shape_rejected
+// CHECK: "compute.matmul"
+// CHECK-SAME: kernel.decision_reason = "dynamic_shape_unsupported"
+// CHECK-SAME: kernel.exists = false
+// CHECK-SAME: kernel.lowering_status = "fallback_required"
+
+module attributes {
+  target.kernel_libraries.cpu_static = [{
+    fallback_backend = "cpu",
+    fallback_kernel = "",
+    fusion_patterns = [],
+    kernel_library = "cpu_blas_static",
+    kernel_name = "cpu_static_matmul",
+    op_type = "matmul",
+    requires_constant_weight = false,
+    rewrite_patterns = [],
+    source_level = "declared_profile",
+    supported_dtypes = ["fp16"],
+    supported_layouts = [],
+    supported_quant_modes = [],
+    supports_dynamic_shape = false,
+    supports_fusion = false,
+    truth_boundary = "kernel_availability_static_library_model_not_runtime_verified"
+  }]
+} {
+  func.func @dynamic_shape_rejected(%arg0: tensor<?x256xf16>) -> tensor<?x256xf16>
+    attributes { representation.source_backend = "cpu_static" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg0) {
+      quant.activation_dtype = "fp16"
+    } : (tensor<?x256xf16>, tensor<?x256xf16>) -> tensor<?x256xf16>
+    return %mm : tensor<?x256xf16>
+  }
+}

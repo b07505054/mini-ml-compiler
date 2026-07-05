@@ -171,6 +171,71 @@ planner choosing a mixed CPU/Metal plan over all-Metal due to transfer cost,
 plus profile-calibrated kernel selection and target tile decisions for HIR
 fused ops.
 
+## 15-Pass Hardware-Aware Serving Pipeline
+
+The primary current compiler work is a complete 15-pass execution-planning
+pipeline in `mlir_passes/lib/serving/` and `mlir_passes/lib/planning/`. The
+pipeline reads hardware/backend/kernel capability profiles declared in target
+profile MLIR attrs, then annotates each op with structured planning decisions.
+
+```text
+HIR / Serving IR input
+  -> ServingPhaseAnalysis          (serving.phase = prefill | decode)
+  -> KVLayoutPlanningPass          (kv.layout, kv.block_size)
+  -> ReplayEligibilityPass         (replay.eligible)
+  -> ExecutionProviderPlanningPass (execution_provider.backend)
+  -> RepresentationPlanningPass    (representation.effective_dtype)
+  -> LayoutPlanningPass            (layout.effective_layout)
+  -> BoundaryPlanningPass          (boundary.cast_required, boundary.dequant_required)
+  -> WeightClassificationPlanningPass (weight.classification)
+  -> QuantizationStrategyPlanningPass (quant.strategy, quant.activation_dtype)
+  -> KernelAvailabilityPlanningPass   (kernel.exists, kernel.lowering_status)
+  -> LoweringDecisionPlanningPass     (lowering.decision)
+  -> QuantizedBoundaryRefinementPass  (boundary.weight_dequant_required)
+  -> AlternativeLoweringPlanningPass  (alternative.candidates)
+  -> CandidateGenerationPass          (compiler.candidates, compiler.rejected_candidates)
+  -> CandidateEvaluationPass          (compiler.evaluated_candidates with evaluation.*)
+  -> PlanSelectionPass                (selected_plan.*, compiler.selected_candidates)
+  -> Execution Plan JSON / Runtime Contract
+```
+
+Key design rules:
+
+- Every pass writes structured MLIR attrs. No pass modifies IR structure.
+- No pass selects a winner until `PlanSelectionPass`.
+- No pass materializes boundary ops (cast, dequant, layout_transform). Materialization is deferred.
+- Fallback is last resort, not first response. Backend fallback is only emitted when direct kernel, algebraic decomposition, representation conversion, layout conversion, and cast conversion paths are all unavailable or invalid.
+- Every annotation carries a `truth_boundary` field: `public_docs`, `declared_profile`, `measured_profile`, or a pass-specific static-constraint label.
+
+Penalty model for `CandidateEvaluationPass` (static relative, no measured latency unit):
+
+| Candidate type | Base penalty |
+|---|---|
+| `direct_lower` | 0 |
+| `cast_conversion` | 2 |
+| `representation_conversion` | 3 + boundary penalties |
+| `layout_conversion` | 4 |
+| `algebraic_decomposition` | 5 |
+| `backend_fallback` | 20 |
+| `unsupported` | 100 |
+| unknown | 10 (→ partially_evaluated) |
+
+Boundary penalties for `representation_conversion`: dequant_weight boundary +3,
+cast boundary +2, layout_transform boundary +2.
+
+`PlanSelectionPass` selection tiers:
+
+1. Lowest-penalty evaluated non-fallback candidate.
+2. If none: evaluated `backend_fallback` (last resort).
+3. If none: lowest-penalty `partially_evaluated` candidate.
+4. If none: `unsupported` (no valid lowering path).
+
+Tiebreak priority within a tier: direct_lower > repr_conv > cast_conv >
+layout_conv > decomp > fallback > unsupported.
+
+FileCheck tests for all 15 passes are in `mlir_passes/test/serving/` and
+`mlir_passes/test/planning/`. Run with `tools/run_mlir_pass_tests.sh`.
+
 ## Verification
 
 ```bash

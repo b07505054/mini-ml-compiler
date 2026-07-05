@@ -106,10 +106,16 @@ struct QuantizationStrategyPlanningPass
       if (effectiveDtype == "i8")   effectiveDtype = "int8";
     }
 
-    // Weights constant: absent = unknown (optimistic; treat as potentially constant).
+    // Function-level weight-constant state.
+    // representation.weights_are_constant = true  → explicit override for all ops.
+    // representation.weights_are_constant = false → old explicit non-constant path.
+    // absent                                      → falls through to per-op signal below.
+    bool funcWeightsConstant = false;
     bool weightsExplicitlyNonConstant = false;
-    if (auto a = funcOp->getAttrOfType<BoolAttr>("representation.weights_are_constant"))
-      if (!a.getValue()) weightsExplicitlyNonConstant = true;
+    if (auto a = funcOp->getAttrOfType<BoolAttr>("representation.weights_are_constant")) {
+      if (a.getValue()) funcWeightsConstant = true;
+      else              weightsExplicitlyNonConstant = true;
+    }
 
     // Backend capability reads.
     std::string bcPrefix = "target.backend_capabilities." + backend + ".";
@@ -170,6 +176,36 @@ struct QuantizationStrategyPlanningPass
       if (auto a = op.getAttrOfType<BoolAttr>("boundary.dequant_required"))
         requiresDequantBoundary = a.getValue();
 
+      // Per-op weight classification from WeightClassificationPlanningPass.
+      // When present, overrides the function-level optimistic default.
+      bool hasOpConstSat = false;
+      bool opConstSatisfied = false;
+      bool opWeightUnknown = false;
+      if (auto a = op.getAttrOfType<BoolAttr>("weight.constant_satisfied")) {
+        hasOpConstSat = true;
+        opConstSatisfied = a.getValue();
+      }
+      if (hasOpConstSat && !opConstSatisfied) {
+        if (auto a = op.getAttrOfType<StringAttr>("weight.classification"))
+          if (a.getValue() == "unknown") opWeightUnknown = true;
+      }
+
+      // Effective constant status (priority: func-level override > per-op > old optimistic).
+      bool isConstant;
+      bool isUnknownConst;
+      if (funcWeightsConstant) {
+        isConstant = true;  isUnknownConst = false;
+      } else if (hasOpConstSat) {
+        isConstant = opConstSatisfied;
+        isUnknownConst = !opConstSatisfied && opWeightUnknown;
+      } else if (weightsExplicitlyNonConstant) {
+        isConstant = false; isUnknownConst = false;
+      } else {
+        // WeightClassificationPlanningPass did not run (standalone pipeline).
+        // Preserve old optimistic default so existing tests pass.
+        isConstant = true;  isUnknownConst = false;
+      }
+
       if (accuracySensitive) {
         // Rule 5: accuracy-sensitive ops always fall back to fp16.
         strategy = "fp16_fallback";
@@ -184,8 +220,23 @@ struct QuantizationStrategyPlanningPass
         fallbackReason = "accuracy_sensitive_op";
         accuracyRisk = "medium";
 
-      } else if (weightsExplicitlyNonConstant) {
-        // Rule 2 negated: weights not constant → cannot do weight quantization.
+      } else if (!isConstant && isUnknownConst) {
+        // weight.classification = "unknown": weight may not be constant; conservative fallback.
+        strategy = "fp16_fallback";
+        weightDtype = effectiveDtype;
+        activationDtype = effectiveDtype;
+        outputDtype = !resultDtype.empty() ? resultDtype : effectiveDtype;
+        accumDtypeForOp = effectiveDtype;
+        quantMode = "none";
+        weightQuantMode = "none";
+        activationQuantMode = "none";
+        decisionReason = "weight_classification_unknown";
+        fallbackReason = "weight_constant_unknown";
+        accuracyRisk = "unknown";
+
+      } else if (!isConstant && weightsExplicitlyNonConstant) {
+        // Func-level explicit non-constant (representation.weights_are_constant = false).
+        // Keeps legacy fallback_reason for backward compat with existing tests.
         strategy = "fp16_fallback";
         weightDtype = effectiveDtype;
         activationDtype = effectiveDtype;
@@ -196,6 +247,20 @@ struct QuantizationStrategyPlanningPass
         activationQuantMode = "none";
         decisionReason = "weight_not_constant";
         fallbackReason = "requires_constant_weight";
+        accuracyRisk = "low";
+
+      } else if (!isConstant) {
+        // Per-op weight.constant_satisfied = false from WeightClassificationPlanningPass.
+        strategy = "fp16_fallback";
+        weightDtype = effectiveDtype;
+        activationDtype = effectiveDtype;
+        outputDtype = !resultDtype.empty() ? resultDtype : effectiveDtype;
+        accumDtypeForOp = effectiveDtype;
+        quantMode = "none";
+        weightQuantMode = "none";
+        activationQuantMode = "none";
+        decisionReason = "weight_classification_runtime_activation";
+        fallbackReason = "weight_not_constant";
         accuracyRisk = "low";
 
       } else if (hasWeightInt8) {

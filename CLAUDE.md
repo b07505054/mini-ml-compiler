@@ -37,29 +37,11 @@ Shared capability profiles
 Static optimization
   (Decision Engine: 15-pass serving pipeline)
   ->
-ExecutionPlan  [internal planning artifact]
-  ->
-Backend export
-  |
-  +-- CoreML lane:  .mlpackage + compiler_metadata.json
-  |
-  +-- (future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime package, ...)
+ExecutionPlan  [compiler deliverable]
 ```
 
-`ExecutionPlan` is an **internal** planning representation. It is NOT the final
-external artifact for the CoreML lane or any other lane. The executable compiler
-output for the current Apple lane is:
-
-- **`.mlpackage`** — the compiled CoreML model package
-- **`compiler_metadata.json`** — per-op planning decisions, selected candidates,
-  truth boundaries, and capability provenance
-
-The runtime (`heterogeneous-inference-runtime`) consumes `.mlpackage` and
-`compiler_metadata.json` through its **Model Adapter** layer, which converts
-them into a backend-neutral Runtime Graph for execution.
-
-Hardware Model, Decision Engine, and Backend Export are **sequential modules**
-in one compiler pipeline — not parallel tracks.
+Hardware Model and Decision Engine are **sequential modules** in one compiler
+pipeline — not parallel tracks.
 
 ### Compiler Responsibility
 
@@ -70,9 +52,7 @@ The compiler owns:
 - Read shared hardware/backend/kernel capability profiles
 - Run hardware-aware static optimization passes (the Decision Engine)
 - Select per-op execution plans using static penalty scoring
-- Materialize the selected plan into backend artifacts:
-  - Current Apple lane: `.mlpackage` + `compiler_metadata.json`
-  - Future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime package, vLLM metadata
+- Export `execution_plan.json` — the compiler deliverable
 
 The compiler produces the **theoretical best static solution** given declared
 capability profiles. It has no visibility into runtime state.
@@ -88,20 +68,6 @@ capability profiles. It has no visibility into runtime state.
 - Materialize IR unless a pass explicitly states it does so
 
 Those responsibilities belong entirely to `heterogeneous-inference-runtime`.
-
-### Runtime Responsibility (heterogeneous-inference-runtime)
-
-The runtime owns:
-
-- Load compiler artifacts (`.mlpackage`, `compiler_metadata.json`) via Model Adapter
-- Convert to a backend-neutral Runtime Graph
-- Schedule execution dynamically based on runtime state
-- Dispatch backend kernels (CoreML, CUDA, Metal, CPU)
-- Allocate and manage runtime buffers
-- Perform speculative decoding and KV cache management
-- Apply deployment policy (continuous batching, prefill/decode split, SLO enforcement)
-- Collect runtime traces and measured latency evidence
-- Validate and extend capability profiles with measured data (MeasuredSupport)
 
 ### 15-Pass Serving Pipeline
 
@@ -210,29 +176,6 @@ The runtime may extend these with a fourth layer:
 Neither repository maintains separate hardware truths. All shared profile data
 must be consistent across both.
 
-### Compiler Output Artifacts
-
-The compiler/runtime boundary for the current Apple lane is:
-
-| Artifact | Contents | Consumer |
-|---|---|---|
-| `.mlpackage` | Compiled CoreML model package | Runtime Model Adapter |
-| `compiler_metadata.json` | Per-op planning decisions, selected candidates, truth boundaries, capability provenance | Runtime Model Adapter |
-
-`compiler_metadata.json` must contain, per op:
-- op name and type
-- selected candidate (type, reason, penalty_score)
-- backend, kernel library, and kernel name
-- dtype, layout, and quantization decisions
-- boundary requirements (cast, dequant, layout_transform)
-- fallback path and unsupported reasons
-- `truth_boundary` per planning claim (`public_docs`, `declared_profile`, `measured_profile`, or `unknown`)
-- source pass identification
-
-The `ExecutionPlan` internal representation that feeds the CoreML export step
-is **not** an external artifact. It is a compiler-internal planning structure
-and should not be described as the compiler/runtime boundary.
-
 ### Truth Boundary
 
 The compiler makes only static optimization claims:
@@ -244,19 +187,6 @@ The compiler makes only static optimization claims:
 
 Every planning annotation carries a `truth_boundary` field. If no benchmark
 exists, the claim is `declared_profile` or `public_docs` — not `measured_profile`.
-
-### Future Output Lanes
-
-Future compiler work may add backend export lanes without changing the
-optimization pipeline:
-
-- **TensorRT**: serialize selected plans into a TensorRT engine profile
-- **OpenVINO IR**: export to OpenVINO Intermediate Representation
-- **ONNX Runtime**: package as ONNX Runtime optimized model
-- **vLLM deployment metadata**: emit serving-framework policy annotations
-
-Each future lane replaces only the backend export step. The frontend, shared
-capability profiles, and Decision Engine remain unchanged across lanes.
 
 ## Environment Policy
 

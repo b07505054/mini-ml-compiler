@@ -16,8 +16,10 @@ module attributes {
       serving.prompt_tokens = 16 : i64,
       serving.output_tokens = 8 : i64
     } : (tensor<1x256xf16>, tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
-    // hir.matmul: quantizable op -> weight_only_int8 on coreml (int8 support).
-    %mm = "hir.matmul"(%attn, %attn) : (tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
+    // hir.matmul: weight.is_constant=true tells WeightClassificationPlanningPass to
+    // classify the weight operand as constant (Rule 2 op-level override) -> weight_only_int8.
+    %mm = "hir.matmul"(%attn, %attn) { weight.is_constant = true }
+        : (tensor<1x256xf16>, tensor<1x256xf16>) -> tensor<1x256xf16>
     // hir.softmax: accuracy-sensitive -> fp16_fallback.
     %sm = "hir.softmax"(%mm) : (tensor<1x256xf16>) -> tensor<1x256xf16>
     return %sm : tensor<1x256xf16>

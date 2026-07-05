@@ -1,9 +1,58 @@
 # MLIR Compiler Passes
 
-This directory contains real MLIR C++ pass infrastructure, separate from the
-project's custom toy graph IR.
+This directory contains the real MLIR C++ pass infrastructure for the
+**execution-planning ML compiler**. It is separate from the project's custom toy
+graph IR in `src/`.
 
-The plugin currently contains MLIR compiler passes for canonicalization,
+The compiler here reuses existing MLIR infrastructure for generic graph
+semantics, lifts backend-relevant regions into a decision-oriented HIR, and
+produces an explainable hardware-aware execution plan consumed by heterogeneous
+runtimes.
+
+## 15-Pass Hardware-Aware Serving Pipeline
+
+The primary current compiler work is a complete 15-pass execution-planning
+pipeline implemented in `lib/serving/` and `lib/planning/`. Each pass annotates
+ops with structured MLIR attrs. No pass modifies IR structure. No pass selects
+a winner until `PlanSelectionPass`. No pass materializes boundary ops.
+
+```text
+HIR / Serving IR input
+  -> ServingPhaseAnalysis            (serving.phase = prefill | decode)
+  -> KVLayoutPlanningPass            (kv.layout, kv.block_size)
+  -> ReplayEligibilityPass           (replay.eligible)
+  -> ExecutionProviderPlanningPass   (execution_provider.backend)
+  -> RepresentationPlanningPass      (representation.effective_dtype)
+  -> LayoutPlanningPass              (layout.effective_layout)
+  -> BoundaryPlanningPass            (boundary.cast_required, boundary.dequant_required)
+  -> WeightClassificationPlanningPass (weight.classification)
+  -> QuantizationStrategyPlanningPass (quant.strategy, quant.activation_dtype)
+  -> KernelAvailabilityPlanningPass   (kernel.exists, kernel.lowering_status)
+  -> LoweringDecisionPlanningPass     (lowering.decision)
+  -> QuantizedBoundaryRefinementPass  (boundary.weight_dequant_required refined)
+  -> AlternativeLoweringPlanningPass  (alternative.candidates)
+  -> CandidateGenerationPass          (compiler.candidates, compiler.rejected_candidates)
+  -> CandidateEvaluationPass          (compiler.evaluated_candidates, evaluation.*)
+  -> PlanSelectionPass                (selected_plan.*, compiler.selected_candidates)
+  -> Execution Plan JSON / Runtime Contract
+```
+
+Truth boundary discipline: every planning annotation carries a `truth_boundary`
+field. Static penalty scores in `CandidateEvaluationPass` carry
+`candidate_evaluation_static_penalty_not_measured_latency`. Declared profile
+data carries `declared_profile`. No annotation presents a static relative
+penalty as measured hardware latency.
+
+Fallback is last resort, not first response. `backend_fallback` is only emitted
+when direct kernel, algebraic decomposition, representation conversion, layout
+conversion, and cast conversion paths are all unavailable or invalid.
+
+FileCheck tests for all 15 passes are in `test/serving/` and `test/planning/`.
+Run with `tools/run_mlir_pass_tests.sh`.
+
+## Other MLIR Passes
+
+The plugin also contains MLIR compiler passes for canonicalization,
 fusion detection, lowering, verification, serving-plan generation, and CV
 execution-plan generation:
 

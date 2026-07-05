@@ -151,6 +151,66 @@ static std::string selectQuantMode(const std::string &dtype,
 }
 
 // ---------------------------------------------------------------------------
+// Per-op compiler candidate helpers (consumes alternative.* from
+// AlternativeLoweringPlanningPass).
+// ---------------------------------------------------------------------------
+
+static std::string dictStr(DictionaryAttr dict, StringRef key) {
+  if (!dict) return {};
+  if (auto a = dict.get(key))
+    if (auto s = dyn_cast<StringAttr>(a)) return s.getValue().str();
+  return {};
+}
+
+static std::vector<std::string> dictStrs(DictionaryAttr dict, StringRef key) {
+  std::vector<std::string> out;
+  if (!dict) return out;
+  if (auto a = dict.get(key))
+    if (auto arr = dyn_cast<ArrayAttr>(a))
+      for (auto e : arr)
+        if (auto s = dyn_cast<StringAttr>(e)) out.push_back(s.getValue().str());
+  return out;
+}
+
+// Build a per-op executable candidate dict.
+static DictionaryAttr buildOpExecCandidate(
+    MLIRContext *ctx,
+    StringRef candidate_type,
+    StringRef source_op,
+    StringRef candidate_reason,
+    const std::vector<std::string> &required_boundary_ops) {
+  auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
+  SmallVector<Attribute> bOps;
+  for (const auto &b : required_boundary_ops)
+    bOps.push_back(StringAttr::get(ctx, b));
+  // DictionaryAttr::get sorts keys alphabetically.
+  SmallVector<NamedAttribute> entries = {
+    {StringAttr::get(ctx, "candidate_reason"),      S(candidate_reason)},
+    {StringAttr::get(ctx, "candidate_type"),        S(candidate_type)},
+    {StringAttr::get(ctx, "required_boundary_ops"), ArrayAttr::get(ctx, bOps)},
+    {StringAttr::get(ctx, "source_op"),             S(source_op)},
+    {StringAttr::get(ctx, "truth_boundary"),        S(kTruth)},
+  };
+  return DictionaryAttr::get(ctx, entries);
+}
+
+// Build a per-op rejected candidate dict (invalid alternative, not promoted).
+static DictionaryAttr buildOpRejectedCandidate(
+    MLIRContext *ctx,
+    StringRef candidate_type,
+    StringRef source_op,
+    StringRef rejection_reason) {
+  auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
+  SmallVector<NamedAttribute> entries = {
+    {StringAttr::get(ctx, "candidate_type"),   S(candidate_type)},
+    {StringAttr::get(ctx, "rejection_reason"), S(rejection_reason)},
+    {StringAttr::get(ctx, "source_op"),        S(source_op)},
+    {StringAttr::get(ctx, "truth_boundary"),   S(kTruth)},
+  };
+  return DictionaryAttr::get(ctx, entries);
+}
+
+// ---------------------------------------------------------------------------
 // Candidate struct
 // ---------------------------------------------------------------------------
 
@@ -383,6 +443,109 @@ struct CandidateGenerationPass
                                      static_cast<int64_t>(candidates.size())));
     funcOp->setAttr("candidates.truth_boundary",
                     StringAttr::get(mctx, kTruth));
+
+    // -------------------------------------------------------------------
+    // Per-op compiler candidates from alternative.* attrs.
+    // Consumes AlternativeLoweringPlanningPass output to produce per-op
+    // compiler.candidates and compiler.rejected_candidates.
+    // -------------------------------------------------------------------
+    if (funcOp.getBody().empty()) return;
+    for (Operation &op : funcOp.getBody().front().without_terminator()) {
+      auto lsAttr = op.getAttrOfType<StringAttr>("kernel.lowering_status");
+      if (!lsAttr) continue;
+
+      std::string ls = lsAttr.getValue().str();
+      bool kernelExists = false;
+      if (auto a = op.getAttrOfType<BoolAttr>("kernel.exists"))
+        kernelExists = a.getValue();
+
+      // Op short name (everything after last '.').
+      llvm::StringRef fullName = op.getName().getStringRef();
+      std::string opType = fullName.str();
+      if (auto dot = fullName.rfind('.'); dot != llvm::StringRef::npos)
+        opType = fullName.substr(dot + 1).str();
+
+      // Boundary ops already required by the lowering decision (direct path).
+      std::vector<std::string> directBoundaryOps;
+      if (readBool(&op, "lowering.requires_cast"))
+        directBoundaryOps.push_back("cast");
+      if (readBool(&op, "lowering.requires_dequant"))
+        directBoundaryOps.push_back("dequant");
+      if (readBool(&op, "lowering.requires_layout_transform"))
+        directBoundaryOps.push_back("layout_transform");
+
+      SmallVector<Attribute> execCandidates;
+      SmallVector<Attribute> rejectedCandidates;
+      bool hasDirectLower    = false;
+      bool hasValidNonFallback = false;
+
+      // Rule 1: emit direct_lower when the kernel is an exact match.
+      if (kernelExists && ls == "lowerable") {
+        hasDirectLower = true;
+        execCandidates.push_back(buildOpExecCandidate(
+            ctx, "direct_lower", opType, "kernel_exact_match",
+            directBoundaryOps));
+      }
+
+      // Rule 2+3: process alternative.candidates.
+      auto altArr = op.getAttrOfType<ArrayAttr>("alternative.candidates");
+      if (altArr) {
+        for (auto elem : altArr) {
+          auto altDict = dyn_cast<DictionaryAttr>(elem);
+          if (!altDict) continue;
+          std::string altType   = dictStr(altDict, "alternative_type");
+          std::string altStatus = dictStr(altDict, "validation_status");
+          std::string altFails  = dictStr(altDict, "validation_failures");
+          auto altBoundary      = dictStrs(altDict, "required_boundary_ops");
+
+          if (altStatus == "valid") {
+            if (altType == "backend_fallback") {
+              // Deferred: only emitted by Rule 4.
+            } else {
+              hasValidNonFallback = true;
+              execCandidates.push_back(buildOpExecCandidate(
+                  ctx, altType, opType, "from_alternative_lowering",
+                  altBoundary));
+            }
+          } else {
+            // Invalid: record in rejected_candidates, not executable.
+            rejectedCandidates.push_back(buildOpRejectedCandidate(
+                ctx, altType, opType, altFails));
+          }
+        }
+      }
+
+      // Rule 4: backend_fallback only when there is no direct_lower and no
+      //         valid non-fallback alternative.
+      if (!hasDirectLower && !hasValidNonFallback && altArr) {
+        for (auto elem : altArr) {
+          auto altDict = dyn_cast<DictionaryAttr>(elem);
+          if (!altDict) continue;
+          if (dictStr(altDict, "alternative_type") == "backend_fallback" &&
+              dictStr(altDict, "validation_status") == "valid") {
+            execCandidates.push_back(buildOpExecCandidate(
+                ctx, "backend_fallback", opType, "last_resort_fallback", {}));
+            break;
+          }
+        }
+      }
+
+      // Emit unsupported sentinel when no viable path was found.
+      if (execCandidates.empty()) {
+        execCandidates.push_back(buildOpExecCandidate(
+            ctx, "unsupported", opType, "no_viable_lowering_path", {}));
+      }
+
+      op.setAttr("compiler.candidates",
+                 ArrayAttr::get(ctx, execCandidates));
+      op.setAttr("compiler.candidates.count",
+                 IntegerAttr::get(IntegerType::get(ctx, 64),
+                                  static_cast<int64_t>(execCandidates.size())));
+      op.setAttr("compiler.candidates.truth_boundary",
+                 StringAttr::get(ctx, kTruth));
+      op.setAttr("compiler.rejected_candidates",
+                 ArrayAttr::get(ctx, rejectedCandidates));
+    }
   }
 };
 

@@ -22,33 +22,17 @@ Shared capability profiles
 Static optimization
   Decision Engine: 15-pass serving pipeline
   ->
-ExecutionPlan  [internal planning artifact — not the external boundary]
-  ->
-Backend export
-  |
-  +-- CoreML lane:  .mlpackage + compiler_metadata.json
-  |
-  +-- (future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime, vLLM metadata)
-  ->
-heterogeneous-inference-runtime
-  Model Adapter loads .mlpackage + compiler_metadata.json
-  ->
-Neutral Runtime Graph
-  ->
-Runtime scheduling / backend dispatch / dynamic execution
+ExecutionPlan  [compiler deliverable]
 ```
 
-`ExecutionPlan` is an **internal** planning representation produced by
-`PlanSelectionPass`. It feeds the backend export step but is not itself an
-external artifact. For the current Apple lane, the executable compiler outputs
-are `.mlpackage` and `compiler_metadata.json`.
+`ExecutionPlan` is produced by `PlanSelectionPass` and exported as
+`execution_plan.json`. It is the compiler's final output.
 
-Frontend, Shared Capability Profiles, Static Optimization, and Backend Export
-are **sequential modules in one compiler pipeline** — not parallel tracks.
+Frontend, Shared Capability Profiles, and Static Optimization are **sequential
+modules in one compiler pipeline** — not parallel tracks.
 
 The compiler produces the **theoretical best static solution** given declared
-capability profiles. The runtime (`heterogeneous-inference-runtime`) produces
-the **best dynamic execution** given runtime state.
+capability profiles.
 
 ## Two Project Components
 
@@ -76,9 +60,7 @@ The compiler does:
 - Read shared hardware, backend, and kernel capability profiles
 - Run hardware-aware static optimization passes (the Decision Engine)
 - Select per-op execution plans using static penalty scoring
-- Materialize the selected plan into backend artifacts:
-  - Current Apple lane: `.mlpackage` + `compiler_metadata.json`
-  - Future lanes: TensorRT engine, OpenVINO IR, ONNX Runtime package, vLLM metadata
+- Export `execution_plan.json` — the compiler deliverable
 
 The compiler does NOT:
 
@@ -89,32 +71,6 @@ The compiler does NOT:
 - Make deployment policy decisions (batching, prefill/decode split, SLO targets)
 - Claim measured latency or runtime speedup unless a benchmark produced them
 - Materialize IR unless a pass explicitly states it does so
-
-## Runtime Responsibility (heterogeneous-inference-runtime)
-
-The runtime uses this architecture:
-
-```text
-Model Artifact (.mlpackage + compiler_metadata.json)
-  ->
-Model Adapter  (loads and validates compiler artifacts)
-  ->
-Neutral Runtime Graph  (backend-independent op graph)
-  ->
-Runtime  (scheduling / dispatch / dynamic optimization)
-```
-
-The runtime does:
-
-- Load compiler artifacts (`.mlpackage`, `compiler_metadata.json`) via Model Adapter
-- Convert to a backend-neutral Runtime Graph
-- Schedule execution dynamically based on runtime state
-- Dispatch backend kernels (CoreML, CUDA, Metal, CPU)
-- Allocate and manage runtime buffers
-- Perform speculative decoding and KV cache management
-- Apply deployment policy (continuous batching, prefill/decode split, SLO enforcement)
-- Collect runtime traces and measured latency evidence
-- Validate and extend capability profiles with measured data (MeasuredSupport)
 
 ## Hardware Model Layers
 
@@ -174,47 +130,6 @@ When the runtime collects measured evidence and writes `MeasuredSupport`, it
 extends the shared profile in a way the compiler can read in a subsequent
 compilation to make better static decisions. This is the intended feedback path:
 runtime measurement → updated profile → compiler re-optimization.
-
-## Compiler Output Artifacts (CoreML Lane)
-
-For the current Apple lane, the compiler/runtime boundary is:
-
-| Artifact | Description | Consumer |
-|---|---|---|
-| `.mlpackage` | Compiled CoreML model package | Runtime Model Adapter |
-| `compiler_metadata.json` | Per-op planning decisions, truth boundaries, capability provenance | Runtime Model Adapter |
-
-`compiler_metadata.json` must contain, per op:
-- op name and type
-- selected candidate (type, reason, penalty_score)
-- backend, kernel library, and kernel name
-- dtype, layout, and quantization decisions
-- boundary requirements (cast, dequant, layout_transform)
-- fallback path and unsupported reasons
-- `truth_boundary` per planning claim
-- source pass identification
-
-The internal `ExecutionPlan` that feeds the CoreML export step is a
-compiler-internal planning structure. It is not an external artifact and should
-not be described as the compiler/runtime boundary.
-
-## Future Output Lanes
-
-Future compiler work may add backend export lanes without changing the
-optimization pipeline. The frontend, shared capability profiles, and Decision
-Engine remain unchanged across lanes. Only the backend export step changes.
-
-| Lane | Compiler output |
-|---|---|
-| CoreML (current) | `.mlpackage` + `compiler_metadata.json` |
-| TensorRT (future) | TensorRT engine profile |
-| OpenVINO (future) | OpenVINO Intermediate Representation |
-| ONNX Runtime (future) | ONNX Runtime optimized model package |
-| vLLM (future) | vLLM deployment metadata + serving-framework policy annotations |
-
-No future lane changes the truth-boundary discipline. All compiler outputs
-remain static optimization claims — no measured latency, no runtime speedup,
-no deployment performance claims.
 
 ## Decision Flow
 
@@ -411,12 +326,9 @@ No pass selects a winner until `PlanSelectionPass`.
 Planning (implemented by the 15-pass pipeline):
 - Annotate `selected_plan.*` per op
 - Annotate `quant.*`, `kernel.*`, `lowering.*`, `alternative.*`
-- Produce internal `ExecutionPlan` representation
+- Export `execution_plan.json` — the compiler deliverable
 
-Backend export (CoreML lane, partially implemented):
-- Serialize `ExecutionPlan` → `.mlpackage` + `compiler_metadata.json`
-
-Materialization (intentionally deferred — not yet implemented):
+IR materialization (intentionally deferred — not yet implemented):
 - Inserting `hir.cast` where `boundary.cast_required = true`
 - Inserting `hir.dequantize` / `hir.requantize` where `boundary.weight_dequant_required = true`
 - Inserting `hir.layout_transform` where `layout.transform_required = true`
@@ -438,7 +350,6 @@ not a measurement of ANE performance.
 - Kernel availability vs backend capability separation — a backend may declare
   support for a dtype without having a kernel for a specific op
 - Per-op plan selection from evaluated candidates
-- Compiler output artifacts consumed by the runtime Model Adapter
 
 **What it does NOT claim**:
 - Real ANE kernel internals or layout proofs (`truth_boundary ≠ measured_profile`)
@@ -446,39 +357,7 @@ not a measurement of ANE performance.
 - A CoreML declared profile as evidence of ANE internal execution paths
 - Fallback is selected immediately after a kernel miss
 
-## Compiler Output and Runtime Contract
-
-### External Artifacts (CoreML Lane)
-
-The compiler/runtime boundary for the current Apple lane:
-
-| Artifact | Description | Consumer |
-|---|---|---|
-| `.mlpackage` | Compiled CoreML model package | Runtime Model Adapter |
-| `compiler_metadata.json` | Per-op planning decisions, truth boundaries, capability provenance | Runtime Model Adapter |
-
-The internal `ExecutionPlan` is a compiler-internal representation that feeds
-the CoreML export step. It is **not** the external boundary artifact and should
-not be described as such.
-
-### `compiler_metadata.json` Schema (per op)
-
-| Field | Description |
-|---|---|
-| `op_name` / `op_type` | Identifies the op in the graph |
-| `selected_plan.candidate_type` | Lowering path selected |
-| `selected_plan.reason` | Why this candidate was selected |
-| `selected_plan.penalty_score` | Static penalty of selected candidate |
-| `selected_plan.backend` | Executing backend |
-| `selected_plan.kernel_library` | Kernel library name |
-| `selected_plan.kernel_name` | Kernel name within the library |
-| `selected_plan.required_boundary_ops` | Boundary ops needed before dispatch |
-| `selected_plan.truth_boundary` | Epistemic status of the selection decision |
-| `compiler.rejected_candidates` | Alternatives that were found invalid |
-| `compiler.selection_rejections` | Valid candidates that lost the selection |
-| Source pass identification | Which pass produced each annotation |
-
-### Truth Boundary Values
+## Truth Boundary Values
 
 Every planning attr carries a `truth_boundary` field:
 

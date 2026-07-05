@@ -65,10 +65,15 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/RepresentationPlanningPass.cpp
   lib/serving/LayoutPlanningPass.cpp
   lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
   lib/serving/LoweringDecisionPlanningPass.cpp
+  lib/serving/QuantizedBoundaryRefinementPass.cpp
+  lib/serving/AlternativeLoweringPlanningPass.cpp
   lib/serving/CandidateGenerationPass.cpp
+  lib/serving/CandidateEvaluationPass.cpp
+  lib/serving/PlanSelectionPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
@@ -345,10 +350,15 @@ add_executable(compile-for-target
   lib/serving/RepresentationPlanningPass.cpp
   lib/serving/LayoutPlanningPass.cpp
   lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
   lib/serving/LoweringDecisionPlanningPass.cpp
+  lib/serving/QuantizedBoundaryRefinementPass.cpp
+  lib/serving/AlternativeLoweringPlanningPass.cpp
   lib/serving/CandidateGenerationPass.cpp
+  lib/serving/CandidateEvaluationPass.cpp
+  lib/serving/PlanSelectionPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingExecutionPlanExporter.cpp
   lib/serving/TargetConstraints.cpp
@@ -434,6 +444,29 @@ add_test(NAME LoweringDecisionExportTest
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunLoweringDecisionExportTest.cmake
 )
 set_tests_properties(LoweringDecisionExportTest PROPERTIES
+  DEPENDS compile-for-target
+)
+
+# ---------------------------------------------------------------------------
+# CTest: AppleQuantLoweringDemoTest
+# End-to-end Apple/CoreML quantization-lowering demo artifact (Commit L).
+# Shows: hardware profile -> representation -> layout -> boundary ->
+#        quant strategy -> kernel availability -> lowering decision -> JSON.
+# Input: integration_bundle/apple_quant_lowering_demo/{input.mlir, target_profile.json}
+# Tests: quant+lowering arrays present, weight_only_int8, fp16_fallback,
+#        direct_lower, fallback_backend, truth_boundary fields, coreml primary.
+# ---------------------------------------------------------------------------
+set(_AQLD_OUT "${CMAKE_CURRENT_BINARY_DIR}/apple_quant_lowering_demo_plan.json")
+
+add_test(NAME AppleQuantLoweringDemoTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/integration_bundle/apple_quant_lowering_demo/target_profile.json
+    -DMLIR=${REPO_ROOT}/integration_bundle/apple_quant_lowering_demo/input.mlir
+    -DOUT=${_AQLD_OUT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunAppleQuantLoweringDemoTest.cmake
+)
+set_tests_properties(AppleQuantLoweringDemoTest PROPERTIES
   DEPENDS compile-for-target
 )
 

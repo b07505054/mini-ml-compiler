@@ -709,13 +709,23 @@ int main(int argc, char **argv) {
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createBoundaryPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createWeightClassificationPlanningPass());  // pass 8
+  pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createQuantizationStrategyPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createKernelAvailabilityPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createLoweringDecisionPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createQuantizedBoundaryRefinementPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createAlternativeLoweringPlanningPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createCandidateGenerationPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createCandidateEvaluationPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createPlanSelectionPass());
 
   if (pm.run(module.get()).failed()) {
     llvm::errs() << "error: serving pass pipeline failed\n";

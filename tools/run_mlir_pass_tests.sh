@@ -462,6 +462,14 @@ run_filecheck \
   --pass-pipeline='builtin.module(boundary-planning-pipeline)'
 
 run_filecheck \
+  "weight-classification: constant RHS, func-arg RHS, attention RHS, declared constant, unknown producer" \
+  "$REPO_ROOT/mlir_passes/test/serving/weight_classification.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(weight-classification-planning-pipeline)'
+
+run_filecheck \
   "quantization-strategy: weight_only_int8, fp16 fallback, accuracy-sensitive, dequant boundary" \
   "$REPO_ROOT/mlir_passes/test/serving/quantization_strategy.mlir" \
   --split-input-file \
@@ -486,12 +494,44 @@ run_filecheck \
   --pass-pipeline='builtin.module(lowering-decision-planning-pipeline)'
 
 run_filecheck \
+  "quantized-boundary-refinement: weight_dequant_required for fallback backends, direct_lower trust, fp16_fallback, unknown" \
+  "$REPO_ROOT/mlir_passes/test/serving/quantized_boundary_refinement.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantized-boundary-refinement-pipeline)'
+
+run_filecheck \
+  "alternative-lowering-planning: algebraic decomposition, missing kernel, representation conversion, layout conversion, backend fallback" \
+  "$REPO_ROOT/mlir_passes/test/serving/alternative_lowering.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(alternative-lowering-planning-pipeline)'
+
+run_filecheck \
   "candidate-generation: dtype variants, layout variants, unsupported-op/static-shape/constant-weight constraint marking" \
   "$REPO_ROOT/mlir_passes/test/serving/candidate_generation.mlir" \
   --split-input-file \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(candidate-generation-pipeline)'
+
+run_filecheck \
+  "candidate-evaluation: direct_lower zero penalty, decomposition penalty, representation_conversion boundary penalty, backend_fallback high penalty, unsupported rejected, rejected_candidates unchanged" \
+  "$REPO_ROOT/mlir_passes/test/serving/candidate_evaluation.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(candidate-evaluation-pipeline)'
+
+run_filecheck \
+  "plan-selection: direct_lower beats decomposition, repr_conversion beats fallback, fallback last resort, unsupported no valid candidate, tiebreak deterministic" \
+  "$REPO_ROOT/mlir_passes/test/serving/plan_selection.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(plan-selection-pipeline)'
 
 run_filecheck \
   "llm-frontend-normalization rewrites raw attention graph to canonical serving IR" \

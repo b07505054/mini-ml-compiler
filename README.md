@@ -18,7 +18,7 @@ The repository contains two components — one primary, one secondary:
    track — it is a local demo harness and benchmark bridge.
 
 These are sequential modules in one pipeline, not parallel tracks:
-Frontend → Shared Capability Profiles → Static Optimization → Backend Export.
+Frontend → Shared Capability Profiles → Static Optimization → Execution Plan.
 The optimization step is the 15-pass serving pipeline described below.
 
 The C++ runtime code in this repository is not the production distributed
@@ -48,21 +48,7 @@ Shared capability profiles
   ->
 Static optimization — Decision Engine (15-pass serving pipeline)
   ->
-ExecutionPlan  [internal planning artifact]
-  ->
-Backend export
-  |
-  +-- CoreML lane: .mlpackage + compiler_metadata.json
-  |
-  +-- (future: TensorRT, OpenVINO IR, ONNX Runtime, vLLM metadata)
-  ->
-heterogeneous-inference-runtime
-  |
-  Model Adapter (loads .mlpackage + compiler_metadata.json)
-  ->
-Neutral Runtime Graph
-  ->
-Runtime scheduling / backend dispatch / dynamic optimization
+ExecutionPlan  [compiler deliverable]
 ```
 
 ONNX import, backend kernel mapping, dynamic-shape support, and PocketChef
@@ -72,10 +58,8 @@ visualization of the CV plan are future work.
 
 Honest claims:
 
-- The compiler performs static optimization and exports `.mlpackage` +
-  `compiler_metadata.json` for the current Apple lane.
-- `ExecutionPlan` is an internal planning representation, not the external
-  compiler/runtime boundary.
+- The compiler performs static optimization and produces `execution_plan.json`
+  as its deliverable — a hardware-aware planning artifact.
 - Quantization support is implemented at the compiler-pass metadata/legality
   level (static planning, `declared_profile` truth boundary).
 - The local C++ runtime is a demo harness and benchmark bridge.

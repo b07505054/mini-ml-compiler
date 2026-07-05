@@ -330,6 +330,47 @@ def LayoutPlanning
   let constructor = "mlir::hir::createLayoutPlanningPass()";
 }
 
+def WeightClassificationPlanning
+    : Pass<"weight-classification-planning", "mlir::func::FuncOp"> {
+  let summary = "Classify weight operands as constant or runtime before quantization";
+  let description = [{
+    Walks every quantizable op (matmul, conv, gemm, linear families) in the entry
+    block and classifies its weight operand (RHS / operand 1) via def-use analysis.
+
+    Classification values:
+      constant_weight    - defined by arith.constant, ConstantLike op, or
+                           an op/op-attr explicitly declaring weight.is_constant=true
+      runtime_activation - defined by a function argument, a compute op (hir.*, llm.*,
+                           cv.*), or any arith.* op that is not a constant
+      unknown            - defining op not recognized as constant or runtime;
+                           conservatively treated as non-constant
+
+    Rules:
+      1. Function-level representation.weights_are_constant=true overrides all → constant_weight.
+      2. Quantizable op has weight.is_constant=true attr → constant_weight.
+      3. Weight operand is a BlockArgument (func arg) → runtime_activation.
+      4. Defining op has weight.is_constant=true attr → constant_weight.
+      5. Defining op is arith.constant or has ConstantLike trait → constant_weight.
+      6. Defining op name starts with hir., llm., cv., arith. (non-const), func. → runtime_activation.
+      7. Otherwise → unknown (conservative: unknown ≠ constant).
+
+    Emitted on each quantizable op:
+      weight.classification          = "constant_weight" | "runtime_activation" | "unknown"
+      weight.constant_required       = true
+      weight.constant_satisfied      = true iff classification == constant_weight
+      weight.classification_reason   = short reason string
+      weight.truth_boundary          = "weight_classification_static_def_use_analysis_not_runtime_validated"
+
+    This pass does NOT modify the graph, insert quantize/dequantize ops,
+    or change any existing attributes.
+
+    Truth boundary: weight_classification_static_def_use_analysis_not_runtime_validated.
+    Must run after BoundaryPlanningPass and before QuantizationStrategyPlanningPass.
+  }];
+  let constructor = "mlir::hir::createWeightClassificationPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 def QuantizationStrategyPlanning
     : Pass<"quantization-strategy-planning", "mlir::func::FuncOp"> {
   let summary = "Per-op quantization strategy annotation for the HIR serving pipeline";
@@ -471,6 +512,98 @@ def LoweringDecisionPlanning
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def QuantizedBoundaryRefinement
+    : Pass<"quantized-boundary-refinement", "mlir::func::FuncOp"> {
+  let summary = "Refine per-op weight dequant boundary requirements after lowering decisions are known";
+  let description = [{
+    Runs after LoweringDecisionPlanningPass. For each non-terminator op, reads
+    quant.strategy and lowering.decision to determine whether the quantized
+    weight dtype (e.g. int8 from weight_only_int8) is compatible with the
+    effective execution backend. When the op falls back to a backend that does
+    not support the quantized weight format, the pass marks the op as requiring
+    a weight dequantization boundary.
+
+    This pass does NOT insert hir.dequantize ops or modify the graph.
+
+    Inputs per op (from upstream passes):
+      quant.strategy          -- from QuantizationStrategyPlanningPass
+      quant.weight_dtype      -- from QuantizationStrategyPlanningPass
+      lowering.decision       -- from LoweringDecisionPlanningPass
+      lowering.target_backend -- from LoweringDecisionPlanningPass
+      kernel.fallback_backend -- from KernelAvailabilityPlanningPass (fallback)
+
+    Outputs per non-terminator op:
+      boundary.fallback_backend_supports_weight_dtype
+      boundary.quantized_weight_dtype
+      boundary.weight_dequant_reason
+      boundary.weight_dequant_required
+      boundary.weight_dtype_mismatch
+      boundary.weight_truth_boundary
+
+    Decision rules:
+      1. quant.strategy != weight_only_int8
+         -> weight_dequant_required=false, reason=not_weight_quantized
+      2. quant.strategy == weight_only_int8, lowering.decision absent
+         -> weight_dequant_required=false, reason=target_backend_unknown
+      3. quant.strategy == weight_only_int8, lowering.decision=direct_lower
+         -> weight_dequant_required=false,
+            reason=kernel_exact_match_backend_supports_weight_quantization
+      4. quant.strategy == weight_only_int8, fallback/rewrite/unsupported,
+         effective backend supported_quant_modes lacks weight_only/static_int8
+         -> weight_dequant_required=true, weight_dtype_mismatch=true,
+            reason=fallback_backend_lacks_quantized_weight_support
+      5. As rule 4 but backend supports weight_only or static_int8
+         -> weight_dequant_required=false, reason=backend_supports_weight_quantization
+
+    Effective backend determination: lowering.target_backend → kernel.fallback_backend
+    → representation.source_backend. Absent → target_backend_unknown.
+
+    Supported_quant_modes semantics: consistent with QuantizationStrategyPlanningPass.
+    Empty list = backend has no declared quant support.
+
+    Truth boundary: quantized_boundary_refinement_static_not_materialized.
+    Must run after LoweringDecisionPlanningPass and QuantizationStrategyPlanningPass.
+  }];
+  let constructor = "mlir::hir::createQuantizedBoundaryRefinementPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def AlternativeLoweringPlanning
+    : Pass<"alternative-lowering-planning", "mlir::func::FuncOp"> {
+  let summary = "Generate alternative legal lowering candidates when exact kernel lowering is unavailable";
+  let description = [{
+    Runs after QuantizedBoundaryRefinementPass. For each non-terminator op where
+    the exact kernel match is absent (kernel.exists=false), generates alternative
+    lowering candidates: algebraic decomposition, representation conversion
+    (weight_only_int8 → dequant_weight + fp16 op), layout conversion
+    (layout_transform + same op), cast conversion, and backend fallback.
+
+    Each candidate is validated: a candidate is valid only if every target op has
+    a matching kernel in the library or the required boundary conversion is
+    supported by the backend.
+
+    This pass does NOT select a best candidate, emit cost, or materialize IR.
+
+    Outputs per non-terminator op (when kernel.lowering_status is present):
+      alternative.available      -- true iff at least one candidate is valid
+      alternative.best_candidate -- always "" (no cost model, no selection)
+      alternative.candidates     -- ArrayAttr of DictionaryAttr, one per candidate
+      alternative.reason         -- summary string
+      alternative.truth_boundary -- always kTruth
+
+    Each candidate DictionaryAttr contains:
+      alternative_id, alternative_type, source_op, target_ops,
+      required_boundary_ops, required_kernel_checks,
+      validation_status (valid/invalid_missing_kernel/invalid_missing_boundary_support/unknown),
+      validation_failures, risk, source_level, truth_boundary.
+
+    Truth boundary: alternative_lowering_static_not_materialized_not_cost_evaluated.
+    Must run after QuantizedBoundaryRefinementPass.
+  }];
+  let constructor = "mlir::hir::createAlternativeLoweringPlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
 def CandidateGeneration
     : Pass<"candidate-generation", "mlir::func::FuncOp"> {
   let summary = "Generate execution candidates from expanded BackendCapability schema";
@@ -505,6 +638,81 @@ def CandidateGeneration
     Truth boundary: candidate_generation_static_constraints_not_cost_evaluated
   }];
   let constructor = "mlir::hir::createCandidateGenerationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CandidateEvaluation
+    : Pass<"candidate-evaluation", "mlir::func::FuncOp"> {
+  let summary = "Evaluate compiler.candidates with static relative penalty scores";
+  let description = [{
+    Reads compiler.candidates (per-op ArrayAttr of DictionaryAttr) produced by
+    CandidateGenerationPass and assigns a static relative penalty score to each
+    candidate without claiming measured latency.
+
+    Penalty model (relative, lower is better):
+      direct_lower:              0
+      algebraic_decomposition:   5
+      representation_conversion: 3 + boundary penalties (dequant=3, cast=2, layout=2)
+      layout_conversion:         4
+      cast_conversion:           2
+      backend_fallback:          20
+      unsupported:               100
+      unknown candidate type:    10 (unknown_cost_penalty, partially_evaluated)
+
+    Per candidate output (augmented into compiler.evaluated_candidates):
+      evaluation.status          = evaluated | partially_evaluated | rejected
+      evaluation.penalty_score   = sum of all breakdown components
+      evaluation.penalty_breakdown = DictionaryAttr with per-type breakdown fields
+      evaluation.reason          = string describing dominant penalty source
+      evaluation.truth_boundary  = "candidate_evaluation_static_penalty_not_measured_latency"
+
+    compiler.rejected_candidates is not modified.
+    No winner is selected. No IR is rewritten. No cost model is applied.
+
+    Truth boundary: candidate_evaluation_static_penalty_not_measured_latency
+  }];
+  let constructor = "mlir::hir::createCandidateEvaluationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def PlanSelection
+    : Pass<"plan-selection", "mlir::func::FuncOp"> {
+  let summary = "Select the best evaluated candidate per op using static penalty scores";
+  let description = [{
+    Reads compiler.evaluated_candidates (per-op) from CandidateEvaluationPass and
+    selects the lowest-penalty candidate with evaluation.status=evaluated.
+
+    Selection rules (applied in order):
+      1. Prefer evaluated (non-fallback) candidates by lowest penalty score.
+      2. Tiebreak: direct_lower > representation_conversion > cast_conversion >
+         layout_conversion > algebraic_decomposition > backend_fallback > unsupported.
+      3. backend_fallback is selected only when no evaluated non-fallback candidate exists.
+      4. If no evaluated candidates exist, partially_evaluated candidates are considered.
+      5. If no viable candidate exists, unsupported is selected with
+         reason=no_valid_lowering_path.
+
+    Per-op outputs (flat attrs):
+      selected_plan.candidate_id     = "plan_0"
+      selected_plan.candidate_type   = the winning candidate type
+      selected_plan.backend          = kernel.backend (or "" if absent)
+      selected_plan.kernel_library   = kernel.library (or "" if absent)
+      selected_plan.kernel_name      = kernel.name (or "" if absent)
+      selected_plan.penalty_score    = evaluation.penalty_score of winner
+      selected_plan.reason           = selection reason string
+      selected_plan.required_boundary_ops = boundary ops from winning candidate
+      selected_plan.truth_boundary   = "plan_selection_static_penalty_not_measured_runtime"
+
+    Per-op collection attrs:
+      compiler.selected_candidates   = [winning candidate dict]
+      compiler.selection_rejections  = [all non-selected evaluated candidate dicts]
+
+    compiler.rejected_candidates (from CandidateGenerationPass) is not modified.
+    No winner is ranked for IR rewriting. No boundary ops are inserted.
+    No IR is rewritten.
+
+    Truth boundary: plan_selection_static_penalty_not_measured_runtime
+  }];
+  let constructor = "mlir::hir::createPlanSelectionPass()";
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 

@@ -226,3 +226,208 @@ module attributes {
     return %0 : tensor<1x768xf16>
   }
 }
+
+// -----
+
+// Test 6: Op with kernel.lowering_status=lowerable and kernel.exists=true.
+// CandidateGenerationPass should emit a direct_lower compiler candidate.
+//
+// CHECK-LABEL: @direct_lower_candidate
+// CHECK: "compute.gelu"
+// CHECK-SAME: compiler.candidates
+// CHECK-SAME: candidate_type = "direct_lower"
+// CHECK-SAME: compiler.candidates.count = 1
+
+module {
+  func.func @direct_lower_candidate(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.effective_dtype = "fp16" }
+  {
+    %g = "compute.gelu"(%arg0) {
+      alternative.candidates = [],
+      kernel.exists = true,
+      kernel.lowering_status = "lowerable",
+      lowering.requires_cast = false,
+      lowering.requires_dequant = false,
+      lowering.requires_layout_transform = false
+    } : (tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %g : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test 7: Op with missing gelu kernel. alternative.candidates contains a valid
+// algebraic_decomposition (gelu -> mul + sigmoid + mul, all kernels present).
+// CandidateGenerationPass should emit algebraic_decomposition as executable
+// candidate and NOT emit backend_fallback (a valid non-fallback exists).
+//
+// CHECK-LABEL: @valid_decomposition_candidate
+// CHECK: "compute.gelu"
+// CHECK-SAME: compiler.candidates
+// CHECK-SAME: candidate_type = "algebraic_decomposition"
+// CHECK-SAME: compiler.candidates.count = 1
+// CHECK-SAME: compiler.rejected_candidates = []
+
+module {
+  func.func @valid_decomposition_candidate(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.effective_dtype = "fp16" }
+  {
+    %g = "compute.gelu"(%arg0) {
+      alternative.candidates = [{
+        alternative_id = "alt_0",
+        alternative_type = "algebraic_decomposition",
+        required_boundary_ops = [],
+        required_kernel_checks = ["mul", "sigmoid"],
+        risk = "medium",
+        source_level = "pass_generated",
+        source_op = "gelu",
+        target_ops = ["mul", "sigmoid", "mul"],
+        truth_boundary = "alternative_lowering_static_not_materialized_not_cost_evaluated",
+        validation_failures = "",
+        validation_status = "valid"
+      }],
+      kernel.exists = false,
+      kernel.fallback_backend = "",
+      kernel.lowering_status = "unsupported"
+    } : (tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %g : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test 8: Op with missing gelu kernel. alternative.candidates contains an
+// invalid algebraic_decomposition (sigmoid kernel is missing).
+// CandidateGenerationPass should record it in rejected_candidates and emit
+// an unsupported sentinel in compiler.candidates.
+//
+// CHECK-LABEL: @invalid_decomposition_rejected
+// CHECK: "compute.gelu"
+// CHECK-SAME: compiler.candidates
+// CHECK-SAME: candidate_type = "unsupported"
+// CHECK-SAME: compiler.candidates.count = 1
+// CHECK-SAME: compiler.rejected_candidates
+// CHECK-SAME: candidate_type = "algebraic_decomposition"
+// CHECK-SAME: rejection_reason = "missing_kernels:sigmoid"
+
+module {
+  func.func @invalid_decomposition_rejected(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.effective_dtype = "fp16" }
+  {
+    %g = "compute.gelu"(%arg0) {
+      alternative.candidates = [{
+        alternative_id = "alt_0",
+        alternative_type = "algebraic_decomposition",
+        required_boundary_ops = [],
+        required_kernel_checks = ["mul", "sigmoid"],
+        risk = "medium",
+        source_level = "pass_generated",
+        source_op = "gelu",
+        target_ops = ["mul", "sigmoid", "mul"],
+        truth_boundary = "alternative_lowering_static_not_materialized_not_cost_evaluated",
+        validation_failures = "missing_kernels:sigmoid",
+        validation_status = "invalid_missing_kernel"
+      }],
+      kernel.exists = false,
+      kernel.fallback_backend = "",
+      kernel.lowering_status = "unsupported"
+    } : (tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %g : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test 9: weight_only_int8 matmul with no direct kernel. alternative.candidates
+// contains a valid representation_conversion (dequant_weight + fp16 matmul).
+// CandidateGenerationPass should emit representation_conversion as executable
+// candidate, including its required_boundary_ops.
+//
+// CHECK-LABEL: @representation_conversion_candidate
+// CHECK: "compute.matmul"
+// CHECK-SAME: compiler.candidates
+// CHECK-SAME: candidate_type = "representation_conversion"
+// CHECK-SAME: required_boundary_ops = ["dequant_weight"]
+// CHECK-SAME: compiler.candidates.count = 1
+// CHECK-SAME: compiler.rejected_candidates = []
+
+module {
+  func.func @representation_conversion_candidate(
+      %arg0: tensor<1x256xf16>, %arg1: tensor<256x256xi8>)
+      -> tensor<1x256xf16>
+    attributes { representation.effective_dtype = "fp16" }
+  {
+    %mm = "compute.matmul"(%arg0, %arg1) {
+      alternative.candidates = [{
+        alternative_id = "alt_0",
+        alternative_type = "representation_conversion",
+        required_boundary_ops = ["dequant_weight"],
+        required_kernel_checks = ["matmul"],
+        risk = "medium",
+        source_level = "pass_generated",
+        source_op = "matmul",
+        target_ops = ["dequant_weight", "matmul"],
+        truth_boundary = "alternative_lowering_static_not_materialized_not_cost_evaluated",
+        validation_failures = "",
+        validation_status = "valid"
+      }],
+      kernel.exists = false,
+      kernel.fallback_backend = "",
+      kernel.lowering_status = "fallback_required"
+    } : (tensor<1x256xf16>, tensor<256x256xi8>) -> tensor<1x256xf16>
+    return %mm : tensor<1x256xf16>
+  }
+}
+
+// -----
+
+// Test 10: gelu with no ANE kernel. alternative.candidates has an invalid
+// algebraic_decomposition (no kernels) and a valid backend_fallback.
+// Rule 4: backend_fallback is emitted only because there is no direct_lower
+// and no valid non-fallback alternative. Invalid decomposition is rejected.
+//
+// CHECK-LABEL: @backend_fallback_only_when_no_alternatives
+// CHECK: "compute.gelu"
+// CHECK-SAME: compiler.candidates
+// CHECK-SAME: candidate_type = "backend_fallback"
+// CHECK-SAME: compiler.candidates.count = 1
+// CHECK-SAME: compiler.rejected_candidates
+// CHECK-SAME: candidate_type = "algebraic_decomposition"
+
+module {
+  func.func @backend_fallback_only_when_no_alternatives(%arg0: tensor<1x256xf16>) -> tensor<1x256xf16>
+    attributes { representation.effective_dtype = "fp16" }
+  {
+    %g = "compute.gelu"(%arg0) {
+      alternative.candidates = [{
+        alternative_id = "alt_0",
+        alternative_type = "algebraic_decomposition",
+        required_boundary_ops = [],
+        required_kernel_checks = ["mul", "sigmoid"],
+        risk = "medium",
+        source_level = "pass_generated",
+        source_op = "gelu",
+        target_ops = ["mul", "sigmoid", "mul"],
+        truth_boundary = "alternative_lowering_static_not_materialized_not_cost_evaluated",
+        validation_failures = "missing_kernels:mul,sigmoid",
+        validation_status = "invalid_missing_kernel"
+      }, {
+        alternative_id = "alt_1",
+        alternative_type = "backend_fallback",
+        required_boundary_ops = [],
+        required_kernel_checks = [],
+        risk = "last_resort",
+        source_level = "fallback_backend_cpu",
+        source_op = "gelu",
+        target_ops = ["gelu"],
+        truth_boundary = "alternative_lowering_static_not_materialized_not_cost_evaluated",
+        validation_failures = "",
+        validation_status = "valid"
+      }],
+      kernel.exists = false,
+      kernel.fallback_backend = "cpu",
+      kernel.lowering_status = "fallback_required"
+    } : (tensor<1x256xf16>) -> tensor<1x256xf16>
+    return %g : tensor<1x256xf16>
+  }
+}

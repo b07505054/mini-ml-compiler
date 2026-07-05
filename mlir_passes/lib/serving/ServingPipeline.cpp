@@ -51,6 +51,13 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createBoundaryPlanningPass());
       });
 
+  static PassPipelineRegistration<> weightClassPipeline(
+      "weight-classification-planning-pipeline",
+      "Classify weight operands as constant or runtime before quantization",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createWeightClassificationPlanningPass());
+      });
+
   static PassPipelineRegistration<> quantStrategyPipeline(
       "quantization-strategy-planning-pipeline",
       "Per-op quantization strategy annotation for the HIR serving pipeline",
@@ -72,6 +79,20 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createLoweringDecisionPlanningPass());
       });
 
+  static PassPipelineRegistration<> quantizedBoundaryRefinementPipeline(
+      "quantized-boundary-refinement-pipeline",
+      "Refine per-op weight dequant boundary requirements after lowering decisions are known",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createQuantizedBoundaryRefinementPass());
+      });
+
+  static PassPipelineRegistration<> alternativeLoweringPipeline(
+      "alternative-lowering-planning-pipeline",
+      "Generate alternative legal lowering candidates when exact kernel lowering is unavailable",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createAlternativeLoweringPlanningPass());
+      });
+
   static PassPipelineRegistration<> candidatePipeline(
       "candidate-generation-pipeline",
       "Generate execution candidates from expanded BackendCapability schema",
@@ -79,10 +100,24 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createCandidateGenerationPass());
       });
 
-  // Eleven-pass serving pipeline (mlir-opt standalone; compile-for-target uses its own PM).
+  static PassPipelineRegistration<> candidateEvalPipeline(
+      "candidate-evaluation-pipeline",
+      "Evaluate compiler.candidates with static relative penalty scores",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCandidateEvaluationPass());
+      });
+
+  static PassPipelineRegistration<> planSelectionPipeline(
+      "plan-selection-pipeline",
+      "Select the best evaluated candidate per op using static penalty scores",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createPlanSelectionPass());
+      });
+
+  // Fifteen-pass serving pipeline (mlir-opt standalone; compile-for-target uses its own PM).
   static PassPipelineRegistration<> servingOptPipeline(
       "serving-optimization-pipeline",
-      "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider, representation, layout, boundary, quant strategy, kernel availability, lowering decision, candidates",
+      "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider, representation, layout, boundary, weight classification, quant strategy, kernel availability, lowering decision, quantized boundary refinement, alternative lowering, candidate generation, candidate evaluation, plan selection",
       [](OpPassManager &pm) {
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
@@ -91,10 +126,15 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createRepresentationPlanningPass());
         pm.addNestedPass<func::FuncOp>(createLayoutPlanningPass());
         pm.addNestedPass<func::FuncOp>(createBoundaryPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createWeightClassificationPlanningPass());
         pm.addNestedPass<func::FuncOp>(createQuantizationStrategyPlanningPass());
         pm.addNestedPass<func::FuncOp>(createKernelAvailabilityPlanningPass());
         pm.addNestedPass<func::FuncOp>(createLoweringDecisionPlanningPass());
+        pm.addNestedPass<func::FuncOp>(createQuantizedBoundaryRefinementPass());
+        pm.addNestedPass<func::FuncOp>(createAlternativeLoweringPlanningPass());
         pm.addNestedPass<func::FuncOp>(createCandidateGenerationPass());
+        pm.addNestedPass<func::FuncOp>(createCandidateEvaluationPass());
+        pm.addNestedPass<func::FuncOp>(createPlanSelectionPass());
       });
 }
 

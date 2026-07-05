@@ -2,6 +2,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #define GEN_PASS_DEF_KERNELAVAILABILITYPLANNING
 #include "FusionPasses.h.inc"
@@ -23,6 +24,8 @@ struct KernelEntry {
   std::vector<std::string> rewrite_patterns;
   std::string fallback_kernel;
   std::string fallback_backend;
+  bool requires_constant_weight = false;
+  bool supports_dynamic_shape   = true;
   std::string truth_boundary;
 };
 
@@ -42,16 +45,23 @@ static KernelEntry parseDictEntry(mlir::DictionaryAttr dict) {
             r.push_back(s.getValue().str());
     return r;
   };
-  ke.op_type              = rStr("op_type");
-  ke.kernel_name          = rStr("kernel_name");
-  ke.kernel_library       = rStr("kernel_library");
-  ke.supported_dtypes     = rStrs("supported_dtypes");
-  ke.supported_layouts    = rStrs("supported_layouts");
-  ke.supported_quant_modes = rStrs("supported_quant_modes");
-  ke.rewrite_patterns     = rStrs("rewrite_patterns");
-  ke.fallback_kernel      = rStr("fallback_kernel");
-  ke.fallback_backend     = rStr("fallback_backend");
-  ke.truth_boundary       = rStr("truth_boundary");
+  auto rBool = [&](llvm::StringRef k, bool def) -> bool {
+    if (auto a = dict.get(k))
+      if (auto b = mlir::dyn_cast<mlir::BoolAttr>(a)) return b.getValue();
+    return def;
+  };
+  ke.op_type                  = rStr("op_type");
+  ke.kernel_name              = rStr("kernel_name");
+  ke.kernel_library           = rStr("kernel_library");
+  ke.supported_dtypes         = rStrs("supported_dtypes");
+  ke.supported_layouts        = rStrs("supported_layouts");
+  ke.supported_quant_modes    = rStrs("supported_quant_modes");
+  ke.rewrite_patterns         = rStrs("rewrite_patterns");
+  ke.fallback_kernel          = rStr("fallback_kernel");
+  ke.fallback_backend         = rStr("fallback_backend");
+  ke.requires_constant_weight = rBool("requires_constant_weight", false);
+  ke.supports_dynamic_shape   = rBool("supports_dynamic_shape",   true);
+  ke.truth_boundary           = rStr("truth_boundary");
   return ke;
 }
 
@@ -130,10 +140,30 @@ struct KernelAvailabilityPlanningPass
       if (auto a = op.getAttrOfType<mlir::StringAttr>("layout.effective_layout"))
         effectiveLayout = a.getValue().str();
 
-      // Quant mode: quant.activation_quant_mode → "none".
-      std::string quantMode = "none";
-      if (auto a = op.getAttrOfType<mlir::StringAttr>("quant.activation_quant_mode"))
-        quantMode = a.getValue().str();
+      // Op quant mode: derived from quant.strategy (not activation_quant_mode).
+      // weight_only_int8 → "weight_only", static_int8 → "static_int8", else → "none".
+      std::string opQuantMode = "none";
+      if (auto a = op.getAttrOfType<mlir::StringAttr>("quant.strategy")) {
+        llvm::StringRef strat = a.getValue();
+        if (strat == "weight_only_int8")  opQuantMode = "weight_only";
+        else if (strat == "static_int8")  opQuantMode = "static_int8";
+      }
+
+      // Per-op weight constant status from WeightClassificationPlanningPass.
+      // If the attr is absent (pass didn't run), enforce optimistically.
+      auto constSatAttr = op.getAttrOfType<mlir::BoolAttr>("weight.constant_satisfied");
+      bool hasConstSat = !!constSatAttr;
+      bool weightConstantSatisfied = hasConstSat && constSatAttr.getValue();
+
+      // Dynamic shape detection: check result types for any dynamic dimension.
+      bool hasDynamicShape = false;
+      for (mlir::Type t : op.getResultTypes())
+        if (auto st = mlir::dyn_cast<mlir::ShapedType>(t))
+          if (!st.hasStaticShape()) { hasDynamicShape = true; break; }
+      if (!hasDynamicShape)
+        for (mlir::Type t : op.getOperandTypes())
+          if (auto st = mlir::dyn_cast<mlir::ShapedType>(t))
+            if (!st.hasStaticShape()) { hasDynamicShape = true; break; }
 
       // Filter kernel entries to those matching this op type.
       std::vector<const KernelEntry *> forThisOp;
@@ -147,14 +177,36 @@ struct KernelAvailabilityPlanningPass
         continue;
       }
 
-      // Rule 1: exact match (empty list matches any value).
+      // Rule 1: exact match.
+      // Capability check: dtype + layout + quant mode.
+      // Constraint check: requires_constant_weight + supports_dynamic_shape.
+      // Only enforce requiresConstantWeight when weight.constant_satisfied is explicitly set.
       const KernelEntry *exact = nullptr;
+      const KernelEntry *capabilityCandidate = nullptr; // dtype+layout+quant matched
+      bool constWeightFailed = false;
+      bool dynamicShapeFailed = false;
+
       for (const auto *ke : forThisOp) {
         bool dtypeOk  = ke->supported_dtypes.empty()      || inList(ke->supported_dtypes,      effectiveDtype);
         bool layoutOk = ke->supported_layouts.empty()     || inList(ke->supported_layouts,     effectiveLayout);
-        bool quantOk  = ke->supported_quant_modes.empty() || inList(ke->supported_quant_modes, quantMode);
-        if (dtypeOk && layoutOk && quantOk) { exact = ke; break; }
+        bool quantOk  = ke->supported_quant_modes.empty() || inList(ke->supported_quant_modes, opQuantMode);
+
+        if (!dtypeOk || !layoutOk || !quantOk) continue;
+
+        // Capability match: record the first such entry for fallback routing.
+        if (!capabilityCandidate) capabilityCandidate = ke;
+
+        // Constraint checks (only enforce const weight when the attr is present).
+        bool constOk = !ke->requires_constant_weight || !hasConstSat || weightConstantSatisfied;
+        bool shapeOk = ke->supports_dynamic_shape    || !hasDynamicShape;
+
+        if (!constOk) { constWeightFailed = true; continue; }
+        if (!shapeOk) { dynamicShapeFailed = true; continue; }
+
+        exact = ke;
+        break;
       }
+
       if (exact) {
         annotateOp(op, backend, exact->kernel_library, exact->kernel_name,
                    true, "lowerable", "", exact->fallback_backend,
@@ -162,7 +214,30 @@ struct KernelAvailabilityPlanningPass
         continue;
       }
 
-      // Rule 2: rewrite_patterns declared → rewrite_candidate.
+      // Capability candidate found but failed constraint checks:
+      // route directly to the candidate's fallback rather than the rewrite chain.
+      if (capabilityCandidate && constWeightFailed) {
+        std::string reason = "requires_constant_weight";
+        std::string status = "fallback_required";
+        std::string fb     = capabilityCandidate->fallback_backend;
+        if (!fb.empty()) reason += "_fallback_to_" + fb;
+        else             status  = "unsupported";
+        annotateOp(op, backend, capabilityCandidate->kernel_library,
+                   capabilityCandidate->kernel_name, false, status, "", fb,
+                   reason, capabilityCandidate->truth_boundary, ctx);
+        continue;
+      }
+
+      if (capabilityCandidate && dynamicShapeFailed) {
+        std::string fb = capabilityCandidate->fallback_backend;
+        std::string status = fb.empty() ? "unsupported" : "fallback_required";
+        annotateOp(op, backend, capabilityCandidate->kernel_library,
+                   capabilityCandidate->kernel_name, false, status, "", fb,
+                   "dynamic_shape_unsupported", capabilityCandidate->truth_boundary, ctx);
+        continue;
+      }
+
+      // Rule 2: no capability match (dtype/layout/quant mismatch) → check rewrite patterns.
       const KernelEntry *rewriteKe = nullptr;
       for (const auto *ke : forThisOp)
         if (!ke->rewrite_patterns.empty()) { rewriteKe = ke; break; }

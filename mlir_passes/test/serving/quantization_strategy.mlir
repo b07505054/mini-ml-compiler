@@ -122,6 +122,124 @@ module attributes {
 
 // -----
 
+// -----
+
+// Test N1: Per-op weight.constant_satisfied=true selects weight_only_int8 when the
+// backend supports int8. Simulates WeightClassificationPlanningPass output for arith.constant
+// weights. Each function has exactly one quantizable op so attr checks are unambiguous.
+//
+// CHECK-LABEL: @per_op_constant_satisfied_true
+// CHECK: quant.activation_dtype = "fp16"
+// CHECK: quant.strategy = "weight_only_int8"
+// CHECK: quant.weight_dtype = "int8"
+
+module attributes {
+  target.backend_capability_names = ["coreml"],
+  target.backend_capabilities.coreml.supported_quant_modes = ["static_int8", "weight_only"],
+  target.backend_capabilities.coreml.supported_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.accumulation_dtypes = ["fp32"],
+  target.backend_capabilities.coreml.allowed_quant_granularity = ["per_channel"]
+} {
+  func.func @per_op_constant_satisfied_true(%arg0: tensor<1x768xf16>) -> tensor<1x768xf16>
+    attributes {
+      representation.effective_dtype = "fp16",
+      representation.source_backend = "coreml"
+    }
+  {
+    %0 = "compute.matmul"(%arg0, %arg0) { weight.constant_satisfied = true }
+        : (tensor<1x768xf16>, tensor<1x768xf16>) -> tensor<1x768xf16>
+    return %0 : tensor<1x768xf16>
+  }
+}
+
+// -----
+
+// Test N2: Per-op weight.constant_satisfied=false with classification=runtime_activation
+// triggers fp16_fallback with fallback_reason=weight_not_constant.
+//
+// CHECK-LABEL: @per_op_constant_satisfied_false_runtime
+// CHECK: quant.fallback_reason = "weight_not_constant"
+// CHECK: quant.strategy = "fp16_fallback"
+
+module attributes {
+  target.backend_capability_names = ["coreml"],
+  target.backend_capabilities.coreml.supported_quant_modes = ["static_int8", "weight_only"],
+  target.backend_capabilities.coreml.supported_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.accumulation_dtypes = ["fp32"]
+} {
+  func.func @per_op_constant_satisfied_false_runtime(%arg0: tensor<1x768xf16>) -> tensor<1x768xf16>
+    attributes {
+      representation.effective_dtype = "fp16",
+      representation.source_backend = "coreml"
+    }
+  {
+    %0 = "compute.matmul"(%arg0, %arg0) {
+        weight.constant_satisfied = false,
+        weight.classification = "runtime_activation"
+    } : (tensor<1x768xf16>, tensor<1x768xf16>) -> tensor<1x768xf16>
+    return %0 : tensor<1x768xf16>
+  }
+}
+
+// -----
+
+// Test N3: Per-op weight.classification=unknown triggers fp16_fallback with
+// fallback_reason=weight_constant_unknown and accuracy_risk=unknown.
+//
+// CHECK-LABEL: @per_op_classification_unknown
+// CHECK: quant.accuracy_risk = "unknown"
+// CHECK: quant.fallback_reason = "weight_constant_unknown"
+// CHECK: quant.strategy = "fp16_fallback"
+
+module attributes {
+  target.backend_capability_names = ["coreml"],
+  target.backend_capabilities.coreml.supported_quant_modes = ["static_int8", "weight_only"],
+  target.backend_capabilities.coreml.supported_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.accumulation_dtypes = ["fp32"]
+} {
+  func.func @per_op_classification_unknown(%arg0: tensor<1x768xf16>) -> tensor<1x768xf16>
+    attributes {
+      representation.effective_dtype = "fp16",
+      representation.source_backend = "coreml"
+    }
+  {
+    %0 = "compute.matmul"(%arg0, %arg0) {
+        weight.constant_satisfied = false,
+        weight.classification = "unknown"
+    } : (tensor<1x768xf16>, tensor<1x768xf16>) -> tensor<1x768xf16>
+    return %0 : tensor<1x768xf16>
+  }
+}
+
+// -----
+
+// Test N4: conv2d with weight.constant_satisfied=true (simulates weight.is_constant=true
+// on the op, processed by WeightClassificationPlanningPass Rule 2) -> weight_only_int8.
+//
+// CHECK-LABEL: @conv2d_per_op_constant_satisfied
+// CHECK: quant.strategy = "weight_only_int8"
+// CHECK: quant.weight_dtype = "int8"
+
+module attributes {
+  target.backend_capability_names = ["coreml"],
+  target.backend_capabilities.coreml.supported_quant_modes = ["static_int8", "weight_only"],
+  target.backend_capabilities.coreml.supported_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.accumulation_dtypes = ["fp32"]
+} {
+  func.func @conv2d_per_op_constant_satisfied(%arg0: tensor<1x64xf16>) -> tensor<1x64xf16>
+    attributes {
+      representation.effective_dtype = "fp16",
+      representation.source_backend = "coreml"
+    }
+  {
+    %0 = "compute.conv2d"(%arg0, %arg0) { weight.constant_satisfied = true }
+        : (tensor<1x64xf16>, tensor<1x64xf16>) -> tensor<1x64xf16>
+    return %0 : tensor<1x64xf16>
+  }
+}
+
+// -----
+
 // Test 5: Op producing int8 output while effective dtype is fp16 marks dequant boundary.
 // Rule 6: quantized op output feeds fp16/fp32 region => requires_dequant_boundary=true.
 // The op result type is tensor<1x768xi8> (int8) but effective_dtype is fp16.
