@@ -619,6 +619,29 @@ set_tests_properties(QwenCompileForTargetTest PROPERTIES
 )
 
 # ---------------------------------------------------------------------------
+# CTest: QwenGTX1650CompileTest
+# End-to-end: qwen-to-serving-mlir -> compile-for-target with GTX 1650 Max-Q profile.
+# Asserts execution_plan.json exists, schema 2.0.0, strategy=none, no measured fields.
+# ---------------------------------------------------------------------------
+set(_QWEN_GTX_DIR  "${CMAKE_CURRENT_BINARY_DIR}/qwen_gtx1650_integration")
+set(_QWEN_GTX_MLIR "${_QWEN_GTX_DIR}/qwen_0_5b_gtx1650.mlir")
+set(_QWEN_GTX_JSON "${_QWEN_GTX_DIR}/execution_plan.json")
+
+add_test(NAME QwenGTX1650CompileTest
+  COMMAND ${CMAKE_COMMAND}
+    -DQWEN_TOOL=$<TARGET_FILE:qwen-to-serving-mlir>
+    -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+    -DSPEC=${REPO_ROOT}/configs/models/qwen_0_5b_spec.json
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/nvidia_gtx1650_maxq.json
+    -DMLIR_OUT=${_QWEN_GTX_MLIR}
+    -DJSON_OUT=${_QWEN_GTX_JSON}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenGTX1650CompileTest.cmake
+)
+set_tests_properties(QwenGTX1650CompileTest PROPERTIES
+  DEPENDS "qwen-to-serving-mlir;compile-for-target"
+)
+
+# ---------------------------------------------------------------------------
 # CTest: LLMFrontendNormalizationTest
 # Two-step integration: mlir-opt (normalization pass) -> compile-for-target.
 # Requires mlir-opt from the LLVM build. Skipped if mlir-opt is not found.

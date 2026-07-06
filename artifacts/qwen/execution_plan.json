@@ -1,0 +1,132 @@
+{
+  "function_plans": [
+    {
+      "backend": {
+        "decision_id": "bd_collected_qwen_prefill",
+        "decision_type": "BackendDecision",
+        "fallback_backends": [],
+        "scope": "Function",
+        "selected_backend": "cuda",
+        "source_pass": "target_preferred",
+        "truth_boundary": "decision_collected_from_v1_mlir_attrs_evidence_not_tracked"
+      },
+      "function_name": "qwen_prefill",
+      "per_op_decisions": [
+        {
+          "op_name": "op_1",
+          "op_type": "llm.rmsnorm",
+          "quantization": {
+            "accumulation_dtype": "fp16",
+            "accuracy_risk": "medium",
+            "activation_dtype": "fp16",
+            "algorithm": "",
+            "decision_id": "qd_collected_op_1",
+            "decision_type": "QuantizationDecision",
+            "granularity": "per_channel",
+            "op_type": "llm.rmsnorm",
+            "reason": "accuracy_sensitive_op",
+            "scope": "PerOp",
+            "source_pass": "quantization-strategy-planning",
+            "strategy": "fp16_fallback",
+            "truth_boundary": "quantization_strategy_static_not_accuracy_calibrated",
+            "weight_dtype": "fp16"
+          }
+        }
+      ],
+      "serving_phase": "prefill"
+    },
+    {
+      "backend": {
+        "decision_id": "bd_collected_qwen_decode",
+        "decision_type": "BackendDecision",
+        "fallback_backends": [
+          "cpu"
+        ],
+        "scope": "Function",
+        "selected_backend": "cuda",
+        "source_pass": "target_preferred",
+        "truth_boundary": "decision_collected_from_v1_mlir_attrs_evidence_not_tracked"
+      },
+      "function_name": "qwen_decode",
+      "per_op_decisions": [
+        {
+          "op_name": "op_1",
+          "op_type": "llm.rmsnorm",
+          "quantization": {
+            "accumulation_dtype": "fp16",
+            "accuracy_risk": "medium",
+            "activation_dtype": "fp16",
+            "algorithm": "",
+            "decision_id": "qd_collected_op_1",
+            "decision_type": "QuantizationDecision",
+            "granularity": "per_channel",
+            "op_type": "llm.rmsnorm",
+            "reason": "accuracy_sensitive_op",
+            "scope": "PerOp",
+            "source_pass": "quantization-strategy-planning",
+            "strategy": "fp16_fallback",
+            "truth_boundary": "quantization_strategy_static_not_accuracy_calibrated",
+            "weight_dtype": "fp16"
+          }
+        }
+      ],
+      "serving_phase": "decode"
+    }
+  ],
+  "global_decisions": {
+    "memory": {
+      "decision_id": "md_collected_qwen_prefill",
+      "decision_type": "MemoryDecision",
+      "estimated_kv_peak_mb": 42,
+      "kv_block_size_tokens": 0,
+      "kv_cache_layout": "paged",
+      "memory_budget_fraction": 0.75,
+      "scope": "Global",
+      "source_pass": "kv-layout-planning",
+      "truth_boundary": "decision_collected_from_v1_mlir_attrs_evidence_not_tracked"
+    },
+    "serving": {
+      "chunked_prefill_eligible": false,
+      "colocated_cost_estimate_ms": 51.200000000000003,
+      "decision_id": "sd_collected_qwen_prefill",
+      "decision_type": "ServingDecision",
+      "parallelism_degree": 1,
+      "pd_split_cost_estimate_ms": 48.805999999999997,
+      "prefix_reuse_eligible": false,
+      "replay_eligible": false,
+      "scope": "Global",
+      "source_pass": "serving-phase-analysis",
+      "token_budget_per_step": 0,
+      "topology": "pd_split",
+      "truth_boundary": "estimated_cost_not_measured_latency"
+    }
+  },
+  "model_identity": {
+    "hidden_size": 896,
+    "model_family": "",
+    "model_id": "qwen2.5-0.5b",
+    "num_attention_heads": 14,
+    "num_kv_heads": 2,
+    "num_layers": 24,
+    "truth_boundary": "declared_model_config_not_full_graph_import"
+  },
+  "plan_id": "nvidia-gtx1650-maxq_serving_plan",
+  "provenance": {
+    "capability_bundle": {
+      "backend_profile_refs": [
+        "cuda_triton",
+        "cuda_cublas"
+      ],
+      "hardware_profile_ref": "nvidia-gtx1650-maxq",
+      "kernel_profile_refs": [
+        "cublas",
+        "triton"
+      ]
+    },
+    "compiler_tool": "compile-for-target",
+    "model_spec_ref": "",
+    "truth_boundary": "execution_planning_declared_profiles_not_measured_runtime"
+  },
+  "schema": "execution_plan",
+  "schema_version": "2.0.0"
+}
