@@ -172,7 +172,7 @@ struct PlanSelectionPass
       op.setAttr("selected_plan.truth_boundary",      S(kTruth));
 
       // Promote V1 structured cost evidence from the winning candidate.
-      // These flat attrs are consumed by ExecutionPlanV2Builder for meta.evidence.cost.
+      // These flat attrs are consumed by ExecutionPlanBuilder for meta.evidence.cost.
       // If ServingCostModelPass did not run, the evaluation.cost.* keys are absent
       // and readI64Dict returns 0 — cost attrs are still emitted (all zeros) so that
       // the builder can gate on selected_plan.cost.total presence (zero is legitimate).

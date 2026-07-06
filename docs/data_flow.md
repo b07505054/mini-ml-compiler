@@ -27,7 +27,7 @@ Assumption: many trace and artifact files are generated outputs and may be stale
    - `inputs`
    - `outputs`
    - `memory_offset`
-6. `ExecutionPlanBuilder` converts lowered ops to `ExecutionPlanV2` steps with dependencies and launch config.
+6. `ExecutionPlanBuilder` converts lowered ops to `ExecutionPlan` steps with dependencies and launch config.
 7. `Executor` binds tensor runtime pointers through `ArenaAllocator`.
 8. Runtime dispatch selects a backend.
 9. The backend dispatches each node through the op registry or logs simulated behavior.
@@ -163,7 +163,7 @@ Rules for interpreting metrics:
 - `Node`: op type plus input/output tensor ids.
 - `ExecutionPlan`: ordered nodes for the basic executor.
 - `LoweredGraph` and `LoweredOp`: runtime-facing lowered representation.
-- `ExecutionPlanV2` and `ExecutionStep`: dependency-aware execution plan.
+- `ExecutionPlan` and `ExecutionStep`: dependency-aware execution plan.
 - `CostReport` and `CostReportEntry`: compiler/runtime cost metadata.
 - `PlannerCandidate` and `PlannerOpCost`: candidate backend assignments and estimated/observed cost breakdowns.
 - `LLMRequest`: serving request state for scheduler demos.

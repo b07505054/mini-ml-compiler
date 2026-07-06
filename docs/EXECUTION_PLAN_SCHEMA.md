@@ -2,7 +2,7 @@
 
 ## Purpose
 
-ExecutionPlanV2 is the canonical compiler output. It replaces the ad-hoc
+ExecutionPlan is the canonical compiler output. It replaces the ad-hoc
 `vllm_execution_plan` artifact (V1) with a typed, backend-agnostic contract.
 
 Key invariants:
@@ -19,7 +19,7 @@ V1 (`ServingExecutionPlan.h`, `artifacts/vllm_plans/qwen_0_5b_gtx1650_plan.json`
 remains in use. V2 is the forward contract; passes will be migrated in a
 subsequent step.
 
-C++ types: `mlir_passes/include/serving/ExecutionPlanV2.h`
+C++ types: `mlir_passes/include/serving/ExecutionPlan.h`
 
 ---
 
@@ -410,7 +410,7 @@ Materializers must also report decisions they cannot express as
 
 ---
 
-## What ExecutionPlanV2 Does Not Contain
+## What ExecutionPlan Does Not Contain
 
 - Runtime flag names from any specific runtime (vLLM, TensorRT-LLM, ONNX Runtime)
 - Measured performance values (latency, throughput, memory usage)

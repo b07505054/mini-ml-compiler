@@ -123,7 +123,7 @@ int main() {
     plan_v2.dump();
 
     plan_v2.export_json(
-        "../trace/execution_plan_v2.json"
+        "../trace/execution_plan.json"
     );
     
     std::cout << "\n=== Lowering After Compiler Pipeline ===\n";

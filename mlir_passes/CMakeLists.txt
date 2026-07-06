@@ -119,34 +119,34 @@ endif()
 enable_testing()
 
 # ---------------------------------------------------------------------------
-# CTest: ExecutionPlanV2Builder collector test (Qwen 2.5-0.5B)
-# Exercises ExecutionPlanV2Builder as a collector/packer on Qwen serving MLIR.
+# CTest: ExecutionPlanBuilder collector test (Qwen 2.5-0.5B)
+# Exercises ExecutionPlanBuilder as a collector/packer on Qwen serving MLIR.
 # Runs the 4-pass serving pipeline, then verifies the V2 plan structure.
 # No exporter, JSON, or artifact generation.  V1 builder untouched.
 # ---------------------------------------------------------------------------
-add_executable(PlanV2BuilderQwenTest
+add_executable(PlanBuilderQwenTest
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
-  lib/serving/ExecutionPlanV2Builder.cpp
-  test/serving/plan_v2_builder_qwen_test.cpp
+  lib/serving/ExecutionPlanBuilder.cpp
+  test/serving/plan_builder_qwen_test.cpp
 )
-llvm_update_compile_flags(PlanV2BuilderQwenTest)
-add_dependencies(PlanV2BuilderQwenTest
+llvm_update_compile_flags(PlanBuilderQwenTest)
+add_dependencies(PlanBuilderQwenTest
   HIRFusionPassIncGen
 )
-target_include_directories(PlanV2BuilderQwenTest
+target_include_directories(PlanBuilderQwenTest
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${LLVM_INCLUDE_DIRS}
     ${MLIR_INCLUDE_DIRS}
 )
-target_compile_definitions(PlanV2BuilderQwenTest
+target_compile_definitions(PlanBuilderQwenTest
   PRIVATE ${LLVM_DEFINITIONS}
 )
-target_link_libraries(PlanV2BuilderQwenTest
+target_link_libraries(PlanBuilderQwenTest
   PRIVATE
     MLIRIR
     MLIRParser
@@ -155,11 +155,11 @@ target_link_libraries(PlanV2BuilderQwenTest
     MLIRTransforms
     MLIRSupport
 )
-add_test(NAME PlanV2BuilderQwenTest
-         COMMAND PlanV2BuilderQwenTest)
+add_test(NAME PlanBuilderQwenTest
+         COMMAND PlanBuilderQwenTest)
 
 # ---------------------------------------------------------------------------
-# CTest: ExecutionPlanV2Builder full 16-pass pipeline test (Qwen 2.5-0.5B)
+# CTest: ExecutionPlanBuilder full 16-pass pipeline test (Qwen 2.5-0.5B)
 # Runs the complete serving pipeline including KernelAvailabilityPlanningPass
 # and LoweringDecisionPlanningPass, then verifies that per-op KernelDecisions
 # are collected from lowering.decision / kernel.* attrs.
@@ -167,7 +167,7 @@ add_test(NAME PlanV2BuilderQwenTest
 # KernelAvailabilityPlanningPass (standard pipeline mechanism, not faking).
 # No V1 builder linked.  No exporter, JSON, or artifact generation.
 # ---------------------------------------------------------------------------
-add_executable(PlanV2BuilderQwenFullPipelineTest
+add_executable(PlanBuilderQwenFullPipelineTest
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
@@ -184,24 +184,24 @@ add_executable(PlanV2BuilderQwenFullPipelineTest
   lib/serving/CandidateGenerationPass.cpp
   lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
-  lib/serving/ExecutionPlanV2Builder.cpp
-  test/serving/plan_v2_builder_qwen_full_pipeline_test.cpp
+  lib/serving/ExecutionPlanBuilder.cpp
+  test/serving/plan_builder_qwen_full_pipeline_test.cpp
 )
-llvm_update_compile_flags(PlanV2BuilderQwenFullPipelineTest)
-add_dependencies(PlanV2BuilderQwenFullPipelineTest
+llvm_update_compile_flags(PlanBuilderQwenFullPipelineTest)
+add_dependencies(PlanBuilderQwenFullPipelineTest
   HIRFusionPassIncGen
 )
-target_include_directories(PlanV2BuilderQwenFullPipelineTest
+target_include_directories(PlanBuilderQwenFullPipelineTest
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${LLVM_INCLUDE_DIRS}
     ${MLIR_INCLUDE_DIRS}
 )
-target_compile_definitions(PlanV2BuilderQwenFullPipelineTest
+target_compile_definitions(PlanBuilderQwenFullPipelineTest
   PRIVATE ${LLVM_DEFINITIONS}
 )
-target_link_libraries(PlanV2BuilderQwenFullPipelineTest
+target_link_libraries(PlanBuilderQwenFullPipelineTest
   PRIVATE
     MLIRIR
     MLIRParser
@@ -210,8 +210,8 @@ target_link_libraries(PlanV2BuilderQwenFullPipelineTest
     MLIRTransforms
     MLIRSupport
 )
-add_test(NAME PlanV2BuilderQwenFullPipelineTest
-         COMMAND PlanV2BuilderQwenFullPipelineTest)
+add_test(NAME PlanBuilderQwenFullPipelineTest
+         COMMAND PlanBuilderQwenFullPipelineTest)
 
 # ---------------------------------------------------------------------------
 # CTest: ServingStaticCostModelV1Test
@@ -423,11 +423,11 @@ set_tests_properties(CVExecutionPlanArtifactToolTest PROPERTIES
 #
 # Wires: TargetDeviceProfile JSON → TargetConstraints + CapabilityBundle →
 #        serving passes (15-pass pipeline) →
-#        ExecutionPlanV2Builder → ExecutionPlanV2Exporter →
-#        canonical artifact (execution_plan_v2.json).
+#        ExecutionPlanBuilder → ExecutionPlanExporter →
+#        canonical artifact (execution_plan.json).
 #
 # No HIRServingCore static library to avoid MODULE duplicate-symbol issues.
-# JSON construction is entirely owned by ExecutionPlanV2Exporter; main.cpp
+# JSON construction is entirely owned by ExecutionPlanExporter; main.cpp
 # never constructs llvm::json types directly.
 # ---------------------------------------------------------------------------
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
@@ -449,8 +449,8 @@ add_executable(compile-for-target
   lib/serving/CandidateGenerationPass.cpp
   lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
-  lib/serving/ExecutionPlanV2Builder.cpp
-  lib/serving/ExecutionPlanV2Exporter.cpp
+  lib/serving/ExecutionPlanBuilder.cpp
+  lib/serving/ExecutionPlanExporter.cpp
   lib/serving/TargetConstraints.cpp
   tools/compile-for-target/main.cpp
 )
@@ -481,7 +481,7 @@ target_link_libraries(compile-for-target
 # then greps both output artifacts for required fields.
 # Writes output to build dir; does not modify the repo artifact.
 # ---------------------------------------------------------------------------
-set(_CFT_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_execution_plan_v2.json")
+set(_CFT_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_execution_plan.json")
 
 add_test(NAME CompileForTargetTest
   COMMAND ${CMAKE_COMMAND}

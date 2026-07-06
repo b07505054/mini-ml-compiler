@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
-PLAN_PATH = "trace/execution_plan_v2.json"
+PLAN_PATH = "trace/execution_plan.json"
 
 with open(PLAN_PATH, "r") as f:
     plan = json.load(f)
@@ -61,7 +61,7 @@ plt.title(
 
 plt.tight_layout()
 
-output_path = "trace/execution_plan_v2.png"
+output_path = "trace/execution_plan.png"
 
 plt.savefig(output_path)
 

@@ -7,18 +7,18 @@
 //     → TargetConstraints + CapabilityBundle
 //     → TargetConstraints::attachToModule()
 //     → serving passes (15-pass pipeline)
-//     → ExecutionPlanV2Builder
-//     → ExecutionPlanV2
-//     → ExecutionPlanV2Exporter
-//         → canonical artifact  (execution_plan_v2.json)
+//     → ExecutionPlanBuilder
+//     → ExecutionPlan
+//     → ExecutionPlanExporter
+//         → canonical artifact  (execution_plan.json)
 //
-// JSON construction is fully owned by ExecutionPlanV2Exporter.
+// JSON construction is fully owned by ExecutionPlanExporter.
 // This file never touches llvm::json types directly.
 
 #include "FusionPasses.h"
-#include "serving/ExecutionPlanV2.h"
-#include "serving/ExecutionPlanV2Builder.h"
-#include "serving/ExecutionPlanV2Exporter.h"
+#include "serving/ExecutionPlan.h"
+#include "serving/ExecutionPlanBuilder.h"
+#include "serving/ExecutionPlanExporter.h"
 #include "serving/TargetConstraints.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -598,9 +598,9 @@ parseDeviceProfile(llvm::StringRef path) {
 }
 
 // ---------------------------------------------------------------------------
-// lowerToCapabilityBundle — tool-boundary mapping for ExecutionPlanV2Builder.
+// lowerToCapabilityBundle — tool-boundary mapping for ExecutionPlanBuilder.
 //
-// Populates only the fields read by ExecutionPlanV2Builder::build:
+// Populates only the fields read by ExecutionPlanBuilder::build:
 //   hardware.hardware_id        → provenance.capability_bundle.hardware_profile_ref
 //   backends[*].backend_name    → provenance.capability_bundle.backend_profile_refs
 //   kernels[*].kernel_library   → provenance.capability_bundle.kernel_profile_refs
@@ -643,7 +643,7 @@ lowerToCapabilityBundle(const TargetDeviceProfile &prof) {
 // ---------------------------------------------------------------------------
 
 static void printTerminalSummary(const TargetDeviceProfile &prof,
-                                  const mlir::hir::ExecutionPlanV2 &plan,
+                                  const mlir::hir::ExecutionPlan &plan,
                                   llvm::StringRef canonicalPath) {
   llvm::outs() << "\n";
   llvm::outs() << "compile-for-target: " << prof.profileId
@@ -773,14 +773,14 @@ int main(int argc, char **argv) {
     }
   }
 
-  // 7. Build ExecutionPlanV2 from annotated module.
+  // 7. Build ExecutionPlan from annotated module.
   std::string plan_id = prof.profileId + "_serving_plan";
-  mlir::hir::ExecutionPlanV2 plan =
-      mlir::hir::ExecutionPlanV2Builder::build(module.get(), capabilities,
+  mlir::hir::ExecutionPlan plan =
+      mlir::hir::ExecutionPlanBuilder::build(module.get(), capabilities,
                                                plan_id);
 
   // 8. Export canonical artifact.
-  if (auto err = mlir::hir::ExecutionPlanV2Exporter::exportToFile(plan,
+  if (auto err = mlir::hir::ExecutionPlanExporter::exportToFile(plan,
                                                                     OutPath)) {
     llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
     return 1;

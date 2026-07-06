@@ -1,4 +1,4 @@
-#include "serving/ExecutionPlanV2Exporter.h"
+#include "serving/ExecutionPlanExporter.h"
 #include "serving/ServingEnums.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -204,7 +204,7 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
   return obj;
 }
 
-static llvm::json::Object serializeFunctionPlan(const FunctionPlanV2 &fp) {
+static llvm::json::Object serializeFunctionPlan(const FunctionPlan &fp) {
   llvm::json::Object obj;
   obj["function_name"] = fp.function_name;
   obj["serving_phase"] = servingPhaseStr(fp.serving_phase);
@@ -224,7 +224,7 @@ static llvm::json::Object serializeFunctionPlan(const FunctionPlanV2 &fp) {
 // exportToFile
 // ---------------------------------------------------------------------------
 
-llvm::Error ExecutionPlanV2Exporter::exportToFile(const ExecutionPlanV2 &plan,
+llvm::Error ExecutionPlanExporter::exportToFile(const ExecutionPlan &plan,
                                                    llvm::StringRef outPath) {
   // capability_bundle
   llvm::json::Array backendRefs;

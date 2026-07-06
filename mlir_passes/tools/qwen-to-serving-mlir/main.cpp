@@ -11,7 +11,7 @@
 //   - @qwen_decode  with llm.attention_decode  (kv_cache.role = "consumer")
 //
 // The output feeds directly into compile-for-target to produce an
-// ExecutionPlanV2 JSON artifact.
+// ExecutionPlan JSON artifact.
 //
 // Usage:
 //   qwen-to-serving-mlir --model-spec configs/models/qwen_0_5b_spec.json \

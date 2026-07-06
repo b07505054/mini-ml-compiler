@@ -1,7 +1,7 @@
-// Full 16-pass pipeline test for ExecutionPlanV2Builder (Qwen 2.5-0.5B).
+// Full 16-pass pipeline test for ExecutionPlanBuilder (Qwen 2.5-0.5B).
 //
 // Architecture contract under test:
-//   ExecutionPlanV2Builder is a COLLECTOR only. It packs attrs already
+//   ExecutionPlanBuilder is a COLLECTOR only. It packs attrs already
 //   emitted by passes. This test verifies that it can collect real per-op
 //   KernelDecisions once the full serving pipeline has run, and that it
 //   does NOT synthesize decisions when a pass did not emit the gate attr.
@@ -30,7 +30,7 @@
 //
 // No GoogleTest. No Python. No JSON parsing. Pure C++ + MLIR.
 
-#include "serving/ExecutionPlanV2Builder.h"
+#include "serving/ExecutionPlanBuilder.h"
 #include "capability/CapabilityBundle.h"
 #include "FusionPasses.h"
 
@@ -157,9 +157,9 @@ int main() {
   bundle.hardware.hardware_id              = "test_gtx1650_maxq";
   bundle.deployment.memory_budget_fraction = 0.75;
 
-  std::puts("[3] Building ExecutionPlanV2 ...");
-  mlir::hir::ExecutionPlanV2 plan =
-      mlir::hir::ExecutionPlanV2Builder::build(
+  std::puts("[3] Building ExecutionPlan ...");
+  mlir::hir::ExecutionPlan plan =
+      mlir::hir::ExecutionPlanBuilder::build(
           module.get(), bundle, "test_qwen_v2_full");
 
   // -------------------------------------------------------------------------
@@ -205,8 +205,8 @@ int main() {
   // -------------------------------------------------------------------------
   assert(plan.function_plans.size() == 2 && "expected exactly 2 function plans");
 
-  const mlir::hir::FunctionPlanV2 *fp_prefill = nullptr;
-  const mlir::hir::FunctionPlanV2 *fp_decode  = nullptr;
+  const mlir::hir::FunctionPlan *fp_prefill = nullptr;
+  const mlir::hir::FunctionPlan *fp_decode  = nullptr;
   for (const auto& fp : plan.function_plans) {
     if (fp.serving_phase == mlir::hir::ServingPhase::Prefill) fp_prefill = &fp;
     if (fp.serving_phase == mlir::hir::ServingPhase::Decode)  fp_decode  = &fp;
@@ -351,7 +351,7 @@ int main() {
   // dumpSummary: must not crash.
   // -------------------------------------------------------------------------
   std::puts("[4] dumpSummary ...");
-  mlir::hir::ExecutionPlanV2Builder::dumpSummary(plan, llvm::errs());
+  mlir::hir::ExecutionPlanBuilder::dumpSummary(plan, llvm::errs());
 
   std::puts("PlanV2BuilderQwenFullPipelineTest: PASS");
   return 0;

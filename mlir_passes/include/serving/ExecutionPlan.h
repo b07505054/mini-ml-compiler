@@ -1,8 +1,8 @@
 #pragma once
 
-// ExecutionPlanV2.h — canonical compiler output contract (schema version 2.0).
+// ExecutionPlan.h — canonical compiler output contract (schema version 2.0).
 //
-// ExecutionPlanV2 is the compiler's deliverable: a hardware-aware, backend-
+// ExecutionPlan is the compiler's deliverable: a hardware-aware, backend-
 // agnostic set of typed decisions produced by the 15-pass serving pipeline
 // and consumed by materializers that translate decisions into runtime-specific
 // artifacts.
@@ -16,8 +16,7 @@
 //   - IR materialization (cast/dequant/layout_transform insertion) is NOT
 //     performed; this plan describes planning decisions only.
 //
-// ExecutionPlanV2 is the sole compiler/runtime contract.  The V1 plan type
-// has been removed.
+// ExecutionPlan is the sole compiler/runtime contract.
 
 #include "capability/CapabilityBundle.h"
 #include "decision/Decision.h"
@@ -84,25 +83,24 @@ struct PerOpDecisionBundle {
 };
 
 // Plan for one serving function (prefill or decode).
-struct FunctionPlanV2 {
+struct FunctionPlan {
   std::string                      function_name;   // "qwen_prefill", "qwen_decode"
   ServingPhase                     serving_phase;   // reuses existing ServingPhase enum
   BackendDecision                  backend;
   std::vector<PerOpDecisionBundle> per_op_decisions;
 };
 
-// ExecutionPlanV2 — the canonical compiler output.
+// ExecutionPlan — the canonical compiler output.
 //
-// JSON representation: docs/EXECUTION_PLAN_SCHEMA_V2.md
-// V1 → V2 field mapping: docs/EXECUTION_PLAN_SCHEMA_V2.md §V1→V2 Mapping
-struct ExecutionPlanV2 {
-  std::string                  schema         = "execution_plan";
-  std::string                  schema_version = "2.0.0";
-  std::string                  plan_id;
-  PlanProvenanceV2             provenance;
-  ModelIdentity                model_identity;
-  GlobalDecisions              global_decisions;
-  std::vector<FunctionPlanV2>  function_plans;
+// JSON representation: docs/EXECUTION_PLAN_SCHEMA.md
+struct ExecutionPlan {
+  std::string                 schema         = "execution_plan";
+  std::string                 schema_version = "2.0.0";
+  std::string                 plan_id;
+  PlanProvenanceV2            provenance;
+  ModelIdentity               model_identity;
+  GlobalDecisions             global_decisions;
+  std::vector<FunctionPlan>   function_plans;
 };
 
 } // namespace mlir::hir

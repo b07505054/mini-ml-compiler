@@ -1,7 +1,7 @@
 #pragma once
 
-// ExecutionPlanV2Builder: reads MLIR attrs already emitted by the serving
-// pass pipeline and packs them into a typed ExecutionPlanV2.
+// ExecutionPlanBuilder: reads MLIR attrs already emitted by the serving
+// pass pipeline and packs them into a typed ExecutionPlan.
 //
 // Architecture contract:
 //   This builder is a COLLECTOR/PACKER only. It does not make decisions.
@@ -14,7 +14,7 @@
 //
 //   Decision Engine: the 15-pass serving pipeline (not this builder).
 
-#include "serving/ExecutionPlanV2.h"
+#include "serving/ExecutionPlan.h"
 #include "capability/CapabilityBundle.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -25,7 +25,7 @@
 
 namespace mlir::hir {
 
-class ExecutionPlanV2Builder {
+class ExecutionPlanBuilder {
 public:
   // Collect decisions already emitted by passes and assemble a V2 plan.
   // module:       should have completed at least ServingPhaseAnalysisPass.
@@ -34,13 +34,13 @@ public:
   // capabilities: assembled at the tool boundary before passes ran; used for
   //               bundle refs and fields not expressible as MLIR attrs
   //               (e.g. memory_budget_fraction).
-  static ExecutionPlanV2 build(mlir::ModuleOp module,
+  static ExecutionPlan build(mlir::ModuleOp module,
                                const CapabilityBundle& capabilities,
                                llvm::StringRef plan_id = "");
 
   // Emit a one-line summary per collected decision.
   // For development inspection only — not a serializer, not schema-stable.
-  static void dumpSummary(const ExecutionPlanV2& plan, llvm::raw_ostream& os);
+  static void dumpSummary(const ExecutionPlan& plan, llvm::raw_ostream& os);
 
 private:
   // Collect helpers: read existing attrs, return typed structs.
@@ -50,7 +50,7 @@ private:
                                                 const CapabilityBundle& capabilities);
   static GlobalDecisions  collectGlobalDecisions(mlir::ModuleOp module,
                                                  const CapabilityBundle& capabilities);
-  static FunctionPlanV2   collectFunctionDecisions(mlir::func::FuncOp funcOp,
+  static FunctionPlan   collectFunctionDecisions(mlir::func::FuncOp funcOp,
                                                    const CapabilityBundle& capabilities);
   static std::vector<PerOpDecisionBundle>
   collectPerOpDecisionBundles(mlir::func::FuncOp funcOp);

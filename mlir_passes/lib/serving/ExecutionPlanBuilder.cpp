@@ -1,4 +1,4 @@
-#include "serving/ExecutionPlanV2Builder.h"
+#include "serving/ExecutionPlanBuilder.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
@@ -77,12 +77,12 @@ static bool boolOp(mlir::Operation *op, llvm::StringRef key) {
 
 } // namespace
 
-ExecutionPlanV2 ExecutionPlanV2Builder::build(
+ExecutionPlan ExecutionPlanBuilder::build(
     mlir::ModuleOp module,
     const CapabilityBundle& capabilities,
     llvm::StringRef plan_id) {
 
-  ExecutionPlanV2 plan;
+  ExecutionPlan plan;
   plan.plan_id = plan_id.str();
 
   plan.model_identity = collectModelIdentity(module);
@@ -107,7 +107,7 @@ ExecutionPlanV2 ExecutionPlanV2Builder::build(
 }
 
 ModelIdentity
-ExecutionPlanV2Builder::collectModelIdentity(mlir::ModuleOp module) {
+ExecutionPlanBuilder::collectModelIdentity(mlir::ModuleOp module) {
   ModelIdentity id;
   if (auto a = module->getAttrOfType<mlir::StringAttr>("llm.model"))
     id.model_id = a.getValue().str();
@@ -127,7 +127,7 @@ ExecutionPlanV2Builder::collectModelIdentity(mlir::ModuleOp module) {
 }
 
 CapabilityBundleRefs
-ExecutionPlanV2Builder::collectBundleRefs(
+ExecutionPlanBuilder::collectBundleRefs(
     mlir::ModuleOp module,
     const CapabilityBundle& capabilities) {
   CapabilityBundleRefs refs;
@@ -156,7 +156,7 @@ ExecutionPlanV2Builder::collectBundleRefs(
 }
 
 GlobalDecisions
-ExecutionPlanV2Builder::collectGlobalDecisions(
+ExecutionPlanBuilder::collectGlobalDecisions(
     mlir::ModuleOp module,
     const CapabilityBundle& capabilities) {
   GlobalDecisions gd;
@@ -185,11 +185,11 @@ ExecutionPlanV2Builder::collectGlobalDecisions(
   return gd;
 }
 
-FunctionPlanV2
-ExecutionPlanV2Builder::collectFunctionDecisions(
+FunctionPlan
+ExecutionPlanBuilder::collectFunctionDecisions(
     mlir::func::FuncOp funcOp,
     const CapabilityBundle&) {
-  FunctionPlanV2 fp;
+  FunctionPlan fp;
   fp.function_name    = funcOp.getName().str();
   fp.serving_phase    = detectServingPhase(funcOp);
   fp.backend          = attrToBackendDecision(funcOp);
@@ -198,7 +198,7 @@ ExecutionPlanV2Builder::collectFunctionDecisions(
 }
 
 std::vector<PerOpDecisionBundle>
-ExecutionPlanV2Builder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
+ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
   std::vector<PerOpDecisionBundle> bundles;
   if (funcOp.getBody().empty())
     return bundles;
@@ -226,7 +226,7 @@ ExecutionPlanV2Builder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
 }
 
 std::optional<ServingDecision>
-ExecutionPlanV2Builder::attrToServingDecision(mlir::func::FuncOp funcOp) {
+ExecutionPlanBuilder::attrToServingDecision(mlir::func::FuncOp funcOp) {
   // Gate: serving.policy must be present (emitted by ServingPhaseAnalysisPass).
   auto policyAttr = funcOp->getAttrOfType<mlir::StringAttr>("serving.policy");
   if (!policyAttr)
@@ -256,7 +256,7 @@ ExecutionPlanV2Builder::attrToServingDecision(mlir::func::FuncOp funcOp) {
 }
 
 std::optional<MemoryDecision>
-ExecutionPlanV2Builder::attrToMemoryDecision(
+ExecutionPlanBuilder::attrToMemoryDecision(
     mlir::func::FuncOp funcOp,
     const CapabilityBundle& capabilities) {
   // Gate: kv.layout must be present (emitted by KVLayoutPlanningPass).
@@ -284,7 +284,7 @@ ExecutionPlanV2Builder::attrToMemoryDecision(
 }
 
 std::optional<QuantizationDecision>
-ExecutionPlanV2Builder::attrToGlobalQuantDecision(mlir::ModuleOp module) {
+ExecutionPlanBuilder::attrToGlobalQuantDecision(mlir::ModuleOp module) {
   // Gate: quantization.plan_dtype must be present on module
   // (emitted by QuantizationPlanningPass when it ran).
   auto dtypeAttr = module->getAttrOfType<mlir::StringAttr>("quantization.plan_dtype");
@@ -316,7 +316,7 @@ ExecutionPlanV2Builder::attrToGlobalQuantDecision(mlir::ModuleOp module) {
 }
 
 BackendDecision
-ExecutionPlanV2Builder::attrToBackendDecision(mlir::func::FuncOp funcOp) {
+ExecutionPlanBuilder::attrToBackendDecision(mlir::func::FuncOp funcOp) {
   BackendDecision d;
   d.meta.decision_id   = "bd_collected_" + funcOp.getName().str();
   d.meta.decision_type = "BackendDecision";
@@ -341,7 +341,7 @@ ExecutionPlanV2Builder::attrToBackendDecision(mlir::func::FuncOp funcOp) {
 }
 
 std::optional<KernelDecision>
-ExecutionPlanV2Builder::attrToKernelDecision(mlir::Operation* op, int opIndex) {
+ExecutionPlanBuilder::attrToKernelDecision(mlir::Operation* op, int opIndex) {
   // Gate: lowering.decision must be present (emitted by LoweringDecisionPlanningPass).
   auto decisionAttr = op->getAttrOfType<mlir::StringAttr>("lowering.decision");
   if (!decisionAttr)
@@ -414,7 +414,7 @@ ExecutionPlanV2Builder::attrToKernelDecision(mlir::Operation* op, int opIndex) {
 }
 
 std::optional<QuantizationDecision>
-ExecutionPlanV2Builder::attrToPerOpQuantDecision(mlir::Operation* op, int opIndex) {
+ExecutionPlanBuilder::attrToPerOpQuantDecision(mlir::Operation* op, int opIndex) {
   // Gate: quant.strategy must be present (emitted by QuantizationStrategyPlanningPass).
   auto stratAttr = op->getAttrOfType<mlir::StringAttr>("quant.strategy");
   if (!stratAttr)
@@ -443,7 +443,7 @@ ExecutionPlanV2Builder::attrToPerOpQuantDecision(mlir::Operation* op, int opInde
 }
 
 std::optional<FallbackDecision>
-ExecutionPlanV2Builder::attrToFallbackDecision(mlir::Operation* op, int opIndex) {
+ExecutionPlanBuilder::attrToFallbackDecision(mlir::Operation* op, int opIndex) {
   // Gate: lowering.decision must be exactly "fallback_backend".
   auto decisionAttr = op->getAttrOfType<mlir::StringAttr>("lowering.decision");
   if (!decisionAttr || decisionAttr.getValue() != "fallback_backend")
@@ -465,9 +465,9 @@ ExecutionPlanV2Builder::attrToFallbackDecision(mlir::Operation* op, int opIndex)
   return d;
 }
 
-void ExecutionPlanV2Builder::dumpSummary(const ExecutionPlanV2& plan,
+void ExecutionPlanBuilder::dumpSummary(const ExecutionPlan& plan,
                                          llvm::raw_ostream& os) {
-  os << "ExecutionPlanV2 schema=" << plan.schema_version
+  os << "ExecutionPlan schema=" << plan.schema_version
      << " id=" << plan.plan_id << "\n";
   os << "  model=" << plan.model_identity.model_id
      << " layers=" << plan.model_identity.num_layers
