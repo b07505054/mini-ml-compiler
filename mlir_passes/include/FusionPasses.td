@@ -641,35 +641,44 @@ def CandidateGeneration
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+// Registration name kept as "candidate-evaluation" for backward compatibility
+// with FileCheck tests and pipeline strings. The C++ implementation is
+// ServingCostModelPass (ServingCostModelPass.cpp), which applies
+// ServingStaticCostModel_v1. The factory createCandidateEvaluationPass() is
+// an inline alias for createServingCostModelPass().
 def CandidateEvaluation
     : Pass<"candidate-evaluation", "mlir::func::FuncOp"> {
-  let summary = "Evaluate compiler.candidates with static relative penalty scores";
+  let summary = "Apply ServingStaticCostModel_v1 to compiler.candidates (upgraded from V0 penalty model)";
   let description = [{
-    Reads compiler.candidates (per-op ArrayAttr of DictionaryAttr) produced by
-    CandidateGenerationPass and assigns a static relative penalty score to each
-    candidate without claiming measured latency.
+    Applies ServingStaticCostModel_v1 to each compiler.candidates candidate dict
+    produced by CandidateGenerationPass. Emits two layers of output per candidate:
 
-    Penalty model (relative, lower is better):
-      direct_lower:              0
-      algebraic_decomposition:   5
-      representation_conversion: 3 + boundary penalties (dequant=3, cast=2, layout=2)
-      layout_conversion:         4
-      cast_conversion:           2
-      backend_fallback:          20
-      unsupported:               100
-      unknown candidate type:    10 (unknown_cost_penalty, partially_evaluated)
-
-    Per candidate output (augmented into compiler.evaluated_candidates):
+    Layer 1 — V0 backward-compat (ranking and FileCheck tests):
       evaluation.status          = evaluated | partially_evaluated | rejected
-      evaluation.penalty_score   = sum of all breakdown components
-      evaluation.penalty_breakdown = DictionaryAttr with per-type breakdown fields
-      evaluation.reason          = string describing dominant penalty source
+      evaluation.penalty_score   = V0 penalty formula (used by PlanSelectionPass ranking)
+      evaluation.reason          = human-readable dominant penalty source
       evaluation.truth_boundary  = "candidate_evaluation_static_penalty_not_measured_latency"
 
-    compiler.rejected_candidates is not modified.
-    No winner is selected. No IR is rewritten. No cost model is applied.
+    Layer 2 — V1 structured cost evidence (new):
+      evaluation.cost.compute, .memory, .dequant, .requant, .layout_transform,
+      .cast, .backend_switch, .launch_overhead, .kv_cache, .transfer, .unsupported,
+      .total, .model_id, .truth_boundary
+      where total == exact sum of all component fields.
 
-    Truth boundary: candidate_evaluation_static_penalty_not_measured_latency
+    V1 component model (StaticCostWeights defaults, declared_profile not measured_latency):
+      direct_lower:              compute=0, boundary costs, launch_overhead per boundary op
+      algebraic_decomposition:   compute=5, boundary costs
+      representation_conversion: memory=3, boundary costs (dequant=3, requant=2, cast=2, layout=2)
+      layout_conversion:         layout_transform=4 (standalone)
+      cast_conversion:           cast=2 (standalone)
+      backend_fallback:          backend_switch=20, launch_overhead=2, transfer=5 if fallback_backend set
+      unsupported:               unsupported_penalty=100 (compile-time rejection sentinel)
+
+    Cost weights are tunable via StaticCostWeights in DeploymentTarget (default values above).
+    No winner is selected. No IR is rewritten. No measured latency is claimed.
+
+    truth_boundary (V1 cost): serving_static_cost_model_v1_not_measured_latency
+    truth_boundary (V0 compat): candidate_evaluation_static_penalty_not_measured_latency
   }];
   let constructor = "mlir::hir::createCandidateEvaluationPass()";
   let dependentDialects = ["mlir::func::FuncDialect"];
@@ -679,7 +688,7 @@ def PlanSelection
     : Pass<"plan-selection", "mlir::func::FuncOp"> {
   let summary = "Select the best evaluated candidate per op using static penalty scores";
   let description = [{
-    Reads compiler.evaluated_candidates (per-op) from CandidateEvaluationPass and
+    Reads compiler.evaluated_candidates (per-op) from ServingCostModelPass and
     selects the lowest-penalty candidate with evaluation.status=evaluated.
 
     Selection rules (applied in order):
@@ -697,10 +706,15 @@ def PlanSelection
       selected_plan.backend          = kernel.backend (or "" if absent)
       selected_plan.kernel_library   = kernel.library (or "" if absent)
       selected_plan.kernel_name      = kernel.name (or "" if absent)
-      selected_plan.penalty_score    = evaluation.penalty_score of winner
+      selected_plan.penalty_score    = evaluation.penalty_score of winner (V0 ranking value)
       selected_plan.reason           = selection reason string
       selected_plan.required_boundary_ops = boundary ops from winning candidate
       selected_plan.truth_boundary   = "plan_selection_static_penalty_not_measured_runtime"
+
+    V1 cost evidence promoted from winner (flat attrs for builder collection):
+      selected_plan.cost.{compute,memory,dequant,requant,layout_transform,cast,
+        backend_switch,launch_overhead,kv_cache,transfer,unsupported,total,
+        model_id,truth_boundary}
 
     Per-op collection attrs:
       compiler.selected_candidates   = [winning candidate dict]

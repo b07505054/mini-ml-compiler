@@ -171,6 +171,41 @@ struct PlanSelectionPass
                  ArrayAttr::get(ctx, bOpAttrs));
       op.setAttr("selected_plan.truth_boundary",      S(kTruth));
 
+      // Promote V1 structured cost evidence from the winning candidate.
+      // These flat attrs are consumed by ExecutionPlanV2Builder for meta.evidence.cost.
+      // If ServingCostModelPass did not run, the evaluation.cost.* keys are absent
+      // and readI64Dict returns 0 — cost attrs are still emitted (all zeros) so that
+      // the builder can gate on selected_plan.cost.total presence (zero is legitimate).
+      // readStrDict returns "" for absent model_id/truth_boundary.
+      op.setAttr("selected_plan.cost.backend_switch",
+                 I64(readI64Dict(best.dict, "evaluation.cost.backend_switch")));
+      op.setAttr("selected_plan.cost.cast",
+                 I64(readI64Dict(best.dict, "evaluation.cost.cast")));
+      op.setAttr("selected_plan.cost.compute",
+                 I64(readI64Dict(best.dict, "evaluation.cost.compute")));
+      op.setAttr("selected_plan.cost.dequant",
+                 I64(readI64Dict(best.dict, "evaluation.cost.dequant")));
+      op.setAttr("selected_plan.cost.kv_cache",
+                 I64(readI64Dict(best.dict, "evaluation.cost.kv_cache")));
+      op.setAttr("selected_plan.cost.launch_overhead",
+                 I64(readI64Dict(best.dict, "evaluation.cost.launch_overhead")));
+      op.setAttr("selected_plan.cost.layout_transform",
+                 I64(readI64Dict(best.dict, "evaluation.cost.layout_transform")));
+      op.setAttr("selected_plan.cost.memory",
+                 I64(readI64Dict(best.dict, "evaluation.cost.memory")));
+      op.setAttr("selected_plan.cost.model_id",
+                 S(readStrDict(best.dict, "evaluation.cost.model_id")));
+      op.setAttr("selected_plan.cost.requant",
+                 I64(readI64Dict(best.dict, "evaluation.cost.requant")));
+      op.setAttr("selected_plan.cost.total",
+                 I64(readI64Dict(best.dict, "evaluation.cost.total")));
+      op.setAttr("selected_plan.cost.transfer",
+                 I64(readI64Dict(best.dict, "evaluation.cost.transfer")));
+      op.setAttr("selected_plan.cost.truth_boundary",
+                 S(readStrDict(best.dict, "evaluation.cost.truth_boundary")));
+      op.setAttr("selected_plan.cost.unsupported",
+                 I64(readI64Dict(best.dict, "evaluation.cost.unsupported")));
+
       // Selected candidate as a 1-element array for downstream consumers.
       op.setAttr("compiler.selected_candidates",
                  ArrayAttr::get(ctx, {best.dict}));

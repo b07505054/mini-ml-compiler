@@ -1,5 +1,6 @@
 #pragma once
 
+#include "capability/CapabilityBundle.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir::hir {
@@ -24,7 +25,16 @@ std::unique_ptr<::mlir::Pass> createLoweringDecisionPlanningPass();
 std::unique_ptr<::mlir::Pass> createQuantizedBoundaryRefinementPass();
 std::unique_ptr<::mlir::Pass> createAlternativeLoweringPlanningPass();
 std::unique_ptr<::mlir::Pass> createCandidateGenerationPass();
-std::unique_ptr<::mlir::Pass> createCandidateEvaluationPass();
+
+// ServingCostModelPass (renamed from CandidateEvaluationPass).
+// createServingCostModelPass() — primary factory; accepts tunable cost weights.
+// createCandidateEvaluationPass() — backward-compat alias; uses default weights.
+std::unique_ptr<::mlir::Pass>
+createServingCostModelPass(const StaticCostWeights& weights = StaticCostWeights{});
+inline std::unique_ptr<::mlir::Pass> createCandidateEvaluationPass() {
+  return createServingCostModelPass();
+}
+
 std::unique_ptr<::mlir::Pass> createPlanSelectionPass();
 std::unique_ptr<::mlir::Pass> createLLMFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createQuantizationPlanningPass();

@@ -72,7 +72,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/QuantizedBoundaryRefinementPass.cpp
   lib/serving/AlternativeLoweringPlanningPass.cpp
   lib/serving/CandidateGenerationPass.cpp
-  lib/serving/CandidateEvaluationPass.cpp
+  lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
@@ -157,6 +157,136 @@ target_link_libraries(ServingExecutionPlanBuilderTest
 )
 add_test(NAME ServingExecutionPlanBuilderTest
          COMMAND ServingExecutionPlanBuilderTest)
+
+# ---------------------------------------------------------------------------
+# CTest: ExecutionPlanV2Builder collector test (Qwen 2.5-0.5B)
+# Exercises ExecutionPlanV2Builder as a collector/packer on Qwen serving MLIR.
+# Runs the 4-pass serving pipeline, then verifies the V2 plan structure.
+# No exporter, JSON, or artifact generation.  V1 builder untouched.
+# ---------------------------------------------------------------------------
+add_executable(PlanV2BuilderQwenTest
+  lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/KVLayoutPlanningPass.cpp
+  lib/serving/ReplayEligibilityPass.cpp
+  lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/ExecutionPlanV2Builder.cpp
+  test/serving/plan_v2_builder_qwen_test.cpp
+)
+llvm_update_compile_flags(PlanV2BuilderQwenTest)
+add_dependencies(PlanV2BuilderQwenTest
+  HIRFusionPassIncGen
+)
+target_include_directories(PlanV2BuilderQwenTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(PlanV2BuilderQwenTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(PlanV2BuilderQwenTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+)
+add_test(NAME PlanV2BuilderQwenTest
+         COMMAND PlanV2BuilderQwenTest)
+
+# ---------------------------------------------------------------------------
+# CTest: ExecutionPlanV2Builder full 16-pass pipeline test (Qwen 2.5-0.5B)
+# Runs the complete serving pipeline including KernelAvailabilityPlanningPass
+# and LoweringDecisionPlanningPass, then verifies that per-op KernelDecisions
+# are collected from lowering.decision / kernel.* attrs.
+# Requires target.kernel_libraries.cpu in the MLIR to activate
+# KernelAvailabilityPlanningPass (standard pipeline mechanism, not faking).
+# No V1 builder linked.  No exporter, JSON, or artifact generation.
+# ---------------------------------------------------------------------------
+add_executable(PlanV2BuilderQwenFullPipelineTest
+  lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/KVLayoutPlanningPass.cpp
+  lib/serving/ReplayEligibilityPass.cpp
+  lib/serving/ExecutionProviderPlanningPass.cpp
+  lib/serving/RepresentationPlanningPass.cpp
+  lib/serving/LayoutPlanningPass.cpp
+  lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/WeightClassificationPlanningPass.cpp
+  lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/KernelAvailabilityPlanningPass.cpp
+  lib/serving/LoweringDecisionPlanningPass.cpp
+  lib/serving/QuantizedBoundaryRefinementPass.cpp
+  lib/serving/AlternativeLoweringPlanningPass.cpp
+  lib/serving/CandidateGenerationPass.cpp
+  lib/serving/ServingCostModelPass.cpp
+  lib/serving/PlanSelectionPass.cpp
+  lib/serving/ExecutionPlanV2Builder.cpp
+  test/serving/plan_v2_builder_qwen_full_pipeline_test.cpp
+)
+llvm_update_compile_flags(PlanV2BuilderQwenFullPipelineTest)
+add_dependencies(PlanV2BuilderQwenFullPipelineTest
+  HIRFusionPassIncGen
+)
+target_include_directories(PlanV2BuilderQwenFullPipelineTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(PlanV2BuilderQwenFullPipelineTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(PlanV2BuilderQwenFullPipelineTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+)
+add_test(NAME PlanV2BuilderQwenFullPipelineTest
+         COMMAND PlanV2BuilderQwenFullPipelineTest)
+
+# ---------------------------------------------------------------------------
+# CTest: ServingStaticCostModelV1Test
+# Verifies ServingCostModelPass cost components, total == sum invariant,
+# cost_model_id, truth_boundary, and V0 backward-compat penalty_score.
+# ---------------------------------------------------------------------------
+add_executable(ServingStaticCostModelV1Test
+  lib/serving/ServingCostModelPass.cpp
+  test/serving/serving_static_cost_model_v1_test.cpp
+)
+llvm_update_compile_flags(ServingStaticCostModelV1Test)
+add_dependencies(ServingStaticCostModelV1Test
+  HIRFusionPassIncGen
+)
+target_include_directories(ServingStaticCostModelV1Test
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ServingStaticCostModelV1Test
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(ServingStaticCostModelV1Test
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTransforms
+    MLIRSupport
+)
+add_test(NAME ServingStaticCostModelV1Test
+         COMMAND ServingStaticCostModelV1Test)
 
 # ---------------------------------------------------------------------------
 # CTest: TargetConstraints unit test
@@ -357,7 +487,7 @@ add_executable(compile-for-target
   lib/serving/QuantizedBoundaryRefinementPass.cpp
   lib/serving/AlternativeLoweringPlanningPass.cpp
   lib/serving/CandidateGenerationPass.cpp
-  lib/serving/CandidateEvaluationPass.cpp
+  lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
   lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingExecutionPlanExporter.cpp
