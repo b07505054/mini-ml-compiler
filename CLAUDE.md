@@ -8,13 +8,13 @@ The primary compiler story lives in `mlir_passes/`. The custom C++ runtime in `s
 
 Be careful to distinguish implemented behavior from simulations:
 
-- Implemented: HIR/CV/Serving MLIR dialects, 15-pass serving pipeline, custom C++ `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager, memory planner, execution plan structures, cost planner, Python artifact generation/validation.
+- Implemented: HIR/CV/Serving MLIR dialects, 16-pass serving pipeline, custom C++ `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager, memory planner, execution plan structures, cost planner, Python artifact generation/validation.
 - Simulated or partial: `MockGPUBackend`, generic `MetalBackend` graph execution, runtime replanning, many timeline artifacts, and serving latency/throughput values in generated plans.
 
 High-value implemented compiler evidence:
 
 - HIR dialect ops, verifiers, canonicalization, fusion, conversion, and lowering tests under `mlir_passes/test/`.
-- 15-pass hardware-aware serving pipeline (serving phase → KV layout → replay eligibility → execution provider → representation → layout → boundary → weight classification → quantization strategy → kernel availability → lowering decision → quantized boundary refinement → alternative lowering → candidate generation → candidate evaluation → plan selection).
+- 16-pass hardware-aware serving pipeline (serving phase → KV layout → replay eligibility → execution provider → representation → layout → boundary → weight classification → quantization strategy → kernel availability → lowering decision → quantized boundary refinement → alternative lowering → candidate generation → candidate evaluation → plan selection).
 - StableHLO-compatible textual subset import for RMSNorm and MatMul-Bias-ReLU patterns.
 - HIR RMSNorm executable CPU path via the MLIR execution engine.
 - Apple Silicon MLIR-to-Metal RMSNorm path with a real Metal kernel, generated execution plan, and dispatch validation when the MLIR pipeline has produced the required trace.
@@ -35,7 +35,7 @@ Shared capability profiles
   (HardwareCapability / BackendCapability / KernelLibraryCapability)
   ->
 Static optimization
-  (Decision Engine: 15-pass serving pipeline)
+  (Decision Engine: 16-pass serving pipeline)
   ->
 ExecutionPlan  [compiler deliverable]
 ```
@@ -69,7 +69,7 @@ capability profiles. It has no visibility into runtime state.
 
 Those responsibilities belong entirely to `heterogeneous-inference-runtime`.
 
-### 15-Pass Serving Pipeline
+### 16-Pass Serving Pipeline
 
 Each pass answers one planning question and writes structured attrs. No pass
 selects a winner until `PlanSelectionPass`. No pass materializes IR.

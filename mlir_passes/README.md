@@ -9,12 +9,13 @@ semantics, lifts backend-relevant regions into a decision-oriented HIR, and
 produces an explainable hardware-aware execution plan consumed by heterogeneous
 runtimes.
 
-## 15-Pass Hardware-Aware Serving Pipeline
+## 16-Pass Hardware-Aware Serving Pipeline
 
-The primary current compiler work is a complete 15-pass execution-planning
-pipeline implemented in `lib/serving/` and `lib/planning/`. Each pass annotates
-ops with structured MLIR attrs. No pass modifies IR structure. No pass selects
-a winner until `PlanSelectionPass`. No pass materializes boundary ops.
+The primary current compiler work is a complete 16-pass execution-planning
+pipeline implemented in `lib/serving/`, with related HIR/quantization helpers
+in `lib/`. Each pass annotates ops with structured MLIR attrs. No pass modifies
+IR structure. No pass selects a winner until `PlanSelectionPass`. No pass
+materializes boundary ops.
 
 ```text
 HIR / Serving IR input
@@ -47,8 +48,8 @@ Fallback is last resort, not first response. `backend_fallback` is only emitted
 when direct kernel, algebraic decomposition, representation conversion, layout
 conversion, and cast conversion paths are all unavailable or invalid.
 
-FileCheck tests for all 15 passes are in `test/serving/` and `test/planning/`.
-Run with `tools/run_mlir_pass_tests.sh`.
+FileCheck tests for the serving pipeline are in `test/serving/`, with related
+HIR and quantization tests in `test/`. Run with `tools/run_mlir_pass_tests.sh`.
 
 ## Other MLIR Passes
 

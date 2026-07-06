@@ -171,12 +171,13 @@ planner choosing a mixed CPU/Metal plan over all-Metal due to transfer cost,
 plus profile-calibrated kernel selection and target tile decisions for HIR
 fused ops.
 
-## 15-Pass Hardware-Aware Serving Pipeline
+## 16-Pass Hardware-Aware Serving Pipeline
 
-The primary current compiler work is a complete 15-pass execution-planning
-pipeline in `mlir_passes/lib/serving/` and `mlir_passes/lib/planning/`. The
-pipeline reads hardware/backend/kernel capability profiles declared in target
-profile MLIR attrs, then annotates each op with structured planning decisions.
+The primary current compiler work is a complete 16-pass execution-planning
+pipeline in `mlir_passes/lib/serving/`, with related HIR/quantization helpers
+in `mlir_passes/lib/`. The pipeline reads hardware/backend/kernel capability
+profiles declared in target profile MLIR attrs, then annotates each op with
+structured planning decisions.
 
 ```text
 HIR / Serving IR input
@@ -233,8 +234,9 @@ cast boundary +2, layout_transform boundary +2.
 Tiebreak priority within a tier: direct_lower > repr_conv > cast_conv >
 layout_conv > decomp > fallback > unsupported.
 
-FileCheck tests for all 15 passes are in `mlir_passes/test/serving/` and
-`mlir_passes/test/planning/`. Run with `tools/run_mlir_pass_tests.sh`.
+FileCheck tests for the serving pipeline are in `mlir_passes/test/serving/`,
+with related HIR and quantization tests in `mlir_passes/test/`. Run with
+`tools/run_mlir_pass_tests.sh`.
 
 ## Verification
 

@@ -7,7 +7,7 @@ explainable hardware-aware execution plan consumed by heterogeneous runtimes.
 
 The repository contains two components — one primary, one secondary:
 
-1. **MLIR compiler** (primary): HIR/CV/Serving dialects, the 15-pass
+1. **MLIR compiler** (primary): HIR/CV/Serving dialects, the 16-pass
    hardware-aware serving pipeline, quantization planning, INT8 island
    propagation, Q/DQ canonicalization, fusion/lowering,
    capability-gated operator-selection, verification, and execution-plan
@@ -19,7 +19,7 @@ The repository contains two components — one primary, one secondary:
 
 These are sequential modules in one pipeline, not parallel tracks:
 Frontend → Shared Capability Profiles → Static Optimization → Execution Plan.
-The optimization step is the 15-pass serving pipeline described below.
+The optimization step is the 16-pass serving pipeline described below.
 
 The C++ runtime code in this repository is not the production distributed
 runtime story. New runtime/deployment features should go to the sibling
@@ -46,7 +46,7 @@ Frontend (import / normalize)
 Shared capability profiles
   (HardwareCapability / BackendCapability / KernelLibraryCapability)
   ->
-Static optimization — Decision Engine (15-pass serving pipeline)
+Static optimization — Decision Engine (16-pass serving pipeline)
   ->
 ExecutionPlan  [compiler deliverable]
 ```
@@ -78,12 +78,12 @@ Not claimed:
 
 ## Latest Milestones
 
-### 15-Pass Hardware-Aware Serving Pipeline (primary current work)
+### 16-Pass Hardware-Aware Serving Pipeline (primary current work)
 
-A complete 15-pass execution-planning pipeline in `mlir_passes/lib/serving/`
-and `mlir_passes/lib/planning/`. Each pass annotates ops with structured
-MLIR attrs without modifying IR structure. No pass selects a winner until
-`PlanSelectionPass`.
+A complete 16-pass execution-planning pipeline in `mlir_passes/lib/serving/`,
+with related HIR/quantization helpers in `mlir_passes/lib/`. Each pass
+annotates ops with structured MLIR attrs without modifying IR structure. No
+pass selects a winner until `PlanSelectionPass`.
 
 | Pass | Attr prefix(es) written |
 |---|---|

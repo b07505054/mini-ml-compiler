@@ -20,7 +20,7 @@ Shared capability profiles
   (HardwareCapability / BackendCapability / KernelLibraryCapability)
   ->
 Static optimization
-  Decision Engine: 15-pass serving pipeline
+  Decision Engine: 16-pass serving pipeline
   ->
 ExecutionPlan  [compiler deliverable]
 ```
@@ -39,7 +39,7 @@ capability profiles.
 This repository contains two components. They are not parallel tracks; one is
 the primary compiler, the other is a local demo harness.
 
-1. **MLIR compiler** (primary): HIR/CV/Serving dialects, the 15-pass
+1. **MLIR compiler** (primary): HIR/CV/Serving dialects, the 16-pass
    hardware-aware planning pipeline, quantization planning, kernel availability
    checking, per-op plan selection, and execution-plan artifact export. This is
    the execution-planning compiler described throughout this document.
@@ -180,7 +180,7 @@ Only when none of steps 1–4 produce a valid candidate does
 `PlanSelectionPass` select the `backend_fallback` candidate. The unsupported
 sentinel is emitted only when no viable path exists at all.
 
-## 15-Pass Serving Pipeline
+## 16-Pass Serving Pipeline
 
 Each pass annotates ops with structured attrs and does not modify IR structure.
 No pass selects a winner until `PlanSelectionPass`.
@@ -323,7 +323,7 @@ No pass selects a winner until `PlanSelectionPass`.
 
 **Planning is implemented. IR materialization is intentionally deferred.**
 
-Planning (implemented by the 15-pass pipeline):
+Planning (implemented by the 16-pass pipeline):
 - Annotate `selected_plan.*` per op
 - Annotate `quant.*`, `kernel.*`, `lowering.*`, `alternative.*`
 - Export `execution_plan.json` — the compiler deliverable
@@ -407,7 +407,7 @@ Implemented in `mlir_passes/`.
 
 - `hir` dialect: typed runtime-facing fused ops, quantization ops.
 - `cv` dialect: CV compiler IR.
-- Serving pipeline: 15-pass hardware-aware planning pipeline.
+- Serving pipeline: 16-pass hardware-aware planning pipeline.
 - Fusion passes: canonicalization, MatMul-Bias-ReLU fusion, RMSNorm lowering.
 - Quantization passes: planning, INT8 island propagation, Q/DQ canonicalization, operator selection.
 - CV passes: frontend normalization, shape inference, memory planning, execution-domain planning.
@@ -429,7 +429,7 @@ Implemented in `tools/` and `src/ml_graph_compiler_runtime/`.
 Implemented:
 - C++17 library build through CMake.
 - Custom `Graph`/`Tensor`/`Node` IR, CPU kernels, op registry, pass manager.
-- Real MLIR plugin: HIR/CV/Serving dialects, 15-pass serving pipeline, quantization passes, CV passes, FileCheck tests.
+- Real MLIR plugin: HIR/CV/Serving dialects, 16-pass serving pipeline, quantization passes, CV passes, FileCheck tests.
 - Memory lifetime analysis, arena offset assignment, execution plan data structures.
 - Python artifact generation and validation for LLM serving plans.
 

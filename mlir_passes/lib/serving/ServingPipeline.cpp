@@ -114,7 +114,7 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createPlanSelectionPass());
       });
 
-  // Fifteen-pass serving pipeline (mlir-opt standalone; compile-for-target uses its own PM).
+  // Sixteen-pass serving pipeline (mlir-opt standalone; compile-for-target uses its own PM).
   static PassPipelineRegistration<> servingOptPipeline(
       "serving-optimization-pipeline",
       "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider, representation, layout, boundary, weight classification, quant strategy, kernel availability, lowering decision, quantized boundary refinement, alternative lowering, candidate generation, candidate evaluation, plan selection",
