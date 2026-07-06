@@ -13,7 +13,7 @@ namespace {
 static const char kPartialTB[] =
     "decision_collected_from_v1_mlir_attrs_evidence_not_tracked";
 
-// Serving phase detection — same logic as ServingExecutionPlanBuilder.
+// Serving phase detection — mirrors the serving phase analysis pass output.
 // Walk nested ops for llm.attention_prefill/decode; fall back to serving.phase attr.
 static ServingPhase detectServingPhase(mlir::func::FuncOp funcOp) {
   ServingPhase phase = ServingPhase::Unknown;

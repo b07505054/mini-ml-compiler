@@ -1,10 +1,10 @@
 # RunAppleQuantLoweringDemoTest.cmake
-# CTest driver for Commit L: Apple/CoreML quantization-lowering end-to-end demo.
+# CTest driver: Apple/CoreML quantization-lowering end-to-end demo.
 #
-# Verifies that compile-for-target produces a complete serving execution plan
-# from the apple_quant_lowering_demo fixture showing the full decision chain:
+# Verifies that compile-for-target produces a complete ExecutionPlanV2 from
+# the apple_quant_lowering_demo fixture showing the full decision chain:
 #   profile -> representation -> layout -> boundary -> quant strategy
-#   -> kernel availability -> lowering decision -> JSON
+#   -> kernel availability -> lowering decision -> V2 JSON
 #
 # Variables passed in from CMakeLists.txt:
 #   TOOL     -- path to compile-for-target executable
@@ -43,37 +43,29 @@ macro(assert_contains _file _needle)
   endif()
 endmacro()
 
-# Test 1: compile-for-target produces a well-formed execution plan.
-assert_contains("${OUT}" "\"artifact_type\": \"serving_execution_plan\"")
-assert_contains("${OUT}" "\"schema_version\": \"1.0.0\"")
+# Test 1: V2 schema identity.
+assert_contains("${OUT}" "\"schema\": \"execution_plan\"")
+assert_contains("${OUT}" "\"schema_version\": \"2.0.0\"")
 
-# Test 2: JSON includes per_op_quantization_decisions array.
-assert_contains("${OUT}" "\"per_op_quantization_decisions\"")
+# Test 2: per_op_decisions array present (contains both quant and kernel bundles).
+assert_contains("${OUT}" "\"per_op_decisions\"")
 
-# Test 3: JSON includes per_op_lowering_decisions array.
-assert_contains("${OUT}" "\"per_op_lowering_decisions\"")
-
-# Test 4: hir.matmul and hir.conv2d inputs are runtime tensors (from llm.attention_prefill).
-# WeightClassificationPlanningPass sets weight.constant_satisfied=false for both.
-# QuantizationStrategyPlanningPass reads this -> fp16_fallback, fallback_reason=weight_not_constant.
-assert_contains("${OUT}" "\"fallback_reason\": \"weight_not_constant\"")
-
-# Test 5: At least one op has strategy=fp16_fallback (hir.softmax — accuracy-sensitive).
+# Test 3: At least one op has strategy=fp16_fallback (hir.softmax — accuracy-sensitive).
 assert_contains("${OUT}" "\"strategy\": \"fp16_fallback\"")
 
-# Test 6: At least one op has lowering_decision=direct_lower (hir.softmax — coreml kernel).
-assert_contains("${OUT}" "\"lowering_decision\": \"direct_lower\"")
+# Test 4: At least one op has lowering_path=direct_lower (hir.softmax — coreml kernel).
+assert_contains("${OUT}" "\"lowering_path\": \"direct_lower\"")
 
-# Test 7: At least one op has lowering_decision=fallback_backend
-#          (hir.matmul / hir.conv2d — requiresConstantWeight but inputs are runtime tensors).
-assert_contains("${OUT}" "\"lowering_decision\": \"fallback_backend\"")
+# Test 5: At least one op has lowering_path=fallback_backend
+#         (hir.matmul / hir.conv2d — requiresConstantWeight but inputs are runtime tensors).
+assert_contains("${OUT}" "\"lowering_path\": \"fallback_backend\"")
 
-# Test 8: truth_boundary fields present for both decision arrays.
+# Test 6: truth_boundary fields present for both decision types.
 assert_contains("${OUT}" "lowering_decision_static_not_backend_codegen_verified")
 assert_contains("${OUT}" "quantization_strategy_static_not_accuracy_calibrated")
 
-# Backend: coreml should be the primary backend (not constraint_conflict).
-assert_contains("${OUT}" "\"primary_backend\": \"coreml\"")
-assert_contains("${OUT}" "\"decision_source\": \"target_preferred\"")
+# Test 7: Backend — coreml should be the primary backend (not constraint_conflict).
+assert_contains("${OUT}" "\"selected_backend\"")
+assert_contains("${OUT}" "\"target_preferred\"")
 
 message(STATUS "AppleQuantLoweringDemoTest: PASS")

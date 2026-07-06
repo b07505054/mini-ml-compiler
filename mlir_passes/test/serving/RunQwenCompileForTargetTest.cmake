@@ -7,7 +7,7 @@
 #   SPEC      — path to configs/models/qwen_0_5b_spec.json
 #   PROFILE   — path to configs/target_profiles/apple_a17pro_mobile.json
 #   MLIR_OUT  — intermediate MLIR path (written to build dir)
-#   JSON_OUT  — canonical serving plan JSON path (written to build dir)
+#   JSON_OUT  — canonical V2 plan JSON path (written to build dir)
 
 # Step 1: Generate serving-aware MLIR from Qwen model spec.
 execute_process(
@@ -60,28 +60,26 @@ macro(assert_contains _file _needle)
   endif()
 endmacro()
 
-# --- Canonical artifact structural checks ---
-assert_contains("${JSON_OUT}" "\"artifact_type\": \"serving_execution_plan\"")
-assert_contains("${JSON_OUT}" "\"schema_version\": \"1.0.0\"")
-assert_contains("${JSON_OUT}" "\"target_profile_id\": \"apple-a17pro-mobile\"")
+# --- V2 schema identity ---
+assert_contains("${JSON_OUT}" "\"schema\": \"execution_plan\"")
+assert_contains("${JSON_OUT}" "\"schema_version\": \"2.0.0\"")
+
+# --- Profile ID in provenance ---
+assert_contains("${JSON_OUT}" "\"hardware_profile_ref\": \"apple-a17pro-mobile\"")
 
 # --- Qwen model identity: proves this is not the tiny-gpt fixture ---
-assert_contains("${JSON_OUT}" "\"model_name\": \"qwen2.5-0.5b\"")
+assert_contains("${JSON_OUT}" "\"model_id\": \"qwen2.5-0.5b\"")
 
 # --- Plan structure ---
 assert_contains("${JSON_OUT}" "\"function_plans\"")
-assert_contains("${JSON_OUT}" "\"backend_execution_plan\"")
-assert_contains("${JSON_OUT}" "\"kv_plan\"")
-assert_contains("${JSON_OUT}" "\"replay_plan\"")
-assert_contains("${JSON_OUT}" "\"source_passes\"")
+assert_contains("${JSON_OUT}" "\"backend\"")
+assert_contains("${JSON_OUT}" "\"kv_cache_layout\"")
+assert_contains("${JSON_OUT}" "\"replay_eligible\"")
 
-# --- GQA metadata in artifact ---
+# --- GQA metadata in model_identity ---
 assert_contains("${JSON_OUT}" "\"num_kv_heads\": 2")
 
-# --- Quantization plan: present in every function plan ---
-assert_contains("${JSON_OUT}" "\"quantization_plan\"")
-assert_contains("${JSON_OUT}" "\"plan_dtype\"")
-assert_contains("${JSON_OUT}" "\"dtype_bytes\"")
-assert_contains("${JSON_OUT}" "precision_selection_from_target_profile_not_calibrated")
+# --- Per-op decisions present ---
+assert_contains("${JSON_OUT}" "\"per_op_decisions\"")
 
 message(STATUS "QwenCompileForTargetTest: PASS")

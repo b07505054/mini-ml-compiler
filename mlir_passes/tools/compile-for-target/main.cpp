@@ -1,26 +1,24 @@
-// compile-for-target: compiler driver for iPhone serving artifact generation.
+// compile-for-target: compiler driver for serving artifact generation.
 //
 // Pipeline:
 //   TargetDeviceProfile JSON
 //     → TargetDeviceProfile (parsed here, tool boundary)
 //     → TargetProfileLowering (tool boundary)
-//     → TargetConstraints
+//     → TargetConstraints + CapabilityBundle
 //     → TargetConstraints::attachToModule()
-//     → serving passes (ServingPhaseAnalysisPass, KVLayoutPlanningPass,
-//                       ReplayEligibilityPass, ExecutionProviderPlanningPass)
-//     → ServingExecutionPlanBuilder
-//     → ServingExecutionPlan
-//     → ServingExecutionPlanExporter
-//         → canonical artifact  (serving_execution_plan_iphone.json)
-//         → summary artifact    (serving_execution_plan_summary.json)
+//     → serving passes (15-pass pipeline)
+//     → ExecutionPlanV2Builder
+//     → ExecutionPlanV2
+//     → ExecutionPlanV2Exporter
+//         → canonical artifact  (execution_plan_v2.json)
 //
-// JSON construction is fully owned by ServingExecutionPlanExporter.
+// JSON construction is fully owned by ExecutionPlanV2Exporter.
 // This file never touches llvm::json types directly.
 
 #include "FusionPasses.h"
-#include "serving/ServingExecutionPlan.h"
-#include "serving/ServingExecutionPlanBuilder.h"
-#include "serving/ServingExecutionPlanExporter.h"
+#include "serving/ExecutionPlanV2.h"
+#include "serving/ExecutionPlanV2Builder.h"
+#include "serving/ExecutionPlanV2Exporter.h"
 #include "serving/TargetConstraints.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -600,15 +598,44 @@ parseDeviceProfile(llvm::StringRef path) {
 }
 
 // ---------------------------------------------------------------------------
-// deriveSummaryPath: same directory as outPath, fixed filename
+// lowerToCapabilityBundle — tool-boundary mapping for ExecutionPlanV2Builder.
+//
+// Populates only the fields read by ExecutionPlanV2Builder::build:
+//   hardware.hardware_id        → provenance.capability_bundle.hardware_profile_ref
+//   backends[*].backend_name    → provenance.capability_bundle.backend_profile_refs
+//   kernels[*].kernel_library   → provenance.capability_bundle.kernel_profile_refs
+//   deployment.memory_budget_fraction → global_decisions.memory.memory_budget_fraction
 // ---------------------------------------------------------------------------
 
-static std::string deriveSummaryPath(llvm::StringRef outPath) {
-  llvm::SmallString<256> dir(outPath);
-  llvm::sys::path::remove_filename(dir);
-  llvm::SmallString<256> summary(dir);
-  llvm::sys::path::append(summary, "serving_execution_plan_summary.json");
-  return summary.str().str();
+static mlir::hir::CapabilityBundle
+lowerToCapabilityBundle(const TargetDeviceProfile &prof) {
+  mlir::hir::CapabilityBundle bundle;
+
+  bundle.hardware.hardware_id   = prof.profileId;
+  bundle.hardware.truth_boundary = prof.truthBoundary;
+
+  for (const auto &bp : prof.backendCapabilities) {
+    mlir::hir::BackendCapability cap;
+    cap.backend_name = bp.backend_name;
+    bundle.backends.push_back(std::move(cap));
+  }
+
+  for (const auto &kp : prof.kernelLibraries) {
+    mlir::hir::KernelLibraryCapability ke;
+    ke.kernel_library = kp.kernel_library;
+    bundle.kernels.push_back(std::move(ke));
+  }
+
+  bundle.deployment.target_profile_id      = prof.profileId;
+  bundle.deployment.memory_budget_fraction  = 0.75;
+  bundle.deployment.truth_boundary          = prof.truthBoundary;
+
+  if (prof.hasPrefillMsPerToken)
+    bundle.deployment.prefill_ms_per_token = prof.prefillMsPerToken;
+  if (prof.hasDecodeMsPerToken)
+    bundle.deployment.decode_ms_per_token  = prof.decodeMsPerToken;
+
+  return bundle;
 }
 
 // ---------------------------------------------------------------------------
@@ -616,45 +643,46 @@ static std::string deriveSummaryPath(llvm::StringRef outPath) {
 // ---------------------------------------------------------------------------
 
 static void printTerminalSummary(const TargetDeviceProfile &prof,
-                                  const mlir::hir::ServingExecutionPlan &plan,
-                                  llvm::StringRef canonicalPath,
-                                  llvm::StringRef summaryPath) {
+                                  const mlir::hir::ExecutionPlanV2 &plan,
+                                  llvm::StringRef canonicalPath) {
   llvm::outs() << "\n";
   llvm::outs() << "compile-for-target: " << prof.profileId
-               << " \xe2\x86\x92 " << plan.model_name << "\n";
+               << " \xe2\x86\x92 " << plan.model_identity.model_id << "\n";
   llvm::outs() << "  canonical:      " << canonicalPath << "\n";
-  llvm::outs() << "  summary:        " << summaryPath
-               << " (documentation only)\n";
-  llvm::outs() << "  function plans: "
-               << plan.function_plans.size() << "\n";
-
-  auto kvStr = [](mlir::hir::KVLayout l) -> llvm::StringRef {
-    switch (l) {
-    case mlir::hir::KVLayout::Paged:      return "paged";
-    case mlir::hir::KVLayout::Contiguous: return "contiguous";
-    default:                               return "unknown";
-    }
-  };
+  llvm::outs() << "  function plans: " << plan.function_plans.size() << "\n";
 
   for (const auto &fp : plan.function_plans) {
     llvm::outs() << "\n";
     llvm::outs() << "  " << fp.function_name << ":\n";
-    llvm::outs() << "    serving_phase:   "
+    llvm::outs() << "    serving_phase:    "
                  << (fp.serving_phase == mlir::hir::ServingPhase::Prefill
                          ? "prefill"
                          : fp.serving_phase == mlir::hir::ServingPhase::Decode
                                ? "decode"
                                : "unknown")
                  << "\n";
-    llvm::outs() << "    primary_backend: "
-                 << fp.backend_execution_plan.primary_backend << "\n";
-    llvm::outs() << "    kv_layout:       "
-                 << kvStr(fp.kv_plan.layout) << "\n";
-    llvm::outs() << "    replay_eligible: "
-                 << (fp.replay_plan.replay_eligible ? "true" : "false") << "\n";
-    llvm::outs() << "    decision_source: "
-                 << fp.backend_execution_plan.decision_source << "\n";
+    llvm::outs() << "    selected_backend: "
+                 << fp.backend.selected_backend << "\n";
+    llvm::outs() << "    decision_source:  "
+                 << fp.backend.meta.source_pass << "\n";
   }
+
+  if (plan.global_decisions.memory) {
+    const auto &mem = *plan.global_decisions.memory;
+    llvm::outs() << "\n";
+    llvm::outs() << "  global.memory:\n";
+    llvm::outs() << "    kv_cache_layout:      " << mem.kv_cache_layout << "\n";
+    llvm::outs() << "    estimated_kv_peak_mb: " << mem.estimated_kv_peak_mb << "\n";
+  }
+
+  if (plan.global_decisions.serving) {
+    const auto &srv = *plan.global_decisions.serving;
+    llvm::outs() << "  global.serving:\n";
+    llvm::outs() << "    topology:         " << srv.topology << "\n";
+    llvm::outs() << "    replay_eligible:  "
+                 << (srv.replay_eligible ? "true" : "false") << "\n";
+  }
+
   llvm::outs() << "\n";
 }
 
@@ -675,8 +703,9 @@ int main(int argc, char **argv) {
   }
   TargetDeviceProfile prof = std::move(*profOrErr);
 
-  // 2. Lower profile → TargetConstraints.
+  // 2. Lower profile → TargetConstraints + CapabilityBundle.
   mlir::hir::TargetConstraints constraints = lowerToTargetConstraints(prof);
+  mlir::hir::CapabilityBundle   capabilities = lowerToCapabilityBundle(prof);
 
   // 3. Parse MLIR module.
   mlir::MLIRContext ctx;
@@ -744,27 +773,21 @@ int main(int argc, char **argv) {
     }
   }
 
-  // 7. Build ServingExecutionPlan from annotated module.
-  mlir::hir::ServingExecutionPlan plan =
-      mlir::hir::ServingExecutionPlanBuilder::build(module.get());
+  // 7. Build ExecutionPlanV2 from annotated module.
+  std::string plan_id = prof.profileId + "_serving_plan";
+  mlir::hir::ExecutionPlanV2 plan =
+      mlir::hir::ExecutionPlanV2Builder::build(module.get(), capabilities,
+                                               plan_id);
 
   // 8. Export canonical artifact.
-  if (auto err = mlir::hir::ServingExecutionPlanExporter::exportToFile(
-          plan, OutPath)) {
+  if (auto err = mlir::hir::ExecutionPlanV2Exporter::exportToFile(plan,
+                                                                    OutPath)) {
     llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
     return 1;
   }
 
-  // 9. Export summary artifact (same plan instance, derived path).
-  std::string summaryPath = deriveSummaryPath(OutPath);
-  if (auto err = mlir::hir::ServingExecutionPlanExporter::exportSummaryToFile(
-          plan, summaryPath)) {
-    llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
-    return 1;
-  }
-
-  // 10. Print terminal summary.
-  printTerminalSummary(prof, plan, OutPath, summaryPath);
+  // 9. Print terminal summary.
+  printTerminalSummary(prof, plan, OutPath);
 
   return 0;
 }

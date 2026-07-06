@@ -16,8 +16,8 @@
 //   - IR materialization (cast/dequant/layout_transform insertion) is NOT
 //     performed; this plan describes planning decisions only.
 //
-// V1 (ServingExecutionPlan.h) remains in use; this file is the forward
-// contract.  V1 → V2 migration will be done in a subsequent step.
+// ExecutionPlanV2 is the sole compiler/runtime contract.  The V1 plan type
+// has been removed.
 
 #include "capability/CapabilityBundle.h"
 #include "decision/Decision.h"

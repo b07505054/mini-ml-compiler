@@ -64,7 +64,6 @@ endif()
 file(READ "${JSON_OUT}" json_content)
 
 foreach(field
-    "serving_execution_plan"
     "qwen2.5-0.5b"
     "raw_qwen_prefill_graph"
     "raw_qwen_decode_graph"

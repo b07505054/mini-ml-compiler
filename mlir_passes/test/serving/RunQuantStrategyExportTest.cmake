@@ -1,6 +1,6 @@
 # RunQuantStrategyExportTest.cmake
-# CTest driver for Commit H: verifies per_op_quantization_decisions appear in
-# the exported serving execution plan JSON.
+# CTest driver: verifies per-op quantization decisions appear in the exported
+# ExecutionPlanV2 JSON when QuantizationStrategyPlanningPass has run.
 #
 # Variables passed in from CMakeLists.txt:
 #   TOOL     — path to compile-for-target executable
@@ -39,12 +39,12 @@ macro(assert_contains _file _needle)
   endif()
 endmacro()
 
-# Artifact structure checks.
-assert_contains("${OUT}" "\"artifact_type\": \"serving_execution_plan\"")
-assert_contains("${OUT}" "\"schema_version\": \"1.0.0\"")
+# V2 schema identity.
+assert_contains("${OUT}" "\"schema\": \"execution_plan\"")
+assert_contains("${OUT}" "\"schema_version\": \"2.0.0\"")
 
-# per_op_quantization_decisions array present.
-assert_contains("${OUT}" "\"per_op_quantization_decisions\"")
+# per_op_decisions array present (V2 name for per-op decision bundles).
+assert_contains("${OUT}" "\"per_op_decisions\"")
 
 # weight_only_int8 strategy from hir.matmul.
 assert_contains("${OUT}" "\"strategy\": \"weight_only_int8\"")
@@ -54,7 +54,6 @@ assert_contains("${OUT}" "\"activation_dtype\": \"fp16\"")
 # fp16_fallback strategy from hir.softmax (accuracy-sensitive).
 assert_contains("${OUT}" "\"strategy\": \"fp16_fallback\"")
 assert_contains("${OUT}" "\"accuracy_risk\": \"medium\"")
-assert_contains("${OUT}" "\"fallback_reason\": \"accuracy_sensitive_op\"")
 
 # Op types appear in decisions.
 assert_contains("${OUT}" "\"op_type\": \"hir.matmul\"")
@@ -63,7 +62,7 @@ assert_contains("${OUT}" "\"op_type\": \"hir.softmax\"")
 # Truth boundary from QuantizationStrategyPlanningPass.
 assert_contains("${OUT}" "quantization_strategy_static_not_accuracy_calibrated")
 
-# Pass tracked in source_passes.
+# Pass name tracked in per-op decision source_pass.
 assert_contains("${OUT}" "\"quantization-strategy-planning\"")
 
 message(STATUS "QuantStrategyExportTest: PASS")

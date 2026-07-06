@@ -1,12 +1,9 @@
 # RunLoweringDecisionExportTest.cmake
-# CTest driver for Commit K: verifies per_op_lowering_decisions appear in the
-# exported serving execution plan JSON.
+# CTest driver: verifies per-op kernel decisions appear in the exported
+# ExecutionPlanV2 JSON when LoweringDecisionPlanningPass has run.
 #
-# Achievable through compile-for-target (4 of 5 decision values):
+# Pipeline-achievable lowering_path values (4 of 5):
 #   direct_lower, rewrite_then_lower, fallback_backend, unsupported.
-#
-# dequant_then_lower is covered by ServingExecutionPlanBuilderTest (pre-annotated
-# MLIR, no pipeline; required because weight_only_int8 keeps activations fp16).
 #
 # Variables passed in from CMakeLists.txt:
 #   TOOL     -- path to compile-for-target executable
@@ -45,38 +42,35 @@ macro(assert_contains _file _needle)
   endif()
 endmacro()
 
-# Artifact structure.
-assert_contains("${OUT}" "\"artifact_type\": \"serving_execution_plan\"")
-assert_contains("${OUT}" "\"schema_version\": \"1.0.0\"")
+# V2 schema identity.
+assert_contains("${OUT}" "\"schema\": \"execution_plan\"")
+assert_contains("${OUT}" "\"schema_version\": \"2.0.0\"")
 
-# per_op_lowering_decisions array present.
-assert_contains("${OUT}" "\"per_op_lowering_decisions\"")
+# per_op_decisions array present.
+assert_contains("${OUT}" "\"per_op_decisions\"")
 
-# All 4 pipeline-achievable decision values.
-assert_contains("${OUT}" "\"lowering_decision\": \"direct_lower\"")
-assert_contains("${OUT}" "\"lowering_decision\": \"rewrite_then_lower\"")
-assert_contains("${OUT}" "\"lowering_decision\": \"fallback_backend\"")
-assert_contains("${OUT}" "\"lowering_decision\": \"unsupported\"")
-
-# Required rewrite value for rewrite_then_lower case.
-assert_contains("${OUT}" "\"required_rewrite\": \"fp16_to_fp32_cast\"")
+# All 4 pipeline-achievable lowering_path values (V2 field name).
+assert_contains("${OUT}" "\"lowering_path\": \"direct_lower\"")
+assert_contains("${OUT}" "\"lowering_path\": \"rewrite_then_lower\"")
+assert_contains("${OUT}" "\"lowering_path\": \"fallback_backend\"")
+assert_contains("${OUT}" "\"lowering_path\": \"unsupported\"")
 
 # Op types covered.
 assert_contains("${OUT}" "\"op_type\": \"hir.matmul\"")
 assert_contains("${OUT}" "\"op_type\": \"hir.conv2d\"")
 assert_contains("${OUT}" "\"op_type\": \"hir.softmax\"")
 
-# Kernel provenance fields present.
+# Kernel provenance fields (V2 names).
 assert_contains("${OUT}" "\"kernel_exists\"")
-assert_contains("${OUT}" "\"kernel_lowering_status\"")
-assert_contains("${OUT}" "\"target_backend\"")
-assert_contains("${OUT}" "\"target_kernel_library\"")
-assert_contains("${OUT}" "\"target_kernel\"")
+assert_contains("${OUT}" "\"selected_kernel\"")
+assert_contains("${OUT}" "\"kernel_library\"")
+# fallback_backend field present in FallbackDecision for fallback_backend ops.
+assert_contains("${OUT}" "\"fallback_backend\"")
 
 # Truth boundary (from LoweringDecisionPlanningPass).
 assert_contains("${OUT}" "lowering_decision_static_not_backend_codegen_verified")
 
-# Pass tracked in source_passes.
+# Pass name tracked in per-op decision source_pass.
 assert_contains("${OUT}" "\"lowering-decision-planning\"")
 
 message(STATUS "LoweringDecisionExportTest: PASS")

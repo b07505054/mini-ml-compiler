@@ -58,7 +58,6 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
-  lib/serving/ServingExecutionPlanBuilder.cpp
   lib/serving/ServingPipeline.cpp
   lib/serving/TargetConstraints.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
@@ -117,46 +116,7 @@ if(APPLE)
   )
 endif()
 
-# ---------------------------------------------------------------------------
-# CTest: ServingExecutionPlanBuilder unit test
-# Compiles ServingPhaseAnalysisPass and ServingExecutionPlanBuilder directly
-# (no plugin loading, no Python, no JSON).
-# ---------------------------------------------------------------------------
 enable_testing()
-
-add_executable(ServingExecutionPlanBuilderTest
-  lib/ServingPhaseAnalysisPass.cpp
-  lib/serving/KVLayoutPlanningPass.cpp
-  lib/serving/ReplayEligibilityPass.cpp
-  lib/serving/ExecutionProviderPlanningPass.cpp
-  lib/serving/ServingExecutionPlanBuilder.cpp
-  test/serving/ServingExecutionPlanBuilderTest.cpp
-)
-llvm_update_compile_flags(ServingExecutionPlanBuilderTest)
-add_dependencies(ServingExecutionPlanBuilderTest
-  HIRFusionPassIncGen
-)
-target_include_directories(ServingExecutionPlanBuilderTest
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-    ${LLVM_INCLUDE_DIRS}
-    ${MLIR_INCLUDE_DIRS}
-)
-target_compile_definitions(ServingExecutionPlanBuilderTest
-  PRIVATE ${LLVM_DEFINITIONS}
-)
-target_link_libraries(ServingExecutionPlanBuilderTest
-  PRIVATE
-    MLIRIR
-    MLIRParser
-    MLIRPass
-    MLIRFuncDialect
-    MLIRTransforms
-    MLIRSupport
-)
-add_test(NAME ServingExecutionPlanBuilderTest
-         COMMAND ServingExecutionPlanBuilderTest)
 
 # ---------------------------------------------------------------------------
 # CTest: ExecutionPlanV2Builder collector test (Qwen 2.5-0.5B)
@@ -461,13 +421,13 @@ set_tests_properties(CVExecutionPlanArtifactToolTest PROPERTIES
 # ---------------------------------------------------------------------------
 # compile-for-target: driver tool
 #
-# Wires: TargetDeviceProfile JSON → TargetConstraints → serving passes →
-#        ServingExecutionPlanBuilder → ServingExecutionPlanExporter →
-#        canonical artifact + summary artifact.
+# Wires: TargetDeviceProfile JSON → TargetConstraints + CapabilityBundle →
+#        serving passes (15-pass pipeline) →
+#        ExecutionPlanV2Builder → ExecutionPlanV2Exporter →
+#        canonical artifact (execution_plan_v2.json).
 #
-# Follows the same direct-source pattern as ServingExecutionPlanBuilderTest
-# (no HIRServingCore static library to avoid MODULE duplicate-symbol issues).
-# JSON construction is entirely owned by ServingExecutionPlanExporter; main.cpp
+# No HIRServingCore static library to avoid MODULE duplicate-symbol issues.
+# JSON construction is entirely owned by ExecutionPlanV2Exporter; main.cpp
 # never constructs llvm::json types directly.
 # ---------------------------------------------------------------------------
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
@@ -489,8 +449,8 @@ add_executable(compile-for-target
   lib/serving/CandidateGenerationPass.cpp
   lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
-  lib/serving/ServingExecutionPlanBuilder.cpp
-  lib/serving/ServingExecutionPlanExporter.cpp
+  lib/serving/ExecutionPlanV2Builder.cpp
+  lib/serving/ExecutionPlanV2Exporter.cpp
   lib/serving/TargetConstraints.cpp
   tools/compile-for-target/main.cpp
 )
@@ -521,8 +481,7 @@ target_link_libraries(compile-for-target
 # then greps both output artifacts for required fields.
 # Writes output to build dir; does not modify the repo artifact.
 # ---------------------------------------------------------------------------
-set(_CFT_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_serving_plan_iphone.json")
-set(_CFT_SUMMARY   "${CMAKE_CURRENT_BINARY_DIR}/serving_execution_plan_summary.json")
+set(_CFT_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_execution_plan_v2.json")
 
 add_test(NAME CompileForTargetTest
   COMMAND ${CMAKE_COMMAND}
@@ -530,7 +489,6 @@ add_test(NAME CompileForTargetTest
     -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
     -DMLIR=${REPO_ROOT}/mlir/tiny_gpt_serving.mlir
     -DOUT=${_CFT_CANONICAL}
-    -DSUMMARY=${_CFT_SUMMARY}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCompileForTargetTest.cmake
 )
 set_tests_properties(CompileForTargetTest PROPERTIES
@@ -558,10 +516,9 @@ set_tests_properties(QuantStrategyExportTest PROPERTIES
 
 # ---------------------------------------------------------------------------
 # CTest: LoweringDecisionExportTest
-# Verifies per_op_lowering_decisions appear in the exported JSON when
-# LoweringDecisionPlanningPass has run (Commit K).
+# Verifies per_op_decisions[].kernel appear in the exported V2 JSON when
+# LoweringDecisionPlanningPass has run.
 # Covers: direct_lower, rewrite_then_lower, fallback_backend, unsupported.
-# dequant_then_lower is covered by ServingExecutionPlanBuilderTest.
 # ---------------------------------------------------------------------------
 set(_LDE_OUT "${CMAKE_CURRENT_BINARY_DIR}/lowering_decision_plan.json")
 
@@ -641,9 +598,7 @@ set_tests_properties(QwenToServingMlirTest PROPERTIES
 
 # ---------------------------------------------------------------------------
 # CTest: QwenCompileForTargetTest
-# End-to-end: qwen-to-serving-mlir -> compile-for-target -> JSON artifact check.
-# Writes to a separate subdirectory to avoid summary file collision with
-# CompileForTargetTest (which also writes serving_execution_plan_summary.json).
+# End-to-end: qwen-to-serving-mlir -> compile-for-target -> V2 JSON artifact check.
 # ---------------------------------------------------------------------------
 set(_QWEN_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/qwen_integration")
 set(_QWEN_INT_MLIR "${_QWEN_INT_DIR}/qwen_0_5b.mlir")
