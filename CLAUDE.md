@@ -159,6 +159,31 @@ The demo does NOT claim:
 - a CoreML profile as evidence of ANE internal execution
 - fallback is selected immediately after a kernel miss
 
+### GTX 1650 / Qwen vLLM Serving Demo
+
+`tools/run_qwen_compiler_pipeline.sh` produces
+`artifacts/qwen/execution_plan.json` from
+`configs/models/qwen_0_5b_spec.json` (architecture-only: layer count, hidden
+size, heads — not imported model weights, `truth_boundary =
+declared_model_config_not_full_graph_import`) and
+`configs/target_profiles/nvidia_gtx1650_maxq.json`. This is the compiler-side
+source artifact consumed by `heterogeneous-inference-runtime`'s measured A/B
+vLLM benchmark (`results/qwen_no_quant/` in that repo):
+
+- Current per-op quantization decision for this target is `fp16_fallback`
+  (quantization `none`), matching `nvidia_gtx1650_maxq.json`'s declared
+  `supportedQuantModes: ["none"]` on both backends — Turing (cc 7.5) has no
+  native INT4 tensor-core path, so this profile cannot honestly claim AWQ/GPTQ
+  support today.
+- Compiler-guided no-quant (B) uses the same original Qwen weights as the
+  manual baseline (A); measured E2E delta is within ~1% across repeatability
+  trials, i.e. benchmark noise, not a speedup claim.
+- A quantized Phase C (compiler-produced AWQ/GPTQ Qwen artifact + a
+  quant-capable target profile) is not implemented. See `docs/future_work.md`.
+- `docs/EXECUTION_PLAN_SCHEMA.md`'s AWQ JSON example is a schema illustration
+  of a hypothetical quant-capable profile, not this profile's actual output —
+  do not read it as evidence that AWQ planning is implemented for GTX 1650.
+
 ### Shared Capability Profiles
 
 The compiler and runtime intentionally read from the same capability data. Both

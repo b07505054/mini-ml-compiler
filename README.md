@@ -109,6 +109,37 @@ Truth boundaries: every planning attr carries a `truth_boundary` field
 pass-specific static-constraint labels). No claim presents static penalty
 scores as measured hardware latency.
 
+### Qwen 2.5-0.5B / GTX 1650 vLLM Serving Demo
+
+`tools/run_qwen_compiler_pipeline.sh` runs `qwen-to-serving-mlir` then
+`compile-for-target` against `configs/models/qwen_0_5b_spec.json` (an
+architecture-only spec — layer count, hidden size, heads; not imported model
+weights) and `configs/target_profiles/nvidia_gtx1650_maxq.json`, producing
+`artifacts/qwen/execution_plan.json`. That file is the compiler-side source
+artifact for the sibling `heterogeneous-inference-runtime` repo's measured A/B
+vLLM benchmark:
+
+- **A (baseline):** original Qwen weights, hand-written vLLM config,
+  quantization none. Default vLLM config OOMs on this 4 GB card; a manually
+  tuned conservative config is the measured baseline.
+- **B (compiler no-quant):** same original Qwen weights, but vLLM runtime
+  flags are materialized from `execution_plan.json` via
+  `deployment/execution_plan/path_builder.py` ->
+  `deployment/vllm_adapter/config_materializer.py` in the runtime repo.
+  Quantization is `none` (per-op `fp16_fallback`, matching this target
+  profile's declared `supportedQuantModes: ["none"]`). Measured E2E delta vs.
+  the conservative manual baseline is within ~1% across three repeatability
+  trials — treated as benchmark noise, not a speedup claim.
+- **C (compiler quant, not implemented):** would require a real AWQ/GPTQ
+  Qwen weight artifact and a target profile that declares int4/AWQ support.
+  The current GTX 1650 profile (Turing, cc 7.5) declares no native INT4
+  tensor-core path, so quantization stays `none` for this target until a
+  quant-capable profile and a real quantized checkpoint exist.
+
+Measured evidence for A/B lives in `heterogeneous-inference-runtime` under
+`results/qwen_no_quant/`, not in this repo. See `docs/EXECUTION_PLAN_SCHEMA.md`
+and `docs/future_work.md` for the schema and the Phase C plan.
+
 ### CV Compiler Pipeline
 
 - Registered `cv` MLIR dialect with seven CV operations.
@@ -1037,6 +1068,7 @@ For deeper project notes, start with:
 - `docs/design_decisions.md`
 - `docs/technical_debt.md`
 - `docs/future_work.md`
+- `docs/EXECUTION_PLAN_SCHEMA.md`
 
 These files document implemented compiler/runtime components, generated
 artifacts, assumptions, known weak spots, and realistic next steps.

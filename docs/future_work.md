@@ -67,6 +67,33 @@ CV compiler Phase 1 work has moved out of future work:
 - Separate serving policy contracts from measured runtime traces.
 - If real serving execution is added later, add measured TTFT/TPOT/throughput capture with environment metadata.
 
+## Qwen GTX 1650 vLLM Serving: Phase C (Quantized) — Not Implemented
+
+`artifacts/qwen/execution_plan.json` (fp16, quantization `none`/`fp16_fallback`)
+is the compiler-side source artifact for the measured A/B vLLM benchmark
+recorded in `heterogeneous-inference-runtime` (`results/qwen_no_quant/`). A
+quantized Phase C is not implemented. Minimum remaining work:
+
+- A real AWQ/GPTQ Qwen weight export step (e.g. AutoAWQ / auto-gptq against the
+  original `Qwen/Qwen2.5-0.5B-Instruct` checkpoint), producing a local
+  quantized model artifact — this repo has no such export tool today.
+- A target profile that actually declares int4/AWQ backend support.
+  `configs/target_profiles/nvidia_gtx1650_maxq.json` currently declares
+  `supportedQuantModes: ["none"]` for both `cuda_triton` and `cuda_cublas`
+  backends (Turing, cc 7.5, no native INT4 tensor cores) — it cannot honestly
+  produce an AWQ `QuantizationDecision` as-is. Either add a new profile for a
+  quant-capable target or add an explicit experimental forced-quant profile
+  variant with its own truth-boundary label.
+- A `QuantizationStrategyPlanningPass` decision path that selects
+  `weight_only_int4`/AWQ when the profile allows it (see the illustrative
+  example in `docs/EXECUTION_PLAN_SCHEMA.md`, which is not yet real output).
+- A materializer update on the runtime side
+  (`deployment/vllm_adapter/config_materializer.py` in
+  `heterogeneous-inference-runtime`) to emit `--quantization awq|gptq` and
+  point `--model` at the quantized artifact path instead of the HF repo id.
+- A repeatability benchmark pass for the quantized path mirroring the existing
+  `results/qwen_no_quant/repeatability_summary.md` structure.
+
 ## Documentation Work
 
 - Maintain a single "implemented vs simulated" section in every high-level doc that discusses runtime behavior.

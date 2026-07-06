@@ -15,15 +15,33 @@ Key invariants:
 - IR materialization (cast/dequant/layout_transform insertion) is not performed;
   the plan describes decisions only.
 
-V1 (`ServingExecutionPlan.h`, `artifacts/vllm_plans/qwen_0_5b_gtx1650_plan.json`)
-remains in use. V2 is the forward contract; passes will be migrated in a
-subsequent step.
+V1 (`ServingExecutionPlan.h`) has been removed; `ExecutionPlan` (this schema,
+formerly called "V2" internally) is now the only compiler output. The older
+`artifacts/vllm_plans/qwen_0_5b_gtx1650_plan.json` artifact and
+`tools/export_vllm_execution_plan.py` are a separate, hand-authored Python
+planning illustration that predates this contract and is not produced from
+this schema or from `artifacts/qwen/execution_plan.json`.
 
 C++ types: `mlir_passes/include/serving/ExecutionPlan.h`
 
 ---
 
 ## Complete JSON Example: Qwen 2.5-0.5B on GTX 1650 Max-Q
+
+**This example is a schema illustration, not the current pipeline output.** It
+shows what a `weight_only_int4` / AWQ `QuantizationDecision` would look like if
+the target profile declared AWQ support. The GTX 1650 Max-Q profile actually
+in use (`configs/target_profiles/nvidia_gtx1650_maxq.json`) declares
+`supportedQuantModes: ["none"]` for both backends (Turing, cc 7.5, no native
+INT4 tensor cores) — it does **not** declare `backend.supported_quantization=[awq]`
+as this example's `capability_evidence` shows. The execution plan this
+pipeline actually generates for GTX 1650
+(`artifacts/qwen/execution_plan.json`, produced by
+`tools/run_qwen_compiler_pipeline.sh`) carries `strategy: "fp16_fallback"`
+per-op, not this AWQ example. Enabling real AWQ/GPTQ quantization (Phase C)
+requires either a different/updated target profile that declares int4/AWQ
+support, or an explicit experimental forced-quant profile, plus a real
+quantized model artifact — see `docs/future_work.md`.
 
 ```json
 {
