@@ -95,3 +95,5 @@ trace/*
 
 build-mlir/
 build-mlir-codex/
+
+build-codex/
