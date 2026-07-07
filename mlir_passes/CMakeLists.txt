@@ -642,6 +642,47 @@ set_tests_properties(QwenGTX1650CompileTest PROPERTIES
 )
 
 # ---------------------------------------------------------------------------
+# qwen-onnx-to-serving-mlir: ONNX-graph-facts frontend (Phase 1 scaffold)
+#
+# Reads configs/models/qwen_0_5b_onnx_graph_facts.json (a hand-authored
+# ONNX-shaped fixture, NOT a real ONNX protobuf parse) and emits full
+# per-layer-expanded, flat, unrolled RAW serving MLIR. Must be run through
+# llm-frontend-normalization before compile-for-target.
+# ---------------------------------------------------------------------------
+add_executable(qwen-onnx-to-serving-mlir
+  tools/qwen-onnx-to-serving-mlir/main.cpp
+)
+llvm_update_compile_flags(qwen-onnx-to-serving-mlir)
+target_include_directories(qwen-onnx-to-serving-mlir
+  PRIVATE
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(qwen-onnx-to-serving-mlir PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(qwen-onnx-to-serving-mlir
+  PRIVATE
+    LLVMSupport
+)
+
+# ---------------------------------------------------------------------------
+# CTest: QwenOnnxToServingMlirTest
+# Runs qwen-onnx-to-serving-mlir and checks output MLIR for required attrs,
+# full per-layer expansion (serving.layer_index 0..num_layers-1), and roles.
+# ---------------------------------------------------------------------------
+set(_QWEN_ONNX_MLIR_UNIT "${CMAKE_CURRENT_BINARY_DIR}/qwen_0_5b_onnx_unit.mlir")
+
+add_test(NAME QwenOnnxToServingMlirTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:qwen-onnx-to-serving-mlir>
+    -DFACTS=${REPO_ROOT}/configs/models/qwen_0_5b_onnx_graph_facts.json
+    -DOUT=${_QWEN_ONNX_MLIR_UNIT}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenOnnxToServingMlirTest.cmake
+)
+set_tests_properties(QwenOnnxToServingMlirTest PROPERTIES
+  DEPENDS qwen-onnx-to-serving-mlir
+)
+
+# ---------------------------------------------------------------------------
 # CTest: LLMFrontendNormalizationTest
 # Two-step integration: mlir-opt (normalization pass) -> compile-for-target.
 # Requires mlir-opt from the LLVM build. Skipped if mlir-opt is not found.
@@ -682,9 +723,39 @@ if(MLIR_OPT_BIN)
   set_tests_properties(LLMFrontendNormalizationTest PROPERTIES
     DEPENDS "HIRMatMulBiasReluFusionPass;compile-for-target"
   )
+
+  # -------------------------------------------------------------------------
+  # CTest: QwenOnnxServingPlanExportTest
+  # Full ONNX-graph-facts pipeline: qwen-onnx-to-serving-mlir ->
+  # llm-frontend-normalization -> compile-for-target -> execution_plan.json.
+  # Validates full per-layer expansion (24 distinct serving.layer_index
+  # values) survives normalization and reaches the exported plan.
+  # -------------------------------------------------------------------------
+  set(_QWEN_ONNX_INT_DIR   "${CMAKE_CURRENT_BINARY_DIR}/qwen_onnx_serving_plan_integration")
+  set(_QWEN_ONNX_RAW_MLIR  "${_QWEN_ONNX_INT_DIR}/qwen_0_5b_onnx_raw.mlir")
+  set(_QWEN_ONNX_NORM_MLIR "${_QWEN_ONNX_INT_DIR}/qwen_0_5b_onnx_normalized.mlir")
+  set(_QWEN_ONNX_JSON      "${_QWEN_ONNX_INT_DIR}/execution_plan.json")
+
+  add_test(NAME QwenOnnxServingPlanExportTest
+    COMMAND ${CMAKE_COMMAND}
+      -DONNX_TOOL=$<TARGET_FILE:qwen-onnx-to-serving-mlir>
+      -DMLIR_OPT=${MLIR_OPT_BIN}
+      -DPLUGIN=$<TARGET_FILE:HIRMatMulBiasReluFusionPass>
+      -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+      -DFACTS=${REPO_ROOT}/configs/models/qwen_0_5b_onnx_graph_facts.json
+      -DPROFILE=${REPO_ROOT}/configs/target_profiles/nvidia_gtx1650_maxq.json
+      -DRAW_OUT=${_QWEN_ONNX_RAW_MLIR}
+      -DNORM_OUT=${_QWEN_ONNX_NORM_MLIR}
+      -DJSON_OUT=${_QWEN_ONNX_JSON}
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenOnnxServingPlanExportTest.cmake
+  )
+  set_tests_properties(QwenOnnxServingPlanExportTest PROPERTIES
+    DEPENDS "qwen-onnx-to-serving-mlir;HIRMatMulBiasReluFusionPass;compile-for-target"
+  )
 else()
   message(STATUS
-    "mlir-opt not found; LLMFrontendNormalizationTest will not be added. "
+    "mlir-opt not found; LLMFrontendNormalizationTest and "
+    "QwenOnnxServingPlanExportTest will not be added. "
     "Set MLIR_OPT_BIN or ensure mlir-opt is in PATH."
   )
 endif()

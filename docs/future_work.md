@@ -67,6 +67,64 @@ CV compiler Phase 1 work has moved out of future work:
 - Separate serving policy contracts from measured runtime traces.
 - If real serving execution is added later, add measured TTFT/TPOT/throughput capture with environment metadata.
 
+## Qwen Real Graph Import: Phase 1 Done (Scaffold), Remaining Work
+
+Phase 1 of moving off the ModelSpec-driven frontend is done:
+
+- `mlir_passes/tools/qwen-onnx-to-serving-mlir` emits full per-layer-expanded,
+  flat, unrolled serving MLIR (real SSA chaining, `serving.layer_index` /
+  `serving.layer_role` stamped per op) from
+  `configs/models/qwen_0_5b_onnx_graph_facts.json`, replacing
+  `qwen-to-serving-mlir`'s single hand-templated block for the graph-import
+  target architecture. `qwen-to-serving-mlir` remains as the legacy/scaffold
+  ModelSpec path.
+- `LLMFrontendNormalizationPass` was generalized from a whole-function
+  erase-and-replace (dummy operand) into a localized per-occurrence rewrite:
+  it buckets ops by `serving.layer_index` (an ungrouped bucket for legacy
+  single-occurrence functions, preserving prior behavior) and canonicalizes
+  each layer's raw attention pattern independently, wiring the canonical
+  `llm.attention_prefill`/`decode` op to that layer's real q/k/v_proj values.
+- `QuantizationStrategyPlanningPass`/`WeightClassificationPlanningPass` now key
+  off an explicit `serving.quantizable = true` attribute stamped by the
+  importer (both `qwen-onnx-to-serving-mlir` and the legacy
+  `qwen-to-serving-mlir`) on linear/weight-bearing ops, so real per-layer ops
+  produce decisions instead of silently vanishing from `per_op_decisions`.
+  Earlier in Phase 1 this was done with `"proj"`/`"mlp"` op-name substring
+  matching directly in those passes; that leaked frontend-specific naming
+  into generic planning passes and has been replaced by the explicit
+  attribute. The passes still fall back to a small generic, model-family-
+  agnostic name-fragment list (`matmul`, `conv`, `gemm`, etc.) for ops with no
+  explicit marker.
+- Validated end to end via `QwenOnnxServingPlanExportTest`: a 24-layer plan
+  produces 24 distinct `serving.layer_index` values and ~170
+  `per_op_decisions` entries per phase (vs. the legacy path's single entry),
+  fully verbose — no `layer_range`/`layer_count` compression, no JSON schema
+  change (per the Phase 1 decision to prioritize import fidelity first).
+
+Remaining work (not done, do not claim otherwise):
+
+- **Real ONNX parser.** `configs/models/qwen_0_5b_onnx_graph_facts.json` is a
+  hand-authored fixture standing in for facts a real ONNX importer would
+  extract, not a parse of a real `.onnx` protobuf file. `tools/export_qwen_onnx.py`
+  can attempt a real HF Optimum export + real `onnx`-package graph
+  introspection when that optional toolchain is installed, but its output is
+  a diagnostic report only — it is not consumed by the C++ importer.
+- **ONNX-MLIR or equivalent frontend integration.** Building the real bridge
+  means either a C++ ONNX protobuf reader or (preferred — see the design
+  discussion that produced this milestone) building on an existing
+  ONNX-MLIR-family frontend rather than hand-rolling protobuf parsing, so the
+  importer's op-name vocabulary is derived from a real graph instead of the
+  current fixed known list (`kSupportedOps` in `qwen-onnx-to-serving-mlir`'s
+  `main.cpp`).
+- **Layer-range compression.** Add `layer_range`/`repeat_count` as an
+  additive field on `PerOpDecisionBundle`/the JSON schema, with a fold step
+  that only collapses a range when decision content is verified identical
+  across layers — never assumed. This is export-time only; the compiler's
+  internal IR model stays full expansion regardless.
+- **Decode-with-past import**, and revisiting whether `KVLayoutPlanningPass`'s
+  `numLayers`-based KV-footprint formula should instead sum real per-op KV
+  attrs now that real per-layer ops exist to sum.
+
 ## Qwen GTX 1650 vLLM Serving: Phase C (Quantized) — Not Implemented
 
 `artifacts/qwen/execution_plan.json` (fp16, quantization `none`/`fp16_fallback`)

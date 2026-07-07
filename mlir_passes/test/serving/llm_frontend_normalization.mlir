@@ -11,21 +11,28 @@
 //
 // The canonical output is structurally identical to qwen-to-serving-mlir output
 // so the serving-optimization-pipeline cannot distinguish Path A from Path B.
+//
+// q_proj/k_proj/v_proj are real producers the canonical op's operands point
+// to (wired to real values, not a dummy placeholder), so they remain present
+// in the normalized body — only the now-redundant intermediate computation
+// (attention_scores, softmax, kv_cache_write/read) is erased.
 
 // ---------------------------------------------------------------------------
 // Prefill function: has llm.kv_cache_write -> llm.attention_prefill expected
 // ---------------------------------------------------------------------------
 
 // CHECK-LABEL: func.func @raw_qwen_prefill_graph
-// Raw ops must be completely absent from the normalized body.
-// CHECK-NOT:   "llm.q_proj"
-// CHECK-NOT:   "llm.k_proj"
-// CHECK-NOT:   "llm.v_proj"
+// q_proj/k_proj/v_proj survive as real producers feeding the canonical op.
+// CHECK:       %[[Q:.*]] = "llm.q_proj"
+// CHECK:       %[[K:.*]] = "llm.k_proj"
+// CHECK:       %[[V:.*]] = "llm.v_proj"
+// The now-redundant intermediate computation must be completely absent.
 // CHECK-NOT:   "llm.attention_scores"
+// CHECK-NOT:   "llm.softmax"
 // CHECK-NOT:   "llm.kv_cache_write"
-// Canonical prefill op must be present with required attrs.
+// Canonical prefill op must be present, wired to the real q/k/v values above.
 // Attrs are printed alphabetically by MLIR; CHECK-SAME must match in that order.
-// CHECK:       "llm.attention_prefill"
+// CHECK:       "llm.attention_prefill"(%[[Q]], %[[K]], %[[V]])
 // CHECK-SAME:  frontend.source = "llm_graph_pattern"
 // CHECK-SAME:  frontend.truth_boundary = "attention_pattern_simplified_not_full_transformer_lowering"
 // CHECK-SAME:  kv_cache.role = "producer"
@@ -39,14 +46,16 @@
 // ---------------------------------------------------------------------------
 
 // CHECK-LABEL: func.func @raw_qwen_decode_graph
-// Raw ops must be completely absent.
-// CHECK-NOT:   "llm.q_proj"
-// CHECK-NOT:   "llm.k_proj"
-// CHECK-NOT:   "llm.v_proj"
+// q_proj/k_proj/v_proj survive as real producers feeding the canonical op.
+// CHECK:       %[[Q:.*]] = "llm.q_proj"
+// CHECK:       %[[K:.*]] = "llm.k_proj"
+// CHECK:       %[[V:.*]] = "llm.v_proj"
+// The now-redundant intermediate computation must be completely absent.
 // CHECK-NOT:   "llm.attention_scores"
+// CHECK-NOT:   "llm.softmax"
 // CHECK-NOT:   "llm.kv_cache_read"
-// Canonical decode op must be present.
-// CHECK:       "llm.attention_decode"
+// Canonical decode op must be present, wired to the real q/k/v values above.
+// CHECK:       "llm.attention_decode"(%[[Q]], %[[K]], %[[V]])
 // CHECK-SAME:  frontend.source = "llm_graph_pattern"
 // CHECK-SAME:  frontend.truth_boundary = "attention_pattern_simplified_not_full_transformer_lowering"
 // CHECK-SAME:  kv_cache.role = "consumer"

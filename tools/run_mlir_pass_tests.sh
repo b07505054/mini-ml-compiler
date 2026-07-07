@@ -541,6 +541,13 @@ run_filecheck \
   --pass-pipeline='builtin.module(llm-frontend-normalization)'
 
 run_filecheck \
+  "llm-frontend-normalization performs a localized per-occurrence rewrite across full per-layer expansion (serving.layer_index)" \
+  "$REPO_ROOT/mlir_passes/test/serving/llm_frontend_normalization_layered.mlir" \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(llm-frontend-normalization)'
+
+run_filecheck \
   "quantization cost effect: plan_dtype drives kv.dtype_bytes and quantization.dtype_bytes" \
   "$REPO_ROOT/mlir_passes/test/serving/quantization_cost_effect.mlir" \
   --split-input-file \

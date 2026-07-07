@@ -24,6 +24,15 @@ this schema or from `artifacts/qwen/execution_plan.json`.
 
 C++ types: `mlir_passes/include/serving/ExecutionPlan.h`
 
+**Per-layer fidelity (Phase 1):** `per_op_decisions` has no `layer_index` or
+`layer_range` field today. When the input graph is real per-layer-expanded
+IR (from `qwen-onnx-to-serving-mlir`, see `docs/future_work.md`), each real
+layer's ops each get their own `op_N` entry — the list is verbose by design
+(e.g. ~170 entries per phase for 24 layers), not compressed. Compression into
+layer ranges is deferred future work and would be an additive schema field,
+not a change to how the compiler's internal IR represents layers (which stays
+fully expanded regardless of export compression).
+
 ---
 
 ## Complete JSON Example: Qwen 2.5-0.5B on GTX 1650 Max-Q

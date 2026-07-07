@@ -41,7 +41,21 @@ static std::string getResultDtype(Operation *op) {
   return "";
 }
 
-static bool isQuantizableOp(const std::string &name) {
+// Ops emitted by an importer (e.g. qwen-onnx-to-serving-mlir,
+// qwen-to-serving-mlir) can declare themselves weight-bearing explicitly via
+// serving.quantizable, instead of this pass inferring it from the op name.
+// This is the preferred path: it lets frontend-specific naming (q_proj,
+// mlp, qkv_projection, ...) stay behind the importer instead of leaking into
+// this generic planning pass as name heuristics, so they still receive a
+// quantization decision instead of silently vanishing from per_op_decisions.
+static bool isQuantizableOp(Operation *op, const std::string &name) {
+  if (auto a = op->getAttrOfType<BoolAttr>("serving.quantizable"))
+    return a.getValue();
+
+  // Fallback for ops with no explicit marker: match a small set of generic,
+  // model-family-agnostic linear/conv op-name fragments. This list
+  // intentionally excludes any frontend-specific naming convention such as
+  // "proj" or "mlp".
   static const char *kNames[] = {
       "matmul", "conv", "linear", "dense", "gemm", "dot", "fc",
       "fully_connected", "batch_gemm", "fused_matmul",
@@ -159,7 +173,7 @@ struct QuantizationStrategyPlanningPass
 
     for (Operation &op : entry.without_terminator()) {
       std::string opName = stripPrefix(op.getName().getStringRef().str());
-      bool quantizable = isQuantizableOp(opName);
+      bool quantizable = isQuantizableOp(&op, opName);
       bool accuracySensitive = isAccuracySensitive(opName);
 
       if (!quantizable && !accuracySensitive) continue;

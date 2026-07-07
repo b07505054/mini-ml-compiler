@@ -140,6 +140,66 @@ Measured evidence for A/B lives in `heterogeneous-inference-runtime` under
 `results/qwen_no_quant/`, not in this repo. See `docs/EXECUTION_PLAN_SCHEMA.md`
 and `docs/future_work.md` for the schema and the Phase C plan.
 
+`qwen-to-serving-mlir` (above) is now the **legacy/scaffold ModelSpec path**:
+it hand-templates a single fixed op block per phase from 9 declared scalar
+fields and never loops over `num_layers`, so it cannot represent a real
+per-layer graph at any layer count. The target architecture is real graph
+import — see below.
+
+### ONNX Graph Import Path (Phase 1 — real per-layer expansion, not real ONNX parsing yet)
+
+`mlir_passes/tools/qwen-onnx-to-serving-mlir` is a new, separate frontend
+tool that reads `configs/models/qwen_0_5b_onnx_graph_facts.json` and emits
+**full per-layer-expanded, flat, unrolled** serving MLIR — one real op
+sequence per decoder layer (`serving.layer_index = 0..num_layers-1`, real SSA
+chaining layer-to-layer), not qwen-to-serving-mlir's single hand-templated
+block. It emits the **raw** (pre-canonicalization) attention pattern
+(`llm.q_proj`/`k_proj`/`v_proj`/`attention_scores`/`softmax`/`attention_output`
++ `kv_cache_write`/`read`) per layer, which `LLMFrontendNormalizationPass`
+(generalized in this change to do a localized per-occurrence rewrite instead
+of a whole-function erase) canonicalizes into one real `llm.attention_prefill`
+/`llm.attention_decode` op per layer, wired to that layer's real q/k/v
+values — not a dummy placeholder.
+
+**Compiler philosophy:** compiler input is moving toward real, per-layer-expanded
+graphs (ONNX-shaped today, a real ONNX/HF import tomorrow) rather than
+hand-authored model specifications. `qwen-to-serving-mlir`'s ModelSpec path is
+the legacy/scaffold generator being phased out, not the long-term architecture
+— it is kept only for the existing GTX 1650 A/B benchmark artifact above, and
+gets no new capability.
+
+**Be precise about what Phase 1 is and is not:**
+- The graph-facts JSON is a **hand-authored fixture** standing in for facts a
+  real ONNX importer would extract — it is explicitly labeled
+  `"truth_boundary": "onnx_shaped_fixture_not_real_onnx_protobuf_import"`.
+  This tool does **not** parse a real ONNX protobuf file.
+- `tools/export_qwen_onnx.py` is a Python edge script (not compiler-core) that
+  attempts a real HF Optimum → ONNX export and real `onnx`-package graph
+  introspection when that optional toolchain is installed; its output is a
+  diagnostic report only and is **not yet consumed** by the C++ importer in
+  this change — see that script's module docstring.
+- Linear/weight-bearing ops (`q_proj`/`k_proj`/`v_proj`/`o_proj`/`mlp`/
+  `lm_head_proj` from this importer, `qkv_projection`/`mlp` from the legacy
+  ModelSpec path) are marked with an explicit `serving.quantizable = true`
+  attribute at emission time, so `QuantizationStrategyPlanningPass`/
+  `WeightClassificationPlanningPass` key off that attribute first and only
+  fall back to a small generic name-fragment match (`matmul`, `conv`, `gemm`,
+  etc.) for ops with no explicit marker. This keeps frontend-specific naming
+  conventions out of the generic planning passes instead of pattern-matching
+  op-name substrings like `"proj"`/`"mlp"` directly in those passes.
+- The exported `ExecutionPlan` stays **verbose** in Phase 1: no
+  `layer_range`/`layer_count` compression, no JSON schema change. A 24-layer
+  plan has ~170 `per_op_decisions` entries per phase (real, one per real op),
+  not the legacy path's single `op_1` (`llm.rmsnorm`) entry. Compression is
+  deferred to a future phase and will only ever be an export-time
+  optimization over verified-identical decisions, never the compiler's
+  internal IR model — see `docs/future_work.md`.
+
+Run `mlir_passes/test/serving/RunQwenOnnxServingPlanExportTest.cmake` (CTest
+`QwenOnnxServingPlanExportTest`) for the full pipeline, or
+`mlir_passes/test/serving/llm_frontend_normalization_layered.mlir` (FileCheck)
+for the localized per-occurrence rewrite in isolation.
+
 ### CV Compiler Pipeline
 
 - Registered `cv` MLIR dialect with seven CV operations.

@@ -13,7 +13,21 @@ namespace {
 static constexpr StringLiteral kTruth =
     "weight_classification_static_def_use_analysis_not_runtime_validated";
 
-static bool isQuantizableOp(llvm::StringRef shortName) {
+// Ops emitted by an importer (e.g. qwen-onnx-to-serving-mlir,
+// qwen-to-serving-mlir) can declare themselves weight-bearing explicitly via
+// serving.quantizable, instead of this pass inferring it from the op name.
+// This is the preferred path: it lets frontend-specific naming (q_proj,
+// mlp, qkv_projection, ...) stay behind the importer instead of leaking into
+// this generic planning pass as name heuristics.
+static bool isQuantizableOp(mlir::Operation *op, llvm::StringRef shortName) {
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>("serving.quantizable"))
+    return a.getValue();
+
+  // Fallback for ops with no explicit marker: match a small set of generic,
+  // model-family-agnostic linear/conv op-name fragments. Exact-name matching
+  // is not used here because dialects spell these ops with suffixes
+  // (conv2d, conv3d, fused_matmul, ...); this list intentionally excludes any
+  // frontend-specific naming convention such as "proj" or "mlp".
   static const char *kNames[] = {
       "matmul", "conv", "linear", "dense", "gemm", "dot", "fc",
       "fully_connected", "batch_gemm", "fused_matmul",
@@ -105,7 +119,7 @@ struct WeightClassificationPlanningPass
       if (auto dot = fullName.find('.'); dot != llvm::StringRef::npos)
         shortName = fullName.substr(dot + 1).str();
 
-      if (!isQuantizableOp(shortName)) continue;
+      if (!isQuantizableOp(&op, shortName)) continue;
 
       // Rule 1: function-level constant declaration.
       if (funcLevelConstant) {

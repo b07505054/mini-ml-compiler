@@ -183,6 +183,52 @@ vLLM benchmark (`results/qwen_no_quant/` in that repo):
 - `docs/EXECUTION_PLAN_SCHEMA.md`'s AWQ JSON example is a schema illustration
   of a hypothetical quant-capable profile, not this profile's actual output —
   do not read it as evidence that AWQ planning is implemented for GTX 1650.
+- `qwen-to-serving-mlir` (above) is the **legacy/scaffold ModelSpec path**: a
+  hand-templated single op block per phase, never looped over `num_layers`.
+  It does not represent a real per-layer graph. See below for the real
+  graph-import path.
+
+### ONNX Graph Import Path (Phase 1)
+
+Compiler philosophy: input is moving toward real, per-layer-expanded graphs
+(ONNX-shaped today, a real ONNX/HF import later) rather than hand-authored
+model specifications. The ModelSpec path (`qwen-to-serving-mlir`, previous
+section) is the legacy/scaffold generator being phased out, not the long-term
+architecture.
+
+`mlir_passes/tools/qwen-onnx-to-serving-mlir` is the target-architecture
+frontend: it reads `configs/models/qwen_0_5b_onnx_graph_facts.json` and emits
+full per-layer-expanded, flat, unrolled serving MLIR (`serving.layer_index =
+0..num_layers-1`, real SSA chaining), not a single hand-templated block. It
+emits the raw pre-canonicalization attention pattern per layer;
+`LLMFrontendNormalizationPass` was generalized to do a localized
+per-occurrence rewrite (real q/k/v operands, not a dummy placeholder) instead
+of a whole-function erase, so it canonicalizes each layer's occurrence
+independently.
+
+Truth boundary — do not overclaim this:
+- `configs/models/qwen_0_5b_onnx_graph_facts.json` is a **hand-authored
+  fixture**, not a real ONNX protobuf parse (`truth_boundary =
+  onnx_shaped_fixture_not_real_onnx_protobuf_import`).
+- `tools/export_qwen_onnx.py` (Python edge tooling, not compiler-core)
+  attempts a real HF Optimum export + real `onnx`-package introspection when
+  installed, but its output is a diagnostic report only, **not yet consumed**
+  by the C++ importer.
+- Linear/weight-bearing ops (`q_proj`/`k_proj`/`v_proj`/`o_proj`/`mlp`/
+  `lm_head_proj` here; `qkv_projection`/`mlp` from the legacy ModelSpec path)
+  are stamped with an explicit `serving.quantizable = true` attribute at
+  emission time. `QuantizationStrategyPlanningPass`/
+  `WeightClassificationPlanningPass` key off that attribute first, falling
+  back to a small generic name-fragment match (`matmul`, `conv`, `gemm`,
+  etc.) only for ops with no explicit marker — frontend-specific naming stays
+  behind the importer instead of leaking into generic planning passes as
+  op-name substring matches.
+- The exported `ExecutionPlan` is **verbose** in Phase 1 (no
+  `layer_range`/`layer_count` compression, no JSON schema change) — ~170
+  `per_op_decisions` entries per phase for 24 layers, vs. the legacy path's
+  single entry. Compression is future work and export-time only; the
+  compiler's internal IR model is always full expansion. See
+  `docs/future_work.md`.
 
 ### Shared Capability Profiles
 

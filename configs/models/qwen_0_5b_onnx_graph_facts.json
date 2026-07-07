@@ -1,0 +1,48 @@
+{
+  "schema": "qwen_onnx_graph_facts",
+  "schema_version": "0.1",
+  "model_name": "qwen2.5-0.5b",
+  "source": "hand_authored_fixture_not_extracted_from_real_onnx_graph",
+  "truth_boundary": "onnx_shaped_fixture_not_real_onnx_protobuf_import",
+  "num_layers": 24,
+  "hidden_size": 896,
+  "intermediate_size": 4864,
+  "num_attention_heads": 14,
+  "num_key_value_heads": 2,
+  "max_position_embeddings": 32768,
+  "vocab_size": 151936,
+  "dtype": "fp16",
+  "graph": {
+    "embedding": ["embed"],
+    "decoder_layer": [
+      "rmsnorm",
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "attention_scores",
+      "softmax",
+      "attention_output",
+      "kv_cache_boundary",
+      "o_proj",
+      "rmsnorm",
+      "mlp"
+    ],
+    "final_norm": ["rmsnorm"],
+    "lm_head": ["lm_head_proj"]
+  },
+  "notes": [
+    "This file is a hand-authored stand-in for facts a real ONNX graph parse",
+    "would extract (node op-type sequence per role, num_layers, dims). It is",
+    "NOT produced by parsing a real .onnx protobuf file and NOT extracted",
+    "from an actual HuggingFace/PyTorch export.",
+    "'kv_cache_boundary' is a role marker the importer maps to llm.kv_cache_write",
+    "when emitting @qwen_prefill and llm.kv_cache_read when emitting @qwen_decode,",
+    "matching the existing raw attention pattern in mlir/raw_qwen_frontend_input.mlir.",
+    "Residual adds are intentionally omitted, consistent with the existing",
+    "raw_qwen_frontend_input.mlir fixture and this compiler's declared scope",
+    "(planning-relevant op/shape structure, not numerically real execution).",
+    "tools/export_qwen_onnx.py is intended to eventually replace this file with",
+    "facts extracted from a real ONNX export; see that script's module",
+    "docstring for current status."
+  ]
+}
