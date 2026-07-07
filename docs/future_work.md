@@ -67,7 +67,7 @@ CV compiler Phase 1 work has moved out of future work:
 - Separate serving policy contracts from measured runtime traces.
 - If real serving execution is added later, add measured TTFT/TPOT/throughput capture with environment metadata.
 
-## Qwen Real Graph Import: Phase 1 Done (Scaffold), Remaining Work
+## Qwen Real Graph Import: Phase 1 + Phase 2 Done, Remaining Work
 
 Phase 1 of moving off the ModelSpec-driven frontend is done:
 
@@ -101,29 +101,79 @@ Phase 1 of moving off the ModelSpec-driven frontend is done:
   fully verbose — no `layer_range`/`layer_count` compression, no JSON schema
   change (per the Phase 1 decision to prioritize import fidelity first).
 
+Phase 2 (real ONNX protobuf bridge, implemented as a **frontend adapter**,
+not a general importer) is done:
+
+- `tools/onnx_graph_to_facts.py` loads a real `.onnx` file with the Python
+  `onnx` package and reads real protobuf structure (node op types,
+  initializer names/shapes/dtypes — never tensor values). It classifies
+  per-layer roles by matching real initializer names against Qwen2's
+  specific HuggingFace naming convention, derives
+  `num_layers`/`hidden_size`/`intermediate_size`/`vocab_size`/`dtype` from
+  real shapes/dtypes, and detects RoPE and lm_head/embedding tying from real
+  graph signals. `num_attention_heads`/`num_key_value_heads`/
+  `max_position_embeddings` are read from an HF `config.json` next to the
+  `.onnx` file or an explicit CLI override, never guessed (they are not
+  recoverable from graph structure alone). It emits the same `GraphFacts`
+  JSON schema Phase 1 already established, plus additive `provenance` and
+  optional `positional_encoding` fields — `qwen-onnx-to-serving-mlir` needed
+  no changes to consume its output.
+- Any missing per-layer role (e.g. a layer with no `v_proj` initializer) is
+  a hard failure (`OnnxGraphToFactsError`), never a silent guess or omitted
+  role.
+- `tools/validate_onnx_graph_facts.py` validates any `GraphFacts` document.
+  For real bridge output it checks `num_layers` against the number of
+  distinct parsed layer indices and that every layer has all required
+  roles, failing hard on any gap. For the hand-authored fixture (no
+  `provenance` field) it validates schema fields only and explicitly
+  reports per-layer completeness as skipped, not silently passed.
+- `qwen-onnx-to-serving-mlir`'s `main.cpp` gained one small additive read:
+  an optional `positional_encoding` GraphFacts field, stamped as a
+  function-level `serving.positional_encoding` attr on
+  `qwen_prefill`/`qwen_decode` when present. RoPE stays absorbed during
+  pattern recognition, not materialized as a distinct op — this only
+  records the declared fact. Absent for the hand-authored fixture, which
+  emits byte-identical MLIR to before this change.
+- The hand-authored fixture is kept, unmodified, as fast/deterministic/
+  network-free regression coverage
+  (`tests/test_onnx_graph_facts_fixture_regression.py`) — not replaced by
+  the bridge. `tests/test_onnx_graph_to_facts.py` covers the bridge itself
+  (tiny synthetic ONNX graphs built with `onnx.helper.make_graph`, RoPE
+  detection, tied/untied lm_head, hard-failure on an incomplete layer,
+  config.json scalar resolution, and clean skip when `onnx` isn't
+  installed) plus an end-to-end test through the real
+  `qwen-onnx-to-serving-mlir` binary.
+
 Remaining work (not done, do not claim otherwise):
 
-- **Real ONNX parser.** `configs/models/qwen_0_5b_onnx_graph_facts.json` is a
-  hand-authored fixture standing in for facts a real ONNX importer would
-  extract, not a parse of a real `.onnx` protobuf file. `tools/export_qwen_onnx.py`
-  can attempt a real HF Optimum export + real `onnx`-package graph
-  introspection when that optional toolchain is installed, but its output is
-  a diagnostic report only — it is not consumed by the C++ importer.
-- **ONNX-MLIR or equivalent frontend integration.** Building the real bridge
-  means either a C++ ONNX protobuf reader or (preferred — see the design
-  discussion that produced this milestone) building on an existing
-  ONNX-MLIR-family frontend rather than hand-rolling protobuf parsing, so the
-  importer's op-name vocabulary is derived from a real graph instead of the
-  current fixed known list (`kSupportedOps` in `qwen-onnx-to-serving-mlir`'s
-  `main.cpp`).
+- **ONNX-MLIR or equivalent frontend integration.** `tools/onnx_graph_to_facts.py`
+  is a Qwen2-specific pattern matcher over initializer names, not a general
+  ONNX frontend. Building a true general importer means either a C++ ONNX
+  protobuf reader or (preferred — see the design discussion that produced
+  this milestone) building on an existing ONNX-MLIR-family frontend, so the
+  importer's op-name vocabulary is derived from arbitrary real graphs
+  instead of the current fixed known list (`kSupportedOps` in
+  `qwen-onnx-to-serving-mlir`'s `main.cpp`) and the Qwen2-specific naming
+  assumptions in `tools/onnx_graph_to_facts.py`.
+- **Torch FX adapter.** A second frontend adapter reading a traced/exported
+  Torch FX graph directly (bypassing ONNX export entirely) and emitting the
+  same `GraphFacts` schema, following the same adapter-seam pattern as the
+  ONNX bridge. Not started.
+- **StableHLO adapter.** A third frontend adapter over this repo's existing
+  StableHLO textual subset tooling (`tools/import_stablehlo_subset.py`,
+  `docs/MLIR_COMPILER_PIPELINE_SUMMARY.md`), emitting `GraphFacts` instead
+  of going straight to HIR, so the same Qwen serving pipeline can be reached
+  from a StableHLO-shaped source. Not started.
 - **Layer-range compression.** Add `layer_range`/`repeat_count` as an
   additive field on `PerOpDecisionBundle`/the JSON schema, with a fold step
   that only collapses a range when decision content is verified identical
   across layers — never assumed. This is export-time only; the compiler's
   internal IR model stays full expansion regardless.
-- **Decode-with-past import**, and revisiting whether `KVLayoutPlanningPass`'s
-  `numLayers`-based KV-footprint formula should instead sum real per-op KV
-  attrs now that real per-layer ops exist to sum.
+- **Decode-with-past import.** Neither frontend adapter handles
+  `past_key_values` inputs/outputs or `use_cache_branch` control flow; both
+  target a single (prefill-shaped) graph today. Also revisit whether
+  `KVLayoutPlanningPass`'s `numLayers`-based KV-footprint formula should
+  instead sum real per-op KV attrs now that real per-layer ops exist to sum.
 
 ## Qwen GTX 1650 vLLM Serving: Phase C (Quantized) — Not Implemented
 

@@ -230,6 +230,61 @@ Truth boundary — do not overclaim this:
   compiler's internal IR model is always full expansion. See
   `docs/future_work.md`.
 
+### Real ONNX Protobuf Bridge (Phase 2 — frontend adapter, not a general importer)
+
+`GraphFacts` is the frontend boundary / adapter seam: `qwen-onnx-to-serving-mlir`
+never changed to support this milestone, because the adapter's whole job is
+to emit the same `GraphFacts` JSON schema Phase 1 already established.
+
+```text
+HF / external model source -> ONNX protobuf
+  -> tools/onnx_graph_to_facts.py (Python frontend adapter)
+  -> GraphFacts JSON -> qwen-onnx-to-serving-mlir (unchanged) -> Serving MLIR
+```
+
+`tools/onnx_graph_to_facts.py` loads a real `.onnx` file with the `onnx`
+package and reads real protobuf structure (node op types, initializer
+names/shapes/dtypes — never tensor values). It classifies per-layer roles
+by matching real initializer names against **Qwen2's specific HuggingFace
+naming convention** (`model.layers.{i}.self_attn.{q,k,v,o}_proj.weight`,
+`model.layers.{i}.mlp.{gate,up,down}_proj.weight`, `*layernorm*`,
+`model.embed_tokens.weight`, `lm_head.weight` or tied embedding), derives
+`num_layers`/`hidden_size`/`intermediate_size`/`vocab_size`/`dtype` from
+real shapes/dtypes, and detects RoPE and lm_head tying from real graph
+signals. `num_attention_heads`/`num_key_value_heads`/
+`max_position_embeddings` are not recoverable from graph structure alone —
+read from an HF `config.json` next to the `.onnx` file, or explicit CLI
+overrides, never guessed. Any missing per-layer role is a hard failure
+(`OnnxGraphToFactsError`), not a silent guess or omission.
+
+**Not a general ONNX importer** — only Qwen2's exact naming convention is
+recognized; the per-layer *operator sequence* is still a declared Qwen2
+architecture template (matching the fixture), not derived from raw graph
+edges. Truth boundary emitted:
+`"onnx_protobuf_parsed_pattern_matched_not_general_graph_interpreter"`.
+
+`tools/validate_onnx_graph_facts.py` validates any GraphFacts document:
+real bridge output (has a `provenance` field) gets full per-layer
+completeness checks (num_layers matches parsed layer count, every layer has
+q/k/v/o_proj + mlp roles, embedding/final_norm/lm_head detected or cleanly
+reported as tied) that fail hard on any gap; the hand-authored fixture (no
+`provenance` field) gets schema-only checks with per-layer completeness
+explicitly reported as skipped, not silently passed.
+
+**Current status:** the hand-authored fixture and the real bridge coexist —
+the fixture is kept as fast, deterministic, network-free regression
+coverage (`tests/test_onnx_graph_facts_fixture_regression.py`), not
+replaced. RoPE stays absorbed (not a distinct op); when detected it is
+stamped as a function-level `serving.positional_encoding = "rope"` attribute
+on `qwen_prefill`/`qwen_decode` — an optional GraphFacts field the C++
+importer reads additively (absent for the fixture, which emits identical
+MLIR as before this change).
+
+Not implemented (do not claim otherwise): general ONNX import for arbitrary
+model families, ONNX-MLIR (or equivalent) frontend integration, a Torch FX
+adapter, a StableHLO adapter, decode-with-past graph handling, and
+layer-range/export-time compression. See `docs/future_work.md`.
+
 ### Shared Capability Profiles
 
 The compiler and runtime intentionally read from the same capability data. Both

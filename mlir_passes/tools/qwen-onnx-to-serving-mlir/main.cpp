@@ -32,7 +32,11 @@
 //     raw_qwen_frontend_input.mlir simplification).
 //   - Tensor shapes are structural placeholders (dynamic where unconstrained),
 //     not derived from real per-op shape inference.
-//   - RoPE is not modeled as a distinct op.
+//   - RoPE is not modeled as a distinct op. If graph facts declare an
+//     optional "positional_encoding" field (stamped by a real-graph
+//     frontend adapter such as tools/onnx_graph_to_facts.py when it detects
+//     RoPE), it is only recorded as a declared serving.positional_encoding
+//     attribute on the emitted function -- absorbed, not materialized.
 //
 // Usage:
 //   qwen-onnx-to-serving-mlir \
@@ -94,6 +98,14 @@ struct GraphFacts {
   std::vector<std::string> decoder_layer_ops;
   std::vector<std::string> final_norm_ops;
   std::vector<std::string> lm_head_ops;
+
+  // Optional. "rope" when a Phase 2 real-graph frontend adapter
+  // (tools/onnx_graph_to_facts.py) detects RoPE in the source ONNX graph.
+  // RoPE is absorbed during pattern recognition rather than materialized as
+  // a distinct op (see docs/future_work.md); this field only stamps the
+  // declared fact onto the emitted function so it is not silently dropped.
+  // Empty when absent from graph facts (e.g. the hand-authored fixture).
+  std::string positional_encoding;
 };
 
 static llvm::Expected<std::vector<std::string>> requireStringArray(
@@ -193,6 +205,11 @@ static llvm::Expected<GraphFacts> parseGraphFacts(llvm::StringRef path) {
   if (auto r = requireStringArray(*graph, "lm_head"))
     facts.lm_head_ops = *r;
   else return r.takeError();
+
+  // Optional additive field; absent in the hand-authored fixture and in
+  // graph facts with no detected positional encoding signal.
+  if (auto v = obj->getString("positional_encoding"))
+    facts.positional_encoding = v->str();
 
   static const llvm::StringRef kSupportedOps[] = {
       "embed", "rmsnorm", "q_proj", "k_proj", "v_proj", "attention_scores",
@@ -396,8 +413,14 @@ static void emitPhaseFunction(llvm::raw_ostream &os, const GraphFacts &facts,
   llvm::StringRef fnName = isPrefill ? "qwen_prefill" : "qwen_decode";
 
   os << "  func.func @" << fnName << "(%tokens: tensor<"
-     << (isPrefill ? "?" : "1") << "xi32>) -> " << emitter.logitsTy()
-     << " {\n";
+     << (isPrefill ? "?" : "1") << "xi32>) -> " << emitter.logitsTy();
+  if (!facts.positional_encoding.empty()) {
+    // Declared fact only (absorbed during pattern recognition, not
+    // materialized as a graph op) -- see GraphFacts::positional_encoding.
+    os << " attributes {serving.positional_encoding = \""
+       << facts.positional_encoding << "\"}";
+  }
+  os << " {\n";
 
   std::string h;
   emitter.emitEmbedding(h);

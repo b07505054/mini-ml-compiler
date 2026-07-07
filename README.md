@@ -200,6 +200,89 @@ Run `mlir_passes/test/serving/RunQwenOnnxServingPlanExportTest.cmake` (CTest
 `mlir_passes/test/serving/llm_frontend_normalization_layered.mlir` (FileCheck)
 for the localized per-occurrence rewrite in isolation.
 
+### Real ONNX Protobuf Bridge (Phase 2 — frontend adapter, not a general importer)
+
+`GraphFacts` (the JSON schema above) is the **frontend boundary / adapter
+seam** in this architecture:
+
+```text
+HF / external model source
+  -> ONNX protobuf
+  -> Python frontend adapter (tools/onnx_graph_to_facts.py)
+  -> GraphFacts JSON
+  -> qwen-onnx-to-serving-mlir  [C++, unchanged from Phase 1]
+  -> Serving MLIR -> existing compiler passes -> ExecutionPlan
+```
+
+`tools/onnx_graph_to_facts.py` loads a real `.onnx` file with the Python
+`onnx` package and reads real protobuf structure — node op types,
+initializer names, initializer shapes/dtypes (metadata only; tensor values
+are never materialized). It classifies per-layer roles
+(`q_proj`/`k_proj`/`v_proj`/`o_proj`, mlp gate/up/down, both layernorms) by
+matching real initializer names against **Qwen2's specific HuggingFace
+parameter-naming convention** (e.g.
+`model.layers.{i}.self_attn.q_proj.weight`), derives `num_layers`,
+`hidden_size`, `intermediate_size`, `vocab_size`, and `dtype` from real
+initializer shapes/dtypes, and detects RoPE presence and lm_head/embedding
+weight tying from real graph signals. It emits the same `GraphFacts` JSON
+schema Phase 1 already established — `qwen-onnx-to-serving-mlir` needed
+**no changes** to consume it.
+
+**This is not a general ONNX importer.** It only recognizes Qwen2's
+decoder-only architecture (RMSNorm, GQA, SwiGLU MLP, separate q/k/v/o Linear
+layers) via this one naming convention. Any other model family, or a Qwen
+graph whose parameter names have been renamed/fused by an ONNX
+graph-optimization pass, is out of scope and fails the role-classification
+checks rather than guessing. The per-layer *operator sequence*
+(rmsnorm → q/k/v_proj → attention_scores → softmax → attention_output →
+kv_cache_boundary → o_proj → rmsnorm → mlp) is a **declared Qwen2
+architecture template**, matching the existing hand-authored fixture, not
+derived by tracing computational edges through the raw ONNX graph — what
+*is* derived from the real graph is layer count, per-layer role presence,
+real dimensions/dtype, and RoPE-ness.
+
+Truth boundary emitted in the bridge's output:
+`"onnx_protobuf_parsed_pattern_matched_not_general_graph_interpreter"` — a
+real ONNX protobuf was parsed, but role assignment is heuristic pattern
+matching tuned to Qwen2, not a general graph interpreter, and no numeric
+weight-value verification is performed.
+
+Scalar facts not recoverable from ONNX graph structure alone
+(`num_attention_heads`, `num_key_value_heads`, `max_position_embeddings`)
+are read from an HF `config.json` sitting next to the `.onnx` file (the
+layout HF Optimum's own export already produces) or from explicit CLI
+overrides — never guessed.
+
+`tools/validate_onnx_graph_facts.py` validates any `GraphFacts` document:
+for real bridge output (which carries an additive `provenance` field) it
+verifies `num_layers` matches the number of distinct parsed layer indices
+and that every layer has all required roles, failing hard on any gap. For
+the hand-authored fixture (no `provenance` field), it validates the
+top-level schema only and explicitly reports per-layer completeness checks
+as skipped, not silently passed.
+
+**Current status:** the hand-authored fixture
+(`configs/models/qwen_0_5b_onnx_graph_facts.json`) and the real bridge
+coexist. The fixture remains as fast, deterministic, network-free
+regression coverage (`tests/test_onnx_graph_facts_fixture_regression.py`);
+it is not replaced. RoPE is absorbed during pattern recognition rather than
+materialized as a distinct op — when detected, it is stamped as a
+function-level `serving.positional_encoding = "rope"` attribute on
+`qwen_prefill`/`qwen_decode` (an additive, harmless read the C++ importer
+performs only when the field is present; the hand-authored fixture has no
+such field and emits identical MLIR as before).
+
+Not implemented (do not claim otherwise): general ONNX import for arbitrary
+model families, ONNX-MLIR (or equivalent) frontend integration, a Torch FX
+adapter, a StableHLO adapter, decode-with-past graph handling, and
+layer-range/export-time compression. See `docs/future_work.md`.
+
+Tests: `tests/test_onnx_graph_to_facts.py` (bridge unit tests plus an
+end-to-end test through the real `qwen-onnx-to-serving-mlir` binary; skips
+cleanly if `onnx` isn't installed or the binary isn't built) and
+`tests/test_onnx_graph_facts_fixture_regression.py` (fixture regression,
+no optional dependencies).
+
 ### CV Compiler Pipeline
 
 - Registered `cv` MLIR dialect with seven CV operations.
