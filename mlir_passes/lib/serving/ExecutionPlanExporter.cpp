@@ -140,6 +140,8 @@ static llvm::json::Object serializeQuantizationDecision(const QuantizationDecisi
   obj["algorithm"]          = d.algorithm;
   if (!d.op_type.empty())
     obj["op_type"] = d.op_type;
+  if (!d.quantized_model_artifact_ref.empty())
+    obj["quantized_model_artifact_ref"] = d.quantized_model_artifact_ref;
   return obj;
 }
 

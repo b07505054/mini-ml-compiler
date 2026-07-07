@@ -34,6 +34,150 @@ modules in one compiler pipeline** — not parallel tracks.
 The compiler produces the **theoretical best static solution** given declared
 capability profiles.
 
+## Current Compiler Pipeline (Qwen / LLM Serving)
+
+The abstract pipeline above is concretely realized today, for the Qwen/LLM
+serving path, as:
+
+```text
+Model
+    │
+    ▼
+ONNX Export
+    │
+    ▼
+Real ONNX Graph
+    │
+    ▼
+Python Frontend Adapter
+    │
+    ▼
+GraphFacts (Frontend Boundary)
+    │
+    ▼
+Serving MLIR
+    │
+    ▼
+Semantic / Planning Passes
+    │
+    ▼
+ExecutionPlan
+```
+
+Concretely: an HF model → `tools/export_qwen_onnx.py` (optional HF Optimum
+export) → a real `.onnx` protobuf file → `tools/onnx_graph_to_facts.py`
+(Python frontend adapter, pattern-matched to Qwen2's HuggingFace naming
+convention) → `GraphFacts` JSON → `mlir_passes/tools/qwen-onnx-to-serving-mlir`
+(C++) → full per-layer-expanded Serving MLIR → `LLMFrontendNormalizationPass`
++ the 16-pass serving pipeline described below → `execution_plan.json`. See
+`README.md`'s "ONNX Graph Import Path" and "Real ONNX Protobuf Bridge"
+sections and `CLAUDE.md` for full detail and truth boundary of every stage.
+
+The CV pipeline (`## Current CV Compiler Pipeline` and related sections in
+`README.md`) has its own, separate, not-yet-implemented ONNX import — the
+frontend adapter described here is specific to the Qwen/LLM serving path.
+
+## What GraphFacts Is (and Is Not)
+
+`GraphFacts` is the JSON contract between the frontend layer and the compiler
+layer for the Qwen/LLM serving path.
+
+`GraphFacts` is **NOT**:
+- a model specification — the separate, legacy `qwen-to-serving-mlir` /
+  `configs/models/qwen_0_5b_spec.json` path this repo is moving away from,
+  not toward.
+- fake graph generation. One specific `GraphFacts` document (the
+  hand-authored fixture at `configs/models/qwen_0_5b_onnx_graph_facts.json`)
+  is honestly labeled as such and kept for regression coverage — that does
+  not make `GraphFacts` itself a fake-graph mechanism.
+
+`GraphFacts` **IS**:
+- a frontend adapter representation — the contract any frontend (ONNX today;
+  potentially Torch FX / StableHLO later) must produce.
+- a compiler input boundary — everything downstream of it (the C++ importer,
+  `LLMFrontendNormalizationPass`, the 16-pass pipeline, `ExecutionPlan`
+  export) needs no changes when the source of `GraphFacts` changes.
+- derived from a real ONNX graph when produced by the real bridge — real
+  protobuf parsing, real initializer names/shapes/dtypes, not fabricated
+  (though role assignment within it is still Qwen2-pattern-matched, not a
+  general graph interpreter).
+- intentionally isolated from compiler policy — it carries structural facts
+  and declared metadata only; quantization, layout, and lowering policy live
+  entirely downstream in the 16-pass pipeline.
+
+## Architecture Philosophy
+
+The compiler is divided into three layers:
+
+- **Frontend** — parses foreign model formats. Currently ONNX, through a
+  Python frontend adapter pattern-matched to Qwen2's HuggingFace naming
+  convention. Future: Torch FX / StableHLO adapters (not implemented).
+- **Compiler** — semantic canonicalization (recognizing raw graph structure
+  as the `llm.*`/`serving.*` vocabulary), planning (the 16-pass serving
+  pipeline described below), and execution plan generation.
+- **Runtime** — executes the produced plan. This belongs entirely to the
+  sibling `heterogeneous-inference-runtime` project; this repo never
+  executes a plan, only produces one.
+
+## Current Capability
+
+Current:
+- Reads real ONNX graphs.
+- Extracts graph structure and model metadata (per-layer role presence,
+  dimensions, dtype, RoPE/lm_head-tying signals — from real initializer
+  names and shapes, never guessed; hard failure on any gap).
+- Converts ONNX-derived information into `GraphFacts`.
+- Generates Serving MLIR.
+- Generates `ExecutionPlan`.
+
+Not yet:
+- A general ONNX compiler — only Qwen2's HuggingFace naming convention is
+  recognized.
+- General ONNX→MLIR lowering — no generic ONNX-dialect import.
+- ONNX-MLIR integration.
+- A Torch FX frontend.
+- A StableHLO frontend (as a source for this pipeline — the unrelated
+  "StableHLO-compatible" Linalg/Arith decomposition demo elsewhere in this
+  repo is a separate path).
+
+## Future Architecture
+
+Long-term target, if a second/third frontend is ever added:
+
+```text
+ONNX / Torch FX / StableHLO
+            │
+            ▼
+Frontend Parser
+            │
+            ▼
+Raw Import Graph
+            │
+            ▼
+Semantic Canonicalization
+            │
+            ▼
+Serving MLIR
+            │
+            ▼
+Planning Passes
+            │
+            ▼
+ExecutionPlan
+```
+
+- Semantic recognition should eventually move out of Python and into a
+  compiler-side MLIR pass, following the pattern-matching technique
+  `StableHLOCompatibleRMSNormPattern` already demonstrates in
+  `mlir_passes/lib/MatMulBiasReluFusionPass.cpp` for a different pattern.
+- Frontend adapters should eventually become thin format parsers only — pure
+  parsing and graph traversal, no architecture knowledge.
+- `GraphFacts` is the current transition layer: it already isolates planning
+  passes from frontend format details; what's not yet true is that role
+  assignment happens in the compiler rather than in the frontend adapter.
+
+This is a target, not a current capability. See `docs/future_work.md`.
+
 ## Two Project Components
 
 This repository contains two components. They are not parallel tracks; one is

@@ -642,6 +642,32 @@ set_tests_properties(QwenGTX1650CompileTest PROPERTIES
 )
 
 # ---------------------------------------------------------------------------
+# CTest: QwenAwqForcedCompileTest
+# End-to-end: qwen-to-serving-mlir -> compile-for-target with the experimental
+# forced-AWQ GTX 1650 profile (Phase C, minimal, AWQ only).
+# Asserts global_decisions.quantization carries strategy=weight_only_int4,
+# algorithm=awq, quantized_model_artifact_ref, and the forced-quant
+# truth_boundary; no measured fields present.
+# ---------------------------------------------------------------------------
+set(_QWEN_AWQ_DIR  "${CMAKE_CURRENT_BINARY_DIR}/qwen_awq_forced_integration")
+set(_QWEN_AWQ_MLIR "${_QWEN_AWQ_DIR}/qwen_0_5b_awq.mlir")
+set(_QWEN_AWQ_JSON "${_QWEN_AWQ_DIR}/execution_plan.json")
+
+add_test(NAME QwenAwqForcedCompileTest
+  COMMAND ${CMAKE_COMMAND}
+    -DQWEN_TOOL=$<TARGET_FILE:qwen-to-serving-mlir>
+    -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+    -DSPEC=${REPO_ROOT}/configs/models/qwen_0_5b_spec.json
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/nvidia_gtx1650_maxq_awq_forced.json
+    -DMLIR_OUT=${_QWEN_AWQ_MLIR}
+    -DJSON_OUT=${_QWEN_AWQ_JSON}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunQwenAwqForcedCompileTest.cmake
+)
+set_tests_properties(QwenAwqForcedCompileTest PROPERTIES
+  DEPENDS "qwen-to-serving-mlir;compile-for-target"
+)
+
+# ---------------------------------------------------------------------------
 # qwen-onnx-to-serving-mlir: ONNX-graph-facts frontend (Phase 1 scaffold)
 #
 # Reads configs/models/qwen_0_5b_onnx_graph_facts.json (a hand-authored

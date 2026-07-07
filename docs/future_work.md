@@ -144,6 +144,18 @@ not a general importer) is done:
   installed) plus an end-to-end test through the real
   `qwen-onnx-to-serving-mlir` binary.
 
+Long-term architecture direction (target, not current — see
+`docs/architecture.md`'s "Future Architecture" section for the full
+diagram): semantic recognition (role classification, RoPE/tied-embedding
+detection) should eventually move out of the Python frontend adapter and
+into a compiler-side MLIR pass; frontend adapters should eventually become
+thin format parsers only (pure parsing and graph traversal, no architecture
+knowledge); `GraphFacts` is the current transition layer — it already
+isolates planning passes from frontend format details, but today it still
+carries semantic role labels a Python adapter assigns, which a future
+compiler-side recognition pass would assign instead. The items below are
+concrete steps toward that target, not requirements for it to already exist.
+
 Remaining work (not done, do not claim otherwise):
 
 - **ONNX-MLIR or equivalent frontend integration.** `tools/onnx_graph_to_facts.py`
@@ -175,32 +187,69 @@ Remaining work (not done, do not claim otherwise):
   `KVLayoutPlanningPass`'s `numLayers`-based KV-footprint formula should
   instead sum real per-op KV attrs now that real per-layer ops exist to sum.
 
-## Qwen GTX 1650 vLLM Serving: Phase C (Quantized) — Not Implemented
+## Qwen GTX 1650 vLLM Serving: Phase C (Quantized) — AWQ Minimal, GPTQ Not Implemented
 
 `artifacts/qwen/execution_plan.json` (fp16, quantization `none`/`fp16_fallback`)
 is the compiler-side source artifact for the measured A/B vLLM benchmark
-recorded in `heterogeneous-inference-runtime` (`results/qwen_no_quant/`). A
-quantized Phase C is not implemented. Minimum remaining work:
+recorded in `heterogeneous-inference-runtime` (`results/qwen_no_quant/`).
 
-- A real AWQ/GPTQ Qwen weight export step (e.g. AutoAWQ / auto-gptq against the
-  original `Qwen/Qwen2.5-0.5B-Instruct` checkpoint), producing a local
-  quantized model artifact — this repo has no such export tool today.
-- A target profile that actually declares int4/AWQ backend support.
-  `configs/target_profiles/nvidia_gtx1650_maxq.json` currently declares
-  `supportedQuantModes: ["none"]` for both `cuda_triton` and `cuda_cublas`
-  backends (Turing, cc 7.5, no native INT4 tensor cores) — it cannot honestly
-  produce an AWQ `QuantizationDecision` as-is. Either add a new profile for a
-  quant-capable target or add an explicit experimental forced-quant profile
-  variant with its own truth-boundary label.
-- A `QuantizationStrategyPlanningPass` decision path that selects
-  `weight_only_int4`/AWQ when the profile allows it (see the illustrative
-  example in `docs/EXECUTION_PLAN_SCHEMA.md`, which is not yet real output).
-- A materializer update on the runtime side
-  (`deployment/vllm_adapter/config_materializer.py` in
-  `heterogeneous-inference-runtime`) to emit `--quantization awq|gptq` and
-  point `--model` at the quantized artifact path instead of the HF repo id.
-- A repeatability benchmark pass for the quantized path mirroring the existing
-  `results/qwen_no_quant/repeatability_summary.md` structure.
+A minimal Phase C (AWQ only) is now implemented:
+
+- `tools/export_qwen_awq.py` — real AutoAWQ export edge tool. Fails clearly
+  (non-zero exit, install instructions, no fake artifact) when AutoAWQ is
+  missing; this repo's development machine (macOS, no CUDA) cannot run the
+  actual export — AutoAWQ has no CPU/macOS quantization kernel path. Output:
+  `artifacts/qwen_awq/` + `provenance.json` (source model, method, tool
+  version, calibration note, `created_at`, `truth_boundary`).
+- `configs/target_profiles/nvidia_gtx1650_maxq_awq_forced.json` — an
+  experimental forced-quant profile variant, distinct from
+  `nvidia_gtx1650_maxq.json`. Its per-op `backendCapabilities` are byte-for-byte
+  identical to the no-quant profile (`supportedQuantModes: ["none"]`) — this
+  does **not** claim GTX 1650 gained native INT4 Tensor Core support. It adds
+  one new top-level `forcedQuantization` block
+  (`strategy: weight_only_int4`, `algorithm: awq`,
+  `quantizedModelArtifactRef: artifacts/qwen_awq`,
+  `truthBoundary: experimental_forced_quant_not_native_int4_support_on_gtx1650`)
+  that `compile-for-target` reads and attaches as module attrs only when
+  present — the unmodified no-quant profile produces a byte-identical
+  `execution_plan.json` to before this change (verified: `diff` against the
+  checked-in `artifacts/qwen/execution_plan.json` is empty).
+- `tools/run_qwen_awq_compiler_pipeline.sh` — produces
+  `artifacts/qwen_awq_plan/execution_plan.json`, whose
+  `global_decisions.quantization` now carries `strategy`, `algorithm`,
+  `quantized_model_artifact_ref`, and `truth_boundary` (extended
+  `QuantizationDecision` in `mlir_passes/include/decision/Decision.h`,
+  `ExecutionPlanBuilder.cpp`, `ExecutionPlanExporter.cpp`). Covered by CTest
+  `QwenAwqForcedCompileTest`.
+- Materializer update on the runtime side
+  (`deployment/vllm_adapter/config_materializer.py` +
+  `deployment/execution_plan/path_builder.py` in
+  `heterogeneous-inference-runtime`): emits `--quantization awq` and points
+  `--model`/`--tokenizer` at `quantized_model_artifact_ref` instead of the HF
+  repo id, only when that ref is present. No-quant (B) materialization is
+  unchanged (regression-tested).
+- `scripts/run_qwen_quant_benchmark.sh` (in `heterogeneous-inference-runtime`)
+  — A/B/C runner under `results/qwen_quant/`. Materializes all three server
+  commands unconditionally; runs the actual servers/benchmarks only when
+  vLLM is importable and the AWQ artifact exists locally. On this
+  development machine (no vLLM, no AWQ artifact), it stops after
+  materialization and still writes `quant_comparison.md` with truth
+  boundaries — no measured C results exist yet.
+
+Remaining/not implemented:
+
+- GPTQ export and materialization. Only AWQ is implemented; extending to
+  GPTQ means adding an `auto-gptq` export path in a new tool (or extending
+  `export_qwen_awq.py`'s dependency check) and a second `algorithm: "gptq"`
+  branch — the schema (`QuantizationDecision.algorithm`) already
+  accommodates it, no schema change needed.
+- No accuracy evaluation of the AWQ artifact (perplexity, task benchmarks).
+- No measured C results — this requires actually running
+  `tools/export_qwen_awq.py` and `scripts/run_qwen_quant_benchmark.sh` on a
+  CUDA-capable Linux host with vLLM installed. Until then, C is
+  materialized-only.
+- Export-time layer-range compression for the AWQ-forced plan (same gap as
+  the no-quant Phase 1 plan — see above).
 
 ## Documentation Work
 

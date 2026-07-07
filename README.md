@@ -51,8 +51,12 @@ Static optimization — Decision Engine (16-pass serving pipeline)
 ExecutionPlan  [compiler deliverable]
 ```
 
-ONNX import, backend kernel mapping, dynamic-shape support, and PocketChef
-visualization of the CV plan are future work.
+For the **CV pipeline** specifically, ONNX import, backend kernel mapping,
+dynamic-shape support, and PocketChef visualization of the CV plan are future
+work — see "CV Compiler Pipeline" below. For the **Qwen/LLM serving
+pipeline**, a real ONNX frontend adapter is implemented (not a general ONNX
+importer) — see "Current Compiler Pipeline" and "Real ONNX Protobuf Bridge"
+below.
 
 ### Honest Claims / Not Claimed
 
@@ -75,6 +79,157 @@ Not claimed:
   management — these belong to `heterogeneous-inference-runtime`.
 - The C++ runtime harness and the Python runtime project are one production
   system.
+
+### Current Compiler Pipeline (Qwen / LLM Serving)
+
+The abstract diagram above (Frontend → Shared Capability Profiles → Static
+Optimization → ExecutionPlan) is concretely realized today, for the Qwen/LLM
+serving path, as:
+
+```text
+Model
+    │
+    ▼
+ONNX Export
+    │
+    ▼
+Real ONNX Graph
+    │
+    ▼
+Python Frontend Adapter
+    │
+    ▼
+GraphFacts (Frontend Boundary)
+    │
+    ▼
+Serving MLIR
+    │
+    ▼
+Semantic / Planning Passes
+    │
+    ▼
+ExecutionPlan
+```
+
+Concretely: an HF model → `tools/export_qwen_onnx.py` (optional HF Optimum
+export) → a real `.onnx` protobuf file → `tools/onnx_graph_to_facts.py`
+(Python frontend adapter) → `GraphFacts` JSON → `mlir_passes/tools/qwen-onnx-to-serving-mlir`
+(C++, unchanged since Phase 1) → full per-layer-expanded Serving MLIR →
+`LLMFrontendNormalizationPass` + the 16-pass serving pipeline →
+`execution_plan.json`. See "ONNX Graph Import Path (Phase 1)" and "Real ONNX
+Protobuf Bridge (Phase 2)" below for the full detail and truth boundary of
+every stage.
+
+### What GraphFacts Is (and Is Not)
+
+`GraphFacts` is **NOT**:
+- a model specification — that's the separate, legacy `qwen-to-serving-mlir`
+  / `configs/models/qwen_0_5b_spec.json` path (see below), which this repo
+  is moving away from, not toward.
+- fake graph generation. The hand-authored fixture
+  (`configs/models/qwen_0_5b_onnx_graph_facts.json`) is one specific,
+  honestly-labeled instance of a `GraphFacts` document that predates the
+  real bridge and remains as regression coverage — it is not what
+  `GraphFacts` as a schema/boundary concept inherently is.
+
+`GraphFacts` **IS**:
+- a frontend adapter representation — the output contract any frontend
+  (today: the ONNX bridge; potentially later: Torch FX / StableHLO adapters)
+  must produce.
+- the compiler input boundary — `qwen-onnx-to-serving-mlir` and everything
+  downstream needs no changes when the source of `GraphFacts` changes.
+- derived from a real ONNX graph when produced by
+  `tools/onnx_graph_to_facts.py` — real protobuf parsing, real initializer
+  names/shapes/dtypes, not fabricated (though role assignment within it is
+  still Qwen2-pattern-matched, not a general graph interpreter — see below).
+- intentionally isolated from compiler policy — it carries structural facts
+  and declared metadata, never planning decisions; quantization, layout, and
+  lowering policy live entirely downstream in the 16-pass pipeline.
+
+### Architecture Philosophy
+
+The compiler is divided into three layers:
+
+- **Frontend** — parses foreign model formats. Currently ONNX, through a
+  Python frontend adapter (`tools/onnx_graph_to_facts.py`) pattern-matched to
+  Qwen2's HuggingFace naming convention. Future: Torch FX / StableHLO
+  adapters (not implemented — see "Future Architecture" below).
+- **Compiler** — semantic canonicalization (recognizing raw graph structure
+  as the `llm.*`/`serving.*` vocabulary), planning (the 16-pass serving
+  pipeline), and execution plan generation.
+- **Runtime** — executes the produced plan. This belongs entirely to the
+  sibling `heterogeneous-inference-runtime` project; this repo never
+  executes a plan, only produces one.
+
+### Current Capability
+
+Current:
+- ✓ Reads real ONNX graphs (`tools/onnx_graph_to_facts.py`, real `.onnx`
+  protobuf parsed via the `onnx` Python package).
+- ✓ Extracts graph structure and model metadata (per-layer role presence,
+  dimensions, dtype, RoPE/lm_head-tying signals — from real initializer
+  names and shapes, never guessed; hard failure on any gap).
+- ✓ Converts ONNX-derived information into `GraphFacts` (the frontend
+  boundary).
+- ✓ Generates Serving MLIR (`qwen-onnx-to-serving-mlir`, full per-layer
+  expansion).
+- ✓ Generates `ExecutionPlan` (the unchanged 16-pass planning pipeline and
+  exporter).
+
+Not yet:
+- ✗ A general ONNX compiler — only Qwen2's specific HuggingFace naming
+  convention is recognized; other model families, or renamed/fused
+  parameters, are out of scope and fail rather than guess.
+- ✗ General ONNX→MLIR lowering — no generic ONNX-dialect import; role
+  recognition is Python name-pattern-matching, not structural graph-edge
+  tracing over an imported IR.
+- ✗ ONNX-MLIR integration — no `onnx-mlir` dependency exists in this repo.
+- ✗ A Torch FX frontend — not started.
+- ✗ A StableHLO frontend — not started (the existing "StableHLO-compatible"
+  Linalg/Arith decomposition demo elsewhere in this repo is unrelated to this
+  pipeline).
+
+### Future Architecture
+
+Long-term target, if a second/third frontend is ever added:
+
+```text
+ONNX / Torch FX / StableHLO
+            │
+            ▼
+Frontend Parser
+            │
+            ▼
+Raw Import Graph
+            │
+            ▼
+Semantic Canonicalization
+            │
+            ▼
+Serving MLIR
+            │
+            ▼
+Planning Passes
+            │
+            ▼
+ExecutionPlan
+```
+
+- Semantic recognition (role classification, RoPE/tied-embedding detection)
+  should eventually move out of Python and into a compiler-side MLIR pass,
+  following the pattern-matching technique `StableHLOCompatibleRMSNormPattern`
+  already demonstrates in `mlir_passes/lib/MatMulBiasReluFusionPass.cpp` for
+  a different pattern.
+- Frontend adapters should eventually become thin format parsers only — pure
+  parsing and graph traversal, no architecture knowledge — once that
+  compiler-side recognition pass exists.
+- `GraphFacts` is the **current transition layer**: it already isolates
+  planning passes from frontend format details; what's not yet true is that
+  role assignment happens in the compiler rather than in the Python adapter
+  that produces `GraphFacts`.
+
+This is a target architecture, not a current capability — see "Current
+Capability" above and `docs/future_work.md` for status.
 
 ## Latest Milestones
 
@@ -130,15 +285,29 @@ vLLM benchmark:
   profile's declared `supportedQuantModes: ["none"]`). Measured E2E delta vs.
   the conservative manual baseline is within ~1% across three repeatability
   trials — treated as benchmark noise, not a speedup claim.
-- **C (compiler quant, not implemented):** would require a real AWQ/GPTQ
-  Qwen weight artifact and a target profile that declares int4/AWQ support.
-  The current GTX 1650 profile (Turing, cc 7.5) declares no native INT4
-  tensor-core path, so quantization stays `none` for this target until a
-  quant-capable profile and a real quantized checkpoint exist.
+- **C (compiler quant, minimal, AWQ only — not yet measured):** an
+  AWQ Qwen checkpoint (`tools/export_qwen_awq.py`, real AutoAWQ export,
+  fails clearly without the AutoAWQ dependency) plus an experimental
+  forced-quant target profile
+  (`configs/target_profiles/nvidia_gtx1650_maxq_awq_forced.json`) whose
+  per-op `backendCapabilities` are unchanged from the no-quant profile — it
+  does not claim GTX 1650 (Turing, cc 7.5) gained native INT4 Tensor Core
+  support. `tools/run_qwen_awq_compiler_pipeline.sh` produces
+  `artifacts/qwen_awq_plan/execution_plan.json` with
+  `global_decisions.quantization = {strategy: weight_only_int4, algorithm:
+  awq, quantized_model_artifact_ref, truth_boundary:
+  experimental_forced_quant_not_native_int4_support_on_gtx1650}`. GPTQ is not
+  implemented. No measured C results exist yet — this repo's development
+  machine has no CUDA and no AutoAWQ, so `scripts/run_qwen_quant_benchmark.sh`
+  (runtime repo) materializes all three (A/B/C) vLLM server commands but
+  stops after materialization until run on a CUDA-capable host with the AWQ
+  artifact present.
 
 Measured evidence for A/B lives in `heterogeneous-inference-runtime` under
-`results/qwen_no_quant/`, not in this repo. See `docs/EXECUTION_PLAN_SCHEMA.md`
-and `docs/future_work.md` for the schema and the Phase C plan.
+`results/qwen_no_quant/`, not in this repo; materialized (not yet measured)
+C commands live under that repo's `results/qwen_quant/`. See
+`docs/EXECUTION_PLAN_SCHEMA.md` and `docs/future_work.md` for the schema and
+what remains for Phase C.
 
 `qwen-to-serving-mlir` (above) is now the **legacy/scaffold ModelSpec path**:
 it hand-templates a single fixed op block per phase from 9 declared scalar

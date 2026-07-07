@@ -159,6 +159,162 @@ The demo does NOT claim:
 - a CoreML profile as evidence of ANE internal execution
 - fallback is selected immediately after a kernel miss
 
+### Current Compiler Pipeline (Qwen / LLM Serving)
+
+The abstract pipeline above (Frontend → Shared Capability Profiles → Static
+Optimization → ExecutionPlan) is concretely realized today, for the Qwen/LLM
+serving path, as:
+
+```text
+Model
+    │
+    ▼
+ONNX Export
+    │
+    ▼
+Real ONNX Graph
+    │
+    ▼
+Python Frontend Adapter
+    │
+    ▼
+GraphFacts (Frontend Boundary)
+    │
+    ▼
+Serving MLIR
+    │
+    ▼
+Semantic / Planning Passes
+    │
+    ▼
+ExecutionPlan
+```
+
+Each stage, concretely: HF model → `tools/export_qwen_onnx.py` (optional, HF
+Optimum export) → a real `.onnx` protobuf file → `tools/onnx_graph_to_facts.py`
+(Python frontend adapter) → `GraphFacts` JSON → `qwen-onnx-to-serving-mlir`
+(C++) → full per-layer-expanded Serving MLIR → `LLMFrontendNormalizationPass`
++ the 16-pass serving pipeline → `execution_plan.json`. See "GTX 1650 / Qwen
+vLLM Serving Demo," "ONNX Graph Import Path (Phase 1)," and "Real ONNX
+Protobuf Bridge (Phase 2)" below for the full detail and truth boundary of
+every stage.
+
+### What GraphFacts Is (and Is Not)
+
+`GraphFacts` is NOT:
+- a model specification (that is the separate, legacy `qwen-to-serving-mlir`
+  / `configs/models/qwen_0_5b_spec.json` path — see below).
+- fake graph generation. The hand-authored fixture
+  (`configs/models/qwen_0_5b_onnx_graph_facts.json`) is one specific,
+  honestly-labeled instance of a `GraphFacts` document that predates the
+  bridge and remains as regression coverage — it is not what `GraphFacts` as
+  a schema/boundary concept inherently is.
+
+`GraphFacts` IS:
+- a frontend adapter representation — the output contract every frontend
+  (today: the ONNX bridge; potentially, later: Torch FX / StableHLO
+  adapters) must produce.
+- the compiler input boundary — `qwen-onnx-to-serving-mlir` and everything
+  downstream (`LLMFrontendNormalizationPass`, the 16-pass pipeline,
+  `ExecutionPlan` export) consumes only this schema and needs no changes
+  when the source of `GraphFacts` changes.
+- derived from a real ONNX graph when produced by
+  `tools/onnx_graph_to_facts.py` (real protobuf parsing, real initializer
+  names/shapes/dtypes) — not fabricated, though role assignment within it is
+  still Qwen2-pattern-matched, not a general graph interpreter (see below).
+- intentionally isolated from compiler policy — it carries structural facts
+  (layer count, dims, dtype, per-role presence) and declared metadata
+  (`positional_encoding`), never planning decisions; quantization, layout,
+  and lowering policy live entirely downstream in the 16-pass pipeline.
+
+### Architecture Philosophy
+
+The compiler is divided into three layers:
+
+- **Frontend** — parses foreign model formats. Currently: ONNX, through a
+  Python frontend adapter (`tools/onnx_graph_to_facts.py`) pattern-matched to
+  Qwen2's HuggingFace naming convention. Future: Torch FX / StableHLO
+  adapters (not implemented — see "Future Architecture" below).
+- **Compiler** — semantic canonicalization (recognizing raw graph structure
+  as the `llm.*`/`serving.*` vocabulary; today done partly in the Python
+  frontend adapter and partly in `LLMFrontendNormalizationPass`), planning
+  (the 16-pass serving pipeline), and execution plan generation
+  (`PlanSelectionPass` + exporter).
+- **Runtime** — executes the produced plan. This belongs entirely to the
+  sibling `heterogeneous-inference-runtime` project; this repo never
+  executes a plan, only produces one.
+
+### Current Capability
+
+Current:
+- Reads real ONNX graphs (`tools/onnx_graph_to_facts.py`, real `.onnx`
+  protobuf parsed via the `onnx` Python package).
+- Extracts graph structure and model metadata (per-layer role presence,
+  dimensions, dtype, RoPE/lm_head-tying signals — from real initializer
+  names and shapes, never guessed; hard failure on any gap).
+- Converts ONNX-derived information into `GraphFacts` (the frontend
+  boundary).
+- Generates Serving MLIR (`qwen-onnx-to-serving-mlir`, full per-layer
+  expansion).
+- Generates `ExecutionPlan` (the unchanged 16-pass planning pipeline and
+  exporter).
+
+Not yet:
+- A general ONNX compiler — only Qwen2's specific HuggingFace naming
+  convention is recognized; any other model family, or a renamed/fused
+  parameter, is out of scope and fails rather than guessing.
+- General ONNX→MLIR lowering — there is no generic ONNX-dialect import; role
+  recognition is Python name-pattern-matching, not structural graph-edge
+  tracing over an imported IR.
+- ONNX-MLIR integration — no `onnx-mlir` dependency exists in this repo.
+- A Torch FX frontend — not started.
+- A StableHLO frontend — not started. (The existing "StableHLO-compatible"
+  Linalg/Arith decomposition support described elsewhere in this file is a
+  separate, unrelated demo path, not a StableHLO import for this pipeline.)
+
+### Future Architecture
+
+Long-term target, if a second/third frontend is ever added:
+
+```text
+ONNX / Torch FX / StableHLO
+            │
+            ▼
+Frontend Parser
+            │
+            ▼
+Raw Import Graph
+            │
+            ▼
+Semantic Canonicalization
+            │
+            ▼
+Serving MLIR
+            │
+            ▼
+Planning Passes
+            │
+            ▼
+ExecutionPlan
+```
+
+- Semantic recognition (role classification, RoPE/tied-embedding detection)
+  should eventually move out of Python and into a compiler-side MLIR pass,
+  following the pattern-matching technique `StableHLOCompatibleRMSNormPattern`
+  already demonstrates in `mlir_passes/lib/MatMulBiasReluFusionPass.cpp` for
+  a different pattern.
+- Frontend adapters should eventually become thin format parsers only —
+  pure parsing and graph traversal, no architecture knowledge — once that
+  compiler-side recognition pass exists.
+- `GraphFacts` is the **current transition layer**: it already isolates
+  planning passes from frontend format details, which is the part of this
+  target that is already true. What is not yet true is that role assignment
+  happens in the compiler rather than in the Python adapter that produces
+  `GraphFacts`.
+
+This is a target architecture, not a current capability — see "Current
+Capability" above and `docs/future_work.md` for status.
+
 ### GTX 1650 / Qwen vLLM Serving Demo
 
 `tools/run_qwen_compiler_pipeline.sh` produces
@@ -178,11 +334,29 @@ vLLM benchmark (`results/qwen_no_quant/` in that repo):
 - Compiler-guided no-quant (B) uses the same original Qwen weights as the
   manual baseline (A); measured E2E delta is within ~1% across repeatability
   trials, i.e. benchmark noise, not a speedup claim.
-- A quantized Phase C (compiler-produced AWQ/GPTQ Qwen artifact + a
-  quant-capable target profile) is not implemented. See `docs/future_work.md`.
+- A minimal quantized Phase C (AWQ only; GPTQ not implemented) now exists:
+  `tools/export_qwen_awq.py` (real AutoAWQ export edge tool, fails clearly
+  without AutoAWQ), `configs/target_profiles/nvidia_gtx1650_maxq_awq_forced.json`
+  (an experimental forced-quant profile variant — per-op `backendCapabilities`
+  are unchanged from the no-quant profile; only a new `forcedQuantization`
+  block is added), and `tools/run_qwen_awq_compiler_pipeline.sh` (produces
+  `artifacts/qwen_awq_plan/execution_plan.json`, whose
+  `global_decisions.quantization` carries `strategy: weight_only_int4`,
+  `algorithm: awq`, `quantized_model_artifact_ref`, and
+  `truth_boundary: experimental_forced_quant_not_native_int4_support_on_gtx1650`).
+  The runtime-side materializer (`heterogeneous-inference-runtime`) emits
+  `--quantization awq` and points `--model`/`--tokenizer` at the quantized
+  artifact path. No measured C results exist yet — this development machine
+  has no CUDA and no AutoAWQ; `scripts/run_qwen_quant_benchmark.sh` in that
+  repo materializes all three (A/B/C) server commands but stops short of
+  running C until the AWQ artifact and a CUDA host are available. See
+  `docs/future_work.md` for what remains (GPTQ, accuracy evaluation, measured
+  results).
 - `docs/EXECUTION_PLAN_SCHEMA.md`'s AWQ JSON example is a schema illustration
-  of a hypothetical quant-capable profile, not this profile's actual output —
-  do not read it as evidence that AWQ planning is implemented for GTX 1650.
+  that predates this Phase C work; it happens to match the real
+  `strategy`/`algorithm` field values now produced for the forced-AWQ profile,
+  but do not read it as evidence of measured behavior — it is still not a
+  real execution trace.
 - `qwen-to-serving-mlir` (above) is the **legacy/scaffold ModelSpec path**: a
   hand-templated single op block per phase, never looped over `num_layers`.
   It does not represent a real per-layer graph. See below for the real

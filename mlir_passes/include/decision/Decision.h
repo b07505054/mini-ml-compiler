@@ -80,6 +80,12 @@ struct QuantizationDecision {
   std::string op_type;               // populated only when scope == PerOp
   // accuracy_risk: "low" | "medium" | "high" | ""
   std::string accuracy_risk;
+  // Path/ref to a compiler-produced (or externally produced, compiler-
+  // referenced) quantized model artifact, e.g. "artifacts/qwen_awq". Empty
+  // when algorithm == "none" or no offline-quantized checkpoint exists.
+  // The compiler never loads or inspects this artifact's weights; it only
+  // carries the reference through to the runtime materializer.
+  std::string quantized_model_artifact_ref;
 };
 
 // Backend selection for a function (Function) or op (PerOp).

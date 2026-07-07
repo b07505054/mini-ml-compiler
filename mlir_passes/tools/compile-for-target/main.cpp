@@ -182,6 +182,19 @@ struct TargetDeviceProfile {
   std::vector<BackendCapabilityProfile> backendCapabilities;
   // Kernel library capability declarations (Layer 3: actual kernel availability).
   std::vector<KernelLibraryProfile> kernelLibraries;
+
+  // Optional experimental global quantization override (Phase C minimal AWQ
+  // support). When absent, quantization planning is unchanged: no
+  // quantization.* module attrs are set by this driver, exactly as before
+  // this field existed. When present, it forces a GLOBAL quantization
+  // decision (global_decisions.quantization in the exported plan) that is
+  // independent of per-op backendCapabilities.supportedQuantModes above --
+  // it does not claim the declared backend/kernel capabilities changed.
+  bool        hasForcedQuantization = false;
+  std::string forcedQuantStrategy;         // e.g. "weight_only_int4"
+  std::string forcedQuantAlgorithm;        // e.g. "awq"
+  std::string forcedQuantArtifactRef;      // e.g. "artifacts/qwen_awq"
+  std::string forcedQuantTruthBoundary;
 };
 
 // ---------------------------------------------------------------------------
@@ -427,6 +440,21 @@ parseDeviceProfile(llvm::StringRef path) {
 
   if (auto v = obj->getString("truthBoundary"))
     prof.truthBoundary = v->str();
+
+  // Parse optional forcedQuantization block (Phase C minimal AWQ support).
+  // Absent in every existing profile; only present in profiles that opt in
+  // to an experimental forced global quantization override.
+  if (auto *fq = obj->getObject("forcedQuantization")) {
+    prof.hasForcedQuantization = true;
+    if (auto v = fq->getString("strategy"))
+      prof.forcedQuantStrategy = v->str();
+    if (auto v = fq->getString("algorithm"))
+      prof.forcedQuantAlgorithm = v->str();
+    if (auto v = fq->getString("quantizedModelArtifactRef"))
+      prof.forcedQuantArtifactRef = v->str();
+    if (auto v = fq->getString("truthBoundary"))
+      prof.forcedQuantTruthBoundary = v->str();
+  }
 
   // Parse backendCapabilities array.
   // Missing cost and alignment fields → std::nullopt (unknown, not zero).
@@ -720,6 +748,30 @@ int main(int argc, char **argv) {
 
   // 4. Attach TargetConstraints as module attrs.
   constraints.attachToModule(module.get(), &ctx);
+
+  // 4b. Attach an experimental forced global quantization override, only
+  // when the profile explicitly opts in via forcedQuantization. This is a
+  // driver-level attribute set, not a compiler pass: it does not run
+  // QuantizationPlanningPass and it does not touch any other profile's
+  // behavior. attrToGlobalQuantDecision() (ExecutionPlanBuilder.cpp) reads
+  // these same attr names for both this driver-set path and (if ever run)
+  // QuantizationPlanningPass's own output.
+  if (prof.hasForcedQuantization) {
+    auto *ctxPtr = &ctx;
+    mlir::Operation *moduleOp = module.get();
+    moduleOp->setAttr("quantization.plan_dtype",
+                       mlir::StringAttr::get(ctxPtr, "int4"));
+    moduleOp->setAttr("quantization.plan_source",
+                       mlir::StringAttr::get(ctxPtr, "forced_quant_profile"));
+    moduleOp->setAttr("quantization.truth_boundary",
+                       mlir::StringAttr::get(ctxPtr, prof.forcedQuantTruthBoundary));
+    moduleOp->setAttr("quantization.strategy",
+                       mlir::StringAttr::get(ctxPtr, prof.forcedQuantStrategy));
+    moduleOp->setAttr("quantization.algorithm",
+                       mlir::StringAttr::get(ctxPtr, prof.forcedQuantAlgorithm));
+    moduleOp->setAttr("quantization.quantized_model_artifact_ref",
+                       mlir::StringAttr::get(ctxPtr, prof.forcedQuantArtifactRef));
+  }
 
   // 5. Run the serving-optimization-pipeline (10 passes).
   mlir::PassManager pm(&ctx);

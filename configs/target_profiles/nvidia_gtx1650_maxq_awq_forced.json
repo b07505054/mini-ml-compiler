@@ -1,0 +1,197 @@
+{
+  "profileId": "nvidia-gtx1650-maxq-awq-forced-experimental",
+  "configuredComputeUnits": "CUDA",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp32",
+    "fp16"
+  ],
+  "pagedKVCompatibleBackends": [
+    "cuda"
+  ],
+  "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "sourceNotes": {
+    "device": "NVIDIA GeForce GTX 1650 Max-Q, Turing architecture, compute capability 7.5, 4 GB GDDR5",
+    "fp16": "Turing supports FP16 natively via shader units; no full Tensor Core FP16 (Tensor Cores on Turing are INT8-focused).",
+    "bf16": "BF16 not supported on Turing (introduced on Ampere).",
+    "int4": "INT4 weight-only quantization is NOT natively supported on Turing Tensor Cores. This profile does not claim otherwise -- forcedQuantization below is an experimental override applied at the global/vLLM-serving level, independent of and not implying any per-op MLIR kernel-level int4 Tensor Core support. Per-op backendCapabilities below are IDENTICAL to nvidia_gtx1650_maxq.json (supportedQuantModes: [\"none\"]) precisely so that per-op kernel planning continues to honestly report fp16_fallback/no native int4 kernel path.",
+    "quantization": "Per-op kernel planning: none (unchanged from nvidia_gtx1650_maxq.json). Global forced override: weight_only_int4/awq -- see forcedQuantization.",
+    "vram": "4 GB GDDR5. memory_budget_fraction applies at the deployment constraint layer.",
+    "triton": "Triton requires compute capability >= 7.0. GTX 1650 (cc 7.5) is supported."
+  },
+  "forcedQuantization": {
+    "strategy": "weight_only_int4",
+    "algorithm": "awq",
+    "quantizedModelArtifactRef": "artifacts/qwen_awq",
+    "truthBoundary": "experimental_forced_quant_not_native_int4_support_on_gtx1650"
+  },
+  "backendCapabilities": [
+    {
+      "backendName": "cuda_triton",
+      "backendApi": "cuda",
+      "supportedOps": [
+        "matmul",
+        "attention",
+        "rmsnorm",
+        "layernorm",
+        "mlp",
+        "embed",
+        "add",
+        "gelu",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "preferredActivationLayouts": [
+        "NCHW"
+      ],
+      "preferredWeightLayouts": [
+        "KN"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "gelu",
+        "reshape",
+        "gather",
+        "softmax"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "matmul_bias",
+        "matmul_bias_relu",
+        "matmul_bias_gelu"
+      ],
+      "requiredWeightQuantMode": "",
+      "requiredActivationQuantMode": "",
+      "allowedQuantGranularity": [],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "declared_device_profile_turing_cc75_fp16_no_mandatory_quant_not_measured"
+    },
+    {
+      "backendName": "cuda_cublas",
+      "backendApi": "cuda",
+      "supportedOps": [
+        "matmul",
+        "add",
+        "reshape"
+      ],
+      "supportedDtypes": [
+        "fp32",
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "preferredActivationLayouts": [
+        "NCHW"
+      ],
+      "preferredWeightLayouts": [
+        "KN"
+      ],
+      "layoutAgnosticOps": [
+        "add",
+        "reshape"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "matmul_bias"
+      ],
+      "requiredWeightQuantMode": "",
+      "requiredActivationQuantMode": "",
+      "allowedQuantGranularity": [],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "declared_device_profile_cublas_fp16_fallback_not_measured"
+    }
+  ],
+  "kernelLibraries": [
+    {
+      "opType": "matmul",
+      "kernelName": "cublas_fp16_matmul",
+      "backend": "cuda_cublas",
+      "kernelLibrary": "cublas",
+      "supportedDtypes": [
+        "fp16",
+        "fp32"
+      ],
+      "supportedLayouts": [],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "supportsDynamicShape": false,
+      "requiresConstantWeight": false,
+      "supportsFusion": true,
+      "fusionPatterns": [
+        "matmul_bias"
+      ],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "cpu",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "cublas_fp16_declared_profile_not_per_shape_kernel_verified"
+    },
+    {
+      "opType": "attention",
+      "kernelName": "triton_attention_fp16",
+      "backend": "cuda_triton",
+      "kernelLibrary": "triton",
+      "supportedDtypes": [
+        "fp16"
+      ],
+      "supportedLayouts": [],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [],
+      "fallbackKernel": "cublas_fp16_matmul",
+      "fallbackBackend": "cuda_cublas",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "triton_cc75_declared_profile_not_kernel_verified"
+    },
+    {
+      "opType": "rmsnorm",
+      "kernelName": "triton_rmsnorm_fp16",
+      "backend": "cuda_triton",
+      "kernelLibrary": "triton",
+      "supportedDtypes": [
+        "fp16"
+      ],
+      "supportedLayouts": [],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "supportsDynamicShape": true,
+      "requiresConstantWeight": false,
+      "supportsFusion": false,
+      "fusionPatterns": [],
+      "rewritePatterns": [],
+      "fallbackKernel": "",
+      "fallbackBackend": "cpu",
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "triton_cc75_declared_profile_not_kernel_verified"
+    }
+  ]
+}

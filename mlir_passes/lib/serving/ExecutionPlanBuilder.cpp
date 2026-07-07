@@ -307,10 +307,20 @@ ExecutionPlanBuilder::attrToGlobalQuantDecision(mlir::ModuleOp module) {
   d.meta.truth_boundary = tb.empty() ? kPartialTB : tb;
 
   // weight_dtype and activation_dtype from plan_dtype.
-  // strategy is left empty: V1 plan_dtype does not encode strategy type without inference.
   d.weight_dtype     = dtypeAttr.getValue().str();
   d.activation_dtype = dtypeAttr.getValue().str();
-  // d.strategy remains empty (""): no strategy attr emitted by current pipeline.
+
+  // Optional fields only ever set by a forced-quant profile (compile-for-
+  // target's forcedQuantization block) today. Absent for every other
+  // profile, so d.strategy/d.algorithm/d.quantized_model_artifact_ref stay
+  // at their default-constructed "" for the existing no-quant pipeline --
+  // this is an additive read, not a behavior change for existing profiles.
+  if (auto a = module->getAttrOfType<mlir::StringAttr>("quantization.strategy"))
+    d.strategy = a.getValue().str();
+  if (auto a = module->getAttrOfType<mlir::StringAttr>("quantization.algorithm"))
+    d.algorithm = a.getValue().str();
+  if (auto a = module->getAttrOfType<mlir::StringAttr>("quantization.quantized_model_artifact_ref"))
+    d.quantized_model_artifact_ref = a.getValue().str();
 
   return d;
 }
