@@ -100,3 +100,4 @@ build-codex/
 
 # Large local model weights
 artifacts/qwen_awq/*.safetensors
+CLAUDE.md
