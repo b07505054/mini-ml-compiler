@@ -142,30 +142,41 @@ Not yet:
 
 ## Future Architecture
 
-Long-term target, if a second/third frontend is ever added:
+The legacy Qwen path remains supported:
 
 ```text
-ONNX / Torch FX / StableHLO
-            │
-            ▼
-Frontend Parser
-            │
-            ▼
-Raw Import Graph
-            │
-            ▼
-Semantic Canonicalization
-            │
-            ▼
-Serving MLIR
-            │
-            ▼
-Planning Passes
-            │
-            ▼
-ExecutionPlan
+Qwen ONNX
+  -> Qwen GraphFacts
+  -> qwen-onnx-to-serving-mlir
+  -> LLM dialect
+  -> ExecutionPlan
 ```
 
+The new generic importer target starts with a model-agnostic ONNX boundary:
+
+```text
+ONNX
+  -> ImportedGraphIR
+  -> GenericGraphIR
+  -> Domain Recognition
+      -> LLM dialect
+      -> CV dialect
+  -> Planning
+  -> ExecutionPlan
+```
+
+- `tools/onnx_import_to_graph_ir.py` implements the Phase 1 importer
+  boundary: ONNX protobuf metadata to `ImportedGraphIR` JSON. It preserves
+  graph inputs, outputs, nodes, attributes, values, initializers, shapes,
+  dtypes, source ONNX names, opset imports, and provenance. It does not
+  perform model-family recognition.
+- `tools/imported_graph_ir_to_generic_graph_ir.py` implements the Phase 2
+  normalization boundary: `ImportedGraphIR` to compiler-owned
+  `GenericGraphIR` with a small model-agnostic `nn.*` op vocabulary and
+  source mapping back to imported ONNX nodes.
+- `GraphFacts` is now explicitly a legacy Qwen/LLM adapter contract, not the
+  generic ONNX importer schema. It is retained so existing Qwen behavior keeps
+  working while the generic path is introduced alongside it.
 - Semantic recognition should eventually move out of Python and into a
   compiler-side MLIR pass, following the pattern-matching technique
   `StableHLOCompatibleRMSNormPattern` already demonstrates in
