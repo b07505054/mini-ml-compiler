@@ -1,0 +1,21 @@
+{
+  "artifact_type": "qwen_awq_export_provenance",
+  "source_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "method": "awq",
+  "tool": "autoawq",
+  "tool_version": "0.2.9",
+  "quant_config": {
+    "zero_point": true,
+    "q_group_size": 128,
+    "w_bit": 4,
+    "version": "GEMM"
+  },
+  "calibration_note": "AutoAWQ's built-in calibration pipeline, dataset='pileval', ~128 samples requested via AutoAWQ's default calibration loader; this script does not construct a custom calibration set.",
+  "created_at": "2026-07-07T22:47:20.309455+00:00",
+  "truth_boundary": "real_autoawq_export_local_run_not_accuracy_evaluated_not_measured_serving_latency",
+  "not_claimed": [
+    "no accuracy evaluation (perplexity, task benchmarks) was run on this artifact",
+    "no measured vLLM serving latency for this artifact",
+    "GTX 1650 (Turing, cc 7.5) has no native INT4 tensor-core path; serving this artifact under vLLM --quantization awq on that hardware is an experimental forced-quant configuration, not a claim of native hardware support"
+  ]
+}

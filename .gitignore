@@ -97,3 +97,6 @@ build-mlir/
 build-mlir-codex/
 
 build-codex/
+
+# Large local model weights
+artifacts/qwen_awq/*.safetensors
