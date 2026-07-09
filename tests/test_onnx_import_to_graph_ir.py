@@ -15,6 +15,7 @@ import numpy as np  # noqa: E402
 from onnx import TensorProto, helper  # noqa: E402
 
 import onnx_import_to_graph_ir as importer  # noqa: E402
+import verify_graph_ir as verifier  # noqa: E402
 
 
 def _initializer(name: str, dtype: int, shape: list[int]) -> "onnx.TensorProto":
@@ -26,6 +27,10 @@ def _initializer(name: str, dtype: int, shape: list[int]) -> "onnx.TensorProto":
     else:
         raise AssertionError(f"unsupported test dtype: {dtype}")
     return helper.make_tensor(name, dtype, shape, data)
+
+
+def _int64_tensor(name: str, values: list[int]) -> "onnx.TensorProto":
+    return helper.make_tensor(name, TensorProto.INT64, [len(values)], values)
 
 
 def _build_tiny_conv_add_model():
@@ -72,6 +77,9 @@ class TestOnnxImportToGraphIR(unittest.TestCase):
             onnx.save(model, str(onnx_path))
 
             graph_ir = importer.import_onnx_to_graph_ir(onnx_path, onnx)
+
+        result = verifier.verify_imported_graph_ir(graph_ir)
+        self.assertTrue(result.passed, result.errors)
 
         self.assertEqual(graph_ir["schema"], "imported_graph_ir")
         self.assertEqual(graph_ir["schema_version"], "0.1.0")
@@ -147,7 +155,61 @@ class TestOnnxImportToGraphIR(unittest.TestCase):
             self.assertEqual(rc, 0)
             loaded = json.loads(out_path.read_text(encoding="utf-8"))
             self.assertEqual(loaded["schema"], "imported_graph_ir")
-            self.assertEqual([node["op_type"] for node in loaded["graph"]["nodes"]], ["Conv", "Add"])
+        self.assertEqual([node["op_type"] for node in loaded["graph"]["nodes"]], ["Conv", "Add"])
+
+    def test_small_shape_initializers_are_inlined_but_large_initializers_are_not(self):
+        reshape = helper.make_node("Reshape", ["input", "shape"], ["reshaped"], name="reshape0")
+        graph = helper.make_graph(
+            [reshape],
+            "literal_initializer_graph",
+            [helper.make_tensor_value_info("input", TensorProto.FLOAT, [6])],
+            [helper.make_tensor_value_info("reshaped", TensorProto.FLOAT, [2, 3])],
+            initializer=[
+                _int64_tensor("shape", [2, 3]),
+                _int64_tensor("large_shape_like", list(range(65))),
+            ],
+        )
+        model = helper.make_model(graph, producer_name="test_literals", opset_imports=[helper.make_opsetid("", 17)])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            onnx_path = Path(tmp) / "literals.onnx"
+            onnx.save(model, str(onnx_path))
+            graph_ir = importer.import_onnx_to_graph_ir(onnx_path, onnx)
+
+        initializers = {init["name"]: init for init in graph_ir["graph"]["initializers"]}
+        values = {value["name"]: value for value in graph_ir["graph"]["values"]}
+        self.assertEqual(initializers["shape"]["literal_values"], [2, 3])
+        self.assertEqual(values["shape"]["literal_values"], [2, 3])
+        self.assertNotIn("literal_values", initializers["large_shape_like"])
+        self.assertIn("raw_data_bytes", initializers["large_shape_like"])
+
+    def test_constant_node_small_tensor_value_is_inlined(self):
+        const = helper.make_node(
+            "Constant",
+            [],
+            ["shape_const"],
+            name="const_shape",
+            value=_int64_tensor("const_shape_value", [1, 6]),
+        )
+        reshape = helper.make_node("Reshape", ["input", "shape_const"], ["reshaped"], name="reshape0")
+        graph = helper.make_graph(
+            [const, reshape],
+            "constant_graph",
+            [helper.make_tensor_value_info("input", TensorProto.FLOAT, [6])],
+            [helper.make_tensor_value_info("reshaped", TensorProto.FLOAT, [1, 6])],
+        )
+        model = helper.make_model(graph, producer_name="test_constant", opset_imports=[helper.make_opsetid("", 17)])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            onnx_path = Path(tmp) / "constant.onnx"
+            onnx.save(model, str(onnx_path))
+            graph_ir = importer.import_onnx_to_graph_ir(onnx_path, onnx)
+
+        values = {value["name"]: value for value in graph_ir["graph"]["values"]}
+        nodes = {node["name"]: node for node in graph_ir["graph"]["nodes"]}
+        self.assertEqual(values["shape_const"]["literal_values"], [1, 6])
+        self.assertEqual(nodes["const_shape"]["attributes"][0]["value"]["literal_values"], [1, 6])
+        self.assertTrue(verifier.verify_imported_graph_ir(graph_ir).passed)
 
 
 if __name__ == "__main__":

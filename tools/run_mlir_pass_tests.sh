@@ -119,6 +119,22 @@ run_verify_diagnostics() {
     >/dev/null
 }
 
+# Like run_verify_diagnostics, but runs a pass pipeline so pass-emitted
+# diagnostics (errors/warnings/remarks) can be verified against
+# expected-* annotations in the input file.
+run_pass_verify_diagnostics() {
+  local name="$1"
+  local input="$2"
+  shift 2
+
+  echo "[MLIR test] $name"
+
+  "$MLIR_OPT" "$input" "$@" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
+    --verify-diagnostics \
+    >/dev/null
+}
+
 run_filecheck \
   "HIR dialect ops parse and verify" \
   "$REPO_ROOT/mlir_passes/test/hir_dialect_ops.mlir"
@@ -462,6 +478,22 @@ run_filecheck \
   --pass-pipeline='builtin.module(boundary-planning-pipeline)'
 
 run_filecheck \
+  "boundary-materialization: materializes required hir.cast with provenance, defers dequant/layout, skips unsupported plans, no-op without requirements" \
+  "$REPO_ROOT/mlir_passes/test/serving/boundary_materialization.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(boundary-materialization-pipeline)'
+
+run_pass_verify_diagnostics \
+  "boundary-materialization: malformed planning attrs are diagnosed, never silently ignored" \
+  "$REPO_ROOT/mlir_passes/test/serving/boundary_materialization_invalid.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(boundary-materialization-pipeline)'
+
+run_filecheck \
   "weight-classification: constant RHS, func-arg RHS, attention RHS, declared constant, unknown producer" \
   "$REPO_ROOT/mlir_passes/test/serving/weight_classification.mlir" \
   --split-input-file \
@@ -524,6 +556,22 @@ run_filecheck \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(candidate-evaluation-pipeline)'
+
+run_filecheck \
+  "tile-planning-v1: tile fits local memory, rejection with reason, dynamic-shape deferral, inert without declared local memory, quant-shrunk footprint, annotation-only cost integration" \
+  "$REPO_ROOT/mlir_passes/test/serving/tile_planning.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(tile-planning-pipeline,candidate-evaluation-pipeline)'
+
+run_filecheck \
+  "shape-cost-model-v2: shape-scaled FLOPs/costs, dtype-aware bytes, dynamic-shape fallback, quant weight bytes, shape-aware ranking mode" \
+  "$REPO_ROOT/mlir_passes/test/serving/shape_cost_model.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(candidate-evaluation-pipeline,plan-selection-pipeline)'
 
 run_filecheck \
   "plan-selection: direct_lower beats decomposition, repr_conversion beats fallback, fallback last resort, unsupported no valid candidate, tiebreak deterministic" \
@@ -592,5 +640,13 @@ run_filecheck \
   "affine vectorization" \
   "$REPO_ROOT/mlir_passes/test/matmul_affine_vectorize.mlir" \
   --affine-super-vectorize="virtual-vector-size=4 test-fastest-varying=0"
+
+run_filecheck \
+  "generic nearest 2x resize existing-dialect prototype" \
+  "$REPO_ROOT/mlir/generic_resize_nearest_2x_prototype.mlir"
+
+run_filecheck \
+  "generic stride-2 transposed convolution existing-dialect prototype" \
+  "$REPO_ROOT/mlir/generic_conv_transpose2d_stride2_prototype.mlir"
 
 echo "[MLIR test] all passed"

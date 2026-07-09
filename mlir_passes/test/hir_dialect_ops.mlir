@@ -17,6 +17,17 @@ func.func @matmul(
   return %0 : tensor<1x64xf32>
 }
 
+func.func @cast_boundary(%x: tensor<16x768xf32>) -> tensor<16x768xf16> {
+  // CHECK: hir.cast
+  // CHECK-SAME: materialized.from_decision = "boundary.cast_required"
+  // CHECK-SAME: materialized.truth_boundary = "compiler_materialized_boundary_op_not_runtime_executed"
+  %0 = hir.cast %x {
+    materialized.from_decision = "boundary.cast_required",
+    materialized.truth_boundary = "compiler_materialized_boundary_op_not_runtime_executed"
+  } : (tensor<16x768xf32>) -> tensor<16x768xf16>
+  return %0 : tensor<16x768xf16>
+}
+
 func.func @rmsnorm(%x: tensor<16x768xf16>) -> tensor<16x768xf16> {
   // CHECK: hir.fused_rmsnorm
   // CHECK-SAME: fusion.candidate = "rmsnorm"

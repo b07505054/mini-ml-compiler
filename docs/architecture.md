@@ -158,6 +158,9 @@ The new generic importer target starts with a model-agnostic ONNX boundary:
 ONNX
   -> ImportedGraphIR
   -> GenericGraphIR
+  -> Canonical GenericGraphIR
+  -> Shape/Type Annotated GenericGraphIR
+  -> Diagnostics Report
   -> Domain Recognition
       -> LLM dialect
       -> CV dialect
@@ -168,12 +171,36 @@ ONNX
 - `tools/onnx_import_to_graph_ir.py` implements the Phase 1 importer
   boundary: ONNX protobuf metadata to `ImportedGraphIR` JSON. It preserves
   graph inputs, outputs, nodes, attributes, values, initializers, shapes,
-  dtypes, source ONNX names, opset imports, and provenance. It does not
-  perform model-family recognition.
+  dtypes, source ONNX names, opset imports, provenance, and bounded small
+  numeric tensor literals for shape-bearing metadata. It does not perform
+  model-family recognition.
 - `tools/imported_graph_ir_to_generic_graph_ir.py` implements the Phase 2
   normalization boundary: `ImportedGraphIR` to compiler-owned
   `GenericGraphIR` with a small model-agnostic `nn.*` op vocabulary and
   source mapping back to imported ONNX nodes.
+- `tools/canonicalize_generic_graph_ir.py` implements the Phase 4
+  canonicalization boundary: selected `nn.*` op attributes are normalized into
+  compiler-owned `canonical_attrs` while original source attributes and
+  provenance remain available. Canonicalization may use small static tensor
+  literals to recover model-agnostic shape operands for ops such as `Reshape`,
+  `Slice`, `Resize`, and `Split`.
+- `tools/infer_generic_graph_shapes.py` implements the Phase 5
+  shape/type-consistency boundary: canonical `nn.*` ops receive conservative
+  `shape_inference_status`, `inferred_outputs`, and explanatory notes without
+  requiring full symbolic solving.
+- `tools/run_generic_onnx_frontend.py` implements the Phase 6 driver:
+  ONNX to verified ImportedGraphIR, GenericGraphIR, canonical GenericGraphIR,
+  and shape/type annotated GenericGraphIR, with a frontend report and no
+  domain recognition or lowering.
+- `tools/diagnose_generic_graph_ir.py` implements the Phase 7 diagnostics
+  boundary: shape-annotated `GenericGraphIR` to a model-agnostic readiness
+  report with op coverage, shape inference status, metadata gaps, largest
+  initializers, verifier status, and no domain recognition or lowering.
+- `tools/check_generic_lowering_contract.py` implements the Phase 13
+  non-emitting contract boundary: shape-annotated `GenericGraphIR` is checked
+  for required attrs, shapes, dtypes, and selected lowering strategies using
+  existing `func`, `tensor`, `arith`, `math`, and `linalg` infrastructure.
+  It does not introduce a generic custom MLIR dialect.
 - `GraphFacts` is now explicitly a legacy Qwen/LLM adapter contract, not the
   generic ONNX importer schema. It is retained so existing Qwen behavior keeps
   working while the generic path is introduced alongside it.
@@ -338,7 +365,9 @@ sentinel is emitted only when no viable path exists at all.
 ## 16-Pass Serving Pipeline
 
 Each pass annotates ops with structured attrs and does not modify IR structure.
-No pass selects a winner until `PlanSelectionPass`.
+No pass selects a winner until `PlanSelectionPass`. After the 16 planning
+passes, the separate `BoundaryMaterializationPass` (see Materialization
+Status below) is the only IR-transforming stage.
 
 ### ServingPhaseAnalysis
 
@@ -456,7 +485,32 @@ No pass selects a winner until `PlanSelectionPass`.
   - `backend_fallback`: 20
   - `unsupported`: 100
   - unknown type: 10 (→ `partially_evaluated`)
-- **truth_boundary**: `candidate_evaluation_static_penalty_not_measured_latency`
+- **Shape-aware layer** (`shape_cost_model_v2`, `ShapeCostModel.h`): for
+  supported op kinds (`matmul_like` 2·M·K·N FLOPs with inferred K×N weight,
+  `normalization` 4 ops/elem, `elementwise` 1 op/elem) with fully static
+  shapes, each candidate additionally gets `evaluation.shape_cost.*`:
+  FLOPs, dtype-aware input/output/weight/total bytes
+  (fp32/fp16/bf16/int8/int4, using candidate dtype →
+  `quant.activation_dtype` → result element type → effective dtype, and
+  `quant.weight_dtype` for weights), arithmetic intensity (milli), and —
+  only when the module declares `target.static_cost_profile.*` peak numbers
+  from the target profile's `staticCostProfile` block — roofline time
+  estimates `max(flops/peak, bytes/bandwidth) + boundary_bytes/bandwidth`
+  in integer nanoseconds. Unknown op kinds and dynamic shapes fall back to
+  the fixed model above, recorded in `compiler.shape_profile.{op_kind,
+  status, ranking_mode}`. These are **static compiler estimates from
+  declared theoretical peaks — not measured benchmarks, not runtime latency
+  guarantees**; they are the first step toward shape × dtype × quantization
+  × hardware co-design decisions.
+- **Ranking**: `evaluation.penalty_score` keeps the fixed heuristic by
+  default. Opt-in module attr `serving.cost_model.mode = "shape_aware_v2"`
+  ranks an op's evaluated candidates by `estimated_total_cost_nanos`
+  instead, only when every evaluated candidate has a time estimate (the
+  heuristic score is preserved as `evaluation.penalty_score_v0`).
+  PlanSelection tier rules (fallback last resort, unsupported never) are
+  unaffected either way.
+- **truth_boundary**: `candidate_evaluation_static_penalty_not_measured_latency`;
+  shape layer: `static_shape_derived_declared_profile_not_measured_not_runtime_validated`
 - **Modifies IR**: no. Does not emit fake latency ms.
 
 ### PlanSelectionPass
@@ -470,28 +524,97 @@ No pass selects a winner until `PlanSelectionPass`.
   4. If no evaluated candidates, consider `partially_evaluated`; if none, select `unsupported`.
 - **Output attrs**:
   - per-op `selected_plan.*` (9 flat attrs: candidate_type, penalty_score, reason, required_boundary_ops, backend, kernel_library, kernel_name, candidate_id, truth_boundary)
+  - per-op `selected_plan.shape_cost.*` — the winning candidate's
+    `evaluation.shape_cost.*` evidence, promoted only when present; the
+    builder exports it as the per-op `shape_cost` object in
+    `execution_plan.json`
   - per-op `compiler.selected_candidates` (1-element ArrayAttr), `compiler.selection_rejections`
 - **truth_boundary**: `plan_selection_static_penalty_not_measured_runtime`
 - **Modifies IR**: no. Does not insert boundary ops.
 
+## Memory-Hierarchy-Aware Tile Planning (tile_planning_v1)
+
+`TilePlanningPass` is an additional planning stage (run by
+`compile-for-target` after quantization strategy and before candidate
+evaluation; standalone as `tile-planning-pipeline`). It extends the static
+cost model into the memory hierarchy:
+
+- **Declared memory hierarchy** — the target profile's `staticCostProfile`
+  block gains `localMemoryBytes` (SRAM / shared memory / scratchpad
+  capacity), `cacheLineBytes`, and optional `supportsAsyncCopy` /
+  `supportsDma` capability flags, attached as
+  `target.static_cost_profile.*` module attrs. These are declared
+  capacities and capabilities (public docs or declared profile), never
+  measured behavior. `nvidia_gtx1650_maxq.json` declares 64 KB shared
+  memory per SM, 128 B cache lines, and `supportsAsyncCopy: false`
+  (cp.async requires Ampere).
+- **Tile feasibility** — for matmul-like ops with static shapes, the pass
+  selects the largest tile from a fixed conservative menu whose
+  A (Mt×Kt) + B (Kt×Nt) + C (Mt×Nt) working set fits the declared local
+  memory, using existing dtype/quantization metadata (int8 weights shrink
+  the B tile). It records the footprint, double-buffer feasibility
+  (2×(A+B) + C), the declared staging capability, a reuse-limited global
+  traffic estimate (A read ⌈N/Nt⌉ times, B read ⌈M/Mt⌉ times, C written
+  once), and — when no tile fits — the rejection reason. Dynamic shapes
+  defer with an explicit status. The pass is inert when no local memory is
+  declared.
+- **Cost-model integration (conservative)** — `ServingCostModelPass`
+  converts the planned traffic into
+  `compiler.shape_profile.estimated_tiled_memory_cost_nanos` when
+  bandwidth is declared. This is an annotation reported alongside the
+  ideal each-byte-once estimate; **candidate ranking is unchanged**.
+- **Export** — per-op `tile_plan` object in `execution_plan.json`, and
+  per-op `layout` decisions (from the existing `LayoutPlanningPass` attrs,
+  including the `required_input_layout` → `selected_layout` transition)
+  are now exported as well.
+
+Truth boundary:
+`tile_planning_static_local_memory_model_not_measured_not_codegen` — this
+is memory-hierarchy-aware **static planning**. It is not measured
+performance, performs no DMA or async copies, generates no code, and does
+not claim the backend kernel uses the planned tiling. Layout transforms
+remain planning-only (deferred by `BoundaryMaterializationPass` until a
+layout-transform op exists).
+
 ## Materialization Status
 
-**Planning is implemented. IR materialization is intentionally deferred.**
+**Planning is implemented. Cast-boundary materialization is implemented.
+All other IR materialization is intentionally deferred.**
 
 Planning (implemented by the 16-pass pipeline):
 - Annotate `selected_plan.*` per op
 - Annotate `quant.*`, `kernel.*`, `lowering.*`, `alternative.*`
 - Export `execution_plan.json` — the compiler deliverable
 
-IR materialization (intentionally deferred — not yet implemented):
-- Inserting `hir.cast` where `boundary.cast_required = true`
-- Inserting `hir.dequantize` / `hir.requantize` where `boundary.weight_dequant_required = true`
+IR materialization implemented (`BoundaryMaterializationPass`, runs after
+`PlanSelectionPass` and before plan export in `compile-for-target`; also
+registered standalone as `boundary-materialization-pipeline`):
+- Inserting `hir.cast` where `boundary.cast_required = true` — float-to-float
+  precision casts only, converting the op's result to the planned
+  `representation.effective_dtype`, redirecting uses, and updating function
+  result types. Every inserted op carries provenance
+  (`compiler.materialized`, `materialized.by`, `materialized.from_decision`,
+  `materialized.of_op`) and `truth_boundary =
+  compiler_materialized_boundary_op_not_runtime_executed`; the `hir.cast`
+  verifier rejects casts without this provenance. Ops whose selected plan is
+  `unsupported` are never materialized; malformed planning attrs are
+  diagnosed as errors, not silently skipped. The exported plan reports
+  `materialized_boundary_ops` next to the planned requirements.
+
+IR materialization intentionally deferred (recorded per-op in
+`boundary.materialization.deferred` and exported as
+`deferred_boundary_ops`, never faked):
+- Inserting `hir.dequantize` / `hir.requantize` where
+  `boundary.weight_dequant_required = true` — requires scale/zero-point
+  metadata the planning pipeline does not produce
 - Inserting `hir.layout_transform` where `layout.transform_required = true`
+  — no layout-transform op exists in the hir dialect yet
 - Replacing `gelu` with primitive ops per an algebraic decomposition plan
 - Rewriting IR graph structure based on selected plan
 
-No pass in the current pipeline materializes IR. All passes are annotation-only.
-IR structure is read-only until a future materialization pass explicitly states otherwise.
+The 16 planning passes remain annotation-only; `BoundaryMaterializationPass`
+is the only pass that modifies IR structure, and only for the cast subset
+above.
 
 ## Apple/CoreML Quantization Demo
 

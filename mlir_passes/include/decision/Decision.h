@@ -41,6 +41,32 @@ struct DecisionCost {
   std::string truth_boundary;        // "serving_static_cost_model_v1_not_measured_latency"
 };
 
+// Shape-derived static cost estimate produced by shape_cost_model_v2
+// (ServingCostModelPass) for the selected candidate of one op.
+// FLOPs/bytes are derived from static tensor shapes and existing dtype /
+// quantization metadata; time estimates exist only when the declared profile
+// provided theoretical peak numbers. This is a static compiler estimate —
+// not a measured benchmark and not a runtime latency guarantee.
+// truth_boundary:
+//   static_shape_derived_declared_profile_not_measured_not_runtime_validated
+struct ShapeCostEstimate {
+  int64_t flops_estimate              = 0;
+  int64_t input_bytes_estimate        = 0;
+  int64_t output_bytes_estimate       = 0;
+  int64_t weight_bytes_estimate       = 0;
+  int64_t total_memory_bytes_estimate = 0;
+  int64_t arithmetic_intensity_milli  = 0; // flops * 1000 / total bytes
+  // Roofline time estimates (integer nanoseconds); absent when the profile
+  // declared no peak FLOPs / bandwidth numbers.
+  std::optional<int64_t> estimated_compute_cost_nanos;
+  std::optional<int64_t> estimated_memory_cost_nanos;
+  std::optional<int64_t> estimated_boundary_cost_nanos;
+  std::optional<int64_t> estimated_total_cost_nanos;
+  std::string status;             // "estimated" | "facts_only_no_profile_numbers"
+  std::string cost_model_version; // "shape_cost_model_v2"
+  std::string truth_boundary;
+};
+
 // Decision justification container.
 // Owns cost evidence and capability/alternative evidence.
 struct DecisionEvidence {
@@ -130,7 +156,32 @@ struct LayoutDecision {
   std::string      op_type;          // empty when scope == Global
   // selected_layout: "nhwc" | "nchw" | "blocked_kc" | "row_major" | "paged_kv"
   std::string      selected_layout;
+  // Layout arriving from the producer; a transform boundary exists when it
+  // differs from selected_layout and requires_layout_transform is true.
+  std::string      required_input_layout;
   bool             requires_layout_transform = false;
+};
+
+// Static local-memory tile plan produced by TilePlanningPass
+// (tile_planning_v1) for one matmul-like op. Feasibility against the
+// declared local memory capacity plus a reuse-limited traffic estimate.
+// Not measured performance, not DMA execution, not codegen, and no claim
+// the backend kernel uses this tiling.
+// truth_boundary:
+//   tile_planning_static_local_memory_model_not_measured_not_codegen
+struct TilePlan {
+  // "planned" | "no_feasible_tile" | "dynamic_dims_unresolved" |
+  // "dtype_unresolved" | "no_tensor_result"
+  std::string status;
+  int64_t tile_m = 0, tile_n = 0, tile_k = 0;   // valid when status == planned
+  int64_t local_memory_bytes = 0;               // selected tile footprint
+  int64_t rejected_tile_count = 0;
+  int64_t estimated_global_traffic_bytes = 0;   // reuse-limited bound
+  bool    double_buffer_fits = false;
+  // "async_copy_declared" | "dma_declared" | "none_declared"
+  std::string staging_capability;
+  std::string rejection_reason;                 // when no tile fits
+  std::string truth_boundary;
 };
 
 // Serving topology and scheduling strategy (Global scope).

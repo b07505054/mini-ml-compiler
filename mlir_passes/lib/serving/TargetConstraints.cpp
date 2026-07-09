@@ -82,6 +82,38 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
     tc.has_pd_bandwidth_mb_per_ms = true;
   }
 
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>(
+          "target.static_cost_profile.peak_flops_fp32"))
+    tc.static_cost_peak_flops_fp32 = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>(
+          "target.static_cost_profile.peak_flops_fp16"))
+    tc.static_cost_peak_flops_fp16 = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>(
+          "target.static_cost_profile.peak_flops_int8"))
+    tc.static_cost_peak_flops_int8 = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>(
+          "target.static_cost_profile.memory_bandwidth_bytes_per_sec"))
+    tc.static_cost_memory_bandwidth_bytes_per_sec = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>(
+          "target.static_cost_profile.local_memory_bytes"))
+    tc.static_cost_local_memory_bytes = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>(
+          "target.static_cost_profile.cache_line_bytes"))
+    tc.static_cost_cache_line_bytes = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>(
+          "target.static_cost_profile.supports_async_copy")) {
+    tc.static_cost_supports_async_copy = a.getValue();
+    tc.has_static_cost_supports_async_copy = true;
+  }
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>(
+          "target.static_cost_profile.supports_dma")) {
+    tc.static_cost_supports_dma = a.getValue();
+    tc.has_static_cost_supports_dma = true;
+  }
+  if (auto a = op->getAttrOfType<mlir::StringAttr>(
+          "target.static_cost_profile.truth_boundary"))
+    tc.static_cost_profile_truth_boundary = a.getValue().str();
+
   // Read per-backend capability entries.  The index attr lists backend names;
   // per-backend fields use flat prefix "target.backend_capabilities.{name}.*".
   // Cost and alignment fields use std::optional: absent attr → std::nullopt.
@@ -307,6 +339,41 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
   if (has_pd_bandwidth_mb_per_ms)
     op->setAttr("target.pd_bandwidth_mb_per_ms",
                 mlir::FloatAttr::get(f64, pd_bandwidth_mb_per_ms));
+
+  // Static cost profile attrs for shape_cost_model_v2. Only declared (> 0)
+  // values are emitted; absent attrs mean "not declared", and the cost model
+  // then produces shape facts without time estimates.
+  if (static_cost_peak_flops_fp32 > 0.0)
+    op->setAttr("target.static_cost_profile.peak_flops_fp32",
+                mlir::FloatAttr::get(f64, static_cost_peak_flops_fp32));
+  if (static_cost_peak_flops_fp16 > 0.0)
+    op->setAttr("target.static_cost_profile.peak_flops_fp16",
+                mlir::FloatAttr::get(f64, static_cost_peak_flops_fp16));
+  if (static_cost_peak_flops_int8 > 0.0)
+    op->setAttr("target.static_cost_profile.peak_flops_int8",
+                mlir::FloatAttr::get(f64, static_cost_peak_flops_int8));
+  if (static_cost_memory_bandwidth_bytes_per_sec > 0.0)
+    op->setAttr("target.static_cost_profile.memory_bandwidth_bytes_per_sec",
+                mlir::FloatAttr::get(
+                    f64, static_cost_memory_bandwidth_bytes_per_sec));
+  if (static_cost_local_memory_bytes > 0)
+    op->setAttr("target.static_cost_profile.local_memory_bytes",
+                mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                       static_cost_local_memory_bytes));
+  if (static_cost_cache_line_bytes > 0)
+    op->setAttr("target.static_cost_profile.cache_line_bytes",
+                mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                       static_cost_cache_line_bytes));
+  if (has_static_cost_supports_async_copy)
+    op->setAttr("target.static_cost_profile.supports_async_copy",
+                mlir::BoolAttr::get(ctx, static_cost_supports_async_copy));
+  if (has_static_cost_supports_dma)
+    op->setAttr("target.static_cost_profile.supports_dma",
+                mlir::BoolAttr::get(ctx, static_cost_supports_dma));
+  if (!static_cost_profile_truth_boundary.empty())
+    op->setAttr("target.static_cost_profile.truth_boundary",
+                mlir::StringAttr::get(ctx,
+                                      static_cost_profile_truth_boundary));
 
   // Emit per-backend capability attrs.
   // Index: target.backend_capability_names lists the backend names.

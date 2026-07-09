@@ -18,6 +18,8 @@ from typing import Any
 SCHEMA = "imported_graph_ir"
 SCHEMA_VERSION = "0.1.0"
 TRUTH_BOUNDARY = "onnx_protobuf_metadata_preserved_no_domain_recognition"
+MAX_INLINE_TENSOR_ELEMENTS = 64
+MAX_INLINE_TENSOR_BYTES = 512
 
 
 class OnnxImportToGraphIRError(Exception):
@@ -70,15 +72,66 @@ def _tensor_shape(dims: Any) -> list[dict[str, Any]]:
     return [{"kind": "static", "value": int(dim)} for dim in dims]
 
 
+def _tensor_element_count(dims: Any) -> int:
+    count = 1
+    for dim in dims:
+        count *= int(dim)
+    return count
+
+
+def _small_numeric_tensor_values(tensor: Any, onnx_mod: Any) -> list[Any] | None:
+    element_count = _tensor_element_count(tensor.dims)
+    if element_count > MAX_INLINE_TENSOR_ELEMENTS:
+        return None
+    raw_data_bytes = len(tensor.raw_data)
+    if raw_data_bytes > MAX_INLINE_TENSOR_BYTES:
+        return None
+    try:
+        array = onnx_mod.numpy_helper.to_array(tensor)
+    except Exception:
+        return None
+    if not getattr(array.dtype, "kind", "") in {"i", "u", "f", "b"}:
+        return None
+    values = array.reshape(-1).tolist()
+    out = []
+    for value in values:
+        if isinstance(value, bool):
+            out.append(bool(value))
+        elif isinstance(value, int):
+            out.append(int(value))
+        elif isinstance(value, float):
+            out.append(float(value))
+        else:
+            try:
+                out.append(int(value))
+            except (TypeError, ValueError):
+                try:
+                    out.append(float(value))
+                except (TypeError, ValueError):
+                    return None
+    return out
+
+
+def _tensor_metadata_record(name: str, tensor: Any, onnx_mod: Any) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "name": name,
+        "source_name": name,
+        "dtype": _dtype_from_elem_type(tensor.data_type, onnx_mod),
+        "shape": _tensor_shape(tensor.dims),
+    }
+    literal_values = _small_numeric_tensor_values(tensor, onnx_mod)
+    if literal_values is not None:
+        record["literal_values"] = literal_values
+    return record
+
+
 def _initializer_to_record(init: Any, onnx_mod: Any) -> dict[str, Any]:
-    return {
-        "name": init.name,
-        "source_name": init.name,
-        "dtype": _dtype_from_elem_type(init.data_type, onnx_mod),
-        "shape": _tensor_shape(init.dims),
+    record = {
+        **_tensor_metadata_record(init.name, init, onnx_mod),
         "data_location": int(init.data_location),
         "raw_data_bytes": len(init.raw_data),
     }
+    return record
 
 
 def _attribute_value(attr: Any, onnx_mod: Any) -> Any:
@@ -97,11 +150,7 @@ def _attribute_value(attr: Any, onnx_mod: Any) -> Any:
     if attr_type_name == "strings":
         return [v.decode("utf-8", errors="replace") for v in attr.strings]
     if attr_type_name == "tensor":
-        return {
-            "name": attr.t.name,
-            "dtype": _dtype_from_elem_type(attr.t.data_type, onnx_mod),
-            "shape": _tensor_shape(attr.t.dims),
-        }
+        return _tensor_metadata_record(attr.t.name, attr.t, onnx_mod)
     if attr_type_name == "graph":
         return {"name": attr.g.name, "node_count": len(attr.g.node)}
     if attr_type_name == "sparse_tensor":
@@ -133,6 +182,16 @@ def _node_to_record(index: int, node: Any, onnx_mod: Any) -> dict[str, Any]:
     }
 
 
+def _constant_output_value_record(node: Any, onnx_mod: Any) -> dict[str, Any] | None:
+    if node.op_type != "Constant" or len(node.output) != 1:
+        return None
+    for attr in node.attribute:
+        attr_type_name = onnx_mod.AttributeProto.AttributeType.Name(attr.type).lower()
+        if attr.name == "value" and attr_type_name == "tensor":
+            return _tensor_metadata_record(node.output[0], attr.t, onnx_mod)
+    return None
+
+
 def _opset_imports(model: Any) -> list[dict[str, Any]]:
     return [
         {"domain": opset.domain, "version": int(opset.version)}
@@ -155,15 +214,11 @@ def import_onnx_to_graph_ir(onnx_path: Path, onnx_mod: Any) -> dict[str, Any]:
     for value_info in list(graph.input) + list(graph.output) + list(graph.value_info):
         values[value_info.name] = _value_info_to_record(value_info, onnx_mod)
     for init in graph.initializer:
-        values.setdefault(
-            init.name,
-            {
-                "name": init.name,
-                "source_name": init.name,
-                "dtype": _dtype_from_elem_type(init.data_type, onnx_mod),
-                "shape": _tensor_shape(init.dims),
-            },
-        )
+        values.setdefault(init.name, _tensor_metadata_record(init.name, init, onnx_mod))
+    for node in graph.node:
+        constant_value = _constant_output_value_record(node, onnx_mod)
+        if constant_value is not None:
+            values[constant_value["name"]] = constant_value
 
     return {
         "schema": SCHEMA,

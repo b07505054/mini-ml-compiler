@@ -51,6 +51,20 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createBoundaryPlanningPass());
       });
 
+  static PassPipelineRegistration<> tilePlanningPipeline(
+      "tile-planning-pipeline",
+      "Static local-memory tile feasibility planning for matmul-like ops",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createTilePlanningPass());
+      });
+
+  static PassPipelineRegistration<> boundaryMaterializationPipeline(
+      "boundary-materialization-pipeline",
+      "Materialize planned cast boundary ops into IR after plan selection",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createBoundaryMaterializationPass());
+      });
+
   static PassPipelineRegistration<> weightClassPipeline(
       "weight-classification-planning-pipeline",
       "Classify weight operands as constant or runtime before quantization",

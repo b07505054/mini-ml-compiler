@@ -100,4 +100,7 @@ build-codex/
 
 # Large local model weights
 artifacts/qwen_awq/*.safetensors
+models/yolo-seg.onnx
+models/yolo-seg.onnx.data
+artifacts/yoloseg_generic_frontend/
 CLAUDE.md

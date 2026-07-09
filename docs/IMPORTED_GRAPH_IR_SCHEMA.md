@@ -80,6 +80,7 @@ Initializer records also include:
 
 - `data_location`: ONNX data location enum as an integer
 - `raw_data_bytes`: number of bytes stored in `raw_data`
+- `literal_values`: optional inline numeric values for small tensors only
 
 `provenance` fields:
 
@@ -91,6 +92,45 @@ Initializer records also include:
 - `truth_boundary`:
   `onnx_protobuf_metadata_preserved_no_domain_recognition`
 
+## Verifier Invariants
+
+`tools/verify_graph_ir.py` validates `ImportedGraphIR` before later compiler
+stages consume it. The verifier checks:
+
+- Required top-level fields exist: `schema`, `schema_version`, `graph`,
+  `provenance`.
+- `schema == "imported_graph_ir"` and `schema_version == "0.1.0"`.
+- `graph` contains `inputs`, `outputs`, `nodes`, `values`, and
+  `initializers`.
+- Node ids are unique.
+- Node outputs are unique by default. Duplicate outputs are accepted only when
+  explicitly marked with `allow_duplicate_outputs`.
+- Every node input resolves to a graph input, value metadata entry,
+  initializer, or prior node output. Empty ONNX optional inputs are ignored.
+- Every graph output is produced or declared.
+- Node attributes are stable JSON records with `name`, `type`, and `value`.
+- Value and initializer records carry `dtype` and `shape` fields.
+- Provenance is present and is an object.
+
+## Small Tensor Literals
+
+`ImportedGraphIR` may inline small numeric tensor contents as `literal_values`
+when they are useful as graph metadata, for example shape-bearing ONNX tensors
+used by `Reshape`, `Slice`, `Resize`, or `Split`.
+
+The importer keeps this bounded:
+
+- at most 64 tensor elements are inlined
+- at most 512 raw tensor bytes are inlined
+- large weight tensors are not inlined
+- `raw_data_bytes` metadata is retained for initializers regardless of whether
+  values are inlined
+
+ONNX `Constant` tensor attributes use the same metadata representation. When a
+small `Constant` node produces a tensor value, the value metadata may include
+`literal_values` so later compiler-owned passes can recover static shape
+parameters without adding model-specific logic.
+
 ## Non-Goals
 
 Phase 1 does not implement:
@@ -100,4 +140,4 @@ Phase 1 does not implement:
 - ExecutionPlan schema changes
 - Lowering into MLIR dialects
 - Shape inference beyond metadata already present in the ONNX file
-- Weight loading beyond initializer metadata
+- Weight loading beyond bounded metadata and small numeric shape literals

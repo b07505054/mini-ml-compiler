@@ -675,8 +675,39 @@ def CandidateEvaluation
       unsupported:               unsupported_penalty=100 (compile-time rejection sentinel)
 
     Cost weights are tunable via StaticCostWeights in DeploymentTarget (default values above).
+
+    Layer 3 — V2 shape-aware cost evidence (shape_cost_model_v2, see
+    ShapeCostModel.h): for supported op kinds with fully static shapes,
+    per-candidate
+      evaluation.shape_cost.flops_estimate, .input_bytes_estimate,
+      .output_bytes_estimate, .weight_bytes_estimate,
+      .total_memory_bytes_estimate, .arithmetic_intensity_milli,
+      .estimated_{compute,memory,boundary,total}_cost_nanos (only when the
+      module declares target.static_cost_profile.* peak numbers),
+      .status, .model_version, .truth_boundary
+    Op kinds: matmul_like (2*M*K*N flops, inferred K*N weight),
+    normalization (4 ops/elem), elementwise (1 op/elem); unknown op kinds and
+    dynamic shapes fall back to the V1 model, recorded in the op-level
+    compiler.shape_profile.{op_kind, status, ranking_mode, truth_boundary}
+    attrs. Bytes are dtype-aware (fp32/fp16/bf16/int8/int4) using candidate
+    dtype -> quant.activation_dtype -> result element type ->
+    representation.effective_dtype, and quant.weight_dtype for weights.
+    Time estimates use the roofline form
+    max(flops/peak, bytes/bandwidth) + boundary_bytes/bandwidth in integer
+    nanoseconds — static estimates from declared theoretical peaks, never
+    measured, never a runtime latency guarantee.
+
+    Ranking: evaluation.penalty_score keeps the V0 heuristic by default.
+    Opt-in module attr serving.cost_model.mode = "shape_aware_v2" ranks an
+    op's evaluated candidates by estimated_total_cost_nanos instead — only
+    when every evaluated candidate of that op has a time estimate (V0 is
+    preserved as evaluation.penalty_score_v0). PlanSelection tier rules
+    (fallback last resort, unsupported never) are unaffected.
+
     No winner is selected. No IR is rewritten. No measured latency is claimed.
 
+    truth_boundary (V2 shape cost):
+      static_shape_derived_declared_profile_not_measured_not_runtime_validated
     truth_boundary (V1 cost): serving_static_cost_model_v1_not_measured_latency
     truth_boundary (V0 compat): candidate_evaluation_static_penalty_not_measured_latency
   }];
@@ -768,6 +799,124 @@ def BoundaryPlanning
     Intended to run after LayoutPlanningPass in serving-optimization-pipeline.
   }];
   let constructor = "mlir::hir::createBoundaryPlanningPass()";
+}
+
+def BoundaryMaterialization
+    : Pass<"boundary-materialization", "mlir::func::FuncOp"> {
+  let summary = "Materialize planned cast boundary ops into IR after plan selection";
+  let description = [{
+    First IR-materializing pass in the serving pipeline. Consumes the
+    boundary requirements the planning passes annotated and inserts real
+    boundary ops for the smallest safe subset:
+
+      boundary.cast_required = true
+        -> inserts hir.cast on the op's first result, converting from the
+           op's float element dtype to the func-level
+           representation.effective_dtype (the same source
+           BoundaryPlanningPass used to decide the requirement). All other
+           uses of the result are redirected to the cast; if the cast
+           reaches func.return, the function result types are updated.
+
+    Deliberately NOT materialized (deferred, recorded per-op in
+    boundary.materialization.deferred and counted at func level):
+      boundary.dequant_required / boundary.weight_dequant_required
+        -- an honest hir.dequantize needs scale/zero_point metadata that the
+           planning pipeline does not produce; fabricating values would
+           violate the truth boundary.
+      boundary.layout_transform_required
+        -- no layout-transform op exists in the hir dialect yet.
+
+    Skipped (never materialized): ops whose selected_plan.candidate_type is
+    "unsupported" — a plan with no viable lowering must not have boundary
+    ops materialized. Recorded in boundary.materialization.skipped_reason.
+    Ops already carrying boundary.cast_materialized = true are left
+    untouched (idempotent re-run).
+
+    Diagnostics (no silent no-op on malformed planning attrs):
+      - boundary.cast_required = true but the func has no float
+        representation.effective_dtype        -> error, pass failure
+      - boundary.cast_required = true but the op's first result is not a
+        ranked tensor with a float element type -> error, pass failure
+      - boundary.cast_required = true but source and target element types
+        are equal                              -> error, pass failure
+      - boundary.materialization_required = true with no specific
+        requirement flag set                   -> warning
+      - deferral / unsupported-skip            -> remark
+
+    Every inserted op carries provenance attrs:
+      compiler.materialized = true
+      materialized.by = "boundary-materialization"
+      materialized.from_decision = "boundary.cast_required"
+      materialized.of_op = source op name
+      cast.from_dtype / cast.to_dtype
+      materialized.truth_boundary
+        = "compiler_materialized_boundary_op_not_runtime_executed"
+
+    Anchor op attrs: boundary.cast_materialized = true,
+    boundary.materialized_ops = ["cast"], boundary.materialization.status.
+    Func attrs: boundary.materialization.{materialized_count,
+    deferred_count, status, truth_boundary}.
+
+    Truth boundary: this pass performs a compiler IR transformation only.
+    It does not execute kernels, claim runtime behavior, or alter planning
+    attrs written by earlier passes. Must run after PlanSelectionPass and
+    before ExecutionPlanBuilder. Only the entry block is processed.
+  }];
+  let constructor = "mlir::hir::createBoundaryMaterializationPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def TilePlanning
+    : Pass<"tile-planning", "mlir::func::FuncOp"> {
+  let summary = "Static local-memory tile feasibility planning for matmul-like ops (tile_planning_v1)";
+  let description = [{
+    Memory-hierarchy-aware static planning. For each matmul-like op with
+    fully static shapes, selects the largest tile from a fixed conservative
+    menu ({128,128,32}, {64,64,32}, {32,32,32}, {16,16,16}, clipped to the
+    op's M/N/K) whose A (Mt x Kt) + B (Kt x Nt) + C (Mt x Nt) working set
+    fits the declared local memory
+    (target.static_cost_profile.local_memory_bytes — SRAM / shared memory /
+    scratchpad capacity from the target profile's staticCostProfile block).
+
+    Emitted per matmul-like op:
+      tile.plan.status
+        = "planned" | "no_feasible_tile" | "dynamic_dims_unresolved"
+        | "dtype_unresolved" | "no_tensor_result"
+      tile.plan.shape                         -- [Mt, Nt, Kt] when planned
+      tile.plan.local_memory_bytes            -- selected tile footprint
+      tile.plan.rejected_tile_count
+      tile.plan.rejection_reason              -- when no tile fits
+      tile.plan.estimated_global_traffic_bytes
+        -- reuse-limited traffic: A read ceil(N/Nt) times, B read
+           ceil(M/Mt) times, C written once. Reported alongside (never
+           replacing) shape_cost_model_v2's ideal each-byte-once bytes.
+      tile.plan.double_buffer_fits            -- 2x(A+B) + C fits capacity
+      tile.plan.staging_capability
+        = "async_copy_declared" | "dma_declared" | "none_declared"
+      tile.plan.truth_boundary
+        = "tile_planning_static_local_memory_model_not_measured_not_codegen"
+
+    Dtypes come from existing metadata (quant.activation_dtype /
+    quant.weight_dtype / result element type / representation.effective_dtype),
+    so weight-only quantization shrinks the B-tile footprint.
+
+    The pass is INERT when the module declares no local_memory_bytes:
+    feasibility against an undeclared budget would be a guess. Dynamic
+    shapes are deferred with an explicit status, never estimated.
+
+    ServingCostModelPass converts the planned traffic into
+    compiler.shape_profile.estimated_tiled_memory_cost_nanos when bandwidth
+    is declared — an annotation only; candidate ranking is unchanged.
+
+    Truth boundary: static local-memory capacity model from declared
+    profile numbers. Not measured performance, not DMA/async-copy
+    execution, not codegen, and no claim that the backend kernel uses this
+    tiling. Runs after QuantizationStrategyPlanning (for quant dtypes) and
+    before CandidateEvaluation in compile-for-target; also registered
+    standalone as tile-planning-pipeline.
+  }];
+  let constructor = "mlir::hir::createTilePlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
 def QuantizationPlanning

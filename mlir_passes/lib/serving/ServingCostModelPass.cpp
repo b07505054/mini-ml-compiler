@@ -1,7 +1,7 @@
 // ServingCostModelPass — upgraded CandidateEvaluationPass.
 //
 // Applies ServingStaticCostModel_v1 to each compiler.candidates candidate dict
-// and emits two layers of output per evaluated candidate:
+// and emits three layers of output per evaluated candidate:
 //
 //   Layer 1 (V0 backward-compat): evaluation.penalty_score, evaluation.status,
 //     evaluation.reason, evaluation.truth_boundary.
@@ -13,16 +13,40 @@
 //     transfer,unsupported,total,model_id,truth_boundary}.
 //     total == exact sum of all component fields (verifiable by the builder).
 //
+//   Layer 3 (V2 shape-aware evidence, shape_cost_model_v2): for supported op
+//     kinds (matmul_like / normalization / elementwise) with fully static
+//     shapes, evaluation.shape_cost.{flops_estimate, input_bytes_estimate,
+//     output_bytes_estimate, weight_bytes_estimate,
+//     total_memory_bytes_estimate, arithmetic_intensity_milli,
+//     estimated_{compute,memory,boundary,total}_cost_nanos, status,
+//     model_version, truth_boundary}. Bytes are dtype-aware (candidate dtype
+//     -> quant.activation_dtype -> result element type ->
+//     representation.effective_dtype; weight dtype from quant.weight_dtype).
+//     Time estimates appear only when target.static_cost_profile.* module
+//     attrs declare peak FLOPs / bandwidth — declared theoretical numbers,
+//     never measured. Unknown op kinds and dynamic shapes fall back to the
+//     V1 fixed model, honestly recorded in compiler.shape_profile.status.
+//
+//   Ranking: evaluation.penalty_score stays the V0 heuristic by default. When
+//     the module opts in with serving.cost_model.mode = "shape_aware_v2" AND
+//     every evaluated candidate of an op has a time estimate, penalty_score
+//     becomes estimated_total_cost_nanos (V0 preserved as
+//     evaluation.penalty_score_v0). PlanSelection tiering (fallback last,
+//     unsupported never) is unaffected because tier precedes penalty.
+//
 // Pass registration keeps the name "candidate-evaluation" so that the MLIR
 // pipeline string, FileCheck tests, and ServingPipeline.cpp are unaffected.
 // The C++ factory is createServingCostModelPass() (new) with a backward-compat
 // alias createCandidateEvaluationPass() declared in FusionPasses.h.
 
+#include "serving/OpShapeFacts.h"
 #include "serving/ServingCostModel.h"
+#include "serving/ShapeCostModel.h"
 #include "FusionPasses.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 #include <string>
 #include <vector>
@@ -74,6 +98,27 @@ static std::vector<std::string> readStrs(DictionaryAttr dict, StringRef key) {
       for (auto e : arr)
         if (auto s = dyn_cast<StringAttr>(e)) out.push_back(s.getValue().str());
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// V2 shape-fact helpers (shape_cost_model_v2)
+// ---------------------------------------------------------------------------
+// Shape-fact derivation (classifyOpKind, computeShapeFacts, readProfileNums)
+// lives in serving/OpShapeFacts.h, shared with TilePlanningPass.
+
+// Resolve the activation/output dtype for one candidate.
+// Priority: candidate "dtype" key -> cast target (effective dtype) ->
+// op-level resolution (quant.activation_dtype -> result element type ->
+// effective dtype).
+static std::string resolveActivationDtype(DictionaryAttr dict,
+                                          const std::string& candType,
+                                          Operation& op,
+                                          const std::string& effectiveDtype) {
+  std::string d = readStr(dict, "dtype");
+  if (dtypeBits(d) > 0) return d;
+  if (candType == "cast_conversion" && dtypeBits(effectiveDtype) > 0)
+    return effectiveDtype;
+  return resolveOpActivationDtype(op, effectiveDtype);
 }
 
 // ---------------------------------------------------------------------------
@@ -144,22 +189,25 @@ static V0Eval evaluatePenaltyV0(const std::string& candType,
 }
 
 // ---------------------------------------------------------------------------
-// Evaluate one candidate dict; return augmented DictionaryAttr with
-// evaluation.penalty_score (V0), evaluation.status, evaluation.reason,
-// evaluation.truth_boundary, and evaluation.cost.* (V1).
+// Evaluate one candidate dict (two-phase: evaluate, then assemble, so the
+// shape_aware_v2 ranking mode can be decided per op across all candidates).
 // ---------------------------------------------------------------------------
-static DictionaryAttr evaluateCandidate(MLIRContext* ctx,
-                                         DictionaryAttr dict,
-                                         const ServingCostModel& model) {
-  std::string candType    = readStr(dict, "candidate_type");
-  std::string fbBackend   = readStr(dict, "fallback_backend");
-  auto boundaryOps        = readStrs(dict, "required_boundary_ops");
+struct CandidateEval {
+  DictionaryAttr dict;      // original candidate fields
+  V0Eval v0;
+  DecisionCost v1;
+  bool hasShapeCost = false;
+  ShapeCostEstimateResult shape;
+};
 
-  // V0 penalty (preserved for backward compat and PlanSelectionPass ranking).
-  V0Eval v0 = evaluatePenaltyV0(candType, boundaryOps);
-
-  // V1 structured cost (new evidence; total may differ from V0 penalty_score).
-  DecisionCost v1 = model.compute(candType, boundaryOps, fbBackend);
+// Assemble the augmented DictionaryAttr with evaluation.penalty_score (V0 or
+// V2 per useV2Penalty), evaluation.status/reason/truth_boundary,
+// evaluation.cost.* (V1), and evaluation.shape_cost.* (V2, when computed).
+static DictionaryAttr assembleCandidate(MLIRContext* ctx,
+                                        const CandidateEval& ce,
+                                        bool useV2Penalty) {
+  const V0Eval& v0 = ce.v0;
+  const DecisionCost& v1 = ce.v1;
 
   auto I64 = [&](int64_t v) -> Attribute {
     return IntegerAttr::get(IntegerType::get(ctx, 64), v);
@@ -167,10 +215,22 @@ static DictionaryAttr evaluateCandidate(MLIRContext* ctx,
   auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
 
   // Copy original candidate fields and append evaluation.* fields.
-  SmallVector<NamedAttribute> augmented(dict.begin(), dict.end());
+  SmallVector<NamedAttribute> augmented(ce.dict.begin(), ce.dict.end());
+
+  // Ranking score: V0 heuristic by default. In shape_aware_v2 mode (only
+  // when every evaluated candidate of the op has a time estimate), evaluated
+  // candidates are ranked by estimated_total_cost_nanos instead; the V0
+  // score is preserved as evaluation.penalty_score_v0.
+  int64_t penalty = v0.penaltyScore;
+  if (useV2Penalty && v0.status == "evaluated" && ce.hasShapeCost &&
+      ce.shape.has_time_estimates) {
+    penalty = ce.shape.estimated_total_cost_nanos;
+    augmented.push_back({StringAttr::get(ctx, "evaluation.penalty_score_v0"),
+                         I64(v0.penaltyScore)});
+  }
 
   // V0 backward-compat attrs.
-  augmented.push_back({StringAttr::get(ctx, "evaluation.penalty_score"), I64(v0.penaltyScore)});
+  augmented.push_back({StringAttr::get(ctx, "evaluation.penalty_score"), I64(penalty)});
   augmented.push_back({StringAttr::get(ctx, "evaluation.reason"),        S(v0.reason)});
   augmented.push_back({StringAttr::get(ctx, "evaluation.status"),        S(v0.status)});
   augmented.push_back({StringAttr::get(ctx, "evaluation.truth_boundary"),S(kV0Truth)});
@@ -191,6 +251,35 @@ static DictionaryAttr evaluateCandidate(MLIRContext* ctx,
   augmented.push_back({StringAttr::get(ctx, "evaluation.cost.truth_boundary"),  S(v1.truth_boundary)});
   augmented.push_back({StringAttr::get(ctx, "evaluation.cost.unsupported"),     I64(v1.unsupported_penalty)});
 
+  // V2 shape-aware attrs (emitted only when shape facts were usable).
+  if (ce.hasShapeCost) {
+    const ShapeCostEstimateResult& sc = ce.shape;
+    auto add = [&](StringRef key, Attribute a) {
+      augmented.push_back({StringAttr::get(ctx, key), a});
+    };
+    add("evaluation.shape_cost.arithmetic_intensity_milli",
+        I64(sc.arithmetic_intensity_milli));
+    add("evaluation.shape_cost.flops_estimate", I64(sc.flops_estimate));
+    add("evaluation.shape_cost.input_bytes_estimate", I64(sc.input_bytes));
+    add("evaluation.shape_cost.model_version", S(kShapeCostModelVersion));
+    add("evaluation.shape_cost.output_bytes_estimate", I64(sc.output_bytes));
+    add("evaluation.shape_cost.status", S(sc.status));
+    add("evaluation.shape_cost.total_memory_bytes_estimate",
+        I64(sc.total_memory_bytes));
+    add("evaluation.shape_cost.truth_boundary", S(kShapeCostTruthBoundary));
+    add("evaluation.shape_cost.weight_bytes_estimate", I64(sc.weight_bytes));
+    if (sc.has_time_estimates) {
+      add("evaluation.shape_cost.estimated_boundary_cost_nanos",
+          I64(sc.estimated_boundary_cost_nanos));
+      add("evaluation.shape_cost.estimated_compute_cost_nanos",
+          I64(sc.estimated_compute_cost_nanos));
+      add("evaluation.shape_cost.estimated_memory_cost_nanos",
+          I64(sc.estimated_memory_cost_nanos));
+      add("evaluation.shape_cost.estimated_total_cost_nanos",
+          I64(sc.estimated_total_cost_nanos));
+    }
+  }
+
   return DictionaryAttr::get(ctx, augmented);
 }
 
@@ -209,24 +298,127 @@ struct ServingCostModelPass
     MLIRContext* ctx = funcOp.getContext();
     ServingCostModel model(weights_);
 
+    Operation* module = funcOp->getParentOp();
+    StaticCostProfileNums profileNums = readProfileNums(module);
+
+    // shape_aware_v2 ranking is opt-in via a module attr; default keeps the
+    // V0 heuristic score untouched.
+    bool v2ModeRequested = false;
+    if (module)
+      if (auto a = module->getAttrOfType<StringAttr>("serving.cost_model.mode"))
+        v2ModeRequested = a.getValue() == "shape_aware_v2";
+
+    std::string effectiveDtype;
+    if (auto a =
+            funcOp->getAttrOfType<StringAttr>("representation.effective_dtype"))
+      effectiveDtype = a.getValue().str();
+
     if (funcOp.getBody().empty()) return;
     for (Operation& op : funcOp.getBody().front().without_terminator()) {
       auto candArr = op.getAttrOfType<ArrayAttr>("compiler.candidates");
       if (!candArr) continue;
 
+      // Dtype-independent shape facts, once per op.
+      ShapeFacts facts = computeShapeFacts(op);
+
+      std::string weightDtype;
+      if (auto a = op.getAttrOfType<StringAttr>("quant.weight_dtype"))
+        weightDtype = a.getValue().str();
+
+      // Phase 1: evaluate every candidate (V0 + V1 + V2 when possible).
+      SmallVector<CandidateEval, 4> evals;
+      SmallVector<Attribute> passthrough; // non-dict elements, kept verbatim
+      bool allEvaluatedHaveEstimates = true;
+      for (auto elem : candArr) {
+        auto dict = dyn_cast<DictionaryAttr>(elem);
+        if (!dict) { passthrough.push_back(elem); continue; }
+
+        CandidateEval ce;
+        ce.dict = dict;
+        std::string candType  = readStr(dict, "candidate_type");
+        std::string fbBackend = readStr(dict, "fallback_backend");
+        auto boundaryOps      = readStrs(dict, "required_boundary_ops");
+
+        ce.v0 = evaluatePenaltyV0(candType, boundaryOps);
+        ce.v1 = model.compute(candType, boundaryOps, fbBackend);
+
+        if (facts.usable()) {
+          std::string actDtype =
+              resolveActivationDtype(dict, candType, op, effectiveDtype);
+          int64_t actBits = dtypeBits(actDtype);
+          int64_t weightBits = dtypeBits(weightDtype);
+          if (weightBits <= 0) weightBits = actBits;
+          if (actBits > 0) {
+            // Boundary traffic from the candidate's required boundary ops;
+            // dequant reads the quantized weight and writes it at the float
+            // activation width (modeled as 2x the float weight bytes).
+            int64_t floatWeightBytes = facts.weight_elems * actBits / 8;
+            int64_t outputBytes      = facts.output_elems * actBits / 8;
+            int64_t boundaryBytes = 0;
+            for (const auto& b : boundaryOps)
+              boundaryBytes +=
+                  boundaryBytesFor(b, outputBytes, floatWeightBytes);
+            ce.shape = estimateShapeCost(facts, actBits, weightBits,
+                                         boundaryBytes, profileNums);
+            ce.hasShapeCost = true;
+          }
+        }
+        if (ce.v0.status == "evaluated" &&
+            (!ce.hasShapeCost || !ce.shape.has_time_estimates))
+          allEvaluatedHaveEstimates = false;
+        evals.push_back(std::move(ce));
+      }
+
+      // Phase 2: decide the ranking mode for this op, then assemble.
+      bool useV2Penalty =
+          v2ModeRequested && facts.usable() && allEvaluatedHaveEstimates;
+
       SmallVector<Attribute> evaluated;
       evaluated.reserve(candArr.size());
-      for (auto elem : candArr) {
-        if (auto dict = dyn_cast<DictionaryAttr>(elem))
-          evaluated.push_back(evaluateCandidate(ctx, dict, model));
-        else
-          evaluated.push_back(elem);
-      }
+      for (const CandidateEval& ce : evals)
+        evaluated.push_back(assembleCandidate(ctx, ce, useV2Penalty));
+      for (Attribute a : passthrough)
+        evaluated.push_back(a);
 
       op.setAttr("compiler.evaluated_candidates",
                  ArrayAttr::get(ctx, evaluated));
       op.setAttr("compiler.evaluated_candidates.truth_boundary",
                  StringAttr::get(ctx, kV0Truth));
+
+      // Op-level shape profile record: op kind, whether shapes were usable,
+      // and which ranking mode actually applied — the honest trail for
+      // fallback cases.
+      op.setAttr("compiler.shape_profile.op_kind",
+                 StringAttr::get(ctx, facts.op_kind));
+      op.setAttr("compiler.shape_profile.status",
+                 StringAttr::get(ctx, facts.status));
+      op.setAttr("compiler.shape_profile.truth_boundary",
+                 StringAttr::get(ctx, kShapeCostTruthBoundary));
+      StringRef rankingMode = "v0_heuristic";
+      if (useV2Penalty)
+        rankingMode = "shape_aware_v2_estimated_total_nanos";
+      else if (v2ModeRequested)
+        rankingMode = "v0_heuristic_shape_estimates_incomplete";
+      op.setAttr("compiler.shape_profile.ranking_mode",
+                 StringAttr::get(ctx, rankingMode));
+
+      // Tile-plan integration (conservative): when TilePlanningPass found a
+      // feasible tile, convert its reuse-limited global traffic into a time
+      // annotation using the declared bandwidth. Reported alongside the
+      // ideal each-byte-once estimate — it never replaces it and never
+      // changes ranking.
+      if (auto st = op.getAttrOfType<StringAttr>("tile.plan.status");
+          st && st.getValue() == "planned" && profileNums.hasBandwidth()) {
+        if (auto traffic = op.getAttrOfType<IntegerAttr>(
+                "tile.plan.estimated_global_traffic_bytes")) {
+          int64_t nanos = static_cast<int64_t>(
+              static_cast<double>(traffic.getInt()) /
+                  profileNums.mem_bandwidth_bytes_per_sec * 1e9 +
+              0.5);
+          op.setAttr("compiler.shape_profile.estimated_tiled_memory_cost_nanos",
+                     IntegerAttr::get(IntegerType::get(ctx, 64), nanos));
+        }
+      }
     }
   }
 

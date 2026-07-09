@@ -18,6 +18,8 @@ std::unique_ptr<::mlir::Pass> createExecutionProviderPlanningPass();
 std::unique_ptr<::mlir::Pass> createRepresentationPlanningPass();
 std::unique_ptr<::mlir::Pass> createLayoutPlanningPass();
 std::unique_ptr<::mlir::Pass> createBoundaryPlanningPass();
+std::unique_ptr<::mlir::Pass> createBoundaryMaterializationPass();
+std::unique_ptr<::mlir::Pass> createTilePlanningPass();
 std::unique_ptr<::mlir::Pass> createWeightClassificationPlanningPass();
 std::unique_ptr<::mlir::Pass> createQuantizationStrategyPlanningPass();
 std::unique_ptr<::mlir::Pass> createKernelAvailabilityPlanningPass();

@@ -206,18 +206,140 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
   mlir::Block& entry = funcOp.getBody().front();
   int opIndex = 0;
   for (mlir::Operation& op : entry.without_terminator()) {
+    // Compiler-materialized boundary ops (hir.cast) are not planned ops.
+    // Skip them WITHOUT consuming an op index so op_N naming matches the
+    // pre-materialization plan exactly; their presence is reported through
+    // the anchor op's materialized_boundary_ops instead.
+    if (op.getAttr("materialized.by"))
+      continue;
     auto quant    = attrToPerOpQuantDecision(&op, opIndex);
     auto kernel   = attrToKernelDecision(&op, opIndex);
     auto fallback = attrToFallbackDecision(&op, opIndex);
 
-    if (quant || kernel || fallback) {
+    // Boundary ops actually inserted / explicitly deferred by
+    // BoundaryMaterializationPass. Absent attrs (materialization did not
+    // run) leave both lists empty — the plan then reports planning only.
+    std::vector<std::string> materialized;
+    std::vector<std::string> deferred;
+    if (auto arr =
+            op.getAttrOfType<mlir::ArrayAttr>("boundary.materialized_ops"))
+      for (mlir::Attribute elem : arr)
+        if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+          materialized.push_back(s.getValue().str());
+    if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+            "boundary.materialization.deferred"))
+      for (mlir::Attribute elem : arr)
+        if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+          deferred.push_back(s.getValue().str());
+
+    // Shape-derived static cost estimate promoted by PlanSelectionPass from
+    // the winning candidate. Present only for supported op kinds with static
+    // shapes — absence means the op honestly used the V1 fixed model.
+    std::optional<ShapeCostEstimate> shapeCost;
+    if (auto st = op.getAttrOfType<mlir::StringAttr>(
+            "selected_plan.shape_cost.status")) {
+      ShapeCostEstimate sc;
+      sc.status = st.getValue().str();
+      auto rI64 = [&](llvm::StringRef key) -> int64_t {
+        if (auto a = op.getAttrOfType<mlir::IntegerAttr>(
+                ("selected_plan.shape_cost." + key).str()))
+          return a.getInt();
+        return 0;
+      };
+      auto rOptI64 = [&](llvm::StringRef key) -> std::optional<int64_t> {
+        if (auto a = op.getAttrOfType<mlir::IntegerAttr>(
+                ("selected_plan.shape_cost." + key).str()))
+          return a.getInt();
+        return std::nullopt;
+      };
+      sc.flops_estimate              = rI64("flops_estimate");
+      sc.input_bytes_estimate        = rI64("input_bytes_estimate");
+      sc.output_bytes_estimate       = rI64("output_bytes_estimate");
+      sc.weight_bytes_estimate       = rI64("weight_bytes_estimate");
+      sc.total_memory_bytes_estimate = rI64("total_memory_bytes_estimate");
+      sc.arithmetic_intensity_milli  = rI64("arithmetic_intensity_milli");
+      sc.estimated_compute_cost_nanos  = rOptI64("estimated_compute_cost_nanos");
+      sc.estimated_memory_cost_nanos   = rOptI64("estimated_memory_cost_nanos");
+      sc.estimated_boundary_cost_nanos = rOptI64("estimated_boundary_cost_nanos");
+      sc.estimated_total_cost_nanos    = rOptI64("estimated_total_cost_nanos");
+      sc.cost_model_version = strOp(&op, "selected_plan.shape_cost.model_version");
+      sc.truth_boundary = strOp(&op, "selected_plan.shape_cost.truth_boundary");
+      shapeCost = std::move(sc);
+    }
+
+    // Static tile plan from TilePlanningPass (matmul-like ops on targets
+    // that declare local memory).
+    std::optional<TilePlan> tilePlan;
+    if (auto st = op.getAttrOfType<mlir::StringAttr>("tile.plan.status")) {
+      TilePlan tp;
+      tp.status = st.getValue().str();
+      auto rI64 = [&](llvm::StringRef key) -> int64_t {
+        if (auto a = op.getAttrOfType<mlir::IntegerAttr>(
+                ("tile.plan." + key).str()))
+          return a.getInt();
+        return 0;
+      };
+      if (auto shape = op.getAttrOfType<mlir::ArrayAttr>("tile.plan.shape");
+          shape && shape.size() == 3) {
+        auto dim = [&](unsigned i) -> int64_t {
+          if (auto ia = mlir::dyn_cast<mlir::IntegerAttr>(shape[i]))
+            return ia.getInt();
+          return 0;
+        };
+        tp.tile_m = dim(0);
+        tp.tile_n = dim(1);
+        tp.tile_k = dim(2);
+      }
+      tp.local_memory_bytes  = rI64("local_memory_bytes");
+      tp.rejected_tile_count = rI64("rejected_tile_count");
+      tp.estimated_global_traffic_bytes =
+          rI64("estimated_global_traffic_bytes");
+      if (auto a =
+              op.getAttrOfType<mlir::BoolAttr>("tile.plan.double_buffer_fits"))
+        tp.double_buffer_fits = a.getValue();
+      tp.staging_capability = strOp(&op, "tile.plan.staging_capability");
+      tp.rejection_reason   = strOp(&op, "tile.plan.rejection_reason");
+      tp.truth_boundary     = strOp(&op, "tile.plan.truth_boundary");
+      tilePlan = std::move(tp);
+    }
+
+    // Per-op layout decision from LayoutPlanningPass attrs. Collected for
+    // every annotated op, but it creates a bundle on its own only when a
+    // transform boundary exists — keeps plan size stable for the common
+    // no-transition case.
+    std::optional<LayoutDecision> layout;
+    if (auto eff =
+            op.getAttrOfType<mlir::StringAttr>("layout.effective_layout")) {
+      LayoutDecision ld;
+      ld.meta.decision_id   = "ld_collected_op_" + std::to_string(opIndex);
+      ld.meta.decision_type = "LayoutDecision";
+      ld.meta.scope         = DecisionScope::PerOp;
+      ld.meta.source_pass   = "layout-planning";
+      ld.meta.reason        = strOp(&op, "layout.layout_source");
+      ld.meta.truth_boundary = strOp(&op, "layout.truth_boundary");
+      ld.op_type            = op.getName().getStringRef().str();
+      ld.selected_layout    = eff.getValue().str();
+      ld.required_input_layout = strOp(&op, "layout.required_input_layout");
+      if (auto a =
+              op.getAttrOfType<mlir::BoolAttr>("layout.transform_required"))
+        ld.requires_layout_transform = a.getValue();
+      layout = std::move(ld);
+    }
+    bool layoutCreatesBundle = layout && layout->requires_layout_transform;
+
+    if (quant || kernel || fallback || !materialized.empty() ||
+        !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
       bundle.quantization = std::move(quant);
       bundle.kernel       = std::move(kernel);
       bundle.fallback     = std::move(fallback);
-      // LayoutDecision: no standalone per-op layout attr in V1. Stays nullopt.
+      bundle.materialized_boundary_ops = std::move(materialized);
+      bundle.deferred_boundary_ops     = std::move(deferred);
+      bundle.shape_cost   = std::move(shapeCost);
+      bundle.tile_plan    = std::move(tilePlan);
+      bundle.layout       = std::move(layout);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;

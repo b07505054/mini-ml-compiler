@@ -174,6 +174,8 @@ static llvm::json::Object serializeLayoutDecision(const LayoutDecision &d) {
   auto obj = serializeMeta(d.meta);
   obj["op_type"]                   = d.op_type;
   obj["selected_layout"]           = d.selected_layout;
+  if (!d.required_input_layout.empty())
+    obj["required_input_layout"]   = d.required_input_layout;
   obj["requires_layout_transform"] = d.requires_layout_transform;
   return obj;
 }
@@ -203,6 +205,75 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     obj["kernel"] = serializeKernelDecision(*b.kernel);
   if (b.fallback)
     obj["fallback"] = serializeFallbackDecision(*b.fallback);
+  // Boundary materialization record: emitted only when
+  // BoundaryMaterializationPass recorded it, so plans from planning-only
+  // pipelines are unchanged. materialized = inserted into IR;
+  // deferred = planned but not yet materializable without inventing
+  // metadata the planner does not produce.
+  if (!b.materialized_boundary_ops.empty()) {
+    llvm::json::Array materialized;
+    for (const auto &m : b.materialized_boundary_ops)
+      materialized.push_back(m);
+    obj["materialized_boundary_ops"] = std::move(materialized);
+  }
+  if (!b.deferred_boundary_ops.empty()) {
+    llvm::json::Array deferred;
+    for (const auto &m : b.deferred_boundary_ops)
+      deferred.push_back(m);
+    obj["deferred_boundary_ops"] = std::move(deferred);
+  }
+  // Shape-derived static cost estimate (shape_cost_model_v2). A static
+  // compiler estimate from tensor shapes and declared profile numbers —
+  // never a measured benchmark. Time fields absent when the profile
+  // declared no peak numbers.
+  if (b.shape_cost) {
+    const ShapeCostEstimate &sc = *b.shape_cost;
+    llvm::json::Object scObj;
+    scObj["flops_estimate"]              = sc.flops_estimate;
+    scObj["input_bytes_estimate"]        = sc.input_bytes_estimate;
+    scObj["output_bytes_estimate"]       = sc.output_bytes_estimate;
+    scObj["weight_bytes_estimate"]       = sc.weight_bytes_estimate;
+    scObj["total_memory_bytes_estimate"] = sc.total_memory_bytes_estimate;
+    scObj["arithmetic_intensity_milli"]  = sc.arithmetic_intensity_milli;
+    if (sc.estimated_compute_cost_nanos)
+      scObj["estimated_compute_cost_nanos"] = *sc.estimated_compute_cost_nanos;
+    if (sc.estimated_memory_cost_nanos)
+      scObj["estimated_memory_cost_nanos"] = *sc.estimated_memory_cost_nanos;
+    if (sc.estimated_boundary_cost_nanos)
+      scObj["estimated_boundary_cost_nanos"] =
+          *sc.estimated_boundary_cost_nanos;
+    if (sc.estimated_total_cost_nanos)
+      scObj["estimated_total_cost_nanos"] = *sc.estimated_total_cost_nanos;
+    scObj["status"]             = sc.status;
+    scObj["cost_model_version"] = sc.cost_model_version;
+    scObj["cost_truth_boundary"] = sc.truth_boundary;
+    obj["shape_cost"] = std::move(scObj);
+  }
+  // Static local-memory tile plan (tile_planning_v1): feasibility against
+  // the declared capacity plus a reuse-limited traffic estimate. Not
+  // measured performance, not DMA execution, not codegen.
+  if (b.tile_plan) {
+    const TilePlan &tp = *b.tile_plan;
+    llvm::json::Object tpObj;
+    tpObj["status"] = tp.status;
+    if (tp.status == "planned") {
+      llvm::json::Array shape;
+      shape.push_back(tp.tile_m);
+      shape.push_back(tp.tile_n);
+      shape.push_back(tp.tile_k);
+      tpObj["tile_shape_mnk"]      = std::move(shape);
+      tpObj["local_memory_bytes"]  = tp.local_memory_bytes;
+      tpObj["estimated_global_traffic_bytes"] =
+          tp.estimated_global_traffic_bytes;
+      tpObj["double_buffer_fits"]  = tp.double_buffer_fits;
+      tpObj["staging_capability"]  = tp.staging_capability;
+    }
+    tpObj["rejected_tile_count"] = tp.rejected_tile_count;
+    if (!tp.rejection_reason.empty())
+      tpObj["rejection_reason"] = tp.rejection_reason;
+    tpObj["truth_boundary"] = tp.truth_boundary;
+    obj["tile_plan"] = std::move(tpObj);
+  }
   return obj;
 }
 

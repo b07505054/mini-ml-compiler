@@ -44,6 +44,32 @@ def HIR_FusedRMSNormOp
   }];
 }
 
+def HIR_CastOp
+    : HIR_Op<"cast", [Pure]> {
+  let summary = "Compiler-materialized float precision cast boundary";
+  let description = [{
+    Float-to-float precision cast inserted by BoundaryMaterializationPass
+    where the selected execution plan requires a cast boundary
+    (boundary.cast_required = true). Input and result must be ranked tensors
+    with identical shapes and different float element types; int<->float
+    boundaries use hir.quantize/hir.dequantize instead.
+
+    The verifier requires provenance attributes so every materialized cast
+    is traceable to the planning decision that caused insertion:
+    materialized.from_decision and materialized.truth_boundary. The op
+    records a compiler IR transform only; it makes no runtime execution
+    claim.
+  }];
+
+  let arguments = (ins AnyTensor:$input);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $input attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def HIR_QuantizeOp
     : HIR_Op<"quantize", [Pure]> {
   let summary = "Quantize floating-point activations to INT8";

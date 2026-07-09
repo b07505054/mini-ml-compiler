@@ -179,6 +179,25 @@ struct TargetConstraints {
   double decode_ms_per_token    = 0.0; // target.decode_ms_per_token
   double pd_bandwidth_mb_per_ms = 0.0; // target.pd_bandwidth_mb_per_ms
 
+  // Static cost profile (target.static_cost_profile.*): declared theoretical
+  // peak numbers consumed by shape_cost_model_v2 in ServingCostModelPass.
+  // 0 = not declared → the cost model emits shape facts only, no time
+  // estimates. These are public-docs/declared-profile peaks, never measured.
+  double static_cost_peak_flops_fp32             = 0.0;
+  double static_cost_peak_flops_fp16             = 0.0;
+  double static_cost_peak_flops_int8             = 0.0;
+  double static_cost_memory_bandwidth_bytes_per_sec = 0.0;
+  // Memory hierarchy (declared capacities/capabilities, never measured):
+  // local memory = SRAM / shared memory / scratchpad per compute unit.
+  // 0 = not declared → TilePlanningPass is inert.
+  int64_t static_cost_local_memory_bytes         = 0;
+  int64_t static_cost_cache_line_bytes           = 0;
+  bool static_cost_supports_async_copy           = false;
+  bool static_cost_supports_dma                  = false;
+  bool has_static_cost_supports_async_copy       = false; // declared in profile
+  bool has_static_cost_supports_dma              = false; // declared in profile
+  std::string static_cost_profile_truth_boundary;  // "" when absent
+
   // Presence flags: set only when the corresponding attr was found in the
   // module.  Needed for fields whose zero/false value is a valid constraint.
   bool has_memory_budget           = false;

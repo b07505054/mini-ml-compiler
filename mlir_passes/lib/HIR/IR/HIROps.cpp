@@ -273,6 +273,31 @@ LogicalResult FusedRMSNormOp::verify() {
   return success();
 }
 
+LogicalResult CastOp::verify() {
+  auto inputType = dyn_cast<RankedTensorType>(getInput().getType());
+  auto outputType = dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!inputType || !outputType) {
+    return emitOpError("expects ranked tensor input and result");
+  }
+  if (inputType.getShape() != outputType.getShape()) {
+    return emitOpError("expects input and result shapes to match");
+  }
+  if (!isa<FloatType>(inputType.getElementType()) ||
+      !isa<FloatType>(outputType.getElementType())) {
+    return emitOpError(
+        "expects float element types; int<->float boundaries use "
+        "hir.quantize/hir.dequantize");
+  }
+  if (inputType.getElementType() == outputType.getElementType()) {
+    return emitOpError("expects input and result element types to differ");
+  }
+  if (failed(requireStringAttr(getOperation(), "materialized.from_decision")) ||
+      failed(requireStringAttr(getOperation(), "materialized.truth_boundary"))) {
+    return failure();
+  }
+  return success();
+}
+
 LogicalResult QuantizeOp::verify() {
   if (failed(requireRankedTensor(getOperation(), getInput().getType(), "input")) ||
       failed(requireRankedTensor(getOperation(), getOutput().getType(), "output")) ||

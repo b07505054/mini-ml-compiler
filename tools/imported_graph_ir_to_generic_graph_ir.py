@@ -21,18 +21,25 @@ TRUTH_BOUNDARY = "imported_graph_ir_normalized_no_domain_recognition"
 
 ONNX_TO_GENERIC_OP = {
     "Conv": "nn.conv2d",
+    "ConvTranspose": "nn.conv_transpose2d",
     "Add": "nn.add",
+    "Sub": "nn.sub",
     "Mul": "nn.mul",
+    "Div": "nn.div",
     "MatMul": "nn.matmul",
     "Gemm": "nn.gemm",
     "Reshape": "nn.reshape",
     "Transpose": "nn.transpose",
     "Concat": "nn.concat",
+    "Split": "nn.split",
+    "Slice": "nn.slice",
     "Resize": "nn.resize",
+    "MaxPool": "nn.maxpool2d",
     "Sigmoid": "nn.sigmoid",
     "Relu": "nn.relu",
     "Softmax": "nn.softmax",
     "Identity": "nn.identity",
+    "Constant": "nn.constant",
 }
 UNKNOWN_OP = "nn.unknown"
 
@@ -83,14 +90,15 @@ def _normalize_values(values: list[Any]) -> list[dict[str, Any]]:
     normalized = []
     for value in values:
         value = _require_dict(value, "graph.values[]")
-        normalized.append(
-            {
-                "name": value.get("name", ""),
-                "source_name": value.get("source_name", value.get("name", "")),
-                "dtype": value.get("dtype", "unknown"),
-                "shape": list(value.get("shape", [])),
-            }
-        )
+        record = {
+            "name": value.get("name", ""),
+            "source_name": value.get("source_name", value.get("name", "")),
+            "dtype": value.get("dtype", "unknown"),
+            "shape": list(value.get("shape", [])),
+        }
+        if "literal_values" in value:
+            record["literal_values"] = list(value.get("literal_values", []))
+        normalized.append(record)
     return normalized
 
 
@@ -108,6 +116,8 @@ def _normalize_initializers(initializers: list[Any]) -> list[dict[str, Any]]:
             record["data_location"] = init["data_location"]
         if "raw_data_bytes" in init:
             record["raw_data_bytes"] = init["raw_data_bytes"]
+        if "literal_values" in init:
+            record["literal_values"] = list(init.get("literal_values", []))
         normalized.append(record)
     return normalized
 

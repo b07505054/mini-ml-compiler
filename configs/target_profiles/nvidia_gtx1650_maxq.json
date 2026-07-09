@@ -10,6 +10,16 @@
     "cuda"
   ],
   "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "staticCostProfile": {
+    "peakFlopsFp32": 2.46e12,
+    "peakFlopsFp16": 4.92e12,
+    "memoryBandwidthBytesPerSec": 1.28e11,
+    "localMemoryBytes": 65536,
+    "cacheLineBytes": 128,
+    "supportsAsyncCopy": false,
+    "truthBoundary": "public_docs_theoretical_peak_not_measured",
+    "source": "TU117 GTX 1650 Max-Q public specs: shader FP32 ~2.46 TFLOPS, FP16 at 2:1 rate, 128-bit GDDR5 ~128 GB/s, 64 KB shared memory per SM (Turing), 128 B cache lines. supportsAsyncCopy=false: cp.async requires Ampere (cc 8.0+). No INT8 peak declared (TU117 has no tensor cores; dp4a rate not claimed)."
+  },
   "sourceNotes": {
     "device": "NVIDIA GeForce GTX 1650 Max-Q, Turing architecture, compute capability 7.5, 4 GB GDDR5",
     "fp16": "Turing supports FP16 natively via shader units; no full Tensor Core FP16 (Tensor Cores on Turing are INT8-focused).",

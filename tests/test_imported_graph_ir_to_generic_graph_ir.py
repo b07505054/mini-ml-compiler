@@ -13,6 +13,7 @@ onnx = pytest.importorskip("onnx")
 
 import onnx_import_to_graph_ir as imported_ir  # noqa: E402
 import imported_graph_ir_to_generic_graph_ir as generic_ir  # noqa: E402
+import verify_graph_ir as verifier  # noqa: E402
 from test_onnx_import_to_graph_ir import _build_tiny_conv_add_model  # noqa: E402
 
 
@@ -25,6 +26,9 @@ class TestImportedGraphIRToGenericGraphIR(unittest.TestCase):
             imported = imported_ir.import_onnx_to_graph_ir(onnx_path, onnx)
 
         generic = generic_ir.convert_imported_graph_ir(imported)
+
+        result = verifier.verify_generic_graph_ir(generic)
+        self.assertTrue(result.passed, result.errors)
 
         self.assertEqual(generic["schema"], "generic_graph_ir")
         self.assertEqual(generic["schema_version"], "0.1.0")
@@ -112,6 +116,101 @@ class TestImportedGraphIRToGenericGraphIR(unittest.TestCase):
         self.assertEqual(generic["nodes"][0]["op"], "nn.unknown")
         self.assertEqual(generic["nodes"][0]["source_op_type"], "CustomOp")
         self.assertEqual(generic["nodes"][0]["source_name"], "custom0")
+
+    def test_yoloseg_gap_ops_map_to_model_agnostic_generic_ops(self):
+        op_types = ["Div", "Sub", "MaxPool", "Split", "Slice", "ConvTranspose", "Constant"]
+        imported = {
+            "schema": "imported_graph_ir",
+            "schema_version": "0.1.0",
+            "graph": {
+                "name": "gap_ops",
+                "source_name": "gap_ops",
+                "inputs": ["x"],
+                "outputs": ["y5"],
+                "nodes": [
+                    {
+                        "id": index,
+                        "name": f"node{index}",
+                        "source_name": f"node{index}",
+                        "op_type": op_type,
+                        "domain": "",
+                        "inputs": ["x" if index == 0 else f"y{index - 1}"],
+                        "outputs": [f"y{index}"],
+                        "attributes": [],
+                    }
+                    for index, op_type in enumerate(op_types)
+                ],
+                "values": [
+                    {"name": "x", "source_name": "x", "dtype": "float", "shape": []},
+                    *[
+                        {"name": f"y{index}", "source_name": f"y{index}", "dtype": "float", "shape": []}
+                        for index in range(len(op_types))
+                    ],
+                ],
+                "initializers": [],
+            },
+            "provenance": {
+                "truth_boundary": "onnx_protobuf_metadata_preserved_no_domain_recognition",
+            },
+        }
+
+        generic = generic_ir.convert_imported_graph_ir(imported)
+
+        self.assertEqual(
+            [node["op"] for node in generic["nodes"]],
+            [
+                "nn.div",
+                "nn.sub",
+                "nn.maxpool2d",
+                "nn.split",
+                "nn.slice",
+                "nn.conv_transpose2d",
+                "nn.constant",
+            ],
+        )
+        self.assertTrue(verifier.verify_generic_graph_ir(generic).passed)
+
+    def test_literal_values_are_preserved_in_generic_values_and_initializers(self):
+        imported = {
+            "schema": "imported_graph_ir",
+            "schema_version": "0.1.0",
+            "graph": {
+                "name": "literal_graph",
+                "source_name": "literal_graph",
+                "inputs": ["x"],
+                "outputs": ["y"],
+                "nodes": [
+                    {
+                        "id": 0,
+                        "name": "reshape0",
+                        "source_name": "reshape0",
+                        "op_type": "Reshape",
+                        "domain": "",
+                        "inputs": ["x", "shape"],
+                        "outputs": ["y"],
+                        "attributes": [],
+                    }
+                ],
+                "values": [
+                    {"name": "x", "source_name": "x", "dtype": "float", "shape": []},
+                    {"name": "shape", "source_name": "shape", "dtype": "int64", "shape": [{"kind": "static", "value": 2}], "literal_values": [2, 3]},
+                    {"name": "y", "source_name": "y", "dtype": "float", "shape": []},
+                ],
+                "initializers": [
+                    {"name": "shape", "source_name": "shape", "dtype": "int64", "shape": [{"kind": "static", "value": 2}], "raw_data_bytes": 16, "literal_values": [2, 3]}
+                ],
+            },
+            "provenance": {
+                "truth_boundary": "onnx_protobuf_metadata_preserved_no_domain_recognition",
+            },
+        }
+
+        generic = generic_ir.convert_imported_graph_ir(imported)
+
+        values = {value["name"]: value for value in generic["values"]}
+        initializers = {init["name"]: init for init in generic["initializers"]}
+        self.assertEqual(values["shape"]["literal_values"], [2, 3])
+        self.assertEqual(initializers["shape"]["literal_values"], [2, 3])
 
     def test_cli_writes_generic_graph_ir_json(self):
         model = _build_tiny_conv_add_model()

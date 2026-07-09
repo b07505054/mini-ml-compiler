@@ -337,15 +337,24 @@ int main() {
          "decode FallbackDecision must be nullopt: lowering_path is direct_lower");
 
   // -------------------------------------------------------------------------
-  // Per-op LayoutDecision: must be nullopt.
-  //
-  // No standalone per-op layout attr cluster in V1. attrToKernelDecision does
-  // not produce a LayoutDecision; that field stays nullopt by design.
+  // Per-op LayoutDecision: collected from layout.* attrs when
+  // LayoutPlanningPass annotated the op (PR4 layout export). When present,
+  // the decision must carry the pass-emitted layout and provenance. A
+  // LayoutDecision alone creates a bundle only when a transform boundary
+  // exists; here it rides on the op's existing decisions.
   // -------------------------------------------------------------------------
-  assert(!prefill_op.layout.has_value() &&
-         "prefill LayoutDecision should stay nullopt: no V1 per-op layout attr");
-  assert(!decode_op.layout.has_value() &&
-         "decode LayoutDecision should stay nullopt: no V1 per-op layout attr");
+  if (prefill_op.layout.has_value()) {
+    assert(!prefill_op.layout->selected_layout.empty() &&
+           "prefill LayoutDecision must carry layout.effective_layout");
+    assert(prefill_op.layout->meta.source_pass == "layout-planning" &&
+           "prefill LayoutDecision source_pass must be layout-planning");
+    assert(!prefill_op.layout->meta.truth_boundary.empty() &&
+           "prefill LayoutDecision must carry layout.truth_boundary");
+  }
+  if (decode_op.layout.has_value()) {
+    assert(!decode_op.layout->selected_layout.empty() &&
+           "decode LayoutDecision must carry layout.effective_layout");
+  }
 
   // -------------------------------------------------------------------------
   // dumpSummary: must not crash.

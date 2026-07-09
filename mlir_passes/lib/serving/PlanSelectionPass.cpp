@@ -206,6 +206,41 @@ struct PlanSelectionPass
       op.setAttr("selected_plan.cost.unsupported",
                  I64(readI64Dict(best.dict, "evaluation.cost.unsupported")));
 
+      // Promote V2 shape-aware cost evidence from the winning candidate.
+      // Gated on presence (unlike cost.*): shape_cost exists only for
+      // supported op kinds with static shapes, so absent attrs mean the op
+      // honestly fell back to the V1 fixed model.
+      if (auto scStatus = best.dict.get("evaluation.shape_cost.status")) {
+        auto promoteI64 = [&](StringRef key) {
+          std::string src = ("evaluation.shape_cost." + key).str();
+          if (auto a = best.dict.get(src))
+            if (auto ia = dyn_cast<IntegerAttr>(a))
+              op.setAttr(("selected_plan.shape_cost." + key).str(),
+                         I64(ia.getInt()));
+        };
+        auto promoteStr = [&](StringRef key) {
+          std::string src = ("evaluation.shape_cost." + key).str();
+          if (auto a = best.dict.get(src))
+            if (auto s = dyn_cast<StringAttr>(a))
+              op.setAttr(("selected_plan.shape_cost." + key).str(),
+                         S(s.getValue()));
+        };
+        promoteI64("arithmetic_intensity_milli");
+        promoteI64("estimated_boundary_cost_nanos");
+        promoteI64("estimated_compute_cost_nanos");
+        promoteI64("estimated_memory_cost_nanos");
+        promoteI64("estimated_total_cost_nanos");
+        promoteI64("flops_estimate");
+        promoteI64("input_bytes_estimate");
+        promoteStr("model_version");
+        promoteI64("output_bytes_estimate");
+        promoteStr("status");
+        promoteI64("total_memory_bytes_estimate");
+        promoteStr("truth_boundary");
+        promoteI64("weight_bytes_estimate");
+        (void)scStatus;
+      }
+
       // Selected candidate as a 1-element array for downstream consumers.
       op.setAttr("compiler.selected_candidates",
                  ArrayAttr::get(ctx, {best.dict}));

@@ -183,6 +183,21 @@ struct TargetDeviceProfile {
   // Kernel library capability declarations (Layer 3: actual kernel availability).
   std::vector<KernelLibraryProfile> kernelLibraries;
 
+  // Optional static cost profile for shape_cost_model_v2: declared
+  // theoretical peak numbers (public docs or declared profile — never
+  // measured). 0 = not declared; the cost model then emits shape facts
+  // without time estimates.
+  double      staticCostPeakFlopsFp32 = 0.0;
+  double      staticCostPeakFlopsFp16 = 0.0;
+  double      staticCostPeakFlopsInt8 = 0.0;
+  double      staticCostMemoryBandwidthBytesPerSec = 0.0;
+  // Memory hierarchy (declared capacities/capabilities, never measured).
+  int64_t     staticCostLocalMemoryBytes = 0;
+  int64_t     staticCostCacheLineBytes   = 0;
+  std::optional<bool> staticCostSupportsAsyncCopy;
+  std::optional<bool> staticCostSupportsDma;
+  std::string staticCostTruthBoundary;
+
   // Optional experimental global quantization override (Phase C minimal AWQ
   // support). When absent, quantization planning is unchanged: no
   // quantization.* module attrs are set by this driver, exactly as before
@@ -271,6 +286,24 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
     tc.pd_bandwidth_mb_per_ms    = prof.pdBandwidthMbPerMs;
     tc.has_pd_bandwidth_mb_per_ms = true;
   }
+
+  // Static cost profile numbers for shape_cost_model_v2 (declared peaks).
+  tc.static_cost_peak_flops_fp32 = prof.staticCostPeakFlopsFp32;
+  tc.static_cost_peak_flops_fp16 = prof.staticCostPeakFlopsFp16;
+  tc.static_cost_peak_flops_int8 = prof.staticCostPeakFlopsInt8;
+  tc.static_cost_memory_bandwidth_bytes_per_sec =
+      prof.staticCostMemoryBandwidthBytesPerSec;
+  tc.static_cost_local_memory_bytes = prof.staticCostLocalMemoryBytes;
+  tc.static_cost_cache_line_bytes   = prof.staticCostCacheLineBytes;
+  if (prof.staticCostSupportsAsyncCopy) {
+    tc.static_cost_supports_async_copy = *prof.staticCostSupportsAsyncCopy;
+    tc.has_static_cost_supports_async_copy = true;
+  }
+  if (prof.staticCostSupportsDma) {
+    tc.static_cost_supports_dma = *prof.staticCostSupportsDma;
+    tc.has_static_cost_supports_dma = true;
+  }
+  tc.static_cost_profile_truth_boundary = prof.staticCostTruthBoundary;
 
   // Lower per-backend capability declarations.
   // Cost fields and alignment fields preserve nullopt → absent in MLIR attrs.
@@ -440,6 +473,30 @@ parseDeviceProfile(llvm::StringRef path) {
 
   if (auto v = obj->getString("truthBoundary"))
     prof.truthBoundary = v->str();
+
+  // Parse optional staticCostProfile block (shape_cost_model_v2 declared
+  // theoretical peaks). Absent in most profiles; the cost model then emits
+  // shape facts only, without time estimates.
+  if (auto *scp = obj->getObject("staticCostProfile")) {
+    if (auto v = scp->getNumber("peakFlopsFp32"))
+      prof.staticCostPeakFlopsFp32 = *v;
+    if (auto v = scp->getNumber("peakFlopsFp16"))
+      prof.staticCostPeakFlopsFp16 = *v;
+    if (auto v = scp->getNumber("peakFlopsInt8"))
+      prof.staticCostPeakFlopsInt8 = *v;
+    if (auto v = scp->getNumber("memoryBandwidthBytesPerSec"))
+      prof.staticCostMemoryBandwidthBytesPerSec = *v;
+    if (auto v = scp->getInteger("localMemoryBytes"))
+      prof.staticCostLocalMemoryBytes = static_cast<int64_t>(*v);
+    if (auto v = scp->getInteger("cacheLineBytes"))
+      prof.staticCostCacheLineBytes = static_cast<int64_t>(*v);
+    if (auto v = scp->getBoolean("supportsAsyncCopy"))
+      prof.staticCostSupportsAsyncCopy = *v;
+    if (auto v = scp->getBoolean("supportsDma"))
+      prof.staticCostSupportsDma = *v;
+    if (auto v = scp->getString("truthBoundary"))
+      prof.staticCostTruthBoundary = v->str();
+  }
 
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
   // Absent in every existing profile; only present in profiles that opt in
@@ -773,7 +830,10 @@ int main(int argc, char **argv) {
                        mlir::StringAttr::get(ctxPtr, prof.forcedQuantArtifactRef));
   }
 
-  // 5. Run the serving-optimization-pipeline (10 passes).
+  // 5. Run the serving-optimization-pipeline (16 planning passes), then
+  //    boundary materialization (the first IR-transforming stage: inserts
+  //    hir.cast where the selected plan requires a cast boundary, before
+  //    ExecutionPlanBuilder collects the annotated module).
   mlir::PassManager pm(&ctx);
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createServingPhaseAnalysisPass());
@@ -799,6 +859,12 @@ int main(int argc, char **argv) {
       mlir::hir::createLoweringDecisionPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createQuantizedBoundaryRefinementPass());
+  // Memory-hierarchy-aware tile planning (inert unless the profile declares
+  // staticCostProfile.localMemoryBytes). Runs after quantization strategy so
+  // quant dtypes shape the tile footprint, before candidate evaluation so
+  // the cost model can annotate tiled traffic.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createTilePlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createAlternativeLoweringPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
@@ -807,6 +873,8 @@ int main(int argc, char **argv) {
       mlir::hir::createCandidateEvaluationPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createPlanSelectionPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createBoundaryMaterializationPass());
 
   if (pm.run(module.get()).failed()) {
     llvm::errs() << "error: serving pass pipeline failed\n";

@@ -80,6 +80,21 @@ struct PerOpDecisionBundle {
   std::optional<LayoutDecision>       layout;
   std::optional<QuantizationDecision> quantization;  // per-op override; scope = PerOp
   std::optional<FallbackDecision>     fallback;
+  // Boundary ops BoundaryMaterializationPass actually inserted into IR for
+  // this op (currently only "cast"). Empty when materialization did not run
+  // or nothing was materialized.
+  std::vector<std::string> materialized_boundary_ops;
+  // Boundary requirements materialization explicitly deferred
+  // ("dequant" | "layout_transform"): planned but not yet insertable
+  // without inventing metadata the planner does not produce.
+  std::vector<std::string> deferred_boundary_ops;
+  // Shape-derived static cost estimate for the selected candidate
+  // (shape_cost_model_v2). Absent when the op fell back to the V1 fixed
+  // model (unknown op kind, dynamic shapes) or the pass did not run.
+  std::optional<ShapeCostEstimate> shape_cost;
+  // Static local-memory tile plan (tile_planning_v1). Absent for
+  // non-matmul ops or when the profile declares no local memory.
+  std::optional<TilePlan> tile_plan;
 };
 
 // Plan for one serving function (prefill or decode).

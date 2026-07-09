@@ -12,8 +12,57 @@ Key invariants:
   the plan and emit runtime-specific artifacts.
 - Every decision carries `truth_boundary` at the decision level.
 - No measured performance values appear in this plan.
-- IR materialization (cast/dequant/layout_transform insertion) is not performed;
-  the plan describes decisions only.
+- Per-op bundles may carry a `shape_cost` object (shape_cost_model_v2): a
+  **static compiler estimate** derived from tensor shapes, existing dtype /
+  quantization metadata, and declared theoretical peak numbers
+  (`staticCostProfile` in the target profile). Fields:
+  `flops_estimate`, `input_bytes_estimate`, `output_bytes_estimate`,
+  `weight_bytes_estimate`, `total_memory_bytes_estimate`,
+  `arithmetic_intensity_milli` (FLOPs×1000/bytes), optional
+  `estimated_{compute,memory,boundary,total}_cost_nanos` (roofline form,
+  present only when the profile declares peak FLOPs/bandwidth), `status`
+  (`estimated` | `facts_only_no_profile_numbers`), `cost_model_version`,
+  and `cost_truth_boundary =
+  static_shape_derived_declared_profile_not_measured_not_runtime_validated`.
+  This is **not a measured benchmark and not a runtime latency guarantee**;
+  it is the first step toward hardware-aware co-design (shape × dtype ×
+  quantization × declared hardware profile). Ops with unknown kinds or
+  dynamic shapes have no `shape_cost` — they honestly fall back to the V1
+  fixed model.
+- Per-op bundles may carry a `tile_plan` object (tile_planning_v1,
+  `TilePlanningPass`): **memory-hierarchy-aware static planning** for
+  matmul-like ops against the declared local memory capacity
+  (`staticCostProfile.localMemoryBytes` — SRAM / shared memory /
+  scratchpad). Fields: `status` (`planned` | `no_feasible_tile` |
+  `dynamic_dims_unresolved` | …), `tile_shape_mnk`, `local_memory_bytes`
+  (selected tile footprint), `estimated_global_traffic_bytes`
+  (reuse-limited bound, reported alongside — never replacing —
+  `shape_cost`'s ideal each-byte-once bytes), `double_buffer_fits`,
+  `staging_capability` (`async_copy_declared` | `dma_declared` |
+  `none_declared`), `rejected_tile_count`, `rejection_reason`, and
+  `truth_boundary =
+  tile_planning_static_local_memory_model_not_measured_not_codegen`.
+  This is **not measured performance, not DMA/async-copy execution, not
+  codegen**, and no claim that the backend kernel uses this tiling.
+  Candidate ranking is unchanged by tile planning.
+- Per-op bundles may carry a `layout` decision collected from
+  `LayoutPlanningPass` attrs: `selected_layout`, `required_input_layout`
+  (the producer's layout — a transform boundary exists when they differ),
+  and `requires_layout_transform`. A layout decision alone creates a
+  bundle only when a transform is required. Layout transforms remain
+  planning-only (`BoundaryMaterializationPass` defers them; no layout op
+  exists in the hir dialect yet).
+- IR materialization is limited to float-precision cast boundaries:
+  `BoundaryMaterializationPass` inserts `hir.cast` where the selected plan
+  set `boundary.cast_required = true`, and the per-op bundle then reports
+  `materialized_boundary_ops` (inserted into IR) alongside
+  `deferred_boundary_ops` (`dequant` / `layout_transform` — planned but not
+  yet materializable without inventing metadata the planner does not
+  produce). Both fields are omitted when materialization did not run or
+  recorded nothing for an op. Materialized casts are compiler IR transforms
+  only (`truth_boundary =
+  compiler_materialized_boundary_op_not_runtime_executed`), not runtime
+  execution claims.
 
 V1 (`ServingExecutionPlan.h`) has been removed; `ExecutionPlan` (this schema,
 formerly called "V2" internally) is now the only compiler output. The older

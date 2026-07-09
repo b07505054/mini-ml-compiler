@@ -64,6 +64,8 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/RepresentationPlanningPass.cpp
   lib/serving/LayoutPlanningPass.cpp
   lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/BoundaryMaterializationPass.cpp
+  lib/serving/TilePlanningPass.cpp
   lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
@@ -440,6 +442,8 @@ add_executable(compile-for-target
   lib/serving/RepresentationPlanningPass.cpp
   lib/serving/LayoutPlanningPass.cpp
   lib/serving/BoundaryPlanningPass.cpp
+  lib/serving/BoundaryMaterializationPass.cpp
+  lib/serving/TilePlanningPass.cpp
   lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
@@ -718,6 +722,11 @@ find_program(MLIR_OPT_BIN
   HINTS "${LLVM_TOOLS_BINARY_DIR}"
   DOC "Path to mlir-opt (required for LLMFrontendNormalizationTest)"
 )
+find_program(FILECHECK_BIN
+  NAMES FileCheck
+  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  DOC "Path to FileCheck (required for generic existing-dialect prototype tests)"
+)
 
 set(_LLMFN_INT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/llm_frontend_norm_integration")
 set(_LLMFN_NORM_MLIR "${_LLMFN_INT_DIR}/normalized.mlir")
@@ -783,6 +792,26 @@ else()
     "mlir-opt not found; LLMFrontendNormalizationTest and "
     "QwenOnnxServingPlanExportTest will not be added. "
     "Set MLIR_OPT_BIN or ensure mlir-opt is in PATH."
+  )
+endif()
+
+if(MLIR_OPT_BIN AND FILECHECK_BIN)
+  foreach(prototype IN ITEMS
+      generic_resize_nearest_2x_prototype
+      generic_conv_transpose2d_stride2_prototype)
+    add_test(NAME ${prototype}Test
+      COMMAND ${CMAKE_COMMAND}
+        -DMLIR_OPT=${MLIR_OPT_BIN}
+        -DFILECHECK=${FILECHECK_BIN}
+        -DINPUT=${REPO_ROOT}/mlir/${prototype}.mlir
+        -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/${prototype}.verified.mlir
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/test/RunGenericMLIRPrototypeTest.cmake
+    )
+  endforeach()
+else()
+  message(STATUS
+    "mlir-opt or FileCheck not found; generic existing-dialect prototype "
+    "tests will not be added."
   )
 endif()
 
