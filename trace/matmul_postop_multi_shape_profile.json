@@ -1,0 +1,2709 @@
+{
+  "schema": "matmul_postop_multi_shape_evaluation",
+  "schema_version": 1,
+  "machine": {
+    "hostname": "allen-ZenBook-UX534FTC-UX534FT",
+    "uname": "Linux-7.0.0-27-generic-x86_64-with-glibc2.43"
+  },
+  "benchmark_configuration": {
+    "formal_warmup_min": 50,
+    "formal_iterations_min": 300,
+    "formal_repeats_min": 5
+  },
+  "workloads": [
+    {
+      "workload_id": "rep_m1_k768_n3072",
+      "category": "representative",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        3072
+      ],
+      "shape": {
+        "m": 1,
+        "n": 3072,
+        "k": 768,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 2359296,
+        "matmul_flops": 4718592,
+        "output_elements": 3072,
+        "output_bytes": 12288,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 24576,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 73728,
+        "logical_fused_postop_bytes": 24576,
+        "estimated_postop_bytes_eliminated": 49152,
+        "fusion_pressure_score": 0.010416666666666666,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_unfused_f32",
+      "compiler_selected_latency": 1.744746,
+      "oracle_best_latency": 1.744746,
+      "tiled_unfused_latency": 1.744746,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.0,
+      "fair_fusion_speedup": 0.9749248583918048,
+      "fair_fusion_latency_reduction_percent": -2.572007616008287,
+      "full_stack_speedup": 2.7312671230389007,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "ba4a7ef7d3e8b88e16a83ac18c000a6349f1af4fd80bfe364f56ad63c66f639b",
+      "execution_plan_sha256": "4432d32ae210f7ce1af7858b9e385d422cdf263dd96a6a3db46d77cb981171cd",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:30:02.091388+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "rep_m1_k768_n3072",
+      "category": "representative",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        1,
+        3072
+      ],
+      "shape": {
+        "m": 1,
+        "n": 3072,
+        "k": 768,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 2359296,
+        "matmul_flops": 4718592,
+        "output_elements": 3072,
+        "output_bytes": 12288,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 24576,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 73728,
+        "logical_fused_postop_bytes": 24576,
+        "estimated_postop_bytes_eliminated": 49152,
+        "fusion_pressure_score": 0.010416666666666666,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_unfused_f32",
+      "compiler_selected_latency": 1.811639,
+      "oracle_best_latency": 1.811639,
+      "tiled_unfused_latency": 1.811639,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.0,
+      "fair_fusion_speedup": 0.9796943307008265,
+      "fair_fusion_latency_reduction_percent": -2.0726535474230756,
+      "full_stack_speedup": 3.600032554829471,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "23d0719415ec153b8809f85c8188adc19da3a28b45c4b2bb2b0fa4f39c51eeda",
+      "execution_plan_sha256": "7f8dfe786d215b0da16d437faccec4d36affe8ecefa62f3ed1a30cc401475756",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:30:35.091613+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m512_n512_k16",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        512
+      ],
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 16,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 4194304,
+        "matmul_flops": 8388608,
+        "output_elements": 262144,
+        "output_bytes": 1048576,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 2097152,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 5244928,
+        "logical_fused_postop_bytes": 1050624,
+        "estimated_postop_bytes_eliminated": 4194304,
+        "fusion_pressure_score": 0.5,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 0.945168,
+      "oracle_best_latency": 0.945168,
+      "tiled_unfused_latency": 1.168437,
+      "plan_speedup": 1.2362214971306689,
+      "oracle_speedup": 1.2362214971306689,
+      "fair_fusion_speedup": 1.2362214971306689,
+      "fair_fusion_latency_reduction_percent": 19.108347304989493,
+      "full_stack_speedup": 2.2083312173073995,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "eb0647d6c45d705853ed15d9a2183065d13412de9a02f89559f66961c2afdc01",
+      "execution_plan_sha256": "4c231688636d2373b8e2895a6e67f79a9727f36e3cf2134a5b65137a0a0070dc",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:30:48.688800+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m512_n512_k16",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        512,
+        512
+      ],
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 16,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 4194304,
+        "matmul_flops": 8388608,
+        "output_elements": 262144,
+        "output_bytes": 1048576,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 2097152,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 6291456,
+        "logical_fused_postop_bytes": 2097152,
+        "estimated_postop_bytes_eliminated": 4194304,
+        "fusion_pressure_score": 0.5,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 0.97627,
+      "oracle_best_latency": 0.97627,
+      "tiled_unfused_latency": 1.188783,
+      "plan_speedup": 1.217678511067635,
+      "oracle_speedup": 1.217678511067635,
+      "fair_fusion_speedup": 1.217678511067635,
+      "fair_fusion_latency_reduction_percent": 17.87651741318642,
+      "full_stack_speedup": 2.190650127526197,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "7885eba33932d2a05371bc72ec4267bea995a05229356ed2e9ad5e3fa53236b6",
+      "execution_plan_sha256": "6987590ac8e438e3265fc35a4c0038f87ed8b4979c821b416225f0ef91d74fd1",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:31:02.573604+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m512_n512_k32",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        512
+      ],
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 32,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 262144,
+        "output_bytes": 1048576,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 2097152,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 5244928,
+        "logical_fused_postop_bytes": 1050624,
+        "estimated_postop_bytes_eliminated": 4194304,
+        "fusion_pressure_score": 0.25,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 1.822682,
+      "oracle_best_latency": 1.822682,
+      "tiled_unfused_latency": 2.117032,
+      "plan_speedup": 1.1614927891974574,
+      "oracle_speedup": 1.1614927891974574,
+      "fair_fusion_speedup": 1.1614927891974574,
+      "fair_fusion_latency_reduction_percent": 13.903899421454181,
+      "full_stack_speedup": 2.924226496997282,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "5f5df0fe76a56eb65ceda667316b02d1e03c724f39dbaae7b93ba40039e5728c",
+      "execution_plan_sha256": "de25f1d1c37a9c48f80be7118819cb3fd10eb3c0baf1004fd4b49ef724c3818f",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:31:32.597225+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m512_n512_k32",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        512,
+        512
+      ],
+      "shape": {
+        "m": 512,
+        "n": 512,
+        "k": 32,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 262144,
+        "output_bytes": 1048576,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 2097152,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 6291456,
+        "logical_fused_postop_bytes": 2097152,
+        "estimated_postop_bytes_eliminated": 4194304,
+        "fusion_pressure_score": 0.25,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 1.850411,
+      "oracle_best_latency": 1.850411,
+      "tiled_unfused_latency": 2.131031,
+      "plan_speedup": 1.1516527949736572,
+      "oracle_speedup": 1.1516527949736572,
+      "fair_fusion_speedup": 1.1516527949736572,
+      "fair_fusion_latency_reduction_percent": 13.168273948149977,
+      "full_stack_speedup": 2.909215304059477,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "0399f5ea5ee040d0b8f81e40568c69f9762fe0ee7e1a7c297c632e34acbc42fe",
+      "execution_plan_sha256": "b7c9d649d43e6e04056907fa9e69a38627440dde353cf14fb7f11595835aa74e",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:32:02.922607+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k16",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        1024
+      ],
+      "shape": {
+        "m": 1024,
+        "n": 1024,
+        "k": 16,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 1048576,
+        "output_bytes": 4194304,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 8388608,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 20975616,
+        "logical_fused_postop_bytes": 4198400,
+        "estimated_postop_bytes_eliminated": 16777216,
+        "fusion_pressure_score": 0.5,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 4.004642,
+      "oracle_best_latency": 4.004642,
+      "tiled_unfused_latency": 5.67743,
+      "plan_speedup": 1.4177122449397477,
+      "oracle_speedup": 1.4177122449397477,
+      "fair_fusion_speedup": 1.4177122449397477,
+      "fair_fusion_latency_reduction_percent": 29.46382430078399,
+      "full_stack_speedup": 2.467696488225415,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "cec267f25c7ff3b317b0f9cbcb12d9bc2b9964ec1d1e31033335160a7105e485",
+      "execution_plan_sha256": "1560691db19b1f2aac4599712ca359613f9c18dea4cdf4d6a53c10fa1da3ef0b",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:33:04.631615+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k16",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        1024,
+        1024
+      ],
+      "shape": {
+        "m": 1024,
+        "n": 1024,
+        "k": 16,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 1048576,
+        "output_bytes": 4194304,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 8388608,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 25165824,
+        "logical_fused_postop_bytes": 8388608,
+        "estimated_postop_bytes_eliminated": 16777216,
+        "fusion_pressure_score": 0.5,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 4.85882,
+      "oracle_best_latency": 4.85882,
+      "tiled_unfused_latency": 6.066099,
+      "plan_speedup": 1.2484716453789193,
+      "oracle_speedup": 1.2484716453789193,
+      "fair_fusion_speedup": 1.2484716453789193,
+      "fair_fusion_latency_reduction_percent": 19.902065561409408,
+      "full_stack_speedup": 2.109021120354325,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "26345b4197adf568315acdfdd0cb2b8ca8ee6da75ff6108fb449f6d2fd645afe",
+      "execution_plan_sha256": "830ee04399f47798ce59079c2f8065add7d0e7e04fea08d4c5539d1379ca1c00",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:34:10.800786+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m64_n64_k64",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        64
+      ],
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 262144,
+        "matmul_flops": 524288,
+        "output_elements": 4096,
+        "output_bytes": 16384,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 32768,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 82176,
+        "logical_fused_postop_bytes": 16640,
+        "estimated_postop_bytes_eliminated": 65536,
+        "fusion_pressure_score": 0.125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 0.052514,
+      "oracle_best_latency": 0.052514,
+      "tiled_unfused_latency": 0.062021,
+      "plan_speedup": 1.181037437635678,
+      "oracle_speedup": 1.181037437635678,
+      "fair_fusion_speedup": 1.181037437635678,
+      "fair_fusion_latency_reduction_percent": 15.328678995823985,
+      "full_stack_speedup": 3.3381003161061815,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "9dc40fd89082003c64c1f9c0d1b24450f8e57a5f625faaed2ac15196d1f0570e",
+      "execution_plan_sha256": "ccbfb522c6f362f9200cc8481fa36da6e6562171cd0264cda72756106eb3b661",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:34:11.757223+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m64_n64_k64",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        64,
+        64
+      ],
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 262144,
+        "matmul_flops": 524288,
+        "output_elements": 4096,
+        "output_bytes": 16384,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 32768,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 98304,
+        "logical_fused_postop_bytes": 32768,
+        "estimated_postop_bytes_eliminated": 65536,
+        "fusion_pressure_score": 0.125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 0.054669,
+      "oracle_best_latency": 0.054669,
+      "tiled_unfused_latency": 0.063669,
+      "plan_speedup": 1.1646271195741644,
+      "oracle_speedup": 1.1646271195741644,
+      "fair_fusion_speedup": 1.1646271195741644,
+      "fair_fusion_latency_reduction_percent": 14.13560759553314,
+      "full_stack_speedup": 3.2096800746309606,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": true,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "7704f276070bb73bd9df5a5affb24eddf221269d458e17f5aa208278665b48d6",
+      "execution_plan_sha256": "4b217f360aa49b4a736824a6640e9070b2308de8a74ae0c3e23653d69bf1fb2e",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:34:12.723589+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m128_n128_k128",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 2097152,
+        "matmul_flops": 4194304,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 328192,
+        "logical_fused_postop_bytes": 66048,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.0625,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 0.422115,
+      "oracle_best_latency": 0.422115,
+      "tiled_unfused_latency": 0.487512,
+      "plan_speedup": 1.1549269748765147,
+      "oracle_speedup": 1.1549269748765147,
+      "fair_fusion_speedup": 1.1549269748765147,
+      "fair_fusion_latency_reduction_percent": 13.414439029193126,
+      "full_stack_speedup": 4.214723475830047,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "7316ae1ea0072472faa650926e89c698e56ef98e24a29a7ca744bf3e7c30dff8",
+      "execution_plan_sha256": "f0124a54ee353eac8f134460a11a2f5cb14a5520c2ba9eefb431b656029cd467",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:34:21.381059+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m128_n128_k128",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        128,
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 2097152,
+        "matmul_flops": 4194304,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 393216,
+        "logical_fused_postop_bytes": 131072,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.0625,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 0.416886,
+      "oracle_best_latency": 0.416886,
+      "tiled_unfused_latency": 0.48544,
+      "plan_speedup": 1.1644430371852257,
+      "oracle_speedup": 1.1644430371852257,
+      "fair_fusion_speedup": 1.1644430371852257,
+      "fair_fusion_latency_reduction_percent": 14.122033618984842,
+      "full_stack_speedup": 4.2305570347768935,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "29ca6a8ba0b40bce483d7f3154b95aed96ae0edd78c55a7c0d29ba41ace4e074",
+      "execution_plan_sha256": "635068c9d1f474e531095ea3cd40c5bc083610b0662aa33f2ac5a73a9610b966",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:34:29.906304+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m256_n256_k256",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        256
+      ],
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 65536,
+        "output_bytes": 262144,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 524288,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 1311744,
+        "logical_fused_postop_bytes": 263168,
+        "estimated_postop_bytes_eliminated": 1048576,
+        "fusion_pressure_score": 0.03125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 3.395018,
+      "oracle_best_latency": 3.395018,
+      "tiled_unfused_latency": 3.853886,
+      "plan_speedup": 1.135159224487175,
+      "oracle_speedup": 1.135159224487175,
+      "fair_fusion_speedup": 1.135159224487175,
+      "fair_fusion_latency_reduction_percent": 11.906631384529797,
+      "full_stack_speedup": 4.711804473496164,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "ce4fa82a91318e9a85a55d77e85be85a4fb538d124cf41efa3a1f3423b29cb28",
+      "execution_plan_sha256": "e2c3d7920e1eb2fe289f810793f54a8be0cf1cf8fa835995a71503b1f3ce6058",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:35:44.929321+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "balanced_m256_n256_k256",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        256,
+        256
+      ],
+      "shape": {
+        "m": 256,
+        "n": 256,
+        "k": 256,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 65536,
+        "output_bytes": 262144,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 524288,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 1572864,
+        "logical_fused_postop_bytes": 524288,
+        "estimated_postop_bytes_eliminated": 1048576,
+        "fusion_pressure_score": 0.03125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 3.356374,
+      "oracle_best_latency": 3.356374,
+      "tiled_unfused_latency": 3.861706,
+      "plan_speedup": 1.1505589067249358,
+      "oracle_speedup": 1.1505589067249358,
+      "fair_fusion_speedup": 1.1505589067249358,
+      "fair_fusion_latency_reduction_percent": 13.08571910963703,
+      "full_stack_speedup": 5.052456609424337,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "fdc2fd8f350ec89211855c48c56e323d85f2614df599e1696e8a0c320c564013",
+      "execution_plan_sha256": "0bbb0b1cc10a13a1f63527d86135e6e2c49a37e3df4ad84776b420d2abb0c406",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:37:03.408088+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k512",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 512,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 328192,
+        "logical_fused_postop_bytes": 66048,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.015625,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 1.702625,
+      "oracle_best_latency": 1.702625,
+      "tiled_unfused_latency": 1.915857,
+      "plan_speedup": 1.1252372072535055,
+      "oracle_speedup": 1.1252372072535055,
+      "fair_fusion_speedup": 1.1252372072535055,
+      "fair_fusion_latency_reduction_percent": 11.12984946162474,
+      "full_stack_speedup": 5.874415681668013,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "434c5dc005a77044215d19464e0f89f335579fa3e4e6780759a1c462d4043223",
+      "execution_plan_sha256": "a73ba15016fce22209fc35c556cbea8d34bc23d4812900fa7db19fe72d19de3a",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:37:47.842574+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k512",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        128,
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 512,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 393216,
+        "logical_fused_postop_bytes": 131072,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.015625,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 1.657977,
+      "oracle_best_latency": 1.657977,
+      "tiled_unfused_latency": 1.921288,
+      "plan_speedup": 1.1588146277059332,
+      "oracle_speedup": 1.1588146277059332,
+      "fair_fusion_speedup": 1.1588146277059332,
+      "fair_fusion_latency_reduction_percent": 13.704920865586,
+      "full_stack_speedup": 5.3872526579077995,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "e2207c110da078922f4581825c66c780f6d544a266d6cbea37ebae5232317201",
+      "execution_plan_sha256": "4f3f2f3c69feb474075365bc953f882fab5af500f0ee6b18e47f9f5d27113e04",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:38:28.526191+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k1024",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 1024,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 328192,
+        "logical_fused_postop_bytes": 66048,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.0078125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 3.333573,
+      "oracle_best_latency": 3.333573,
+      "tiled_unfused_latency": 3.835574,
+      "plan_speedup": 1.1505894726169188,
+      "oracle_speedup": 1.1505894726169188,
+      "fair_fusion_speedup": 1.1505894726169188,
+      "fair_fusion_latency_reduction_percent": 13.088028023967201,
+      "full_stack_speedup": 7.578727389500695,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "c9578b1cea1142d7ae9e5c3d85d91ad18b37038ac1bf04ffee565f2afaa4c894",
+      "execution_plan_sha256": "ad39587fe1009a0591f24bb992c252841b3db0d025df35d7988e2de813ae6fe1",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:40:15.045256+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k1024",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        128,
+        128
+      ],
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 1024,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 16384,
+        "output_bytes": 65536,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 131072,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 393216,
+        "logical_fused_postop_bytes": 131072,
+        "estimated_postop_bytes_eliminated": 262144,
+        "fusion_pressure_score": 0.0078125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 3.599304,
+      "oracle_best_latency": 3.599304,
+      "tiled_unfused_latency": 3.83919,
+      "plan_speedup": 1.0666478852578165,
+      "oracle_speedup": 1.0666478852578165,
+      "fair_fusion_speedup": 1.0666478852578165,
+      "fair_fusion_latency_reduction_percent": 6.248349261172281,
+      "full_stack_speedup": 6.986515726373765,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "f9e1bf4a733d922cfb3096519fc15896833cb0bb72fe5e761b01d10a9245ae88",
+      "execution_plan_sha256": "decc142f11f5d92b93fe6f8436e430c2021eb7e7e6c474e1f09c3ac8eb4bc3ca",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:42:02.875286+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m64_n64_k4096",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        64
+      ],
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 4096,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 4096,
+        "output_bytes": 16384,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 32768,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 82176,
+        "logical_fused_postop_bytes": 16640,
+        "estimated_postop_bytes_eliminated": 65536,
+        "fusion_pressure_score": 0.001953125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 3.344491,
+      "oracle_best_latency": 3.344491,
+      "tiled_unfused_latency": 3.841137,
+      "plan_speedup": 1.148496736872666,
+      "oracle_speedup": 1.148496736872666,
+      "fair_fusion_speedup": 1.148496736872666,
+      "fair_fusion_latency_reduction_percent": 12.929661191464914,
+      "full_stack_speedup": 8.484011169412625,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "3a07e08ee96ee88765a7890522b3884f0c616c3eb3da4ac9d97e248dce6714f7",
+      "execution_plan_sha256": "1f9bdf732965ca05678f2929c01e674ad1c472a6ff753f4b3c072599b0bbe6dc",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:44:00.238416+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "unfriendly_m64_n64_k4096",
+      "category": "fusion_unfriendly_compute_heavy",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        64,
+        64
+      ],
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 4096,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 16777216,
+        "matmul_flops": 33554432,
+        "output_elements": 4096,
+        "output_bytes": 16384,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 32768,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 98304,
+        "logical_fused_postop_bytes": 32768,
+        "estimated_postop_bytes_eliminated": 65536,
+        "fusion_pressure_score": 0.001953125,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 3.377395,
+      "oracle_best_latency": 3.377395,
+      "tiled_unfused_latency": 3.914279,
+      "plan_speedup": 1.1589639352222645,
+      "oracle_speedup": 1.1589639352222645,
+      "fair_fusion_speedup": 1.1589639352222645,
+      "fair_fusion_latency_reduction_percent": 13.716038126050801,
+      "full_stack_speedup": 8.285236106525888,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "1976950e8afb008a1719e7c66cdbe615b6c8dccbcb390c2725943fcb2004da70",
+      "execution_plan_sha256": "2a4e19f30521b1337141d8b82e6d1e36f742ac64c9c674054571040ef234b51f",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:45:58.176064+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k8",
+      "category": "k_sweep",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "bias",
+      "postop_shape": [
+        1024
+      ],
+      "shape": {
+        "m": 1024,
+        "n": 1024,
+        "k": 8,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 1048576,
+        "output_bytes": 4194304,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 8388608,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 20975616,
+        "logical_fused_postop_bytes": 4198400,
+        "estimated_postop_bytes_eliminated": 16777216,
+        "fusion_pressure_score": 1.0,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 2.244872,
+      "oracle_best_latency": 2.244872,
+      "tiled_unfused_latency": 3.595651,
+      "plan_speedup": 1.601717603498106,
+      "oracle_speedup": 1.601717603498106,
+      "fair_fusion_speedup": 1.601717603498106,
+      "fair_fusion_latency_reduction_percent": 37.56702193844731,
+      "full_stack_speedup": 2.1630890313567988,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "fad4d2f28a63830e07e9c64c11d0ce33a95a8be70ac2af17d0eac791e28563a3",
+      "execution_plan_sha256": "44821df17ff00e6c9c4f160f569e8f18bc44e26138bf3cc02703a671ba689ad0",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:46:30.990380+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k8",
+      "category": "k_sweep",
+      "tier": "formal_core",
+      "held_out": false,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        1024,
+        1024
+      ],
+      "shape": {
+        "m": 1024,
+        "n": 1024,
+        "k": 8,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 8388608,
+        "matmul_flops": 16777216,
+        "output_elements": 1048576,
+        "output_bytes": 4194304,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 8388608,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 25165824,
+        "logical_fused_postop_bytes": 8388608,
+        "estimated_postop_bytes_eliminated": 16777216,
+        "fusion_pressure_score": 1.0,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 2.640356,
+      "oracle_best_latency": 2.640356,
+      "tiled_unfused_latency": 3.72525,
+      "plan_speedup": 1.4108892891716116,
+      "oracle_speedup": 1.4108892891716116,
+      "fair_fusion_speedup": 1.4108892891716116,
+      "fair_fusion_latency_reduction_percent": 29.12271659620159,
+      "full_stack_speedup": 2.007086165653419,
+      "selection_regret": 0.0,
+      "top1_correct": true,
+      "fallback_reason": null,
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "f3376bbb4743fd63999ca8d08dc576e1943a52f5c56ef8d9469586d4fdab6a45",
+      "execution_plan_sha256": "9e409df73ba0291491e6a75d5ad55beadd77e8ec88115dd521a9efae5d3a77d6",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:47:06.521034+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "holdout_m192_n192_k192",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": true,
+      "pattern": "bias",
+      "postop_shape": [
+        192
+      ],
+      "shape": {
+        "m": 192,
+        "n": 192,
+        "k": 192,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 7077888,
+        "matmul_flops": 14155776,
+        "output_elements": 36864,
+        "output_bytes": 147456,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 294912,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 738048,
+        "logical_fused_postop_bytes": 148224,
+        "estimated_postop_bytes_eliminated": 589824,
+        "fusion_pressure_score": 0.041666666666666664,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 1.629851,
+      "oracle_best_latency": 1.400012,
+      "tiled_unfused_latency": 1.629851,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.1641693071202246,
+      "fair_fusion_speedup": 1.1641693071202246,
+      "fair_fusion_latency_reduction_percent": 14.10184121125182,
+      "full_stack_speedup": 4.712030325454353,
+      "selection_regret": 0.16416930712022462,
+      "top1_correct": false,
+      "fallback_reason": "no_exact_shape_match",
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "fdbc4f9bea2d19ceaee2a032e3cbb2d968dbdc69e12bb484d975d86121d31dfb",
+      "execution_plan_sha256": "c7ae8aa9e90ba59b9c7becb8ca3bde85faebce700f8b1abdc79b77d01e66d715",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:47:37.906199+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "holdout_m192_n192_k192",
+      "category": "balanced",
+      "tier": "formal_core",
+      "held_out": true,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        192,
+        192
+      ],
+      "shape": {
+        "m": 192,
+        "n": 192,
+        "k": 192,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 7077888,
+        "matmul_flops": 14155776,
+        "output_elements": 36864,
+        "output_bytes": 147456,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 294912,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 884736,
+        "logical_fused_postop_bytes": 294912,
+        "estimated_postop_bytes_eliminated": 589824,
+        "fusion_pressure_score": 0.041666666666666664,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 1.646691,
+      "oracle_best_latency": 1.416221,
+      "tiled_unfused_latency": 1.646691,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.1627359006821676,
+      "fair_fusion_speedup": 1.1627359006821676,
+      "fair_fusion_latency_reduction_percent": 13.995947023454924,
+      "full_stack_speedup": 4.632776240431402,
+      "selection_regret": 0.1627359006821675,
+      "top1_correct": false,
+      "fallback_reason": "no_exact_shape_match",
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "a133afc2cc4d793a98f155ef1668cd14c1cd4adda6ab5e0c7eaab8cb047dc288",
+      "execution_plan_sha256": "c689f9edee1a019b2965eff13b5b0e0670b748d2f55c74ee45ecf841dc89f215",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:48:09.522315+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "holdout_m768_n768_k32",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": true,
+      "pattern": "bias",
+      "postop_shape": [
+        768
+      ],
+      "shape": {
+        "m": 768,
+        "n": 768,
+        "k": 32,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 18874368,
+        "matmul_flops": 37748736,
+        "output_elements": 589824,
+        "output_bytes": 2359296,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 4718592,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 11799552,
+        "logical_fused_postop_bytes": 2362368,
+        "estimated_postop_bytes_eliminated": 9437184,
+        "fusion_pressure_score": 0.25,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_bias_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+      "compiler_selected_latency": 5.133849,
+      "oracle_best_latency": 3.948157,
+      "tiled_unfused_latency": 5.133849,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.300315311675802,
+      "fair_fusion_speedup": 1.300315311675802,
+      "fair_fusion_latency_reduction_percent": 23.095576048302146,
+      "full_stack_speedup": 2.800640400065144,
+      "selection_regret": 0.300315311675802,
+      "top1_correct": false,
+      "fallback_reason": "no_exact_shape_match",
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "25674474e387fd7740b4a3c69277efb757fc6e365e4ee255437dd80f5d7f8807",
+      "execution_plan_sha256": "7d8f6b3d8ad881dd7afc924051337007c248d228edbb36699b4ba1a062e1304e",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:49:15.845471+00:00",
+      "planned_equals_actual_dispatched": true
+    },
+    {
+      "workload_id": "holdout_m768_n768_k32",
+      "category": "fusion_friendly_memory_stress",
+      "tier": "formal_core",
+      "held_out": true,
+      "pattern": "elementwise_add",
+      "postop_shape": [
+        768,
+        768
+      ],
+      "shape": {
+        "m": 768,
+        "n": 768,
+        "k": 32,
+        "dtype": "f32"
+      },
+      "static_cost": {
+        "matmul_macs": 18874368,
+        "matmul_flops": 37748736,
+        "output_elements": 589824,
+        "output_bytes": 2359296,
+        "logical_intermediate_tensor_count_unfused": 2,
+        "logical_intermediate_tensor_count_fused": 0,
+        "logical_intermediate_storage_bytes_eliminated": 4718592,
+        "runtime_dispatch_count_unfused": 3,
+        "runtime_dispatch_count_fused": 1,
+        "logical_unfused_postop_bytes": 14155776,
+        "logical_fused_postop_bytes": 4718592,
+        "estimated_postop_bytes_eliminated": 9437184,
+        "fusion_pressure_score": 0.25,
+        "fusion_pressure_score_units": "analytical_bytes_eliminated_per_flop",
+        "truth_boundary": "analytical_feature_not_measured_hardware_traffic"
+      },
+      "compiler_selected_kernel": "cpu_tiled_matmul_add_relu_unfused_f32",
+      "oracle_best_kernel": "cpu_tiled_matmul_add_relu_one_pass_f32",
+      "compiler_selected_latency": 5.302145,
+      "oracle_best_latency": 4.126042,
+      "tiled_unfused_latency": 5.302145,
+      "plan_speedup": 1.0,
+      "oracle_speedup": 1.2850438749775208,
+      "fair_fusion_speedup": 1.2850438749775208,
+      "fair_fusion_latency_reduction_percent": 22.18164535296564,
+      "full_stack_speedup": 2.7178135850289453,
+      "selection_regret": 0.28504387497752093,
+      "top1_correct": false,
+      "fallback_reason": "no_exact_shape_match",
+      "correctness": {
+        "naive_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_unfused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "naive_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        },
+        "tiled_one_pass_fused": {
+          "passed": true,
+          "atol": 0.0001,
+          "rtol": 0.0001,
+          "max_abs_error": 0.0,
+          "max_rel_error": 0.0,
+          "contains_nan": false,
+          "contains_inf": false
+        }
+      },
+      "cv_unstable": false,
+      "candidate_count": 4,
+      "benchmark_configuration": {
+        "warmup": 50,
+        "iterations": 300,
+        "repeats": 5,
+        "lowered_reason": null
+      },
+      "profile_artifact_sha256": "0ec98285a9712925b5832eba3ef6f7cfd151cae936e82a4f2e4e03e3b8c265e5",
+      "execution_plan_sha256": "3691029de12db59e4d3334d802cfae4996bb24ce23d982a4e4038222bf713465",
+      "process_id": 282933,
+      "utc_start": "2026-07-11T05:29:35.633429+00:00",
+      "utc_end": "2026-07-11T05:50:23.856825+00:00",
+      "planned_equals_actual_dispatched": true
+    }
+  ],
+  "skipped_workloads": [],
+  "aggregates": {
+    "representative": {
+      "count": 2,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.0,
+      "geomean_fair_fusion_speedup": 0.9773066850409636,
+      "best_case_fair_fusion_speedup": 0.9796943307008265,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "fusion_friendly_memory_stress": {
+      "count": 8,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.75,
+      "mean_regret": 0.07316989833166537,
+      "median_regret": 0.0,
+      "p95_regret": 0.2949703088314036,
+      "geomean_plan_speedup": 1.1721730278368139,
+      "geomean_fair_fusion_speedup": 1.2498634063933702,
+      "best_case_fair_fusion_speedup": 1.4177122449397477,
+      "worst_case_fair_fusion_speedup": 1.1516527949736572
+    },
+    "balanced": {
+      "count": 7,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 0.7142857142857143,
+      "mean_regret": 0.046700743971770306,
+      "median_regret": 0.0,
+      "p95_regret": 0.16373928518880748,
+      "geomean_plan_speedup": 1.1098690112898169,
+      "geomean_fair_fusion_speedup": 1.1589295693604202,
+      "best_case_fair_fusion_speedup": 1.181037437635678,
+      "worst_case_fair_fusion_speedup": 1.135159224487175
+    },
+    "fusion_unfriendly_compute_heavy": {
+      "count": 6,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.1343137645891612,
+      "geomean_fair_fusion_speedup": 1.1343137645891612,
+      "best_case_fair_fusion_speedup": 1.1589639352222645,
+      "worst_case_fair_fusion_speedup": 1.0666478852578165
+    },
+    "k_sweep": {
+      "count": 2,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.503278487524218,
+      "geomean_fair_fusion_speedup": 1.503278487524218,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 1.4108892891716116
+    },
+    "exact_profiled": {
+      "count": 21,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.1854195728265275,
+      "geomean_fair_fusion_speedup": 1.1828308763552755,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "unprofiled_fallback": {
+      "count": 4,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.0,
+      "mean_regret": 0.22806609861392876,
+      "median_regret": 0.22460659104887276,
+      "p95_regret": 0.29802459617105986,
+      "geomean_plan_speedup": 1.0,
+      "geomean_fair_fusion_speedup": 1.2263543188947472,
+      "best_case_fair_fusion_speedup": 1.300315311675802,
+      "worst_case_fair_fusion_speedup": 1.1627359006821676
+    },
+    "bias": {
+      "count": 13,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.8461538461538461,
+      "mean_regret": 0.03572958606123282,
+      "median_regret": 0.0,
+      "p95_regret": 0.21862770894245565,
+      "geomean_plan_speedup": 1.1677309050300764,
+      "geomean_fair_fusion_speedup": 1.203221381828861,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "elementwise_add": {
+      "count": 12,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 0.8333333333333334,
+      "mean_regret": 0.037314981304974036,
+      "median_regret": 0.0,
+      "p95_regret": 0.21777448911507646,
+      "geomean_plan_speedup": 1.1384697401652664,
+      "geomean_fair_fusion_speedup": 1.175201384852466,
+      "best_case_fair_fusion_speedup": 1.4108892891716116,
+      "worst_case_fair_fusion_speedup": 0.9796943307008265
+    }
+  },
+  "correlations": {
+    "k": {
+      "pearson": -0.26533342526560044,
+      "spearman": -0.8411030339037893
+    },
+    "output_bytes": {
+      "pearson": 0.8368255222606589,
+      "spearman": 0.708578410099993
+    },
+    "fusion_pressure_score": {
+      "pearson": 0.8485071369732798,
+      "spearman": 0.8411030339037893
+    },
+    "matmul_flops": {
+      "pearson": 0.21728274661582475,
+      "spearman": 0.06639137299238815
+    },
+    "output_bytes_per_matmul_flop": {
+      "pearson": 0.8485071369732798,
+      "spearman": 0.8411030339037893
+    }
+  }
+}

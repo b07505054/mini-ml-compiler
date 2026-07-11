@@ -1,0 +1,215 @@
+{
+  "schema": "matmul_postop_multi_shape_validation",
+  "schema_version": 1,
+  "use_plan_outputs_are_profile_evidence": false,
+  "validations": [
+    {
+      "workload_id": "rep_m1_k768_n3072",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/rep_m1_k768_n3072_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "rep_m1_k768_n3072",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/rep_m1_k768_n3072_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m512_n512_k16",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m512_n512_k16_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m512_n512_k16",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m512_n512_k16_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m512_n512_k32",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m512_n512_k32_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m512_n512_k32",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m512_n512_k32_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k16",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m1024_n1024_k16_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k16",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/stress_m1024_n1024_k16_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m64_n64_k64",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m64_n64_k64_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m64_n64_k64",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m64_n64_k64_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m128_n128_k128",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m128_n128_k128_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m128_n128_k128",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m128_n128_k128_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m256_n256_k256",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m256_n256_k256_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "balanced_m256_n256_k256",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/balanced_m256_n256_k256_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k512",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m128_n128_k512_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k512",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m128_n128_k512_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k1024",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m128_n128_k1024_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k1024",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m128_n128_k1024_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m64_n64_k4096",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m64_n64_k4096_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "unfriendly_m64_n64_k4096",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/unfriendly_m64_n64_k4096_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k8",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/ksweep_m1024_n1024_k8_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k8",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/ksweep_m1024_n1024_k8_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": null
+    },
+    {
+      "workload_id": "holdout_m192_n192_k192",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/holdout_m192_n192_k192_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": "no_exact_shape_match"
+    },
+    {
+      "workload_id": "holdout_m192_n192_k192",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/holdout_m192_n192_k192_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": "no_exact_shape_match"
+    },
+    {
+      "workload_id": "holdout_m768_n768_k32",
+      "pattern": "bias",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/holdout_m768_n768_k32_bias.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": "no_exact_shape_match"
+    },
+    {
+      "workload_id": "holdout_m768_n768_k32",
+      "pattern": "elementwise_add",
+      "use_plan_artifact": "trace/matmul_postop_multi_shape_runs/holdout_m768_n768_k32_elementwise_add.use_plan.json",
+      "use_plan_is_profile_evidence": false,
+      "planned_equals_actual_dispatched": true,
+      "fallback_reason": "no_exact_shape_match"
+    }
+  ]
+}

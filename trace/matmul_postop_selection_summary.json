@@ -1,0 +1,114 @@
+{
+  "schema": "matmul_postop_selection_summary",
+  "schema_version": 1,
+  "aggregates": {
+    "representative": {
+      "count": 2,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.0,
+      "geomean_fair_fusion_speedup": 0.9773066850409636,
+      "best_case_fair_fusion_speedup": 0.9796943307008265,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "fusion_friendly_memory_stress": {
+      "count": 8,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.75,
+      "mean_regret": 0.07316989833166537,
+      "median_regret": 0.0,
+      "p95_regret": 0.2949703088314036,
+      "geomean_plan_speedup": 1.1721730278368139,
+      "geomean_fair_fusion_speedup": 1.2498634063933702,
+      "best_case_fair_fusion_speedup": 1.4177122449397477,
+      "worst_case_fair_fusion_speedup": 1.1516527949736572
+    },
+    "balanced": {
+      "count": 7,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 0.7142857142857143,
+      "mean_regret": 0.046700743971770306,
+      "median_regret": 0.0,
+      "p95_regret": 0.16373928518880748,
+      "geomean_plan_speedup": 1.1098690112898169,
+      "geomean_fair_fusion_speedup": 1.1589295693604202,
+      "best_case_fair_fusion_speedup": 1.181037437635678,
+      "worst_case_fair_fusion_speedup": 1.135159224487175
+    },
+    "fusion_unfriendly_compute_heavy": {
+      "count": 6,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.1343137645891612,
+      "geomean_fair_fusion_speedup": 1.1343137645891612,
+      "best_case_fair_fusion_speedup": 1.1589639352222645,
+      "worst_case_fair_fusion_speedup": 1.0666478852578165
+    },
+    "k_sweep": {
+      "count": 2,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.503278487524218,
+      "geomean_fair_fusion_speedup": 1.503278487524218,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 1.4108892891716116
+    },
+    "exact_profiled": {
+      "count": 21,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 1.0,
+      "mean_regret": 0.0,
+      "median_regret": 0.0,
+      "p95_regret": 0.0,
+      "geomean_plan_speedup": 1.1854195728265275,
+      "geomean_fair_fusion_speedup": 1.1828308763552755,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "unprofiled_fallback": {
+      "count": 4,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.0,
+      "mean_regret": 0.22806609861392876,
+      "median_regret": 0.22460659104887276,
+      "p95_regret": 0.29802459617105986,
+      "geomean_plan_speedup": 1.0,
+      "geomean_fair_fusion_speedup": 1.2263543188947472,
+      "best_case_fair_fusion_speedup": 1.300315311675802,
+      "worst_case_fair_fusion_speedup": 1.1627359006821676
+    },
+    "bias": {
+      "count": 13,
+      "excluded_unstable_cv": 0,
+      "top1_accuracy": 0.8461538461538461,
+      "mean_regret": 0.03572958606123282,
+      "median_regret": 0.0,
+      "p95_regret": 0.21862770894245565,
+      "geomean_plan_speedup": 1.1677309050300764,
+      "geomean_fair_fusion_speedup": 1.203221381828861,
+      "best_case_fair_fusion_speedup": 1.601717603498106,
+      "worst_case_fair_fusion_speedup": 0.9749248583918048
+    },
+    "elementwise_add": {
+      "count": 12,
+      "excluded_unstable_cv": 1,
+      "top1_accuracy": 0.8333333333333334,
+      "mean_regret": 0.037314981304974036,
+      "median_regret": 0.0,
+      "p95_regret": 0.21777448911507646,
+      "geomean_plan_speedup": 1.1384697401652664,
+      "geomean_fair_fusion_speedup": 1.175201384852466,
+      "best_case_fair_fusion_speedup": 1.4108892891716116,
+      "worst_case_fair_fusion_speedup": 0.9796943307008265
+    }
+  }
+}

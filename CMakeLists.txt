@@ -3,6 +3,7 @@ project(mini_ml_compiler LANGUAGES CXX)
 
 option(ENABLE_CUDA "Build CUDA targets" OFF)
 include(CTest)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,6 +82,81 @@ target_link_libraries(run_mlir_model mlcompiler)
 
 add_executable(run_mlir_fused_kernel_benchmark apps/run_mlir_fused_kernel_benchmark.cpp)
 target_link_libraries(run_mlir_fused_kernel_benchmark mlcompiler)
+add_test(
+    NAME mlir_fused_kernel_benchmark_smoke
+    COMMAND run_mlir_fused_kernel_benchmark
+        --pattern all
+        --variant all
+        --warmup 1
+        --iterations 1
+        --repeats 2
+        --output ${CMAKE_BINARY_DIR}/matmul_postop_relu_kernel_profile_smoke.json
+        --report-output ${CMAKE_BINARY_DIR}/matmul_postop_relu_benchmark_report_smoke.md
+)
+set_tests_properties(mlir_fused_kernel_benchmark_smoke PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME mlir_fused_kernel_benchmark_json_schema
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/validate_matmul_postop_benchmark_json.py
+        $<TARGET_FILE:run_mlir_fused_kernel_benchmark>
+        ${CMAKE_BINARY_DIR}/matmul_postop_relu_kernel_profile_schema.json
+        ${CMAKE_BINARY_DIR}/matmul_postop_relu_benchmark_report_schema.md
+)
+set_tests_properties(mlir_fused_kernel_benchmark_json_schema PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME matmul_postop_multi_shape_infrastructure
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/test_matmul_postop_multi_shape.py
+)
+set_tests_properties(matmul_postop_multi_shape_infrastructure PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME mlir_fused_kernel_benchmark_rejects_invalid_variant
+    COMMAND run_mlir_fused_kernel_benchmark --variant not-a-variant
+)
+set_tests_properties(mlir_fused_kernel_benchmark_rejects_invalid_variant PROPERTIES
+    WILL_FAIL TRUE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME mlir_fused_kernel_benchmark_rejects_invalid_bias_shape
+    COMMAND run_mlir_fused_kernel_benchmark
+        --pattern bias
+        --variant naive-unfused
+        --warmup 1
+        --iterations 1
+        --repeats 1
+        --force-invalid-bias-shape
+        --output ${CMAKE_BINARY_DIR}/invalid_bias_shape.json
+        --report-output ${CMAKE_BINARY_DIR}/invalid_bias_shape.md
+)
+set_tests_properties(mlir_fused_kernel_benchmark_rejects_invalid_bias_shape PROPERTIES
+    WILL_FAIL TRUE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME mlir_fused_kernel_benchmark_rejects_invalid_elementwise_shape
+    COMMAND run_mlir_fused_kernel_benchmark
+        --pattern elementwise-add
+        --variant naive-unfused
+        --warmup 1
+        --iterations 1
+        --repeats 1
+        --force-invalid-elementwise-shape
+        --output ${CMAKE_BINARY_DIR}/invalid_elementwise_shape.json
+        --report-output ${CMAKE_BINARY_DIR}/invalid_elementwise_shape.md
+)
+set_tests_properties(mlir_fused_kernel_benchmark_rejects_invalid_elementwise_shape PROPERTIES
+    WILL_FAIL TRUE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
 
 add_executable(run_attention_demo apps/run_attention_demo.cpp)
 target_link_libraries(run_attention_demo mlcompiler)

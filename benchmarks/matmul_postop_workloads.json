@@ -1,0 +1,350 @@
+{
+  "schema": "matmul_postop_workload_manifest",
+  "schema_version": 1,
+  "description": "Multi-shape MatMul post-op (bias/elementwise-add + ReLU) workload suite. Tiers: formal_core (warmup 50 / iterations 300 / repeats 5, the only tier admitted to the primary aggregate), extended (50/100/5), resource_heavy (10/30/3). Non-core tiers record a structured lowered_reason and are reported separately. held_out workloads are excluded from profile generation to evaluate exact-match fallback behavior.",
+  "tier_budgets": {
+    "formal_core": {"warmup": 50, "iterations": 300, "repeats": 5},
+    "extended": {
+      "warmup": 50, "iterations": 100, "repeats": 5,
+      "lowered_reason": "reduced_iterations_resource_limit_estimated_naive_latency"
+    },
+    "resource_heavy": {
+      "warmup": 10, "iterations": 30, "repeats": 3,
+      "lowered_reason": "reduced_iterations_and_repeats_resource_limit_estimated_naive_latency"
+    }
+  },
+  "tier_assignment_rule": "estimated_naive_latency_ms = 2*M*N*K / 2.4e9 * 1000 (calibrated to the measured 128^3 naive latency on the remote i5-10210U host): <=20ms formal_core, <=80ms extended, <=1200ms resource_heavy, else skipped_resource_limit. The suite driver probes measured naive latency before formal runs and may demote a workload, recording the measured value.",
+  "workloads": [
+    {
+      "workload_id": "rep_m1_k768_n3072",
+      "category": "representative",
+      "m": 1, "n": 3072, "k": 768, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "BERT-base FFN up-projection, batch-1 decode-style row",
+      "estimated_naive_latency_ms": 1.966,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "rep_m16_k768_n3072",
+      "category": "representative",
+      "m": 16, "n": 3072, "k": 768, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "BERT-base FFN up-projection, short sequence/batch 16",
+      "estimated_naive_latency_ms": 31.457,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "rep_m128_k768_n3072",
+      "category": "representative",
+      "m": 128, "n": 3072, "k": 768, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "BERT-base FFN up-projection, sequence 128",
+      "estimated_naive_latency_ms": 251.658,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "rep_m1_k4096_n11008",
+      "category": "representative",
+      "m": 1, "n": 11008, "k": 4096, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "LLaMA-7B FFN gate/up projection, single decode token",
+      "estimated_naive_latency_ms": 37.573,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "rep_m16_k4096_n11008",
+      "category": "representative",
+      "m": 16, "n": 11008, "k": 4096, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "LLaMA-7B FFN projection, batch/sequence 16",
+      "estimated_naive_latency_ms": 601.164,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "rep_m128_k4096_n4096",
+      "category": "representative",
+      "m": 128, "n": 4096, "k": 4096, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "LLaMA-7B attention output projection, sequence 128",
+      "estimated_naive_latency_ms": 1789.57,
+      "held_out": false, "status": "skipped_resource_limit", "tier": "resource_heavy",
+      "skip_reason": "estimated naive latency ~1790 ms/iteration (2*M*N*K at ~2.4 GFLOP/s measured on this host at 128^3); a full four-candidate sweep at even the resource_heavy budget would exceed the suite wall-clock budget on the i5-10210U laptop host"
+    },
+    {
+      "workload_id": "stress_m512_n512_k16",
+      "category": "fusion_friendly_memory_stress",
+      "m": 512, "n": 512, "k": 16, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: large output, K=16 (not a representative model average)",
+      "estimated_naive_latency_ms": 3.495,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "stress_m512_n512_k32",
+      "category": "fusion_friendly_memory_stress",
+      "m": 512, "n": 512, "k": 32, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: large output, K=32 (not a representative model average)",
+      "estimated_naive_latency_ms": 6.991,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k16",
+      "category": "fusion_friendly_memory_stress",
+      "m": 1024, "n": 1024, "k": 16, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: 1M-element output, K=16 (not a representative model average)",
+      "estimated_naive_latency_ms": 13.981,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k32",
+      "category": "fusion_friendly_memory_stress",
+      "m": 1024, "n": 1024, "k": 32, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: 1M-element output, K=32 (not a representative model average)",
+      "estimated_naive_latency_ms": 27.962,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "stress_m1024_n1024_k64",
+      "category": "fusion_friendly_memory_stress",
+      "m": 1024, "n": 1024, "k": 64, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: 1M-element output, K=64 (not a representative model average)",
+      "estimated_naive_latency_ms": 55.924,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "stress_m2048_n512_k32",
+      "category": "fusion_friendly_memory_stress",
+      "m": 2048, "n": 512, "k": 32, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: tall output, K=32 (not a representative model average)",
+      "estimated_naive_latency_ms": 27.962,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "stress_m4096_n256_k32",
+      "category": "fusion_friendly_memory_stress",
+      "m": 4096, "n": 256, "k": 32, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "stress case: very tall output, K=32 (not a representative model average)",
+      "estimated_naive_latency_ms": 27.962,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "balanced_m64_n64_k64",
+      "category": "balanced",
+      "m": 64, "n": 64, "k": 64, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "balanced cube 64",
+      "estimated_naive_latency_ms": 0.218,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "balanced_m128_n128_k128",
+      "category": "balanced",
+      "m": 128, "n": 128, "k": 128, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "balanced cube 128 (previous PR anchor shape; do not regress)",
+      "estimated_naive_latency_ms": 1.748,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "balanced_m256_n256_k256",
+      "category": "balanced",
+      "m": 256, "n": 256, "k": 256, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "balanced cube 256",
+      "estimated_naive_latency_ms": 13.981,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "balanced_m512_n512_k512",
+      "category": "balanced",
+      "m": 512, "n": 512, "k": 512, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "balanced cube 512",
+      "estimated_naive_latency_ms": 111.848,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k512",
+      "category": "fusion_unfriendly_compute_heavy",
+      "m": 128, "n": 128, "k": 512, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "K large relative to output; expected small fusion benefit",
+      "estimated_naive_latency_ms": 6.991,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "unfriendly_m128_n128_k1024",
+      "category": "fusion_unfriendly_compute_heavy",
+      "m": 128, "n": 128, "k": 1024, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "K large relative to output; expected small fusion benefit",
+      "estimated_naive_latency_ms": 13.981,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "unfriendly_m256_n256_k1024",
+      "category": "fusion_unfriendly_compute_heavy",
+      "m": 256, "n": 256, "k": 1024, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "K large relative to output; expected small fusion benefit",
+      "estimated_naive_latency_ms": 55.924,
+      "held_out": false, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "unfriendly_m64_n64_k4096",
+      "category": "fusion_unfriendly_compute_heavy",
+      "m": 64, "n": 64, "k": 4096, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "extreme K, tiny output; expected minimal fusion benefit",
+      "estimated_naive_latency_ms": 13.981,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k8",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 8, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "controlled K sweep point at fixed M=N=1024 (K=16/32/64 points reuse the stress workloads)",
+      "estimated_naive_latency_ms": 6.991,
+      "held_out": false, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k128",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 128, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "controlled K sweep point at fixed M=N=1024",
+      "estimated_naive_latency_ms": 111.848,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k256",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 256, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "controlled K sweep point at fixed M=N=1024",
+      "estimated_naive_latency_ms": 223.696,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k512",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 512, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "controlled K sweep point at fixed M=N=1024",
+      "estimated_naive_latency_ms": 447.392,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "ksweep_m1024_n1024_k1024",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 1024, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "controlled K sweep point at fixed M=N=1024",
+      "estimated_naive_latency_ms": 894.785,
+      "held_out": false, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "holdout_m1024_n1024_k24",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 24, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled K between profiled 16 and 32",
+      "estimated_naive_latency_ms": 20.972,
+      "held_out": true, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "holdout_m1024_n1024_k48",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 48, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled K between profiled 32 and 64",
+      "estimated_naive_latency_ms": 41.943,
+      "held_out": true, "status": "active", "tier": "extended"
+    },
+    {
+      "workload_id": "holdout_m1024_n1024_k96",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 96, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled K between profiled 64 and 128",
+      "estimated_naive_latency_ms": 83.886,
+      "held_out": true, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "holdout_m1024_n1024_k192",
+      "category": "k_sweep",
+      "m": 1024, "n": 1024, "k": 192, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled K between profiled 128 and 256",
+      "estimated_naive_latency_ms": 167.772,
+      "held_out": true, "status": "active", "tier": "resource_heavy"
+    },
+    {
+      "workload_id": "holdout_m192_n192_k192",
+      "category": "balanced",
+      "m": 192, "n": 192, "k": 192, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled balanced cube",
+      "estimated_naive_latency_ms": 5.898,
+      "held_out": true, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "holdout_m768_n768_k32",
+      "category": "fusion_friendly_memory_stress",
+      "m": 768, "n": 768, "k": 32, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled stress shape",
+      "estimated_naive_latency_ms": 15.729,
+      "held_out": true, "status": "active", "tier": "formal_core"
+    },
+    {
+      "workload_id": "holdout_m48_k768_n3072",
+      "category": "representative",
+      "m": 48, "n": 3072, "k": 768, "dtype": "f32",
+      "patterns": ["bias", "elementwise_add"],
+      "tile_configs": [{"tile_m": 32, "tile_n": 32, "tile_k": 32}],
+      "representative_reason": "held-out unprofiled BERT-base FFN, sequence 48",
+      "estimated_naive_latency_ms": 94.372,
+      "held_out": true, "status": "active", "tier": "resource_heavy"
+    }
+  ]
+}
