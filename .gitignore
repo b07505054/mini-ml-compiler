@@ -118,3 +118,6 @@ models/yolo-seg.onnx
 models/yolo-seg.onnx.data
 artifacts/yoloseg_generic_frontend/
 CLAUDE.md
+
+build-benchmark-release/
+__incoming_dummy__/
