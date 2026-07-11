@@ -162,6 +162,76 @@ struct LayoutDecision {
   bool             requires_layout_transform = false;
 };
 
+// Compiler-side kernel selection against concrete runtime kernel
+// descriptors (kernel_selection_contract_v1, KernelSelectionPass). A
+// kernel is selected only when a declared RuntimeKernelDescriptor fully
+// matches the planned op; otherwise the status carries an explicit
+// rejection/deferral reason. A selection is a contract handed to the
+// runtime — the compiler never executes, dispatches, or benchmarks it.
+// truth_boundary:
+//   kernel_selection_static_descriptor_match_not_runtime_execution
+struct KernelSelection {
+  // "selected" | "rejected_*" | "deferred_*" (see KernelSelectionPass)
+  std::string status;
+  std::string selected_kernel_id;            // when status == "selected"
+  // Descriptor source when selected: "handwritten_runtime" |
+  // "declared_profile" | "measured_runtime" | "fixture"
+  std::string source;
+  std::vector<std::string> rejection_reasons; // per-descriptor "{id}:{reason}"
+  std::string contract_version;               // "kernel_selection_contract_v1"
+  std::string truth_boundary;
+};
+
+// Quantization co-design evidence (quantization_codesign_contract_v1,
+// QuantizationCoDesignPass). Deliberately SEPARATE facts: representation,
+// algorithm declaration, backend legality, concrete runtime-kernel support,
+// static systems-cost estimate, accuracy evidence, and materialization
+// status are never collapsed into one string. Unknown metadata
+// (granularity, group size, axis, symmetric/asymmetric, scale, zero point)
+// is omitted, never defaulted. Static planning evidence only — no
+// calibration, no measured accuracy, no quantized runtime execution.
+// truth_boundary:
+//   quantization_codesign_static_planning_no_calibration_no_measured_accuracy
+struct QuantizationCoDesign {
+  std::string status;   // "selected" | "rejected_*" | "deferred_*" | ...
+  std::string policy;   // the explicit policy that produced this decision
+  // Candidate representation facts (best backend-legal candidate).
+  std::string representation;      // "weight_only_int8" | "weight_only_int4"
+  std::string weight_dtype;
+  std::string activation_dtype;
+  std::string accumulator_dtype;   // only when the profile declares one
+  // Algorithm declaration (no algorithm is implemented in this repo).
+  std::string algorithm_status;    // "not_declared" | "declared_external"
+  std::string algorithm_name;      // only when declared (e.g. "awq")
+  // Backend capability vs concrete kernel support — kept distinct.
+  std::string backend_legality;    // "legal" | "not_legal"
+  std::string kernel_support_status;
+  std::string kernel_support_kernel_id; // only when runtime_dispatchable
+  std::string kernel_support_source;    // only when runtime_dispatchable
+  // Accuracy evidence status; artifact_ref only when a quantized artifact
+  // is declared by the profile.
+  std::string accuracy_evidence_status;
+  std::string accuracy_evidence_artifact_ref;
+  // Quant parameter provenance (always unavailable today).
+  std::string scale_source;
+  std::string zero_point_source;
+  // Static systems-cost estimate; absent for dynamic shapes / no profile
+  // numbers. Units: bytes and integer nanoseconds (roofline form).
+  std::optional<int64_t> weight_bytes_before;
+  std::optional<int64_t> weight_bytes_after;
+  std::optional<int64_t> boundary_bytes;
+  std::optional<int64_t> total_cost_before_nanos;
+  std::optional<int64_t> total_cost_after_nanos;
+  std::optional<int64_t> systems_benefit_nanos;
+  std::vector<std::string> excluded_cost_terms; // e.g. inline conversion
+  // Materialization facts (the actual IR transform is a separate change).
+  bool        materialization_required = false;
+  std::string materialization_status;
+  std::vector<std::string> rejection_reasons;
+  std::string truth_boundary;
+  std::string contract_version;
+};
+
 // Static local-memory tile plan produced by TilePlanningPass
 // (tile_planning_v1) for one matmul-like op. Feasibility against the
 // declared local memory capacity plus a reuse-limited traffic estimate.
@@ -170,17 +240,22 @@ struct LayoutDecision {
 // truth_boundary:
 //   tile_planning_static_local_memory_model_not_measured_not_codegen
 struct TilePlan {
-  // "planned" | "no_feasible_tile" | "dynamic_dims_unresolved" |
-  // "dtype_unresolved" | "no_tensor_result"
+  // "planned" | "no_feasible_tile" | "deferred_missing_memory_hierarchy" |
+  // "dynamic_dims_unresolved" | "dtype_unresolved" | "no_tensor_result"
   std::string status;
   int64_t tile_m = 0, tile_n = 0, tile_k = 0;   // valid when status == planned
   int64_t local_memory_bytes = 0;               // selected tile footprint
   int64_t rejected_tile_count = 0;
   int64_t estimated_global_traffic_bytes = 0;   // reuse-limited bound
   bool    double_buffer_fits = false;
-  // "async_copy_declared" | "dma_declared" | "none_declared"
+  // "async_copy_declared" | "dma_declared" | "declared_unavailable"
+  // (declared and false) | "unknown_not_declared" (no declaration)
   std::string staging_capability;
   std::string rejection_reason;                 // when no tile fits
+  // Why feasibility was deferred (e.g. the target profile declares no
+  // local memory — MemoryHierarchyProfile is optional metadata and absence
+  // is never replaced with an invented capacity).
+  std::string deferred_reason;
   std::string truth_boundary;
 };
 

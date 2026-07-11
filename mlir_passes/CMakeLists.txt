@@ -66,8 +66,11 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/BoundaryPlanningPass.cpp
   lib/serving/BoundaryMaterializationPass.cpp
   lib/serving/TilePlanningPass.cpp
+  lib/serving/KernelSelectionPass.cpp
+  lib/serving/QuantizationCoDesignPass.cpp
   lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/CVExecutionPlanAttrsPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
   lib/serving/LoweringDecisionPlanningPass.cpp
   lib/serving/QuantizedBoundaryRefinementPass.cpp
@@ -80,6 +83,8 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
   lib/serving/CVExecutionDomainPlanningPass.cpp
+  lib/serving/CVSemanticAnnotationPass.cpp
+  lib/serving/CVExecutionPlanAttrsPass.cpp
   lib/serving/CVExecutionPlanBuilder.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
@@ -154,6 +159,10 @@ target_link_libraries(PlanBuilderQwenTest
     MLIRParser
     MLIRPass
     MLIRFuncDialect
+    MLIRTensorDialect
+    MLIRLinalgDialect
+    MLIRArithDialect
+    MLIRMathDialect
     MLIRTransforms
     MLIRSupport
 )
@@ -179,6 +188,7 @@ add_executable(PlanBuilderQwenFullPipelineTest
   lib/serving/BoundaryPlanningPass.cpp
   lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/CVExecutionPlanAttrsPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
   lib/serving/LoweringDecisionPlanningPass.cpp
   lib/serving/QuantizedBoundaryRefinementPass.cpp
@@ -444,8 +454,11 @@ add_executable(compile-for-target
   lib/serving/BoundaryPlanningPass.cpp
   lib/serving/BoundaryMaterializationPass.cpp
   lib/serving/TilePlanningPass.cpp
+  lib/serving/KernelSelectionPass.cpp
+  lib/serving/QuantizationCoDesignPass.cpp
   lib/serving/WeightClassificationPlanningPass.cpp
   lib/serving/QuantizationStrategyPlanningPass.cpp
+  lib/serving/CVExecutionPlanAttrsPass.cpp
   lib/serving/KernelAvailabilityPlanningPass.cpp
   lib/serving/LoweringDecisionPlanningPass.cpp
   lib/serving/QuantizedBoundaryRefinementPass.cpp
@@ -474,6 +487,10 @@ target_link_libraries(compile-for-target
     MLIRParser
     MLIRPass
     MLIRFuncDialect
+    MLIRTensorDialect
+    MLIRLinalgDialect
+    MLIRArithDialect
+    MLIRMathDialect
     MLIRTransforms
     MLIRSupport
     LLVMSupport

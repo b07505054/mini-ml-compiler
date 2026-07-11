@@ -880,19 +880,23 @@ def TilePlanning
 
     Emitted per matmul-like op:
       tile.plan.status
-        = "planned" | "no_feasible_tile" | "dynamic_dims_unresolved"
-        | "dtype_unresolved" | "no_tensor_result"
+        = "planned" | "no_feasible_tile"
+        | "deferred_missing_memory_hierarchy"
+        | "dynamic_dims_unresolved" | "dtype_unresolved" | "no_tensor_result"
       tile.plan.shape                         -- [Mt, Nt, Kt] when planned
       tile.plan.local_memory_bytes            -- selected tile footprint
       tile.plan.rejected_tile_count
       tile.plan.rejection_reason              -- when no tile fits
+      tile.plan.deferred_reason               -- when feasibility deferred
       tile.plan.estimated_global_traffic_bytes
         -- reuse-limited traffic: A read ceil(N/Nt) times, B read
            ceil(M/Mt) times, C written once. Reported alongside (never
            replacing) shape_cost_model_v2's ideal each-byte-once bytes.
       tile.plan.double_buffer_fits            -- 2x(A+B) + C fits capacity
       tile.plan.staging_capability
-        = "async_copy_declared" | "dma_declared" | "none_declared"
+        = "async_copy_declared" | "dma_declared"
+        | "declared_unavailable" (declared and false)
+        | "unknown_not_declared" (no declaration — unknown, not unavailable)
       tile.plan.truth_boundary
         = "tile_planning_static_local_memory_model_not_measured_not_codegen"
 
@@ -900,9 +904,14 @@ def TilePlanning
     quant.weight_dtype / result element type / representation.effective_dtype),
     so weight-only quantization shrinks the B-tile footprint.
 
-    The pass is INERT when the module declares no local_memory_bytes:
-    feasibility against an undeclared budget would be a guess. Dynamic
-    shapes are deferred with an explicit status, never estimated.
+    MemoryHierarchyProfile is OPTIONAL declared metadata — not every backend
+    exposes local memory or DMA details. Tile feasibility runs only when
+    (1) the op kind is supported, (2) local_memory_bytes is declared, and
+    (3) shapes are fully static (plus a resolvable dtype). When the memory
+    hierarchy is missing, no value is invented: matmul-like ops are stamped
+    "deferred_missing_memory_hierarchy" with tile.plan.deferred_reason, the
+    plan stays valid, and the deferral is exported. Dynamic shapes are
+    deferred with an explicit status, never estimated.
 
     ServingCostModelPass converts the planned traffic into
     compiler.shape_profile.estimated_tiled_memory_cost_nanos when bandwidth
@@ -916,6 +925,135 @@ def TilePlanning
     standalone as tile-planning-pipeline.
   }];
   let constructor = "mlir::hir::createTilePlanningPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def KernelSelection
+    : Pass<"kernel-selection", "mlir::func::FuncOp"> {
+  let summary = "Select a concrete runtime kernel descriptor per op (kernel_selection_contract_v1)";
+  let description = [{
+    Compiler-side kernel selection against CONCRETE runtime kernel
+    descriptors — the compiler/runtime kernel contract. Distinct from
+    KernelAvailabilityPlanningPass, which models declared third-party
+    LIBRARY coverage (cuBLAS/Triton/CoreML public APIs); this pass selects
+    a kernel only when a RuntimeKernelDescriptor in the module's
+    target.runtime_kernels registry (from the target profile's
+    runtimeKernels array) fully matches the planned op:
+
+      op name x backend x dtype x quant mode x layout (when both sides
+      state one) x static/dynamic shape x tile plan (when the descriptor
+      constrains tile shapes) x declared local memory (when the descriptor
+      requires it)
+
+    Emitted per non-terminator op (kernel_selection.* namespace):
+      kernel_selection.status
+        = "selected"
+        | "rejected_no_kernel_for_op" | "rejected_backend_mismatch"
+        | "rejected_dtype_unsupported" | "rejected_quant_mode_unsupported"
+        | "rejected_layout_unsupported" | "rejected_tile_shape_unsupported"
+        | "rejected_local_memory_insufficient"
+        | "deferred_dynamic_shape" | "deferred_missing_tile_plan"
+        | "deferred_missing_memory_hierarchy"
+        | "deferred_no_kernel_library_declared"
+      kernel_selection.selected_id       -- when selected
+      kernel_selection.source            -- descriptor source, when selected
+        ("handwritten_runtime" | "declared_profile" | "measured_runtime"
+         | "fixture")
+      kernel_selection.rejection_reasons -- per-descriptor "{id}:{reason}"
+      kernel_selection.contract_version  = "kernel_selection_contract_v1"
+      kernel_selection.truth_boundary
+
+    The registry is expected to be SMALL AND HONEST: only kernels with a
+    known dispatchable implementation are declared (today: the handwritten
+    Metal RMSNorm f32 kernel). No coverage is inferred; ops without a
+    matching descriptor are rejected or deferred with explicit reasons,
+    including when no registry is declared at all.
+
+    Truth boundary: static descriptor matching from declared metadata. The
+    compiler does not execute, dispatch, or benchmark kernels; a selection
+    is a contract handed to the runtime, not an execution claim. Runs after
+    TilePlanningPass (to see tile plans) and before candidate evaluation in
+    compile-for-target; standalone as kernel-selection-pipeline.
+  }];
+  let constructor = "mlir::hir::createKernelSelectionPass()";
+  let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def QuantizationCoDesign
+    : Pass<"quantization-codesign", "mlir::func::FuncOp"> {
+  let summary = "Quantization co-design evidence per op (quantization_codesign_contract_v1)";
+  let description = [{
+    For each matmul-like constant-weight op, reports SEPARATE facts (never
+    collapsed into one string): numeric representation under consideration,
+    algorithm declaration status (none is implemented in this repository;
+    only the forced-AWQ profile DECLARES one), backend legality (declared
+    profile capability), concrete runtime-kernel support (a
+    target.runtime_kernels descriptor — backend capability never counts as
+    dispatchable), static systems-cost evidence, honest accuracy-evidence
+    status, and materialization requirements.
+
+    INERT unless the module sets quant.codesign.policy:
+      planning_only              -- evidence only, never selects
+      systems_cost_only          -- selects iff estimated benefit > 0
+      require_dispatchable_kernel-- additionally requires a runtime kernel
+      require_accuracy_evidence  -- defers without calibrated/measured
+                                    evidence (always defers today)
+    The policy is recorded in every decision. An unknown policy is a pass
+    error, not a silent fallback.
+
+    Emitted per matmul-like op (quant_codesign.* namespace; unknown
+    metadata — granularity, group size, axis, symmetric/asymmetric, scale,
+    zero point — is OMITTED, never defaulted):
+      quant_codesign.status
+        = "selected" | "planning_only_not_selected"
+        | "rejected_weight_not_constant" | "rejected_backend_not_legal"
+        | "rejected_no_systems_benefit"
+        | "backend_supported_but_not_dispatchable"
+        | "deferred_no_runtime_kernel"
+        | "deferred_missing_accuracy_evidence"
+        | "deferred_missing_cost_estimates"
+        | "deferred_missing_weight_classification"
+      quant_codesign.policy, .contract_version, .truth_boundary
+      quant_codesign.candidate.{representation, weight_dtype,
+        activation_dtype, accumulator_dtype (only when declared)}
+      quant_codesign.algorithm.{status, name (only when declared)}
+      quant_codesign.accuracy_evidence.{status, artifact_ref (only when
+        declared)}   -- status = "no_accuracy_evidence" |
+                        "algorithm_declared_not_calibrated" (the only
+                        truthful values today)
+      quant_codesign.backend_legality = "legal" | "not_legal"
+      quant_codesign.kernel_support.{status, kernel_id, source}
+        -- status = "runtime_dispatchable" |
+           "backend_supported_but_not_dispatchable" |
+           "no_kernel_registry_declared"
+      quant_codesign.scale_source / .zero_point_source
+        = "not_available_no_calibration"
+      quant_codesign.est.{weight_bytes_before, weight_bytes_after,
+        boundary_bytes, total_cost_before_nanos, total_cost_after_nanos,
+        systems_benefit_nanos, excluded_terms}
+      quant_codesign.materialization.{required, status}
+      quant_codesign.rejection_reasons
+
+    Cost-term inclusion boundary (full table in
+    docs/QUANTIZATION_CODESIGN.md): the boundary term models the
+    MATERIALIZED float dequant intermediate (2x float weight bytes, same
+    formula as ShapeCostModel). A dispatchable weight-only kernel removes
+    that materialized intermediate only; inline scale/metadata/unpack/
+    conversion cost is NOT modeled and is listed in est.excluded_terms
+    rather than silently treated as free.
+
+    Invariants: existing quant.strategy semantics are untouched;
+    quant_codesign.est.* is never read by CandidateEvaluation or
+    PlanSelection (enforced by a ranking-invariance test); nothing is
+    estimated for dynamic shapes.
+
+    Truth boundary:
+    quantization_codesign_static_planning_no_calibration_no_measured_accuracy
+    — static planning evidence from declared profiles and tensor shapes.
+    No calibration data, no measured accuracy, and no quantized runtime
+    execution exist in this repository.
+  }];
+  let constructor = "mlir::hir::createQuantizationCoDesignPass()";
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
@@ -1248,6 +1386,77 @@ def CVExecutionDomainPlanning
   }];
   let constructor = "mlir::hir::createCVExecutionDomainPlanningPass()";
   let dependentDialects = ["mlir::func::FuncDialect"];
+}
+
+def CVSemanticAnnotation
+    : Pass<"cv-semantic-annotation", "mlir::func::FuncOp"> {
+  let summary = "Annotate real upstream YOLO-Seg MLIR with CV semantic attrs";
+  let description = [{
+    Runs on upstream MLIR, not cv.* operations. The pass recognizes compact
+    semantic boundaries and regions from tensor contracts, output topology,
+    producer/consumer relationships, operation families, and spatial shapes.
+
+    It annotates existing upstream operations and function results with attrs
+    such as:
+
+      cv.model_family
+      cv.semantic_role
+      cv.region_id
+      cv.output_role
+      cv.feature_scale
+      cv.postprocess_boundary
+      cv.recognition_confidence
+      cv.recognition_evidence
+
+    The pass does not introduce custom CV operations, select backends, plan
+    memory, select kernels, generate an ExecutionPlan, or continue lowering.
+
+    Truth boundary:
+      cv_semantic_annotation_only_no_backend_selection_no_memory_plan_no_kernel_selection_no_execution_plan_generation
+  }];
+  let constructor = "mlir::hir::createCVSemanticAnnotationPass()";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+    "mlir::tensor::TensorDialect",
+    "mlir::linalg::LinalgDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::math::MathDialect"
+  ];
+}
+
+def CVExecutionPlanAttrs
+    : Pass<"cv-execution-plan-attrs", "mlir::func::FuncOp"> {
+  let summary = "Attach minimum CV planning attrs for canonical ExecutionPlan export";
+  let description = [{
+    Runs on real upstream MLIR after cv-semantic-annotation and after target.*
+    attrs have been attached. The pass does not require or create cv.* numeric
+    operations. It annotates the existing function and upstream operations with
+    the same generic planning attr families consumed by the canonical
+    ExecutionPlanBuilder:
+
+      serving.policy
+      execution_provider.*
+      representation.*
+      layout.*
+      quant.*
+      kernel.*
+      cv.execution_plan.*
+      cv.memory.*
+
+    The pass makes only static/configured compiler decisions. Existing generic
+    kernel availability, lowering, kernel selection, candidate generation, and
+    cost-model passes may refine the seeded attrs when a target profile declares
+    concrete capabilities. No runtime execution, measured latency, numerical
+    validation, or memory slot assignment is performed.
+  }];
+  let constructor = "mlir::hir::createCVExecutionPlanAttrsPass()";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+    "mlir::tensor::TensorDialect",
+    "mlir::linalg::LinalgDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::math::MathDialect"
+  ];
 }
 
 #endif // HIR_FUSION_PASSES

@@ -10,6 +10,10 @@ An optional Phase 13 checker validates whether shape-annotated
 `GenericGraphIR` satisfies the structural contract for future lowering into
 existing upstream MLIR dialects. It also emits no MLIR.
 
+Phase 15 added a separate minimal emitter for a small elementwise subset.
+Phase 16 extends that emitter with selected shape/layout forms and nearest 2x
+resize. The frontend driver itself still emits no MLIR.
+
 ## Pipeline
 
 ```text
@@ -36,6 +40,20 @@ ONNX
 The checker distinguishes valid frontend output from operations that still
 need an existing-dialect lowering strategy. See
 `docs/GENERIC_GRAPH_IR_TO_MLIR_LOWERING_CONTRACT.md`.
+
+## Minimal Existing-MLIR Emitter
+
+```bash
+.venv/bin/python tools/generic_graph_ir_to_mlir.py \
+  --in path/to/shape_generic_graph_ir.json \
+  --out path/to/module.mlir
+```
+
+The v0 emitter is intentionally smaller than the lowering contract. It emits
+`nn.constant`, `nn.identity`, `nn.add`, `nn.sub`, `nn.mul`, `nn.div`,
+`nn.relu`, `nn.sigmoid`, `nn.reshape`, `nn.transpose`, and the selected
+`nn.resize` subset for static `f32` tensor forms. See
+`docs/GENERIC_GRAPH_IR_TO_MLIR_EMITTER.md`.
 
 ## CLI
 

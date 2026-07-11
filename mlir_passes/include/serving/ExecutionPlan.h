@@ -95,6 +95,14 @@ struct PerOpDecisionBundle {
   // Static local-memory tile plan (tile_planning_v1). Absent for
   // non-matmul ops or when the profile declares no local memory.
   std::optional<TilePlan> tile_plan;
+  // Concrete runtime-kernel contract selection
+  // (kernel_selection_contract_v1). Absent when KernelSelectionPass did
+  // not run.
+  std::optional<KernelSelection> kernel_selection;
+  // Quantization co-design evidence (quantization_codesign_contract_v1).
+  // Absent when the co-design pass/policy did not run — existing plans
+  // stay byte-identical by default.
+  std::optional<QuantizationCoDesign> quantization_codesign;
 };
 
 // Plan for one serving function (prefill or decode).
@@ -103,6 +111,37 @@ struct FunctionPlan {
   ServingPhase                     serving_phase;   // reuses existing ServingPhase enum
   BackendDecision                  backend;
   std::vector<PerOpDecisionBundle> per_op_decisions;
+};
+
+struct TensorContract {
+  std::string              tensor_id;
+  std::vector<int64_t>     shape;
+  std::string              dtype;
+  std::string              layout;
+  std::string              role;
+};
+
+struct CVSemanticRegion {
+  std::string              region_id;
+  std::string              semantic_role;
+  std::string              recognition_confidence;
+  int64_t                  operation_count = 0;
+  std::vector<std::string> feature_scales;
+};
+
+struct CVPlanExtension {
+  std::string                    model_family;
+  std::string                    function_name;
+  std::string                    target_profile_id;
+  std::vector<TensorContract>    inputs;
+  std::vector<TensorContract>    outputs;
+  std::vector<CVSemanticRegion>  semantic_regions;
+  int64_t                        estimated_input_bytes = 0;
+  int64_t                        estimated_output_bytes = 0;
+  int64_t                        estimated_temporary_bytes = 0;
+  int64_t                        estimated_total_tensor_bytes = 0;
+  std::string                    postprocess_boundary;
+  std::string                    truth_boundary;
 };
 
 // ExecutionPlan — the canonical compiler output.
@@ -116,6 +155,7 @@ struct ExecutionPlan {
   ModelIdentity               model_identity;
   GlobalDecisions             global_decisions;
   std::vector<FunctionPlan>   function_plans;
+  std::optional<CVPlanExtension> cv_extension;
 };
 
 } // namespace mlir::hir

@@ -119,6 +119,46 @@ run_verify_diagnostics() {
     >/dev/null
 }
 
+# Ranking-invariance check for QuantizationCoDesignPass: compiles the input
+# with and without the co-design pass ahead of candidate evaluation + plan
+# selection, extracts every evaluation.* / selected_plan.* signal from both
+# outputs, and requires them to be byte-identical — quant_codesign.est.*
+# evidence must never affect ranking inputs or outputs.
+run_quant_codesign_ranking_invariant() {
+  local input="$REPO_ROOT/mlir_passes/test/serving/quantization_codesign_invariant.mlir"
+  local a b
+  a="$(mktemp)"
+  b="$(mktemp)"
+
+  echo "[MLIR test] quant-codesign ranking invariance (byte-identical with/without pass)"
+
+  "$MLIR_OPT" "$input" \
+    --allow-unregistered-dialect \
+    --load-pass-plugin="$PLUGIN" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
+    --pass-pipeline='builtin.module(candidate-evaluation-pipeline,plan-selection-pipeline)' \
+    | grep -oE '(evaluation|selected_plan)\.[a-z_.0-9]+ = [^,}]+' > "$a"
+
+  "$MLIR_OPT" "$input" \
+    --allow-unregistered-dialect \
+    --load-pass-plugin="$PLUGIN" \
+    --load-dialect-plugin="$DIALECT_PLUGIN" \
+    --pass-pipeline='builtin.module(quant-codesign-pipeline,candidate-evaluation-pipeline,plan-selection-pipeline)' \
+    | grep -oE '(evaluation|selected_plan)\.[a-z_.0-9]+ = [^,}]+' > "$b"
+
+  if [[ ! -s "$a" ]]; then
+    echo "error: no ranking signals extracted — invariant test input is broken" >&2
+    rm -f "$a" "$b"
+    exit 1
+  fi
+  if ! diff -u "$a" "$b"; then
+    echo "error: ranking signals differ with quant-codesign enabled" >&2
+    rm -f "$a" "$b"
+    exit 1
+  fi
+  rm -f "$a" "$b"
+}
+
 # Like run_verify_diagnostics, but runs a pass pipeline so pass-emitted
 # diagnostics (errors/warnings/remarks) can be verified against
 # expected-* annotations in the input file.
@@ -566,6 +606,24 @@ run_filecheck \
   --pass-pipeline='builtin.module(tile-planning-pipeline,candidate-evaluation-pipeline)'
 
 run_filecheck \
+  "kernel-selection-v1: rmsnorm selected, matmul rejected, dtype/layout/tile mismatches rejected, missing tile plan and dynamic shape and missing registry deferred" \
+  "$REPO_ROOT/mlir_passes/test/serving/kernel_selection.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(tile-planning-pipeline,kernel-selection-pipeline)'
+
+run_filecheck \
+  "quantization-codesign-v1: inert without policy, weight/backend legality, boundary overhead loses on small shapes, dispatchable kernel wins memory-bound, capability vs dispatchability, accuracy/dynamic/registry deferrals, declared-algorithm evidence, idempotent double-run" \
+  "$REPO_ROOT/mlir_passes/test/serving/quantization_codesign.mlir" \
+  --split-input-file \
+  --allow-unregistered-dialect \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quant-codesign-pipeline,quant-codesign-pipeline)'
+
+run_quant_codesign_ranking_invariant
+
+run_filecheck \
   "shape-cost-model-v2: shape-scaled FLOPs/costs, dtype-aware bytes, dynamic-shape fallback, quant weight bytes, shape-aware ranking mode" \
   "$REPO_ROOT/mlir_passes/test/serving/shape_cost_model.mlir" \
   --split-input-file \
@@ -630,6 +688,18 @@ run_filecheck \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(cv-execution-domain-planning)'
+
+run_filecheck \
+  "cv-semantic-annotation: annotates real upstream YOLO-Seg-like MLIR without cv ops" \
+  "$REPO_ROOT/mlir_passes/test/serving/cv_semantic_annotation.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(cv-semantic-annotation)'
+
+run_filecheck \
+  "cv-execution-plan-attrs: attaches minimum real-CV ExecutionPlan attrs" \
+  "$REPO_ROOT/mlir_passes/test/serving/cv_execution_plan_attrs.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(cv-semantic-annotation,cv-execution-plan-attrs)'
 
 run_filecheck \
   "affine loop tiling" \

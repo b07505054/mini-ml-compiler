@@ -33,18 +33,67 @@ Key invariants:
   `TilePlanningPass`): **memory-hierarchy-aware static planning** for
   matmul-like ops against the declared local memory capacity
   (`staticCostProfile.localMemoryBytes` — SRAM / shared memory /
-  scratchpad). Fields: `status` (`planned` | `no_feasible_tile` |
+  scratchpad). The memory hierarchy is **optional declared metadata** —
+  not every backend exposes local memory or DMA details. Tile feasibility
+  runs only when the op kind is supported, the capacity is declared, and
+  shapes are fully static. Fields: `status` (`planned` |
+  `no_feasible_tile` | `deferred_missing_memory_hierarchy` |
   `dynamic_dims_unresolved` | …), `tile_shape_mnk`, `local_memory_bytes`
   (selected tile footprint), `estimated_global_traffic_bytes`
   (reuse-limited bound, reported alongside — never replacing —
   `shape_cost`'s ideal each-byte-once bytes), `double_buffer_fits`,
   `staging_capability` (`async_copy_declared` | `dma_declared` |
-  `none_declared`), `rejected_tile_count`, `rejection_reason`, and
-  `truth_boundary =
+  `declared_unavailable` when declared false | `unknown_not_declared` when
+  no declaration exists — unknown is not unavailable),
+  `rejected_tile_count`, `rejection_reason`, `deferred_reason` (why
+  feasibility was deferred, e.g.
+  `local_memory_bytes_not_declared_in_target_profile` — absence is
+  recorded, never replaced with an invented capacity; the plan stays
+  valid), and `truth_boundary =
   tile_planning_static_local_memory_model_not_measured_not_codegen`.
   This is **not measured performance, not DMA/async-copy execution, not
   codegen**, and no claim that the backend kernel uses this tiling.
   Candidate ranking is unchanged by tile planning.
+- Per-op bundles may carry a `kernel_selection` object
+  (kernel_selection_contract_v1, `KernelSelectionPass`): the concrete
+  compiler/runtime kernel contract. `selected_kernel` (+ `source`) appears
+  **only** when a declared `RuntimeKernelDescriptor`
+  (`runtimeKernels` in the target profile) fully matches the planned op —
+  op name × backend × dtype × quant mode × layout × shape staticness ×
+  tile plan × local memory. Otherwise `status` carries an explicit
+  `rejected_*` / `deferred_*` reason plus per-descriptor
+  `rejection_reasons`, including `deferred_no_kernel_library_declared`
+  when no registry exists — never silent. Today exactly one kernel is
+  declared (Metal RMSNorm f32, `handwritten_runtime`); this is a
+  kernel-selection framework, not broad kernel coverage. A selection is a
+  contract handed to the runtime, not an execution or performance claim
+  (`truth_boundary =
+  kernel_selection_static_descriptor_match_not_runtime_execution`). See
+  `docs/RUNTIME_KERNEL_CONTRACT.md`.
+- Per-op bundles may carry a `quantization_codesign` object
+  (quantization_codesign_contract_v1, `QuantizationCoDesignPass` — see
+  `docs/QUANTIZATION_CODESIGN.md`): separated quantization facts —
+  representation, algorithm declaration status, backend legality, concrete
+  kernel support (structured `{status, kernel_id, source}`), accuracy
+  evidence (structured `{status, artifact_ref}`), static systems-cost
+  comparison (`systems_cost_estimate` with before/after bytes and nanos and
+  an explicit `excluded_terms` list), materialization requirement/status,
+  scale/zero-point sources, rejection/deferral reasons, policy, and truth
+  boundary. Present only when the profile/module opts in via
+  `quant.codesign.policy` — existing plans are byte-identical by default.
+  Named distinctly from the existing per-op `quantization` object (the
+  `QuantizationStrategyPlanningPass` output), which is unchanged. Unknown
+  metadata (granularity, group size, axis, symmetric/asymmetric, scale,
+  zero point) is omitted, never defaulted. No calibration, measured
+  accuracy, or quantized execution is claimed.
+- Plans may carry an optional `cv_extension` object when the input module was
+  annotated by the real upstream-MLIR CV path. This extension is absent for
+  Qwen/LLM plans. It records model family, function name, target profile id,
+  graph input/output tensor contracts, CV semantic regions, output roles,
+  static tensor byte estimates, postprocess boundary, and a CV truth boundary.
+  It is metadata and compiler planning evidence only: no runtime execution,
+  no measured performance, no numerical validation, and no memory slot
+  allocation.
 - Per-op bundles may carry a `layout` decision collected from
   `LayoutPlanningPass` attrs: `selected_layout`, `required_input_layout`
   (the producer's layout — a transform boundary exists when they differ),

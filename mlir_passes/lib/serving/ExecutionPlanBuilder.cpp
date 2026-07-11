@@ -6,6 +6,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <map>
+#include <set>
+
 namespace mlir::hir {
 namespace {
 
@@ -75,6 +78,68 @@ static bool boolOp(mlir::Operation *op, llvm::StringRef key) {
   return false;
 }
 
+static std::string dtypeOf(mlir::Type type) {
+  auto shaped = mlir::dyn_cast<mlir::ShapedType>(type);
+  if (!shaped)
+    return {};
+  mlir::Type element = shaped.getElementType();
+  if (element.isF32())
+    return "f32";
+  if (element.isF16())
+    return "f16";
+  if (element.isBF16())
+    return "bf16";
+  if (element.isInteger(8))
+    return "i8";
+  if (element.isInteger(32))
+    return "i32";
+  std::string text;
+  llvm::raw_string_ostream os(text);
+  element.print(os);
+  return text;
+}
+
+static std::string layoutOf(mlir::Type type) {
+  auto shaped = mlir::dyn_cast<mlir::ShapedType>(type);
+  if (!shaped || !shaped.hasRank())
+    return {};
+  if (shaped.getRank() == 4)
+    return "nchw";
+  if (shaped.getRank() == 3 || shaped.getRank() == 2)
+    return "row_major";
+  return "ranked_tensor";
+}
+
+static int64_t byteSizeOf(mlir::Type type) {
+  auto shaped = mlir::dyn_cast<mlir::ShapedType>(type);
+  if (!shaped || !shaped.hasStaticShape())
+    return 0;
+  unsigned bytes = 0;
+  mlir::Type element = shaped.getElementType();
+  if (element.isF32() || element.isInteger(32))
+    bytes = 4;
+  else if (element.isF16() || element.isBF16())
+    bytes = 2;
+  else if (element.isInteger(8))
+    bytes = 1;
+  else
+    return 0;
+  int64_t elems = 1;
+  for (int64_t dim : shaped.getShape())
+    elems *= dim;
+  return elems * static_cast<int64_t>(bytes);
+}
+
+static std::vector<int64_t> shapeOf(mlir::Type type) {
+  std::vector<int64_t> shape;
+  auto shaped = mlir::dyn_cast<mlir::ShapedType>(type);
+  if (!shaped || !shaped.hasRank())
+    return shape;
+  for (int64_t dim : shaped.getShape())
+    shape.push_back(dim);
+  return shape;
+}
+
 } // namespace
 
 ExecutionPlan ExecutionPlanBuilder::build(
@@ -94,6 +159,7 @@ ExecutionPlan ExecutionPlanBuilder::build(
       "execution_planning_declared_profiles_not_measured_runtime";
 
   plan.global_decisions = collectGlobalDecisions(module, capabilities);
+  plan.cv_extension = collectCVPlanExtension(module);
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     // Same gate attr as V1 builder: only collect annotated functions.
@@ -111,6 +177,25 @@ ExecutionPlanBuilder::collectModelIdentity(mlir::ModuleOp module) {
   ModelIdentity id;
   if (auto a = module->getAttrOfType<mlir::StringAttr>("llm.model"))
     id.model_id = a.getValue().str();
+  if (id.model_id.empty())
+    if (auto a = module->getAttrOfType<mlir::StringAttr>("cv.model"))
+      id.model_id = a.getValue().str();
+  if (id.model_id.empty()) {
+    module.walk([&](mlir::func::FuncOp funcOp) {
+      if (id.model_id.empty())
+        if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("cv.model_family"))
+          id.model_id = a.getValue().str();
+    });
+  }
+  if (auto a = module->getAttrOfType<mlir::StringAttr>("cv.model_family"))
+    id.model_family = a.getValue().str();
+  if (id.model_family.empty()) {
+    module.walk([&](mlir::func::FuncOp funcOp) {
+      if (id.model_family.empty())
+        if (auto a = funcOp->getAttrOfType<mlir::StringAttr>("cv.model_family"))
+          id.model_family = a.getValue().str();
+    });
+  }
   if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.num_layers"))
     id.num_layers = a.getInt();
   if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.hidden_size"))
@@ -120,9 +205,11 @@ ExecutionPlanBuilder::collectModelIdentity(mlir::ModuleOp module) {
   if (auto a = module->getAttrOfType<mlir::IntegerAttr>("llm.num_key_value_heads"))
     id.num_kv_heads = a.getInt();
   // attention_mechanism and positional_encoding: no V1 module attrs for these.
-  id.truth_boundary = !id.model_id.empty()
-      ? "declared_model_config_not_full_graph_import"
-      : kPartialTB;
+  id.truth_boundary = !id.model_id.empty() && !id.model_family.empty() &&
+      id.model_family == "yoloseg"
+      ? "cv_semantic_attrs_from_upstream_mlir_static_contracts"
+      : (!id.model_id.empty() ? "declared_model_config_not_full_graph_import"
+                              : kPartialTB);
   return id;
 }
 
@@ -183,6 +270,111 @@ ExecutionPlanBuilder::collectGlobalDecisions(
   // gd.calibration remains nullopt.
 
   return gd;
+}
+
+std::optional<CVPlanExtension>
+ExecutionPlanBuilder::collectCVPlanExtension(mlir::ModuleOp module) {
+  CVPlanExtension ext;
+  mlir::func::FuncOp selected;
+  module.walk([&](mlir::func::FuncOp funcOp) {
+    if (!selected &&
+        funcOp->getAttrOfType<mlir::StringAttr>("cv.execution_plan.status"))
+      selected = funcOp;
+  });
+  if (!selected)
+    return std::nullopt;
+
+  ext.function_name = selected.getName().str();
+  ext.model_family = strFn(selected, "cv.model_family");
+  if (ext.model_family.empty())
+    ext.model_family = strOp(module.getOperation(), "cv.model_family");
+  ext.target_profile_id = strOp(module.getOperation(), "target.profile_id");
+  ext.truth_boundary = strFn(selected, "cv.execution_plan.truth_boundary");
+  ext.postprocess_boundary = "model_output_boundary";
+
+  auto fnType = selected.getFunctionType();
+  for (auto [index, type] : llvm::enumerate(fnType.getInputs())) {
+    TensorContract tc;
+    tc.tensor_id = "arg_" + std::to_string(index);
+    tc.shape = shapeOf(type);
+    tc.dtype = dtypeOf(type);
+    tc.layout = layoutOf(type);
+    tc.role = "graph_input";
+    ext.estimated_input_bytes += byteSizeOf(type);
+    ext.inputs.push_back(std::move(tc));
+  }
+
+  mlir::func::ReturnOp returnOp;
+  if (!selected.getBody().empty())
+    returnOp = mlir::dyn_cast<mlir::func::ReturnOp>(
+        selected.getBody().front().getTerminator());
+  if (returnOp) {
+    for (auto [index, operand] : llvm::enumerate(returnOp.getOperands())) {
+      TensorContract tc;
+      tc.tensor_id = "result_" + std::to_string(index);
+      tc.shape = shapeOf(operand.getType());
+      tc.dtype = dtypeOf(operand.getType());
+      tc.layout = layoutOf(operand.getType());
+      tc.role = "graph_output";
+      if (mlir::Operation *producer = operand.getDefiningOp()) {
+        if (auto role =
+                producer->getAttrOfType<mlir::StringAttr>("cv.output_role"))
+          tc.role = role.getValue().str();
+        if (auto boundary = producer->getAttrOfType<mlir::StringAttr>(
+                "cv.postprocess_boundary"))
+          ext.postprocess_boundary = boundary.getValue().str();
+      }
+      ext.estimated_output_bytes += byteSizeOf(operand.getType());
+      ext.outputs.push_back(std::move(tc));
+    }
+  }
+
+  struct RegionAccum {
+    std::string role;
+    std::string confidence;
+    int64_t count = 0;
+    std::set<std::string> scales;
+  };
+  std::map<std::string, RegionAccum> regions;
+  selected.walk([&](mlir::Operation *op) {
+    auto id = op->getAttrOfType<mlir::StringAttr>("cv.region_id");
+    if (!id)
+      return;
+    RegionAccum &acc = regions[id.getValue().str()];
+    ++acc.count;
+    if (acc.role.empty())
+      if (auto role = op->getAttrOfType<mlir::StringAttr>("cv.semantic_role"))
+        acc.role = role.getValue().str();
+    if (acc.confidence.empty())
+      if (auto conf =
+              op->getAttrOfType<mlir::StringAttr>("cv.recognition_confidence"))
+        acc.confidence = conf.getValue().str();
+    if (auto scale = op->getAttrOfType<mlir::StringAttr>("cv.feature_scale"))
+      acc.scales.insert(scale.getValue().str());
+  });
+  for (const auto &entry : regions) {
+    CVSemanticRegion region;
+    region.region_id = entry.first;
+    region.semantic_role = entry.second.role;
+    region.recognition_confidence = entry.second.confidence;
+    region.operation_count = entry.second.count;
+    for (const auto &scale : entry.second.scales)
+      region.feature_scales.push_back(scale);
+    ext.semantic_regions.push_back(std::move(region));
+  }
+
+  if (auto a = selected->getAttrOfType<mlir::IntegerAttr>(
+          "cv.memory.estimated_temporary_bytes"))
+    ext.estimated_temporary_bytes = a.getInt();
+  if (auto a = selected->getAttrOfType<mlir::IntegerAttr>(
+          "cv.memory.estimated_total_tensor_bytes"))
+    ext.estimated_total_tensor_bytes = a.getInt();
+  if (ext.estimated_total_tensor_bytes == 0) {
+    ext.estimated_total_tensor_bytes = ext.estimated_input_bytes +
+        ext.estimated_output_bytes + ext.estimated_temporary_bytes;
+  }
+
+  return ext;
 }
 
 FunctionPlan
@@ -299,8 +491,85 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
         tp.double_buffer_fits = a.getValue();
       tp.staging_capability = strOp(&op, "tile.plan.staging_capability");
       tp.rejection_reason   = strOp(&op, "tile.plan.rejection_reason");
+      tp.deferred_reason    = strOp(&op, "tile.plan.deferred_reason");
       tp.truth_boundary     = strOp(&op, "tile.plan.truth_boundary");
       tilePlan = std::move(tp);
+    }
+
+    // Concrete runtime-kernel contract selection from KernelSelectionPass
+    // (kernel_selection_contract_v1). Present on every op when the pass
+    // ran — including explicit deferrals when no registry was declared.
+    std::optional<KernelSelection> kernelSelection;
+    if (auto st =
+            op.getAttrOfType<mlir::StringAttr>("kernel_selection.status")) {
+      KernelSelection ks;
+      ks.status = st.getValue().str();
+      ks.selected_kernel_id = strOp(&op, "kernel_selection.selected_id");
+      ks.source             = strOp(&op, "kernel_selection.source");
+      ks.contract_version   = strOp(&op, "kernel_selection.contract_version");
+      ks.truth_boundary     = strOp(&op, "kernel_selection.truth_boundary");
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "kernel_selection.rejection_reasons"))
+        for (mlir::Attribute elem : arr)
+          if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+            ks.rejection_reasons.push_back(s.getValue().str());
+      kernelSelection = std::move(ks);
+    }
+
+    // Quantization co-design evidence (quantization_codesign_contract_v1).
+    // Present only when the co-design pass ran under an explicit policy.
+    std::optional<QuantizationCoDesign> quantCoDesign;
+    if (auto st =
+            op.getAttrOfType<mlir::StringAttr>("quant_codesign.status")) {
+      QuantizationCoDesign qc;
+      auto rS = [&](llvm::StringRef key) {
+        return strOp(&op, ("quant_codesign." + key).str());
+      };
+      auto rOptI = [&](llvm::StringRef key) -> std::optional<int64_t> {
+        if (auto a = op.getAttrOfType<mlir::IntegerAttr>(
+                ("quant_codesign." + key).str()))
+          return a.getInt();
+        return std::nullopt;
+      };
+      qc.status  = st.getValue().str();
+      qc.policy  = rS("policy");
+      qc.representation    = rS("candidate.representation");
+      qc.weight_dtype      = rS("candidate.weight_dtype");
+      qc.activation_dtype  = rS("candidate.activation_dtype");
+      qc.accumulator_dtype = rS("candidate.accumulator_dtype");
+      qc.algorithm_status  = rS("algorithm.status");
+      qc.algorithm_name    = rS("algorithm.name");
+      qc.backend_legality  = rS("backend_legality");
+      qc.kernel_support_status    = rS("kernel_support.status");
+      qc.kernel_support_kernel_id = rS("kernel_support.kernel_id");
+      qc.kernel_support_source    = rS("kernel_support.source");
+      qc.accuracy_evidence_status = rS("accuracy_evidence.status");
+      qc.accuracy_evidence_artifact_ref = rS("accuracy_evidence.artifact_ref");
+      qc.scale_source      = rS("scale_source");
+      qc.zero_point_source = rS("zero_point_source");
+      qc.weight_bytes_before      = rOptI("est.weight_bytes_before");
+      qc.weight_bytes_after       = rOptI("est.weight_bytes_after");
+      qc.boundary_bytes           = rOptI("est.boundary_bytes");
+      qc.total_cost_before_nanos  = rOptI("est.total_cost_before_nanos");
+      qc.total_cost_after_nanos   = rOptI("est.total_cost_after_nanos");
+      qc.systems_benefit_nanos    = rOptI("est.systems_benefit_nanos");
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "quant_codesign.est.excluded_terms"))
+        for (mlir::Attribute e : arr)
+          if (auto s = mlir::dyn_cast<mlir::StringAttr>(e))
+            qc.excluded_cost_terms.push_back(s.getValue().str());
+      if (auto a = op.getAttrOfType<mlir::BoolAttr>(
+              "quant_codesign.materialization.required"))
+        qc.materialization_required = a.getValue();
+      qc.materialization_status = rS("materialization.status");
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "quant_codesign.rejection_reasons"))
+        for (mlir::Attribute e : arr)
+          if (auto s = mlir::dyn_cast<mlir::StringAttr>(e))
+            qc.rejection_reasons.push_back(s.getValue().str());
+      qc.truth_boundary   = rS("truth_boundary");
+      qc.contract_version = rS("contract_version");
+      quantCoDesign = std::move(qc);
     }
 
     // Per-op layout decision from LayoutPlanningPass attrs. Collected for
@@ -328,7 +597,8 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
     bool layoutCreatesBundle = layout && layout->requires_layout_transform;
 
     if (quant || kernel || fallback || !materialized.empty() ||
-        !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle) {
+        !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle ||
+        kernelSelection || quantCoDesign) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
@@ -340,6 +610,8 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       bundle.shape_cost   = std::move(shapeCost);
       bundle.tile_plan    = std::move(tilePlan);
       bundle.layout       = std::move(layout);
+      bundle.kernel_selection = std::move(kernelSelection);
+      bundle.quantization_codesign = std::move(quantCoDesign);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;

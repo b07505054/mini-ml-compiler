@@ -72,4 +72,12 @@ assert_contains("${OUT}" "\"per_op_decisions\"")
 # --- Truth boundary present ---
 assert_contains("${OUT}" "\"truth_boundary\"")
 
+# --- Kernel selection contract (kernel_selection_contract_v1) ---
+# The a17pro profile declares exactly one runtime kernel (Metal RMSNorm f32);
+# the coreml-primary plan must therefore carry kernel_selection objects with
+# explicit statuses — never silent, never fabricated coverage.
+assert_contains("${OUT}" "\"kernel_selection\"")
+assert_contains("${OUT}" "\"contract_version\": \"kernel_selection_contract_v1\"")
+assert_contains("${OUT}" "kernel_selection_static_descriptor_match_not_runtime_execution")
+
 message(STATUS "CompileForTargetTest: PASS")

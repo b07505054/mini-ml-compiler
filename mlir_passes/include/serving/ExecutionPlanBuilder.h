@@ -50,6 +50,8 @@ private:
                                                 const CapabilityBundle& capabilities);
   static GlobalDecisions  collectGlobalDecisions(mlir::ModuleOp module,
                                                  const CapabilityBundle& capabilities);
+  static std::optional<CVPlanExtension>
+  collectCVPlanExtension(mlir::ModuleOp module);
   static FunctionPlan   collectFunctionDecisions(mlir::func::FuncOp funcOp,
                                                    const CapabilityBundle& capabilities);
   static std::vector<PerOpDecisionBundle>

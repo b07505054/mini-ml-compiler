@@ -1322,6 +1322,20 @@ void registerFusionPasses() {
         pm.addNestedPass<func::FuncOp>(createCVExecutionDomainPlanningPass());
       });
 
+  static PassPipelineRegistration<> cvSemanticAnnotationPipeline(
+      "cv-semantic-annotation",
+      "Annotate real upstream YOLO-Seg MLIR with CV semantic attrs",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVSemanticAnnotationPass());
+      });
+
+  static PassPipelineRegistration<> cvExecutionPlanAttrsPipeline(
+      "cv-execution-plan-attrs",
+      "Attach minimum CV planning attrs for canonical ExecutionPlan export",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createCVExecutionPlanAttrsPass());
+      });
+
   // QuantizationPlanningPass is module-scoped: it reads/writes module attrs
   // and optionally annotates linalg.matmul ops inside functions.
   static PassPipelineRegistration<> quantizationPlanningPipeline(

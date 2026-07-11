@@ -1,0 +1,105 @@
+{
+  "schema": "kernel_benchmark_profile",
+  "schema_version": 2,
+  "benchmark": "matmul_postop_relu",
+  "source": "apps/run_mlir_fused_kernel_benchmark.cpp",
+  "mode": "use-plan",
+  "execution_plan": "trace/mlir_execution_plan.json",
+  "build": {
+    "type": "Release",
+    "compiler": "gcc 15.2.0",
+    "ndebug": true,
+    "flags": ["Release", "-O3", "-DNDEBUG"]
+  },
+  "machine": {
+    "hostname": "allen-ZenBook-UX534FTC-UX534FT",
+    "uname": "Linux allen-ZenBook-UX534FTC-UX534FT 7.0.0-27-generic #27-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 18 19:13:49 UTC 2026 x86_64 GNU/Linux",
+    "cpu_summary": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           39 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  8\nOn-line CPU(s) list:                     0-7\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz\nCPU family:                              6\nModel:                                   142\nThread(s) per core:                      2\nCore(s) per socket:                      4\nSocket(s):                               1\nStepping:                                12\nCPU(s) scaling MHz:                      90%\nCPU max MHz:                             4200.0000",
+    "nproc": "8",
+    "cpu_affinity": "pid 280104's current affinity list: 0-7"
+  },
+  "configuration": {
+    "warmup": 50,
+    "iterations": 300,
+    "repeats": 5,
+    "dtype": "f32",
+    "m": 128,
+    "n": 128,
+    "k": 128,
+    "tile_size": 32
+  },
+  "patterns": {
+    "bias": {
+      "postop_semantics": "bias_shape_N",
+      "variants": {
+        "tiled_one_pass_fused": {
+          "function": "run_tiled_one_pass_fused",
+          "kernel_id": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+          "rank": 0,
+          "oracle_best": false,
+          "samples_ms": [0.430029, 0.415444, 0.417318, 0.422575, 0.421094],
+          "statistics": {
+            "sample_count": 5,
+            "mean_ms": 0.421292,
+            "median_ms": 0.421094,
+            "p50_ms": 0.421094,
+            "p95_ms": 0.428538,
+            "min_ms": 0.415444,
+            "max_ms": 0.430029,
+            "stddev_ms": 0.005657,
+            "coefficient_of_variation": 0.013428
+          },
+          "correctness": {
+            "passed": true,
+            "atol": 0.000100,
+            "rtol": 0.000100,
+            "max_abs_error": 0.000000,
+            "max_rel_error": 0.000000,
+            "contains_nan": false,
+            "contains_inf": false
+          },
+          "implementation_properties": {
+            "matmul_strategy": "tiled",
+            "post_op_strategy": "one_pass_fused",
+            "intermediate_tensor_count": 0,
+            "full_output_post_op_passes": 0,
+            "final_output_store_passes": 1,
+            "tile_size": 32
+          }
+,
+          "runtime_trace": {
+            "execution_plan": "trace/mlir_execution_plan.json",
+            "planned_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+            "actual_dispatched_kernel": "cpu_tiled_matmul_bias_relu_one_pass_f32",
+            "backend": "cpu",
+            "dispatch_count": 1,
+            "kernel_config": {
+              "tile_m": 32,
+              "tile_n": 32,
+              "tile_k": 32
+            },
+            "plan_matched_runtime": true
+          }
+        }
+      },
+      "comparisons": {
+        "tiling_speedup": {
+          "speedup": 0.000000,
+          "latency_reduction_percent": 0.000000
+        },
+        "fusion_speedup_naive": {
+          "speedup": 0.000000,
+          "latency_reduction_percent": 0.000000
+        },
+        "fusion_speedup_fair": {
+          "speedup": 0.000000,
+          "latency_reduction_percent": 0.000000
+        },
+        "full_stack_speedup": {
+          "speedup": 0.000000,
+          "latency_reduction_percent": 0.000000
+        }
+      }
+    }
+  }
+}

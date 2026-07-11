@@ -1,9 +1,414 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
+import math
 import re
+from datetime import datetime, timezone
 from pathlib import Path
+
+# --- Profile-guided MatMul post-op kernel selection -------------------------
+#
+# The measured kernel benchmark profile is the JSON document written by
+# apps/run_mlir_fused_kernel_benchmark.cpp (benchmark == "matmul_postop_relu",
+# schema_version == 2). A measurement is used for selection only when ALL of
+# pattern / backend / dtype / M / N / K / kernel_id / kernel configuration
+# match exactly and correctness passed. Ranking metric: mean latency
+# (mean_latency_ms). Tie-breaking order, documented and deterministic:
+#   1. lower p95_ms
+#   2. lower coefficient of variation
+#   3. fewer runtime dispatches
+#   4. fewer intermediate tensors
+#   5. stable lexical kernel_id ordering
+# When no valid exact-match evidence exists, selection falls back to a
+# deterministic safe kernel with an explicit structured fallback reason.
+
+MATMUL_PROFILE_BENCHMARK = "matmul_postop_relu"
+SUPPORTED_PROFILE_SCHEMA_VERSIONS = (2,)
+PROFILE_RANKING_METRIC = "mean_latency_ms"
+# Repeat-to-repeat coefficient of variation acceptance threshold for a
+# measurement to count as selection evidence (5%).
+MAX_ACCEPTED_CV = 0.05
+
+TIE_BREAKER_ORDER = (
+    "p95_ms",
+    "coefficient_of_variation",
+    "runtime_dispatch_count",
+    "intermediate_tensor_count",
+    "kernel_id_lexical",
+)
+
+POSTOP_SEMANTICS_TO_PATTERN = {
+    "bias_shape_N": "matmul_bias_relu",
+    "elementwise_add_shape_MxN": "matmul_add_relu",
+}
+
+MATMUL_LEGAL_KERNELS = {
+    "matmul_bias_relu": (
+        "cpu_naive_matmul_bias_relu_unfused_f32",
+        "cpu_naive_matmul_bias_relu_one_pass_f32",
+        "cpu_tiled_matmul_bias_relu_unfused_f32",
+        "cpu_tiled_matmul_bias_relu_one_pass_f32",
+    ),
+    "matmul_add_relu": (
+        "cpu_naive_matmul_add_relu_unfused_f32",
+        "cpu_naive_matmul_add_relu_one_pass_f32",
+        "cpu_tiled_matmul_add_relu_unfused_f32",
+        "cpu_tiled_matmul_add_relu_one_pass_f32",
+    ),
+}
+
+MATMUL_SAFE_FALLBACK_KERNEL = {
+    "matmul_bias_relu": "cpu_tiled_matmul_bias_relu_unfused_f32",
+    "matmul_add_relu": "cpu_tiled_matmul_add_relu_unfused_f32",
+}
+
+DEFAULT_MATMUL_KERNEL_CONFIG = {"tile_m": 32, "tile_n": 32, "tile_k": 32}
+
+
+def kernel_static_properties(kernel_id):
+    one_pass = kernel_id.endswith("_one_pass_f32")
+    return {
+        "tiled": kernel_id.startswith("cpu_tiled_"),
+        "runtime_dispatch_count": 1 if one_pass else 3,
+        "intermediate_tensor_count": 0 if one_pass else 2,
+    }
+
+
+def finite_positive(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value > 0
+
+
+def positive_int(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def normalize_profile_measurement(pattern, variant_key, variant, config, machine, source):
+    stats = variant.get("statistics") or {}
+    correctness = variant.get("correctness") or {}
+    implementation = variant.get("implementation_properties") or {}
+    record = {
+        "pattern": pattern,
+        "backend": "cpu",
+        "dtype": config.get("dtype"),
+        "m": config.get("m"),
+        "n": config.get("n"),
+        "k": config.get("k"),
+        "kernel_id": variant.get("kernel_id"),
+        "variant": variant_key,
+        "tile_size": implementation.get("tile_size"),
+        "correctness_passed": correctness.get("passed"),
+        "warmup_iterations": config.get("warmup"),
+        "measured_iterations": config.get("iterations"),
+        "repeats": config.get("repeats"),
+        "mean_ms": stats.get("mean_ms"),
+        "p50_ms": stats.get("p50_ms"),
+        "p95_ms": stats.get("p95_ms"),
+        "stddev_ms": stats.get("stddev_ms"),
+        "coefficient_of_variation": stats.get("coefficient_of_variation"),
+        "machine_hostname": machine.get("hostname"),
+        "source": source,
+    }
+
+    issues = []
+    if not record["kernel_id"]:
+        issues.append("missing_kernel_id")
+    elif not record["kernel_id"].startswith("cpu_"):
+        issues.append("kernel_backend_not_cpu")
+    if not record["dtype"]:
+        issues.append("missing_dtype")
+    for dim in ("m", "n", "k"):
+        if not positive_int(record[dim]):
+            issues.append(f"invalid_shape_{dim}")
+    if not positive_int(record["warmup_iterations"]):
+        issues.append("invalid_warmup_iterations")
+    if not positive_int(record["measured_iterations"]):
+        issues.append("invalid_measured_iterations")
+    if not positive_int(record["repeats"]):
+        issues.append("invalid_repeats")
+    for field in ("mean_ms", "p50_ms", "p95_ms"):
+        if not finite_positive(record[field]):
+            issues.append(f"invalid_{field}")
+    cv = record["coefficient_of_variation"]
+    if cv is None or isinstance(cv, bool) or not isinstance(cv, (int, float)) or not math.isfinite(cv) or cv < 0:
+        issues.append("invalid_coefficient_of_variation")
+    elif cv > MAX_ACCEPTED_CV:
+        issues.append("cv_above_acceptance_threshold")
+    if record["correctness_passed"] is not True:
+        issues.append("correctness_not_passed")
+
+    record["issues"] = issues
+    record["stats_valid"] = all(issue == "correctness_not_passed" for issue in issues)
+    record["usable"] = not issues
+    return record
+
+
+def profile_fingerprint(path):
+    payload = path.read_bytes()
+    return {
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "mtime_utc": datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(),
+    }
+
+
+def collect_matmul_profile_document(payload, source):
+    doc = {
+        "path": source,
+        "benchmark": payload.get("benchmark"),
+        "schema": payload.get("schema"),
+        "schema_version": payload.get("schema_version"),
+        "mode": payload.get("mode"),
+        "supported": False,
+        "issues": [],
+        "measurements": [],
+    }
+    if payload.get("benchmark") != MATMUL_PROFILE_BENCHMARK:
+        doc["issues"].append("not_a_matmul_postop_benchmark_document")
+        return doc
+    if payload.get("schema_version") not in SUPPORTED_PROFILE_SCHEMA_VERSIONS:
+        doc["issues"].append("unsupported_profile_schema_version")
+        return doc
+    if payload.get("mode") == "use-plan":
+        # Circular-measurement guard: a plan-driven validation run must never
+        # feed back into selection as profile evidence.
+        doc["issues"].append("use_plan_output_rejected_as_selection_evidence")
+        return doc
+
+    config = payload.get("configuration") or {}
+    machine = payload.get("machine") or {}
+    for pattern_payload in (payload.get("patterns") or {}).values():
+        semantics = pattern_payload.get("postop_semantics")
+        pattern = POSTOP_SEMANTICS_TO_PATTERN.get(semantics)
+        if pattern is None:
+            doc["issues"].append(f"unknown_postop_semantics:{semantics}")
+            continue
+        for variant_key, variant in (pattern_payload.get("variants") or {}).items():
+            doc["measurements"].append(
+                normalize_profile_measurement(pattern, variant_key, variant, config, machine, source)
+            )
+    doc["supported"] = True
+    return doc
+
+
+def candidate_export_entry(kernel_id, measurement):
+    props = kernel_static_properties(kernel_id)
+    entry = {
+        "kernel_id": kernel_id,
+        "eligible": False,
+        "rank": None,
+        "profile_latency_ms": None,
+        "profile_p50_ms": None,
+        "profile_p95_ms": None,
+        "profile_cv": None,
+        "runtime_dispatch_count": props["runtime_dispatch_count"],
+        "intermediate_tensor_count": props["intermediate_tensor_count"],
+    }
+    if measurement is not None:
+        entry["profile_latency_ms"] = measurement["mean_ms"]
+        entry["profile_p50_ms"] = measurement["p50_ms"]
+        entry["profile_p95_ms"] = measurement["p95_ms"]
+        entry["profile_cv"] = measurement["coefficient_of_variation"]
+        entry["correctness_passed"] = measurement["correctness_passed"]
+    return entry
+
+
+def kernel_config_matches(kernel_id, measurement, kernel_config):
+    """Tiled kernels must be measured at exactly the planned tile config.
+
+    Naive kernels do not consume the tile configuration, so any measurement of
+    a naive kernel is config-compatible by construction.
+    """
+    if not kernel_static_properties(kernel_id)["tiled"]:
+        return True
+    tile = measurement.get("tile_size")
+    return (
+        positive_int(tile)
+        and tile == kernel_config["tile_m"]
+        and tile == kernel_config["tile_n"]
+        and tile == kernel_config["tile_k"]
+    )
+
+
+def matmul_safe_fallback_selection(pattern, shape, profile, reason, detail=None, candidates=None):
+    fallback_kernel = MATMUL_SAFE_FALLBACK_KERNEL[pattern]
+    shape_bucket = f"{shape['m']}x{shape['k']}x{shape['n']}:{shape['dtype']}"
+    selection_export = {
+        "policy": "safe_fallback",
+        "metric": PROFILE_RANKING_METRIC,
+        "selected_value": None,
+        "profile_schema_version": None,
+        "profile_match": "none",
+        "fallback_used": True,
+        "fallback_reason": reason,
+        "tie_breaker_order": list(TIE_BREAKER_ORDER),
+        "cv_acceptance_threshold": MAX_ACCEPTED_CV,
+        "profile_source": profile.get("profile_path"),
+    }
+    if detail:
+        selection_export["fallback_detail"] = detail
+    return {
+        "selected_kernel": fallback_kernel,
+        "selected_backend": "cpu",
+        "candidate_kernel": fallback_kernel,
+        "candidate_backend": "cpu",
+        "fallback_kernel": fallback_kernel,
+        "fallback_backend": "cpu",
+        "profile_status": profile.get("profile_status", "not_provided"),
+        "profile_source": profile.get("profile_path"),
+        "selection_reason": reason,
+        "profile_calibrated": False,
+        "shape_bucket": shape_bucket,
+        "evidence": None,
+        "selection": selection_export,
+        "kernel_candidates": candidates if candidates is not None else [],
+    }
+
+
+def resolve_no_eligible_reason(legal_measurements, illegal_kernels):
+    if not legal_measurements:
+        if illegal_kernels:
+            return "all_profiled_candidates_illegal", None
+        return "invalid_profile_measurement", "no_legal_candidate_has_a_matching_measurement"
+    if all(
+        measurement["stats_valid"] and "correctness_not_passed" in measurement["issues"]
+        for measurement in legal_measurements
+    ):
+        return "no_correctness_passing_candidate", None
+    issues = sorted({issue for m in legal_measurements for issue in m["issues"]})
+    return "invalid_profile_measurement", ",".join(issues) if issues else None
+
+
+def select_matmul_kernel(pattern, shape, kernel_config, profile):
+    """Rank legal kernels for this op by measured profile evidence.
+
+    Exact-match keys: pattern, backend, dtype, M, N, K, kernel_id, kernel
+    configuration, correctness_passed == true. Ranking metric: mean latency.
+    """
+    status = profile.get("profile_status", "not_provided")
+    if status in ("not_provided", "missing"):
+        detail = "profile_files_missing" if status == "missing" else None
+        return matmul_safe_fallback_selection(pattern, shape, profile, "profile_not_provided", detail)
+
+    documents = profile.get("matmul_profile_documents", [])
+    supported_docs = [doc for doc in documents if doc["supported"]]
+    if not supported_docs:
+        issues = sorted({issue for doc in documents for issue in doc["issues"]})
+        return matmul_safe_fallback_selection(
+            pattern, shape, profile, "unsupported_profile_schema", ",".join(issues) or None
+        )
+
+    measurements = [m for doc in supported_docs for m in doc["measurements"]]
+    pattern_measurements = [m for m in measurements if m["pattern"] == pattern]
+    if not pattern_measurements:
+        return matmul_safe_fallback_selection(pattern, shape, profile, "no_matching_pattern")
+
+    exact = [
+        m
+        for m in pattern_measurements
+        if m["m"] == shape["m"]
+        and m["n"] == shape["n"]
+        and m["k"] == shape["k"]
+        and m["dtype"] == shape["dtype"]
+        and m["backend"] == "cpu"
+    ]
+    if not exact:
+        return matmul_safe_fallback_selection(pattern, shape, profile, "no_exact_shape_match")
+
+    legal = MATMUL_LEGAL_KERNELS[pattern]
+    # Later profile documents override earlier ones for the same kernel_id.
+    by_kernel = {}
+    for measurement in exact:
+        if measurement["kernel_id"]:
+            by_kernel[measurement["kernel_id"]] = measurement
+    missing_kernel_id = [m for m in exact if not m["kernel_id"]]
+    illegal_kernels = sorted(k for k in by_kernel if k not in legal)
+
+    candidates = []
+    for kernel_id in legal:
+        measurement = by_kernel.get(kernel_id)
+        entry = candidate_export_entry(kernel_id, measurement)
+        if measurement is None:
+            entry["ineligible_reason"] = "no_exact_profile_measurement"
+        elif not kernel_config_matches(kernel_id, measurement, kernel_config):
+            entry["ineligible_reason"] = "kernel_config_mismatch"
+        elif measurement["issues"]:
+            entry["ineligible_reason"] = (
+                "correctness_failed"
+                if measurement["issues"] == ["correctness_not_passed"]
+                else "invalid_profile_measurement:" + ",".join(measurement["issues"])
+            )
+        else:
+            entry["eligible"] = True
+        candidates.append(entry)
+
+    eligible = [c for c in candidates if c["eligible"]]
+    if not eligible:
+        legal_measurements = [
+            by_kernel[kernel_id]
+            for kernel_id in legal
+            if kernel_id in by_kernel
+            and kernel_config_matches(kernel_id, by_kernel[kernel_id], kernel_config)
+        ]
+        if missing_kernel_id and not by_kernel:
+            reason, detail = "invalid_profile_measurement", "measurements_missing_kernel_id"
+        else:
+            reason, detail = resolve_no_eligible_reason(legal_measurements, illegal_kernels)
+        return matmul_safe_fallback_selection(pattern, shape, profile, reason, detail, candidates)
+
+    ranked = sorted(
+        eligible,
+        key=lambda c: (
+            c["profile_latency_ms"],
+            c["profile_p95_ms"],
+            c["profile_cv"],
+            c["runtime_dispatch_count"],
+            c["intermediate_tensor_count"],
+            c["kernel_id"],
+        ),
+    )
+    for index, entry in enumerate(ranked):
+        entry["rank"] = index + 1
+    ranked_ids = [entry["kernel_id"] for entry in ranked]
+    candidates.sort(
+        key=lambda c: (c["rank"] is None, c["rank"] if c["rank"] is not None else 0, c["kernel_id"])
+    )
+    winner = ranked[0]
+    winner_measurement = by_kernel[winner["kernel_id"]]
+    shape_bucket = f"{shape['m']}x{shape['k']}x{shape['n']}:{shape['dtype']}"
+
+    selection_export = {
+        "policy": "profile_guided_latency",
+        "metric": PROFILE_RANKING_METRIC,
+        "selected_value": winner["profile_latency_ms"],
+        "profile_schema_version": SUPPORTED_PROFILE_SCHEMA_VERSIONS[-1],
+        "profile_match": "exact",
+        "fallback_used": False,
+        "tie_breaker_order": list(TIE_BREAKER_ORDER),
+        "cv_acceptance_threshold": MAX_ACCEPTED_CV,
+        "profile_source": winner_measurement["source"],
+        "profile_generation_mode": next(
+            (doc["mode"] for doc in supported_docs if doc["path"] == winner_measurement["source"]),
+            None,
+        ),
+        "ranked_kernels": ranked_ids,
+    }
+    return {
+        "selected_kernel": winner["kernel_id"],
+        "selected_backend": "cpu",
+        "candidate_kernel": winner["kernel_id"],
+        "candidate_backend": "cpu",
+        "fallback_kernel": MATMUL_SAFE_FALLBACK_KERNEL[pattern],
+        "fallback_backend": "cpu",
+        "profile_status": profile.get("profile_status", "loaded"),
+        "profile_source": winner_measurement["source"],
+        "selection_reason": "profile_guided_latency_rank_1",
+        "profile_calibrated": True,
+        "shape_bucket": shape_bucket,
+        "evidence": winner_measurement,
+        "selection": selection_export,
+        "kernel_candidates": candidates,
+    }
 
 
 def detect_fused_matmul(text):
@@ -99,11 +504,13 @@ def matmul_shape_from_mlir(text, match, default):
 
 def load_kernel_profiles(paths):
     if not paths:
-        return {"profile_status": "not_provided", "kernels": {}}
+        return {"profile_status": "not_provided", "kernels": {}, "matmul_profile_documents": []}
 
     profile_paths = [Path(path) for path in paths]
     kernels = {}
     cost_table = {}
+    matmul_documents = []
+    fingerprints = {}
     loaded = []
     missing = []
 
@@ -114,6 +521,8 @@ def load_kernel_profiles(paths):
 
         payload = json.loads(profile_path.read_text(encoding="utf-8"))
         loaded.append(str(profile_path))
+        fingerprints[str(profile_path)] = profile_fingerprint(profile_path)
+        matmul_documents.append(collect_matmul_profile_document(payload, str(profile_path)))
         if payload.get("artifact_type") == "profile_calibrated_cost_table":
             for fusion_candidate, by_backend in payload.get("cost_table", {}).items():
                 cost_table.setdefault(fusion_candidate, {}).update(by_backend)
@@ -126,6 +535,7 @@ def load_kernel_profiles(paths):
             "profile_path": ",".join(str(path) for path in profile_paths),
             "missing_profiles": missing,
             "kernels": {},
+            "matmul_profile_documents": [],
         }
 
     return {
@@ -134,6 +544,8 @@ def load_kernel_profiles(paths):
         "missing_profiles": missing,
         "kernels": kernels,
         "cost_table": cost_table,
+        "matmul_profile_documents": matmul_documents,
+        "profile_fingerprints": fingerprints,
     }
 
 
@@ -486,21 +898,20 @@ def estimate_rmsnorm_cost(tokens=16, hidden=768, dtype="f16"):
 
 
 def build_matmul_op(index, match, profile, source_text):
-    selection = select_kernel(
-        "matmul_bias_relu",
-        "fused_matmul_add_relu",
-        "CPU",
-        "unfused_matmul_add_relu",
-        "CPU",
-        profile,
-    )
     result_name = match.group("result")
     hir_op_type = "hir.fused_matmul_bias_relu"
     runtime_op_type = "FusedMatMulAddReLU"
+    typed_runtime_op_type = "FusedMatMulBiasRelu"
     shape = matmul_shape_from_mlir(
         source_text,
         match,
         {"m": 16, "k": 128, "n": 64, "dtype": "f32"},
+    )
+    selection = select_matmul_kernel(
+        "matmul_bias_relu",
+        shape,
+        DEFAULT_MATMUL_KERNEL_CONFIG,
+        profile,
     )
     target = sparsecore_like_target_model()
     line = op_line(source_text, match)
@@ -524,6 +935,11 @@ def build_matmul_op(index, match, profile, source_text):
             "fallback_backend": "CPU",
             "selection_reason": "profile_guided_sparse_2_4_legal",
             "profile_calibrated": True,
+            "selection": {
+                **selection["selection"],
+                "policy": "sparse_layout_override",
+                "fallback_used": False,
+            },
         }
         sparse_metadata = {
             "sparse_candidate": "2_4",
@@ -558,6 +974,9 @@ def build_matmul_op(index, match, profile, source_text):
         "runtime_kernel": selection["selected_kernel"],
         "runtime_kernel_backend": selection["selected_backend"],
         "backend": selection["selected_backend"],
+        "typed_runtime_op_type": typed_runtime_op_type,
+        "selected_kernel": selection["selected_kernel"],
+        "kernel_config": dict(DEFAULT_MATMUL_KERNEL_CONFIG),
         "runtime_dispatch_contract": build_runtime_dispatch_contract(
             hir_op_type,
             runtime_op_type,
@@ -569,7 +988,7 @@ def build_matmul_op(index, match, profile, source_text):
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],
-        "outputs": [result_name],
+        "outputs": ["output"],
         "cost_model": estimate_matmul_bias_relu_cost(
             shape["m"],
             shape["k"],
@@ -753,6 +1172,11 @@ def build_lowered_graph(
         "kernel_profile": {
             "status": profile.get("profile_status", "not_provided"),
             "source": profile.get("profile_path"),
+            "fingerprints": profile.get("profile_fingerprints", {}),
+            "documents": [
+                {key: doc[key] for key in ("path", "benchmark", "schema_version", "mode", "supported", "issues")}
+                for doc in profile.get("matmul_profile_documents", [])
+            ],
         },
         "num_ops": len(ops),
         "ops": ops,
@@ -761,6 +1185,7 @@ def build_lowered_graph(
 
 def build_execution_plan(lowered_graph):
     steps = []
+    operations = []
 
     for op in lowered_graph["ops"]:
         steps.append({
@@ -783,11 +1208,30 @@ def build_execution_plan(lowered_graph):
             "estimated_flops": op["cost_model"]["estimated_flops"],
             "arithmetic_intensity_flops_per_byte": op["cost_model"]["arithmetic_intensity_flops_per_byte"],
         })
+        if op.get("typed_runtime_op_type") and op.get("selected_kernel"):
+            operation = {
+                "op_id": op["name"],
+                "op_type": op["typed_runtime_op_type"],
+                "backend": op["backend"],
+                "selected_kernel": op["selected_kernel"],
+                "kernel_config": op["kernel_config"],
+                "inputs": op["inputs"],
+                "outputs": op["outputs"],
+            }
+            kernel_selection = op.get("kernel_selection") or {}
+            if "selection" in kernel_selection:
+                operation["selection"] = kernel_selection["selection"]
+                operation["kernel_candidates"] = kernel_selection.get("kernel_candidates", [])
+            operations.append(operation)
 
     return {
-        "format": "hir.execution_plan.v1",
+        "schema_version": 2,
+        "schema": "runtime_execution_plan",
+        "format": "hir.execution_plan.v2",
+        "graph_id": "mlir_matmul_postop_relu",
         "source": lowered_graph["source"],
         "kernel_profile": lowered_graph["kernel_profile"],
+        "operations": operations,
         "num_steps": len(steps),
         "steps": steps,
     }

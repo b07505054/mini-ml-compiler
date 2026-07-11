@@ -157,6 +157,36 @@ struct KernelLibraryCapability {
   std::string truth_boundary;  // must name this kernel layer claim
 };
 
+// RuntimeKernelDescriptor — the compiler/runtime kernel contract
+// (kernel_selection_contract_v1). One entry per CONCRETE runtime kernel a
+// runtime can actually dispatch. This is deliberately distinct from
+// KernelLibraryCapability above: that layer models declared third-party
+// library coverage (cuBLAS/Triton/CoreML public APIs); this layer models
+// specific kernels with a known implementation. KernelSelectionPass
+// selects a kernel ONLY when a descriptor exists and matches the planned
+// op, dtype, quant mode, layout, tile plan, and memory hierarchy — never
+// by inference or wishful coverage. The registry is expected to be small
+// and honest: if the runtime only has RMSNorm, only RMSNorm is declared.
+struct RuntimeKernelDescriptor {
+  std::string kernel_id;   // stable id, e.g. "metal_rmsnorm_f32_v1"
+  std::string op_name;     // short op name it implements, e.g. "rmsnorm"
+  std::string backend;     // backend it dispatches on, e.g. "metal"
+
+  std::vector<std::string> supported_dtypes;      // empty = any
+  std::vector<std::string> supported_quant_modes; // empty = any
+  std::vector<std::string> supported_layouts;     // empty = layout-agnostic
+  // Tile shapes ("MxNxK") the kernel is written for; empty = no tile
+  // constraint. Non-empty requires a planned tile.plan to match against.
+  std::vector<std::string> supported_tile_shapes;
+
+  bool    requires_static_shape       = true;
+  int64_t requires_local_memory_bytes = 0; // 0 = no local-memory requirement
+
+  // "handwritten_runtime" | "declared_profile" | "measured_runtime" | "fixture"
+  std::string source;
+  std::string truth_boundary;
+};
+
 struct TargetConstraints {
   // ---- Compile-time constraint fields ------------------------------------
   // Absent in module → field stays at its default (unconstrained).
@@ -219,6 +249,13 @@ struct TargetConstraints {
   // as target.kernel_libraries.{backend} ArrayAttr of DictionaryAttr.
   // Empty when the profile predates the kernelLibraries schema.
   std::vector<KernelLibraryCapability> kernel_library_capabilities;
+
+  // Concrete runtime kernel descriptors (kernel_selection_contract_v1).
+  // Lowered from the target profile JSON runtimeKernels array; stored in
+  // the module as target.runtime_kernels (ArrayAttr of DictionaryAttr).
+  // Empty when the profile declares no runtime kernels — KernelSelectionPass
+  // then defers every op with an explicit reason, never silently.
+  std::vector<RuntimeKernelDescriptor> runtime_kernels;
 
   // Read target.* attrs from a ModuleOp.  Absent attrs leave fields at their
   // defaults and leave presence flags false.

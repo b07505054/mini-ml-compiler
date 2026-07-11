@@ -9,6 +9,20 @@ recognition, select a runtime, or generate an `ExecutionPlan`.
 Existing upstream MLIR dialects are the default lowering targets. No generic
 `nn` MLIR dialect is proposed.
 
+Phase 15 introduced `tools/generic_graph_ir_to_mlir.py`, a minimal emitter for
+the first static `f32` elementwise subset. Phase 16 extended it with selected
+shape/layout forms and the nearest 2x resize subset. Phase 17 added static
+`tensor.extract_slice` / `tensor.insert_slice` data movement for slice, split,
+and concat. Phase 18 added automatic emission for the current static ONNX
+reshape forms, static NCHW maxpool, and stable softmax. Phase 19 added
+automatic emission for the static standard `nn.conv2d` forms used by
+YOLO-Seg. Phase 20 wires the selected static non-overlapping
+`nn.conv_transpose2d` subset into the emitter, completing automatic
+YOLO-Seg emission. The emitter is still
+intentionally smaller than this contract; contract readiness means a selected
+existing-MLIR strategy exists, not that every op is implemented by the current
+emitter.
+
 ## Current MLIR Availability
 
 The configured MLIR installation is `/opt/homebrew/opt/llvm`. Availability has
@@ -55,20 +69,20 @@ strategy is a contract decision, not evidence that an emitter exists.
 
 | Generic op | Preferred existing MLIR target | Fallback | Required canonical attrs | Shape/dtype requirements | Treatment | Difficulty | Notes |
 |---|---|---|---|---|---|---|---|
-| `nn.conv2d` | `linalg.conv_2d_nchw_fchw` | `linalg.generic` | `pads`, `strides`, `dilations`, `groups`, `kernel_shape` | ranked input, weight, output; known dtypes | direct or decompose | medium | Grouped/depthwise cases may require generic indexing or decomposition. |
-| `nn.conv_transpose2d` | `linalg.generic` + `arith` for the selected non-overlapping subset | TOSA only after complete layout and downstream conversion support | `pads`, `strides`, `dilations`, `groups`, `kernel_shape`, `output_padding`, `output_shape` | ranked input, weight, output; known dtypes | direct specialized | medium | Selected for group 1, unit dilation, zero pads/output padding, kernel equal to stride, and no explicit output shape. Other variants block. |
-| `nn.maxpool2d` | `linalg.pooling_nchw_max` | `linalg.generic` | `kernel_shape`, `pads`, `strides`, `dilations`, `ceil_mode` | ranked input/output; known dtype | direct or decompose | medium | Padding identity and ceil semantics must be preserved. |
+| `nn.conv2d` | `linalg.conv_2d_nchw_fchw` | `linalg.generic` | `pads`, `strides`, `dilations`, `groups`, `kernel_shape` | ranked input, weight, output; known dtypes | direct or decompose | medium | Current emitter supports static `f32` NCHW/FCHW standard convolution with `groups=1`, optional rank-1 bias, exact output-shape validation, and `tensor.pad` for ONNX pads. Grouped/depthwise forms remain rejected unless a verified named op path is selected. |
+| `nn.conv_transpose2d` | `linalg.generic` + `arith` for the selected non-overlapping subset | TOSA only after complete layout and downstream conversion support | `pads`, `strides`, `dilations`, `groups`, `kernel_shape`, `output_padding`, `output_shape` | ranked input, weight, output; known dtypes | direct specialized | medium | Current emitter supports static `f32` NCHW, ONNX IOHW weights, group 1, unit dilation, zero pads/output padding, kernel `[2,2]` equal to stride `[2,2]`, optional rank-1 bias, and no explicit output shape. Other variants block. |
+| `nn.maxpool2d` | `linalg.pooling_nchw_max` | `linalg.generic` | `kernel_shape`, `pads`, `strides`, `dilations`, `ceil_mode` | ranked input/output; known dtype | direct or decompose | medium | Current emitter supports static `f32` NCHW with negative-infinity padding/init and `ceil_mode=0`; broader ceil semantics remain contract-only. |
 | `nn.add` | `linalg.generic` + `arith.addf/addi` | TOSA add after TOSA integration | none | broadcast-compatible ranked tensors; known dtypes | direct | low | Index maps encode broadcasting. |
 | `nn.sub` | `linalg.generic` + `arith.subf/subi` | TOSA sub after TOSA integration | none | broadcast-compatible ranked tensors; known dtypes | direct | low | Signedness selects the integer operation. |
 | `nn.mul` | `linalg.generic` + `arith.mulf/muli` | TOSA mul after TOSA integration | none | broadcast-compatible ranked tensors; known dtypes | direct | low | Index maps encode broadcasting. |
 | `nn.div` | `linalg.generic` + `arith.divf/divsi/divui` | TOSA arithmetic after TOSA integration | none | broadcast-compatible ranked tensors; known dtypes | direct | medium | Integer signedness and division semantics must be explicit. |
 | `nn.matmul` | `linalg.matmul` or `linalg.batch_matmul` | `linalg.generic` | none | ranked operands/output; compatible inner dimensions; known dtypes | direct | low | Batch broadcasting may need explicit materialization. |
 | `nn.gemm` | `linalg.matmul` + `linalg.generic` + `arith` | `linalg.generic` | `alpha`, `beta`, `transA`, `transB` | ranked operands/output; known dtypes | decompose | medium | Decompose transpose, scaling, bias, and matrix multiplication. |
-| `nn.reshape` | `tensor.expand_shape`, `tensor.collapse_shape`, or `tensor.reshape` | TOSA reshape after TOSA integration | `allowzero`, `target_shape` | ranked input/output; equal element count when static; known dtype | direct or decompose | medium | Reassociation legality determines the Tensor operation. |
+| `nn.reshape` | `tensor.expand_shape`, `tensor.collapse_shape`, or `tensor.reshape` | TOSA reshape after TOSA integration | `allowzero`, `target_shape` | ranked input/output; equal element count when static; known dtype | direct or decompose | medium | Current emitter supports static row-major contiguous reassociation via Tensor dialect collapse/expand/cast and rejects general remaps. |
 | `nn.transpose` | `linalg.transpose` | `linalg.generic` | `perm` | equal input/output rank; known dtype | direct | low | `perm` must be a complete permutation. |
 | `nn.concat` | repeated `tensor.insert_slice` | `linalg.generic` | `axis` | equal rank and compatible non-axis dimensions; known dtype | decompose | medium | Negative axis must be rank-normalizable. |
 | `nn.resize` | `tensor.generate` + `tensor.extract` + `arith` for selected nearest 2x upscale | TOSA after complete layout/conversion integration | `mode`, `coordinate_transformation_mode`, `nearest_mode`; static `scales` | ranked input/output; known dtype | direct specialized | medium | Selected for rank-4 nearest/asymmetric/floor scale `[1,1,2,2]`. Other variants block. |
-| `nn.softmax` | Linalg reductions + `arith` + `math.exp` | TOSA softmax after TOSA integration | `axis` | ranked input/output; floating dtype | decompose | medium | Use max-subtract-exp-sum-div. |
+| `nn.softmax` | Linalg reductions + `arith` + `math.exp` | TOSA softmax after TOSA integration | `axis` | ranked input/output; floating dtype | decompose | medium | Current emitter supports static ranked `f32` with max-subtract-exp-sum-div over a canonical axis. |
 | `nn.sigmoid` | `linalg.generic` + `arith` + `math.exp` | TOSA sigmoid after TOSA integration | none | same ranked input/output shape; floating dtype | decompose | low | Compute `1 / (1 + exp(-x))`. |
 | `nn.relu` | `linalg.generic` + `arith.maximumf/maxsi/maxui` | TOSA clamp after TOSA integration | none | same ranked input/output shape; known dtype | direct | low | Integer signedness must be preserved. |
 | `nn.split` | repeated `tensor.extract_slice` | `linalg.generic` | `axis`; `split` when unequal sizes cannot be derived from outputs | ranked input/outputs; known dtype | decompose | low | Output shapes can supply static split sizes. |

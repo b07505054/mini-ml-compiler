@@ -201,6 +201,53 @@ ONNX
   for required attrs, shapes, dtypes, and selected lowering strategies using
   existing `func`, `tensor`, `arith`, `math`, and `linalg` infrastructure.
   It does not introduce a generic custom MLIR dialect.
+- `tools/generic_graph_ir_to_mlir.py` implements the Phase 15-20 minimal
+  emitter: shape-annotated `GenericGraphIR` to existing-dialect MLIR for
+  static `f32` elementwise ops, selected reshape/transpose forms, the nearest
+  2x NCHW resize subset, static slice/split/concat tensor data movement,
+  static NCHW maxpool, stable softmax, static standard NCHW/FCHW conv2d, and
+  the selected static non-overlapping NCHW ConvTranspose subset. It emits
+  `func`, `tensor`, `linalg`, `arith`, and `math` only. For the current
+  YOLO-Seg graph this reaches full existing-dialect MLIR emission and
+  `mlir-opt` verification; it still performs no backend codegen, runtime
+  execution, or `ExecutionPlan` generation.
+- `scripts/lower_yoloseg_mlir_to_bufferized.sh` implements the Phase 21
+  post-emission prototype boundary for the full YOLO-Seg MLIR artifact:
+  `tensor`/`linalg` MLIR through
+  `one-shot-bufferize{bufferize-function-boundaries}` and
+  `buffer-deallocation-pipeline` to verified `memref`/`linalg` MLIR. This
+  removes all `tensor.*` ops from the full graph while preserving `linalg.*`
+  as the compute dialect. It still performs no machine codegen, runtime
+  execution, numerical equivalence validation, or `ExecutionPlan` generation.
+  See `docs/YOLOSEG_MLIR_NEXT_LOWERING_BOUNDARY.md`.
+- `cv-semantic-annotation` implements the Phase 22 semantic analysis boundary
+  over the real upstream YOLO-Seg MLIR. It annotates selected `func`, `tensor`,
+  and `linalg` operations with structured `cv.*` attributes such as
+  `cv.output_role`, `cv.semantic_role`, and `cv.region_id`; it does not
+  introduce or require custom `cv.*` operations. The real graph remains
+  numerical upstream MLIR, while CV meaning is represented as attributes and a
+  report at `artifacts/yoloseg_generic_frontend/yoloseg.cv_semantic_report.json`.
+  This still performs no backend selection, memory plan, kernel selection,
+  runtime execution, or `ExecutionPlan` generation. See
+  `docs/REAL_YOLOSEG_CV_SEMANTIC_ANNOTATION.md`.
+- `tools/cv_planning_facts.py` implements the Phase 23 planner-facing facts
+  boundary over the annotated upstream YOLO-Seg MLIR. It converts CV semantic
+  attrs, tensor types, topology, and shape-IR initializer provenance into
+  structured region, output, tensor, cost, lifetime, candidate-domain,
+  quantization-eligibility, and fusion-eligibility facts. It emits
+  `artifacts/yoloseg_generic_frontend/yoloseg.cv_planning_facts.json` and does
+  not select a backend/kernel, assign memory slots, modify `ExecutionPlan`, or
+  use legacy numerical `cv.*` ops. See
+  `docs/REAL_YOLOSEG_CV_PLANNING_FACTS.md`.
+- `cv-execution-plan-attrs` implements the Phase 24 minimum parity path from
+  annotated upstream YOLO-Seg MLIR to the canonical `ExecutionPlan`. It writes
+  the same generic planning attr families used by the LLM builder path,
+  including `execution_provider.*`, `representation.*`, `layout.*`, `quant.*`,
+  and seeded `kernel.*` attrs. `compile-for-target` then uses the existing
+  target-profile, `CapabilityBundle`, generic kernel/lowering/selection
+  passes, `ExecutionPlanBuilder`, and `ExecutionPlanExporter`. The Phase 23
+  planning-facts JSON remains diagnostic and is not a required compiler
+  boundary. See `docs/REAL_YOLOSEG_EXECUTION_PLAN.md`.
 - `GraphFacts` is now explicitly a legacy Qwen/LLM adapter contract, not the
   generic ONNX importer schema. It is retained so existing Qwen behavior keeps
   working while the generic path is introduced alongside it.
@@ -548,16 +595,26 @@ cost model into the memory hierarchy:
   measured behavior. `nvidia_gtx1650_maxq.json` declares 64 KB shared
   memory per SM, 128 B cache lines, and `supportsAsyncCopy: false`
   (cp.async requires Ampere).
-- **Tile feasibility** — for matmul-like ops with static shapes, the pass
-  selects the largest tile from a fixed conservative menu whose
-  A (Mt×Kt) + B (Kt×Nt) + C (Mt×Nt) working set fits the declared local
-  memory, using existing dtype/quantization metadata (int8 weights shrink
-  the B tile). It records the footprint, double-buffer feasibility
-  (2×(A+B) + C), the declared staging capability, a reuse-limited global
+- **Tile feasibility** — runs only when the op kind is supported
+  (matmul-like), the local memory capacity is declared, and shapes are
+  fully static. The pass selects the largest tile from a fixed conservative
+  menu whose A (Mt×Kt) + B (Kt×Nt) + C (Mt×Nt) working set fits the
+  declared local memory, using existing dtype/quantization metadata (int8
+  weights shrink the B tile). It records the footprint, double-buffer
+  feasibility (2×(A+B) + C), the staging capability as a declared fact
+  (`async_copy_declared` / `dma_declared` / `declared_unavailable` when
+  declared false / `unknown_not_declared` when nothing is declared —
+  unknown is not the same fact as unavailable), a reuse-limited global
   traffic estimate (A read ⌈N/Nt⌉ times, B read ⌈M/Mt⌉ times, C written
   once), and — when no tile fits — the rejection reason. Dynamic shapes
-  defer with an explicit status. The pass is inert when no local memory is
-  declared.
+  defer with an explicit status.
+- **Missing memory hierarchy is a recorded deferral, not a guess** — the
+  `MemoryHierarchyProfile` is optional declared metadata; not every backend
+  exposes local memory or DMA details. When `localMemoryBytes` is absent,
+  matmul-like ops are stamped `tile.plan.status =
+  "deferred_missing_memory_hierarchy"` with `tile.plan.deferred_reason`,
+  the plan remains valid, and the deferral (with its reason) is exported —
+  no capacity value is ever invented.
 - **Cost-model integration (conservative)** — `ServingCostModelPass`
   converts the planned traffic into
   `compiler.shape_profile.estimated_tiled_memory_cost_nanos` when
@@ -575,6 +632,72 @@ performance, performs no DMA or async copies, generates no code, and does
 not claim the backend kernel uses the planned tiling. Layout transforms
 remain planning-only (deferred by `BoundaryMaterializationPass` until a
 layout-transform op exists).
+
+## Kernel Selection Framework (kernel_selection_contract_v1)
+
+`KernelSelectionPass` (run by `compile-for-target` after tile planning;
+standalone `kernel-selection-pipeline`) selects a **concrete runtime
+kernel** per op — the compiler/runtime kernel contract. It is deliberately
+distinct from `KernelAvailabilityPlanningPass`: that pass models declared
+*third-party library coverage* (cuBLAS/Triton/CoreML public APIs); this
+pass matches ops against `RuntimeKernelDescriptor` entries
+(`runtimeKernels` in the target profile → `target.runtime_kernels` module
+attr) describing kernels with a known dispatchable implementation.
+
+A kernel is selected only on a full match of op name × backend × dtype ×
+quant mode × layout (when both sides state one) × shape staticness × tile
+plan (when the kernel is tile-constrained) × declared local memory (when
+required). Everything else records an explicit `rejected_*` or
+`deferred_*` status with per-descriptor `rejection_reasons` — including
+`deferred_no_kernel_library_declared` when no registry exists. Exported
+per op as the `kernel_selection` object.
+
+The registry is small and honest by design: today exactly **one** kernel
+is declared — Metal RMSNorm f32 (`metal_rmsnorm_f32_v1`,
+`source: handwritten_runtime`, implementation `metal/rmsnorm.metal` +
+`src/runtime/metal_rmsnorm_executor.mm`). This is a kernel-selection
+**framework**, not broad kernel coverage; on the A17 Pro plan even RMSNorm
+honestly rejects with `backend_mismatch` because that plan selects CoreML
+as primary. A selection is a contract handed to the runtime — the compiler
+never executes, dispatches, or benchmarks kernels (`truth_boundary =
+kernel_selection_static_descriptor_match_not_runtime_execution`). The
+add-a-kernel checklist lives in `docs/RUNTIME_KERNEL_CONTRACT.md`.
+
+## Quantization Co-Design (quantization_codesign_contract_v1)
+
+`QuantizationCoDesignPass` (run by `compile-for-target` after kernel
+selection; standalone `quant-codesign-pipeline`; **inert unless**
+`quant.codesign.policy` is set via the optional profile field
+`quantizationCoDesignPolicy` — no existing profile sets it, so all existing
+artifacts are byte-identical) evaluates matmul-like constant-weight ops and
+emits `quant_codesign.*` attrs, exported per op as `quantization_codesign`.
+
+It keeps four concepts separate — quantization **algorithm** (none is
+implemented in this repository; forced-AWQ only *declares* an external
+artifact), numeric **representation** (weight-only INT8 modeled; INT4 where
+a profile declares it), **backend/kernel execution support** (declared
+library capability is never treated as a dispatchable kernel; only
+`target.runtime_kernels` descriptors count), and **accuracy evidence**
+(`no_accuracy_evidence` or `algorithm_declared_not_calibrated` — nothing
+calibrated or measured exists). Explicit policies (`planning_only`,
+`systems_cost_only`, `require_dispatchable_kernel`,
+`require_accuracy_evidence`) control selection, and every decision records
+its policy. Unknown granularity/group-size/axis/symmetric/scale/zero-point
+metadata is omitted, never defaulted.
+
+The static systems-cost comparison (terms, sources, units, and inclusion
+boundaries tabulated in `docs/QUANTIZATION_CODESIGN.md`) surfaces the
+central co-design fact honestly: without a runtime kernel that consumes
+quantized weights, the materialized float dequant intermediate makes
+weight-only quantization move more bytes than fp16 and it loses; with such
+a kernel the materialized intermediate disappears (inline conversion cost
+is explicitly listed as *not modeled*, never treated as free).
+`quant_codesign.est.*` is evidence only — a ranking-invariance test proves
+`evaluation.*`/`selected_plan.*` signals are byte-identical with the pass
+enabled vs disabled. `quant.strategy` semantics are unchanged. Honest
+`hir.dequantize` materialization is deliberately a separate future change
+(needs a real quantized-typed operand plus explicit scale/zero-point
+metadata, neither of which the serving path has).
 
 ## Materialization Status
 

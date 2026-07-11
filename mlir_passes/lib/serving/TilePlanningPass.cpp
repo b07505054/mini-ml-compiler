@@ -9,10 +9,14 @@
 // supports_dma), and a reuse-limited global-traffic estimate. Formulas live
 // in serving/ShapeCostModel.h (planMatmulTiles).
 //
-// The pass is deliberately inert when the module declares no local memory —
-// no attrs are stamped, so profiles without a memory hierarchy declaration
-// keep byte-identical output. Rejections and dynamic shapes are recorded
-// explicitly, never guessed.
+// The memory hierarchy is OPTIONAL declared metadata: not every backend
+// exposes local memory or DMA details. When local_memory_bytes is not
+// declared, feasibility is not guessed — matmul-like ops are stamped
+// tile.plan.status = "deferred_missing_memory_hierarchy" with an explicit
+// deferred_reason, and the plan stays valid. Tile feasibility runs only
+// when the op kind is supported, the memory hierarchy is declared, shapes
+// are fully static, and the dtype resolves. Rejections and deferrals are
+// recorded explicitly, never invented.
 //
 // Truth boundary: this is memory-hierarchy-aware STATIC PLANNING. It does
 // not claim the backend kernel uses this tiling, does not perform DMA or
@@ -44,11 +48,8 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
     if (funcOp.getBody().empty())
       return;
 
-    // Inert without a declared local memory capacity: tile feasibility
-    // against an undeclared budget would be a guess.
     StaticCostProfileNums nums = readProfileNums(funcOp->getParentOp());
-    if (nums.local_memory_bytes <= 0)
-      return;
+    const MemoryHierarchyProfile& mh = nums.memory_hierarchy;
 
     std::string effectiveDtype;
     if (auto a =
@@ -59,13 +60,28 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
     auto S = [&](StringRef s) { return StringAttr::get(ctx, s); };
     auto I = [&](int64_t v) { return IntegerAttr::get(i64, v); };
 
+    // Gate order (feasibility runs only when ALL hold, and the recorded
+    // status names the first unmet gate):
+    //   1. op kind supported (matmul-like; others get no attrs in V1)
+    //   2. memory hierarchy declared (else deferred_missing_memory_hierarchy)
+    //   3. shapes fully static (else dynamic_dims_unresolved / ...)
+    //   4. dtype resolvable (else dtype_unresolved)
     for (Operation &op : funcOp.getBody().front().without_terminator()) {
       if (classifyOpKind(op) != "matmul_like")
         continue; // V1 scope: matmul-like ops only.
 
-      ShapeFacts facts = computeShapeFacts(op);
       op.setAttr("tile.plan.truth_boundary", S(kTilePlanTruthBoundary));
 
+      if (!mh.localMemoryDeclared()) {
+        // Optional metadata is absent: never invent a capacity. Record the
+        // deferral so the exported plan says why no tile was planned.
+        op.setAttr("tile.plan.status", S("deferred_missing_memory_hierarchy"));
+        op.setAttr("tile.plan.deferred_reason",
+                   S("local_memory_bytes_not_declared_in_target_profile"));
+        continue;
+      }
+
+      ShapeFacts facts = computeShapeFacts(op);
       if (!facts.usable()) {
         // Dynamic dims or unusable shapes: defer honestly, no invented tile.
         op.setAttr("tile.plan.status", S(facts.status));
@@ -85,7 +101,7 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
 
       TilePlanResult plan = planMatmulTiles(facts.m, facts.n, facts.k,
                                             actBits, weightBits,
-                                            nums.local_memory_bytes);
+                                            mh.local_memory_bytes);
       if (!plan.feasible) {
         op.setAttr("tile.plan.status", S("no_feasible_tile"));
         op.setAttr("tile.plan.rejected_tile_count",
@@ -94,7 +110,7 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
                    S("smallest_tile_footprint_" +
                      std::to_string(plan.min_footprint_bytes) +
                      "_bytes_exceeds_local_memory_" +
-                     std::to_string(nums.local_memory_bytes) + "_bytes"));
+                     std::to_string(mh.local_memory_bytes) + "_bytes"));
         continue;
       }
 
@@ -107,15 +123,14 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
                  I(plan.rejected_tile_count));
       op.setAttr("tile.plan.estimated_global_traffic_bytes",
                  I(plan.estimated_global_traffic_bytes));
-      // Double-buffered staging feasibility — a static capacity fact. Only
-      // actionable on targets declaring async copy / DMA support, so record
-      // which capability (if any) the profile declared alongside it.
+      // Double-buffered staging feasibility — a static capacity fact. Its
+      // actionability depends on what the profile DECLARED about staging:
+      // async_copy_declared / dma_declared / declared_unavailable (declared
+      // false) / unknown_not_declared (no declaration — unknown, not
+      // unavailable).
       op.setAttr("tile.plan.double_buffer_fits",
                  BoolAttr::get(ctx, plan.double_buffer_fits));
-      StringRef staging = "none_declared";
-      if (nums.supports_async_copy) staging = "async_copy_declared";
-      else if (nums.supports_dma)   staging = "dma_declared";
-      op.setAttr("tile.plan.staging_capability", S(staging));
+      op.setAttr("tile.plan.staging_capability", S(mh.stagingCapability()));
     }
   }
 };

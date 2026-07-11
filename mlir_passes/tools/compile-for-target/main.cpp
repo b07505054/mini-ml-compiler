@@ -21,7 +21,11 @@
 #include "serving/ExecutionPlanExporter.h"
 #include "serving/TargetConstraints.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
@@ -182,6 +186,12 @@ struct TargetDeviceProfile {
   std::vector<BackendCapabilityProfile> backendCapabilities;
   // Kernel library capability declarations (Layer 3: actual kernel availability).
   std::vector<KernelLibraryProfile> kernelLibraries;
+  // Concrete runtime kernel descriptors (kernel_selection_contract_v1).
+  // Small and honest by design: only kernels with a known dispatchable
+  // implementation are declared here.
+  std::vector<mlir::hir::RuntimeKernelDescriptor> runtimeKernels;
+  // Optional quantization co-design policy; "" = co-design pass inert.
+  std::string quantizationCoDesignPolicy;
 
   // Optional static cost profile for shape_cost_model_v2: declared
   // theoretical peak numbers (public docs or declared profile — never
@@ -397,6 +407,10 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
     tc.kernel_library_capabilities.push_back(std::move(ke));
   }
 
+  // Runtime kernel descriptors pass through unchanged (already the
+  // compiler-side type).
+  tc.runtime_kernels = prof.runtimeKernels;
+
   return tc;
 }
 
@@ -497,6 +511,12 @@ parseDeviceProfile(llvm::StringRef path) {
     if (auto v = scp->getString("truthBoundary"))
       prof.staticCostTruthBoundary = v->str();
   }
+
+  // Optional quantization co-design policy (quantization_codesign_contract_v1).
+  // Absent in every existing profile — the co-design pass is then inert and
+  // existing artifacts stay byte-identical.
+  if (auto v = obj->getString("quantizationCoDesignPolicy"))
+    prof.quantizationCoDesignPolicy = v->str();
 
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
   // Absent in every existing profile; only present in profiles that opt in
@@ -679,6 +699,39 @@ parseDeviceProfile(llvm::StringRef path) {
     }
   }
 
+  // Parse runtimeKernels array (kernel_selection_contract_v1). Absent in
+  // most profiles; KernelSelectionPass then records
+  // deferred_no_kernel_library_declared per op — never a silent no-op.
+  if (auto *rks = obj->getArray("runtimeKernels")) {
+    auto readStrings = [](const llvm::json::Object *o,
+                          llvm::StringRef key) -> std::vector<std::string> {
+      std::vector<std::string> result;
+      if (auto *arr = o->getArray(key))
+        for (const auto &elem : *arr)
+          if (auto s = elem.getAsString()) result.push_back(s->str());
+      return result;
+    };
+    for (const auto &relem : *rks) {
+      const llvm::json::Object *ro = relem.getAsObject();
+      if (!ro) continue;
+      mlir::hir::RuntimeKernelDescriptor rk;
+      if (auto v = ro->getString("kernelId"))       rk.kernel_id = v->str();
+      if (auto v = ro->getString("opName"))         rk.op_name = v->str();
+      if (auto v = ro->getString("backend"))        rk.backend = v->str();
+      rk.supported_dtypes      = readStrings(ro, "supportedDtypes");
+      rk.supported_quant_modes = readStrings(ro, "supportedQuantModes");
+      rk.supported_layouts     = readStrings(ro, "supportedLayouts");
+      rk.supported_tile_shapes = readStrings(ro, "supportedTileShapes");
+      if (auto v = ro->getBoolean("requiresStaticShape"))
+        rk.requires_static_shape = *v;
+      if (auto v = ro->getInteger("requiresLocalMemoryBytes"))
+        rk.requires_local_memory_bytes = static_cast<int64_t>(*v);
+      if (auto v = ro->getString("source"))         rk.source = v->str();
+      if (auto v = ro->getString("truthBoundary"))  rk.truth_boundary = v->str();
+      prof.runtimeKernels.push_back(std::move(rk));
+    }
+  }
+
   return prof;
 }
 
@@ -795,7 +848,9 @@ int main(int argc, char **argv) {
   // 3. Parse MLIR module.
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect>();
+  ctx.loadDialect<mlir::func::FuncDialect, mlir::tensor::TensorDialect,
+                  mlir::linalg::LinalgDialect, mlir::arith::ArithDialect,
+                  mlir::math::MathDialect>();
 
   auto module = mlir::parseSourceFile<mlir::ModuleOp>(MlirPath, &ctx);
   if (!module) {
@@ -805,6 +860,13 @@ int main(int argc, char **argv) {
 
   // 4. Attach TargetConstraints as module attrs.
   constraints.attachToModule(module.get(), &ctx);
+
+  // 4a. Optional quantization co-design policy: attach only when the
+  // profile declares one; the co-design pass is inert otherwise.
+  if (!prof.quantizationCoDesignPolicy.empty())
+    module.get()->setAttr(
+        "quant.codesign.policy",
+        mlir::StringAttr::get(&ctx, prof.quantizationCoDesignPolicy));
 
   // 4b. Attach an experimental forced global quantization override, only
   // when the profile explicitly opts in via forcedQuantization. This is a
@@ -853,6 +915,12 @@ int main(int argc, char **argv) {
       mlir::hir::createWeightClassificationPlanningPass());  // pass 8
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createQuantizationStrategyPlanningPass());
+  // Real upstream CV graphs use cv.* semantic attrs rather than llm.* serving
+  // ops. This skip-safe pass only annotates functions already marked by
+  // cv-semantic-annotation, then the generic kernel/lowering/selection passes
+  // below can refine those attrs from the same target profile infrastructure.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createCVExecutionPlanAttrsPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createKernelAvailabilityPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
@@ -865,6 +933,17 @@ int main(int argc, char **argv) {
   // the cost model can annotate tiled traffic.
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createTilePlanningPass());
+  // Concrete runtime-kernel contract selection (kernel_selection_contract_v1):
+  // matches ops against target.runtime_kernels descriptors; defers with an
+  // explicit reason when no registry is declared. Runs after tile planning
+  // so tile constraints are visible.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createKernelSelectionPass());
+  // Quantization co-design evidence (quantization_codesign_contract_v1):
+  // inert unless the profile/module opts in via quant.codesign.policy, so
+  // existing plans are byte-identical by default.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createQuantizationCoDesignPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createAlternativeLoweringPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(

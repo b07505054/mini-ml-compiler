@@ -271,8 +271,100 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     tpObj["rejected_tile_count"] = tp.rejected_tile_count;
     if (!tp.rejection_reason.empty())
       tpObj["rejection_reason"] = tp.rejection_reason;
+    if (!tp.deferred_reason.empty())
+      tpObj["deferred_reason"] = tp.deferred_reason;
     tpObj["truth_boundary"] = tp.truth_boundary;
     obj["tile_plan"] = std::move(tpObj);
+  }
+  // Concrete runtime-kernel contract selection
+  // (kernel_selection_contract_v1). A selected kernel is a contract handed
+  // to the runtime — not a claim of runtime execution or measured
+  // performance. Rejections and deferrals carry their explicit reasons.
+  if (b.kernel_selection) {
+    const KernelSelection &ks = *b.kernel_selection;
+    llvm::json::Object ksObj;
+    ksObj["status"] = ks.status;
+    if (!ks.selected_kernel_id.empty()) {
+      ksObj["selected_kernel"] = ks.selected_kernel_id;
+      ksObj["source"]          = ks.source;
+    }
+    if (!ks.rejection_reasons.empty()) {
+      llvm::json::Array reasons;
+      for (const auto &r : ks.rejection_reasons)
+        reasons.push_back(r);
+      ksObj["rejection_reasons"] = std::move(reasons);
+    }
+    ksObj["contract_version"] = ks.contract_version;
+    ksObj["truth_boundary"]   = ks.truth_boundary;
+    obj["kernel_selection"] = std::move(ksObj);
+  }
+  // Quantization co-design evidence (quantization_codesign_contract_v1).
+  // Named "quantization_codesign" to stay distinct from the existing
+  // "quantization" object (QuantizationStrategyPlanningPass output).
+  // Unknown fields are omitted, never defaulted. Static planning evidence
+  // only — no calibration, no measured accuracy, no quantized execution.
+  if (b.quantization_codesign) {
+    const QuantizationCoDesign &qc = *b.quantization_codesign;
+    llvm::json::Object qcObj;
+    auto addIf = [&](llvm::StringRef key, const std::string &v) {
+      if (!v.empty()) qcObj[key] = v;
+    };
+    qcObj["status"] = qc.status;
+    qcObj["policy"] = qc.policy;
+    addIf("representation",    qc.representation);
+    addIf("weight_dtype",      qc.weight_dtype);
+    addIf("activation_dtype",  qc.activation_dtype);
+    addIf("accumulator_dtype", qc.accumulator_dtype);
+    addIf("algorithm_status",  qc.algorithm_status);
+    addIf("algorithm_name",    qc.algorithm_name);
+    addIf("backend_legality",  qc.backend_legality);
+    if (!qc.kernel_support_status.empty()) {
+      llvm::json::Object ksup;
+      ksup["status"] = qc.kernel_support_status;
+      if (!qc.kernel_support_kernel_id.empty()) {
+        ksup["kernel_id"] = qc.kernel_support_kernel_id;
+        ksup["source"]    = qc.kernel_support_source;
+      }
+      qcObj["kernel_support"] = std::move(ksup);
+    }
+    if (!qc.accuracy_evidence_status.empty()) {
+      llvm::json::Object acc;
+      acc["status"] = qc.accuracy_evidence_status;
+      if (!qc.accuracy_evidence_artifact_ref.empty())
+        acc["artifact_ref"] = qc.accuracy_evidence_artifact_ref;
+      qcObj["accuracy_evidence"] = std::move(acc);
+    }
+    addIf("scale_source",      qc.scale_source);
+    addIf("zero_point_source", qc.zero_point_source);
+    if (qc.weight_bytes_before || qc.total_cost_before_nanos) {
+      llvm::json::Object est;
+      auto addOpt = [&](llvm::StringRef key,
+                        const std::optional<int64_t> &v) {
+        if (v) est[key] = *v;
+      };
+      addOpt("weight_bytes_before",     qc.weight_bytes_before);
+      addOpt("weight_bytes_after",      qc.weight_bytes_after);
+      addOpt("boundary_bytes",          qc.boundary_bytes);
+      addOpt("total_cost_before_nanos", qc.total_cost_before_nanos);
+      addOpt("total_cost_after_nanos",  qc.total_cost_after_nanos);
+      addOpt("systems_benefit_nanos",   qc.systems_benefit_nanos);
+      if (!qc.excluded_cost_terms.empty()) {
+        llvm::json::Array excluded;
+        for (const auto &t : qc.excluded_cost_terms) excluded.push_back(t);
+        est["excluded_terms"] = std::move(excluded);
+      }
+      qcObj["systems_cost_estimate"] = std::move(est);
+    }
+    qcObj["materialization_required"] = qc.materialization_required;
+    addIf("materialization_status", qc.materialization_status);
+    if (!qc.rejection_reasons.empty()) {
+      llvm::json::Array reasons;
+      for (const auto &r : qc.rejection_reasons) reasons.push_back(r);
+      qcObj["rejection_reasons"] = std::move(reasons);
+    }
+    qcObj["truth_boundary"]   = qc.truth_boundary;
+    qcObj["contract_version"] = qc.contract_version;
+    obj["quantization_codesign"] = std::move(qcObj);
   }
   return obj;
 }
@@ -288,6 +380,67 @@ static llvm::json::Object serializeFunctionPlan(const FunctionPlan &fp) {
     per_op.push_back(serializePerOpBundle(bundle));
   obj["per_op_decisions"] = std::move(per_op);
 
+  return obj;
+}
+
+static llvm::json::Array serializeShape(const std::vector<int64_t> &shape) {
+  llvm::json::Array arr;
+  for (int64_t dim : shape)
+    arr.push_back(dim);
+  return arr;
+}
+
+static llvm::json::Object serializeTensorContract(const TensorContract &t) {
+  llvm::json::Object obj;
+  obj["tensor_id"] = t.tensor_id;
+  obj["shape"] = serializeShape(t.shape);
+  obj["dtype"] = t.dtype;
+  obj["layout"] = t.layout;
+  obj["role"] = t.role;
+  return obj;
+}
+
+static llvm::json::Object serializeCVExtension(const CVPlanExtension &cv) {
+  llvm::json::Object obj;
+  obj["model_family"] = cv.model_family;
+  obj["function_name"] = cv.function_name;
+  obj["target_profile_id"] = cv.target_profile_id;
+
+  llvm::json::Array inputs;
+  for (const auto &input : cv.inputs)
+    inputs.push_back(serializeTensorContract(input));
+  obj["inputs"] = std::move(inputs);
+
+  llvm::json::Array outputs;
+  for (const auto &output : cv.outputs)
+    outputs.push_back(serializeTensorContract(output));
+  obj["outputs"] = std::move(outputs);
+
+  llvm::json::Array regions;
+  for (const auto &region : cv.semantic_regions) {
+    llvm::json::Object r;
+    r["region_id"] = region.region_id;
+    r["semantic_role"] = region.semantic_role;
+    r["recognition_confidence"] = region.recognition_confidence;
+    r["operation_count"] = region.operation_count;
+    llvm::json::Array scales;
+    for (const auto &scale : region.feature_scales)
+      scales.push_back(scale);
+    r["feature_scales"] = std::move(scales);
+    regions.push_back(std::move(r));
+  }
+  obj["semantic_regions"] = std::move(regions);
+
+  llvm::json::Object memory;
+  memory["estimated_input_bytes"] = cv.estimated_input_bytes;
+  memory["estimated_output_bytes"] = cv.estimated_output_bytes;
+  memory["estimated_temporary_bytes"] = cv.estimated_temporary_bytes;
+  memory["estimated_total_tensor_bytes"] = cv.estimated_total_tensor_bytes;
+  memory["scope"] = "static_tensor_byte_estimates_no_slot_allocation";
+  obj["memory_estimates"] = std::move(memory);
+
+  obj["postprocess_boundary"] = cv.postprocess_boundary;
+  obj["truth_boundary"] = cv.truth_boundary;
   return obj;
 }
 
@@ -381,6 +534,8 @@ llvm::Error ExecutionPlanExporter::exportToFile(const ExecutionPlan &plan,
   root["model_identity"]   = std::move(modelId);
   root["global_decisions"] = std::move(globalDecisions);
   root["function_plans"]   = std::move(functionPlans);
+  if (plan.cv_extension)
+    root["cv_extension"] = serializeCVExtension(*plan.cv_extension);
 
   return writeJSON(llvm::json::Value(std::move(root)), outPath);
 }

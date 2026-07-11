@@ -1,0 +1,196 @@
+{
+  "schema": "kernel_benchmark_profile",
+  "schema_version": 2,
+  "benchmark": "matmul_postop_relu",
+  "source": "apps/run_mlir_fused_kernel_benchmark.cpp",
+  "mode": "sweep-candidates",
+  "execution_plan": "trace/mlir_execution_plan.json",
+  "build": {
+    "type": "Release",
+    "compiler": "gcc 15.2.0",
+    "ndebug": true,
+    "flags": ["Release", "-O3", "-DNDEBUG"]
+  },
+  "machine": {
+    "hostname": "allen-ZenBook-UX534FTC-UX534FT",
+    "uname": "Linux allen-ZenBook-UX534FTC-UX534FT 7.0.0-27-generic #27-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 18 19:13:49 UTC 2026 x86_64 GNU/Linux",
+    "cpu_summary": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           39 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  8\nOn-line CPU(s) list:                     0-7\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz\nCPU family:                              6\nModel:                                   142\nThread(s) per core:                      2\nCore(s) per socket:                      4\nSocket(s):                               1\nStepping:                                12\nCPU(s) scaling MHz:                      83%\nCPU max MHz:                             4200.0000",
+    "nproc": "8",
+    "cpu_affinity": "pid 280262's current affinity list: 0-7"
+  },
+  "configuration": {
+    "warmup": 50,
+    "iterations": 300,
+    "repeats": 5,
+    "dtype": "f32",
+    "m": 128,
+    "n": 128,
+    "k": 128,
+    "tile_size": 32
+  },
+  "patterns": {
+    "elementwise_add": {
+      "postop_semantics": "elementwise_add_shape_MxN",
+      "variants": {
+        "naive_unfused": {
+          "function": "run_naive_unfused",
+          "kernel_id": "cpu_naive_matmul_add_relu_unfused_f32",
+          "rank": 3,
+          "oracle_best": false,
+          "samples_ms": [1.770885, 1.752818, 1.742183, 1.753133, 1.740862],
+          "statistics": {
+            "sample_count": 5,
+            "mean_ms": 1.751976,
+            "median_ms": 1.752818,
+            "p50_ms": 1.752818,
+            "p95_ms": 1.767335,
+            "min_ms": 1.740862,
+            "max_ms": 1.770885,
+            "stddev_ms": 0.012032,
+            "coefficient_of_variation": 0.006867
+          },
+          "correctness": {
+            "passed": true,
+            "atol": 0.000100,
+            "rtol": 0.000100,
+            "max_abs_error": 0.000000,
+            "max_rel_error": 0.000000,
+            "contains_nan": false,
+            "contains_inf": false
+          },
+          "implementation_properties": {
+            "matmul_strategy": "naive",
+            "post_op_strategy": "separate",
+            "intermediate_tensor_count": 2,
+            "full_output_post_op_passes": 2,
+            "final_output_store_passes": 1,
+            "tile_size": 0
+          }
+        },
+        "tiled_unfused": {
+          "function": "run_tiled_unfused",
+          "kernel_id": "cpu_tiled_matmul_add_relu_unfused_f32",
+          "rank": 2,
+          "oracle_best": false,
+          "samples_ms": [0.487300, 0.485121, 0.485901, 0.485899, 0.483420],
+          "statistics": {
+            "sample_count": 5,
+            "mean_ms": 0.485528,
+            "median_ms": 0.485899,
+            "p50_ms": 0.485899,
+            "p95_ms": 0.487020,
+            "min_ms": 0.483420,
+            "max_ms": 0.487300,
+            "stddev_ms": 0.001416,
+            "coefficient_of_variation": 0.002917
+          },
+          "correctness": {
+            "passed": true,
+            "atol": 0.000100,
+            "rtol": 0.000100,
+            "max_abs_error": 0.000000,
+            "max_rel_error": 0.000000,
+            "contains_nan": false,
+            "contains_inf": false
+          },
+          "implementation_properties": {
+            "matmul_strategy": "tiled",
+            "post_op_strategy": "separate",
+            "intermediate_tensor_count": 2,
+            "full_output_post_op_passes": 2,
+            "final_output_store_passes": 1,
+            "tile_size": 32
+          }
+        },
+        "naive_one_pass_fused": {
+          "function": "run_naive_one_pass_fused",
+          "kernel_id": "cpu_naive_matmul_add_relu_one_pass_f32",
+          "rank": 4,
+          "oracle_best": false,
+          "samples_ms": [1.762946, 1.751466, 1.818592, 1.758911, 1.738666],
+          "statistics": {
+            "sample_count": 5,
+            "mean_ms": 1.766116,
+            "median_ms": 1.758911,
+            "p50_ms": 1.758911,
+            "p95_ms": 1.807463,
+            "min_ms": 1.738666,
+            "max_ms": 1.818592,
+            "stddev_ms": 0.030756,
+            "coefficient_of_variation": 0.017415
+          },
+          "correctness": {
+            "passed": true,
+            "atol": 0.000100,
+            "rtol": 0.000100,
+            "max_abs_error": 0.000000,
+            "max_rel_error": 0.000000,
+            "contains_nan": false,
+            "contains_inf": false
+          },
+          "implementation_properties": {
+            "matmul_strategy": "naive",
+            "post_op_strategy": "one_pass_fused",
+            "intermediate_tensor_count": 0,
+            "full_output_post_op_passes": 0,
+            "final_output_store_passes": 1,
+            "tile_size": 0
+          }
+        },
+        "tiled_one_pass_fused": {
+          "function": "run_tiled_one_pass_fused",
+          "kernel_id": "cpu_tiled_matmul_add_relu_one_pass_f32",
+          "rank": 1,
+          "oracle_best": true,
+          "samples_ms": [0.418727, 0.423815, 0.416447, 0.414886, 0.415783],
+          "statistics": {
+            "sample_count": 5,
+            "mean_ms": 0.417932,
+            "median_ms": 0.416447,
+            "p50_ms": 0.416447,
+            "p95_ms": 0.422797,
+            "min_ms": 0.414886,
+            "max_ms": 0.423815,
+            "stddev_ms": 0.003583,
+            "coefficient_of_variation": 0.008573
+          },
+          "correctness": {
+            "passed": true,
+            "atol": 0.000100,
+            "rtol": 0.000100,
+            "max_abs_error": 0.000000,
+            "max_rel_error": 0.000000,
+            "contains_nan": false,
+            "contains_inf": false
+          },
+          "implementation_properties": {
+            "matmul_strategy": "tiled",
+            "post_op_strategy": "one_pass_fused",
+            "intermediate_tensor_count": 0,
+            "full_output_post_op_passes": 0,
+            "final_output_store_passes": 1,
+            "tile_size": 32
+          }
+        }
+      },
+      "comparisons": {
+        "tiling_speedup": {
+          "speedup": 3.608394,
+          "latency_reduction_percent": 72.286839
+        },
+        "fusion_speedup_naive": {
+          "speedup": 0.991994,
+          "latency_reduction_percent": -0.807095
+        },
+        "fusion_speedup_fair": {
+          "speedup": 1.161741,
+          "latency_reduction_percent": 13.922265
+        },
+        "full_stack_speedup": {
+          "speedup": 4.192018,
+          "latency_reduction_percent": 76.145139
+        }
+      }
+    }
+  }
+}

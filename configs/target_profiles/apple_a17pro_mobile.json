@@ -11,6 +11,23 @@
   "decodeMsPerToken": 0.12,
   "pdBandwidthMbPerMs": 24.0,
   "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "runtimeKernels": [
+    {
+      "kernelId": "metal_rmsnorm_f32_v1",
+      "opName": "rmsnorm",
+      "backend": "metal",
+      "supportedDtypes": ["fp32"],
+      "supportedQuantModes": ["none"],
+      "supportedLayouts": [],
+      "supportedTileShapes": [],
+      "requiresStaticShape": true,
+      "requiresLocalMemoryBytes": 0,
+      "source": "handwritten_runtime",
+      "implementationRef": "metal/rmsnorm.metal (rmsnorm_f32) + src/runtime/metal_rmsnorm_executor.mm",
+      "truthBoundary": "handwritten_kernel_source_in_repo_dispatch_validated_not_benchmarked"
+    }
+  ],
+  "runtimeKernelsNote": "kernel_selection_contract_v1 registry. Deliberately small and honest: the ONLY handwritten runtime kernel with a dispatch-validated path in this repo is the Metal RMSNorm f32 kernel. This is a kernel-selection framework, not broad kernel coverage — every other op is rejected or deferred with an explicit reason. Note the a17pro plan selects the coreml backend as primary, so even rmsnorm honestly rejects here with backend_mismatch; selection succeeds only on metal-primary plans.",
   "backendCapabilities": [
     {
       "backendName": "coreml",

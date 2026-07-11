@@ -601,6 +601,45 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
                   mlir::ArrayAttr::get(ctx, entries));
     }
   }
+
+  // Concrete runtime kernel descriptors (kernel_selection_contract_v1):
+  //   target.runtime_kernels = [{...}, ...] (ArrayAttr of DictionaryAttr)
+  // A flat list — each descriptor names its backend. Absent attr = no
+  // runtime kernels declared; KernelSelectionPass records the deferral.
+  if (!runtime_kernels.empty()) {
+    mlir::Type i64 = mlir::IntegerType::get(ctx, 64);
+    llvm::SmallVector<mlir::Attribute> entries;
+    for (const auto &rk : runtime_kernels) {
+      auto S = [&](llvm::StringRef s) -> mlir::Attribute {
+        return mlir::StringAttr::get(ctx, s);
+      };
+      auto A = [&](const std::vector<std::string> &v) -> mlir::Attribute {
+        llvm::SmallVector<mlir::Attribute> elems;
+        for (const auto &s : v) elems.push_back(mlir::StringAttr::get(ctx, s));
+        return mlir::ArrayAttr::get(ctx, elems);
+      };
+      llvm::SmallVector<mlir::NamedAttribute> fields;
+      auto add = [&](llvm::StringRef k, mlir::Attribute v) {
+        fields.emplace_back(mlir::StringAttr::get(ctx, k), v);
+      };
+      // Sorted alphabetically (DictionaryAttr requirement):
+      add("backend",                     S(rk.backend));
+      add("kernel_id",                   S(rk.kernel_id));
+      add("op_name",                     S(rk.op_name));
+      add("requires_local_memory_bytes",
+          mlir::IntegerAttr::get(i64, rk.requires_local_memory_bytes));
+      add("requires_static_shape",
+          mlir::BoolAttr::get(ctx, rk.requires_static_shape));
+      add("source",                      S(rk.source));
+      add("supported_dtypes",            A(rk.supported_dtypes));
+      add("supported_layouts",           A(rk.supported_layouts));
+      add("supported_quant_modes",       A(rk.supported_quant_modes));
+      add("supported_tile_shapes",       A(rk.supported_tile_shapes));
+      add("truth_boundary",              S(rk.truth_boundary));
+      entries.push_back(mlir::DictionaryAttr::get(ctx, fields));
+    }
+    op->setAttr("target.runtime_kernels", mlir::ArrayAttr::get(ctx, entries));
+  }
 }
 
 } // namespace mlir::hir

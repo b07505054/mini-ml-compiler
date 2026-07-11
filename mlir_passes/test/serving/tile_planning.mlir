@@ -94,17 +94,28 @@ module attributes {
 
 // -----
 
-// Test 4: no declared local memory -> the pass is inert. Tile feasibility
-// against an undeclared budget would be a guess.
+// Test 4: MemoryHierarchyProfile is optional declared metadata. Without a
+// declared local memory capacity, feasibility is DEFERRED and recorded —
+// no capacity is invented, no tile is planned, and the reason is explicit
+// so the exported plan stays valid and explains itself. The elementwise op
+// still gets no attrs (op-kind gate precedes the memory gate).
 //
-// CHECK-LABEL: func.func @no_local_memory_declared_inert
+// The single CHECK-SAME below matches the op's full attr dict contiguously,
+// proving exactly these three tile.plan attrs exist — no invented shape,
+// footprint, or staging fields.
+//
+// CHECK-LABEL: func.func @missing_memory_hierarchy_defers
+// CHECK: "compute.matmul"
+// CHECK-SAME: {tile.plan.deferred_reason = "local_memory_bytes_not_declared_in_target_profile", tile.plan.status = "deferred_missing_memory_hierarchy", tile.plan.truth_boundary = "tile_planning_static_local_memory_model_not_measured_not_codegen"}
+// CHECK: "compute.relu"
 // CHECK-NOT: tile.plan
 
 module {
-  func.func @no_local_memory_declared_inert(%a: tensor<256x512xf16>)
+  func.func @missing_memory_hierarchy_defers(%a: tensor<256x512xf16>)
       -> tensor<256x1024xf16> {
     %0 = "compute.matmul"(%a) : (tensor<256x512xf16>) -> tensor<256x1024xf16>
-    return %0 : tensor<256x1024xf16>
+    %1 = "compute.relu"(%0) : (tensor<256x1024xf16>) -> tensor<256x1024xf16>
+    return %1 : tensor<256x1024xf16>
   }
 }
 
@@ -115,11 +126,16 @@ module {
 // (64,64,32), but int8 weights (quant.weight_dtype) shrink the footprint
 // from 16384 B (fp16 weights) to 14336 B.
 //
+// The module declares local memory but no async-copy/DMA information, so
+// staging capability is honestly "unknown_not_declared" — unknown is not
+// the same fact as unavailable.
+//
 // CHECK-LABEL: func.func @quant_weight_shrinks_tile_footprint
 // CHECK: "compute.matmul"
 // CHECK-SAME: tile.plan.local_memory_bytes = 16384
 // CHECK-SAME: tile.plan.rejected_tile_count = 1
 // CHECK-SAME: tile.plan.shape = [64, 64, 32]
+// CHECK-SAME: tile.plan.staging_capability = "unknown_not_declared"
 // CHECK: "compute.matmul"
 // CHECK-SAME: tile.plan.local_memory_bytes = 14336
 // CHECK-SAME: tile.plan.shape = [64, 64, 32]
@@ -145,18 +161,23 @@ module attributes {
 // reported ALONGSIDE shape_cost_model_v2's ideal each-byte-once bytes
 // (1835008) — and the V0 ranking score is untouched.
 //
+// The module declares supports_dma = false: staging capability is
+// "declared_unavailable" — declared-and-false, distinct from not-declared.
+//
 // CHECK-LABEL: func.func @tile_traffic_annotated_ranking_unchanged
 // CHECK: "compute.matmul"
 // CHECK-SAME: evaluation.penalty_score = 0
 // CHECK-SAME: evaluation.shape_cost.total_memory_bytes_estimate = 1835008
 // CHECK-SAME: compiler.shape_profile.estimated_tiled_memory_cost_nanos = 47186
 // CHECK-SAME: tile.plan.estimated_global_traffic_bytes = 4718592
+// CHECK-SAME: tile.plan.staging_capability = "declared_unavailable"
 // CHECK-SAME: tile.plan.status = "planned"
 
 module attributes {
   target.static_cost_profile.local_memory_bytes = 65536 : i64,
   target.static_cost_profile.peak_flops_fp16 = 1.0e12 : f64,
-  target.static_cost_profile.memory_bandwidth_bytes_per_sec = 1.0e11 : f64
+  target.static_cost_profile.memory_bandwidth_bytes_per_sec = 1.0e11 : f64,
+  target.static_cost_profile.supports_dma = false
 } {
   func.func @tile_traffic_annotated_ranking_unchanged(%a: tensor<256x512xf16>)
       -> tensor<256x1024xf16> {

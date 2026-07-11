@@ -58,6 +58,20 @@ void registerServingOptimizationPipeline() {
         pm.addNestedPass<func::FuncOp>(createTilePlanningPass());
       });
 
+  static PassPipelineRegistration<> kernelSelectionPipeline(
+      "kernel-selection-pipeline",
+      "Select a concrete runtime kernel descriptor per op (kernel_selection_contract_v1)",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createKernelSelectionPass());
+      });
+
+  static PassPipelineRegistration<> quantCoDesignPipeline(
+      "quant-codesign-pipeline",
+      "Quantization co-design evidence per op (quantization_codesign_contract_v1); inert without quant.codesign.policy",
+      [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createQuantizationCoDesignPass());
+      });
+
   static PassPipelineRegistration<> boundaryMaterializationPipeline(
       "boundary-materialization-pipeline",
       "Materialize planned cast boundary ops into IR after plan selection",

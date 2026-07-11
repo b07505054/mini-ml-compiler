@@ -72,6 +72,42 @@ struct ShapeFacts {
   bool usable() const { return status == "static_shapes"; }
 };
 
+// MemoryHierarchyProfile — OPTIONAL declared memory-hierarchy metadata.
+// Not every backend exposes local memory or DMA details; absence is a valid
+// state and must never be papered over with invented values. When
+// local_memory_bytes is not declared, tile feasibility is DEFERRED and
+// recorded as "deferred_missing_memory_hierarchy" — the plan stays valid.
+struct MemoryHierarchyProfile {
+  // SRAM / shared memory / scratchpad usable per compute unit for one op's
+  // working tiles. 0 = not declared.
+  int64_t local_memory_bytes = 0;
+  int64_t cache_line_bytes   = 0;
+  // Declared capability flags (e.g. cp.async on NVIDIA Ampere+, DMA engines
+  // on NPUs). The has_* flags distinguish "declared false" from "not
+  // declared at all" — unknown is not the same fact as unavailable. Used
+  // only for static feasibility annotations — no async copy or DMA is ever
+  // executed or simulated.
+  bool supports_async_copy         = false;
+  bool supports_dma                = false;
+  bool has_async_copy_declaration  = false;
+  bool has_dma_declaration         = false;
+
+  bool localMemoryDeclared() const { return local_memory_bytes > 0; }
+
+  // Staging capability as a declared fact:
+  //   "async_copy_declared" | "dma_declared" | "declared_unavailable"
+  //   (declared and false) | "unknown_not_declared" (no declaration).
+  const char* stagingCapability() const {
+    if (has_async_copy_declaration && supports_async_copy)
+      return "async_copy_declared";
+    if (has_dma_declaration && supports_dma)
+      return "dma_declared";
+    if (has_async_copy_declaration || has_dma_declaration)
+      return "declared_unavailable";
+    return "unknown_not_declared";
+  }
+};
+
 // Declared-profile peak numbers (target.static_cost_profile.* module attrs).
 // 0 = not declared. All values are theoretical peaks / declared capacities
 // from public docs or a declared profile — never measured.
@@ -80,17 +116,8 @@ struct StaticCostProfileNums {
   double peak_flops_fp16            = 0.0;
   double peak_flops_int8            = 0.0;
   double mem_bandwidth_bytes_per_sec = 0.0;
-  // Memory hierarchy (declared capacities, not measured behavior).
-  // local_memory_bytes: SRAM / shared memory / scratchpad usable per
-  // compute unit for one op's working tiles. 0 = not declared → tile
-  // planning is inert.
-  int64_t local_memory_bytes = 0;
-  int64_t cache_line_bytes   = 0;
-  // Declared capability flags (e.g. cp.async on NVIDIA Ampere+, DMA engines
-  // on NPUs). Used only for static feasibility annotations — no async copy
-  // or DMA is ever executed or simulated.
-  bool supports_async_copy = false;
-  bool supports_dma        = false;
+  // Optional declared memory hierarchy (see MemoryHierarchyProfile).
+  MemoryHierarchyProfile memory_hierarchy;
 
   // Peak FLOPs for a dtype, falling back to the nearest wider declared
   // peak. Returns 0 when nothing applicable is declared.

@@ -20,6 +20,8 @@ std::unique_ptr<::mlir::Pass> createLayoutPlanningPass();
 std::unique_ptr<::mlir::Pass> createBoundaryPlanningPass();
 std::unique_ptr<::mlir::Pass> createBoundaryMaterializationPass();
 std::unique_ptr<::mlir::Pass> createTilePlanningPass();
+std::unique_ptr<::mlir::Pass> createKernelSelectionPass();
+std::unique_ptr<::mlir::Pass> createQuantizationCoDesignPass();
 std::unique_ptr<::mlir::Pass> createWeightClassificationPlanningPass();
 std::unique_ptr<::mlir::Pass> createQuantizationStrategyPlanningPass();
 std::unique_ptr<::mlir::Pass> createKernelAvailabilityPlanningPass();
@@ -47,5 +49,7 @@ std::unique_ptr<::mlir::Pass> createCVFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createCVShapeInferencePass();
 std::unique_ptr<::mlir::Pass> createCVMemoryPlanningPass();
 std::unique_ptr<::mlir::Pass> createCVExecutionDomainPlanningPass();
+std::unique_ptr<::mlir::Pass> createCVSemanticAnnotationPass();
+std::unique_ptr<::mlir::Pass> createCVExecutionPlanAttrsPass();
 
 } // namespace mlir::hir

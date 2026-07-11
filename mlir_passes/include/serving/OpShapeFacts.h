@@ -151,22 +151,28 @@ inline StaticCostProfileNums readProfileNums(Operation* module) {
       return a.getInt();
     return 0;
   };
-  auto rB = [&](StringRef key) -> bool {
-    if (auto a = module->getAttrOfType<BoolAttr>(key))
-      return a.getValue();
-    return false;
-  };
   nums.peak_flops_fp32 = rF("target.static_cost_profile.peak_flops_fp32");
   nums.peak_flops_fp16 = rF("target.static_cost_profile.peak_flops_fp16");
   nums.peak_flops_int8 = rF("target.static_cost_profile.peak_flops_int8");
   nums.mem_bandwidth_bytes_per_sec =
       rF("target.static_cost_profile.memory_bandwidth_bytes_per_sec");
-  nums.local_memory_bytes =
+
+  // Optional declared memory hierarchy. Attr absence is preserved as
+  // absence (has_* flags), never coerced into a default capability claim.
+  MemoryHierarchyProfile& mh = nums.memory_hierarchy;
+  mh.local_memory_bytes =
       rI("target.static_cost_profile.local_memory_bytes");
-  nums.cache_line_bytes = rI("target.static_cost_profile.cache_line_bytes");
-  nums.supports_async_copy =
-      rB("target.static_cost_profile.supports_async_copy");
-  nums.supports_dma = rB("target.static_cost_profile.supports_dma");
+  mh.cache_line_bytes = rI("target.static_cost_profile.cache_line_bytes");
+  if (auto a = module->getAttrOfType<BoolAttr>(
+          "target.static_cost_profile.supports_async_copy")) {
+    mh.supports_async_copy = a.getValue();
+    mh.has_async_copy_declaration = true;
+  }
+  if (auto a = module->getAttrOfType<BoolAttr>(
+          "target.static_cost_profile.supports_dma")) {
+    mh.supports_dma = a.getValue();
+    mh.has_dma_declaration = true;
+  }
   return nums;
 }
 
