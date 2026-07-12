@@ -187,6 +187,20 @@ struct RuntimeKernelDescriptor {
   std::string truth_boundary;
 };
 
+// HardwareExecutionProfile — scheduling-visible execution resources.
+//
+// This deliberately stays smaller than a full HardwareProfile. It carries only
+// the execution fields needed to make compiler tooling and Triton evaluation
+// use the same canonical target-profile facts. Missing values remain
+// std::nullopt and are not lowered into MLIR attributes.
+struct HardwareExecutionProfile {
+  std::optional<int64_t> physical_compute_units;
+  std::optional<int64_t> effective_compute_units;
+  std::optional<int64_t> max_concurrent_work_items_per_unit;
+  std::optional<bool> supports_latency_hiding;
+  std::optional<std::string> local_memory_kind;
+};
+
 struct TargetConstraints {
   // ---- Compile-time constraint fields ------------------------------------
   // Absent in module → field stays at its default (unconstrained).
@@ -194,6 +208,7 @@ struct TargetConstraints {
   // default value (0.0 / true) is ambiguous with "absent".
 
   std::string profile_id;               // target.profile_id  — "" if absent
+  std::string profile_kind;             // target.profile_kind — "" if absent
   double      memory_budget_mb    = 0.0; // target.memory_budget_mb
   bool        static_shape_support = true; // target.static_shape_support
   double      frame_latency_budget_ms = 0.0; // target.frame_latency_budget_ms
@@ -227,6 +242,12 @@ struct TargetConstraints {
   bool has_static_cost_supports_async_copy       = false; // declared in profile
   bool has_static_cost_supports_dma              = false; // declared in profile
   std::string static_cost_profile_truth_boundary;  // "" when absent
+
+  // Hardware execution resources (target.hardware.*). These are canonical
+  // target-profile facts used by schedule-selection tooling. They are separate
+  // from static_cost_profile because they describe scheduling capacity rather
+  // than peak throughput/bandwidth.
+  HardwareExecutionProfile hardware_execution_profile;
 
   // Presence flags: set only when the corresponding attr was found in the
   // module.  Needed for fields whose zero/false value is a valid constraint.

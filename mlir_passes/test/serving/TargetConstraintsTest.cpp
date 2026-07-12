@@ -569,6 +569,108 @@ static void testBackendCapabilityAbsentWhenNotDeclared() {
   std::puts("  [PASS] testBackendCapabilityAbsentWhenNotDeclared");
 }
 
+// ---------------------------------------------------------------------------
+// Case 12: HardwareExecutionProfile — optional target.hardware.* fields.
+// ---------------------------------------------------------------------------
+static void testHardwareExecutionProfileRoundtrip() {
+  mlir::MLIRContext ctx;
+  ctx.allowUnregisteredDialects(true);
+
+  {
+    auto m = parseModule("module {}", ctx);
+    mlir::hir::TargetConstraints tc =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(!tc.hardware_execution_profile.physical_compute_units.has_value()
+           && "12a: physical compute units should be absent");
+    assert(!tc.hardware_execution_profile.effective_compute_units.has_value()
+           && "12a: effective compute units should be absent");
+    assert(!tc.hardware_execution_profile.max_concurrent_work_items_per_unit
+                .has_value()
+           && "12a: max concurrent work items should be absent");
+    assert(!tc.hardware_execution_profile.supports_latency_hiding.has_value()
+           && "12a: latency hiding should be absent");
+    assert(!tc.hardware_execution_profile.local_memory_kind.has_value()
+           && "12a: local memory kind should be absent");
+  }
+
+  {
+    auto m = parseModule(R"mlir(
+      module attributes {
+        target.hardware.physical_compute_units = 16 : i64,
+        target.hardware.effective_compute_units = 12 : i64,
+        target.hardware.max_concurrent_work_items_per_unit = 2 : i64,
+        target.hardware.supports_latency_hiding = true,
+        target.hardware.local_memory_kind = "software_managed_shared_memory",
+        target.profile_kind = "synthetic_analytical"
+      } {}
+    )mlir", ctx);
+    mlir::hir::TargetConstraints tc =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(tc.profile_kind == "synthetic_analytical"
+           && "12b: profile kind value");
+    assert(tc.hardware_execution_profile.physical_compute_units.has_value()
+           && "12b: physical compute units present");
+    assert(*tc.hardware_execution_profile.physical_compute_units == 16
+           && "12b: physical compute unit value");
+    assert(tc.hardware_execution_profile.effective_compute_units.has_value()
+           && "12b: effective compute units present");
+    assert(*tc.hardware_execution_profile.effective_compute_units == 12
+           && "12b: effective compute unit value");
+    assert(tc.hardware_execution_profile.max_concurrent_work_items_per_unit
+               .has_value()
+           && "12b: max concurrent work items present");
+    assert(*tc.hardware_execution_profile.max_concurrent_work_items_per_unit
+               == 2
+           && "12b: max concurrent work items value");
+    assert(tc.hardware_execution_profile.supports_latency_hiding.has_value()
+           && "12b: supports latency hiding present");
+    assert(*tc.hardware_execution_profile.supports_latency_hiding
+           && "12b: supports latency hiding value");
+    assert(tc.hardware_execution_profile.local_memory_kind.has_value()
+           && "12b: local memory kind present");
+    assert(*tc.hardware_execution_profile.local_memory_kind
+               == "software_managed_shared_memory"
+           && "12b: local memory kind value");
+  }
+
+  {
+    auto m = parseModule("module {}", ctx);
+    mlir::hir::TargetConstraints original;
+    original.hardware_execution_profile.physical_compute_units = 16;
+    original.hardware_execution_profile.effective_compute_units = 16;
+    original.hardware_execution_profile.max_concurrent_work_items_per_unit = 1;
+    original.hardware_execution_profile.supports_latency_hiding = true;
+    original.hardware_execution_profile.local_memory_kind =
+        "software_managed_shared_memory";
+    original.profile_kind = "synthetic_analytical";
+    original.attachToModule(m.get(), &ctx);
+
+    mlir::hir::TargetConstraints recovered =
+        mlir::hir::TargetConstraints::fromModule(m.get());
+    assert(recovered.hardware_execution_profile.physical_compute_units
+               == original.hardware_execution_profile.physical_compute_units
+           && "12c: physical compute units roundtrip");
+    assert(recovered.hardware_execution_profile.effective_compute_units
+               == original.hardware_execution_profile.effective_compute_units
+           && "12c: effective compute units roundtrip");
+    assert(recovered.hardware_execution_profile
+               .max_concurrent_work_items_per_unit
+               == original.hardware_execution_profile
+                      .max_concurrent_work_items_per_unit
+           && "12c: max concurrent work items roundtrip");
+    assert(recovered.hardware_execution_profile.supports_latency_hiding
+               == original.hardware_execution_profile.supports_latency_hiding
+           && "12c: latency hiding roundtrip");
+    assert(recovered.hardware_execution_profile.local_memory_kind
+               == original.hardware_execution_profile.local_memory_kind
+           && "12c: local memory kind roundtrip");
+    assert(recovered.profile_kind == original.profile_kind
+           && "12c: profile kind roundtrip");
+  }
+
+  std::puts("  [PASS] testHardwareExecutionProfileRoundtrip");
+}
+
 int main() {
   std::puts("TargetConstraintsTest:");
   testUnconstrained();
@@ -582,6 +684,7 @@ int main() {
   testBackendCapabilityKnownCostRoundtrip();
   testBackendCapabilityMultipleBackends();
   testBackendCapabilityAbsentWhenNotDeclared();
+  testHardwareExecutionProfileRoundtrip();
   std::puts("TargetConstraintsTest: PASS");
   return 0;
 }

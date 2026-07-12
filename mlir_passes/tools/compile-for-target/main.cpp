@@ -70,6 +70,12 @@ static llvm::cl::opt<std::string> DumpAnnotatedMlir(
     llvm::cl::desc("(Optional) write pass-annotated MLIR to this path"),
     llvm::cl::init(""));
 
+static llvm::cl::opt<std::string> DispatchUnitReportPath(
+    "dispatch-unit-report",
+    llvm::cl::desc("(Optional) write Phase 26 dispatch-unit reconciliation "
+                   "report JSON to this path"),
+    llvm::cl::init(""));
+
 // ---------------------------------------------------------------------------
 // TargetDeviceProfile — tool-boundary struct
 // Only the fields consumed by TargetProfileLowering are populated.
@@ -169,6 +175,7 @@ struct BackendCapabilityProfile {
 
 struct TargetDeviceProfile {
   std::string profileId;
+  std::string profileKind;
   double      metalMaxWorkingSetMB = 0.0;
   std::string configuredComputeUnits;
   bool        staticShapeSupport = true;
@@ -207,6 +214,11 @@ struct TargetDeviceProfile {
   std::optional<bool> staticCostSupportsAsyncCopy;
   std::optional<bool> staticCostSupportsDma;
   std::string staticCostTruthBoundary;
+  std::optional<int64_t> hardwarePhysicalComputeUnits;
+  std::optional<int64_t> hardwareEffectiveComputeUnits;
+  std::optional<int64_t> hardwareMaxConcurrentWorkItemsPerUnit;
+  std::optional<bool> hardwareSupportsLatencyHiding;
+  std::optional<std::string> hardwareLocalMemoryKind;
 
   // Optional experimental global quantization override (Phase C minimal AWQ
   // support). When absent, quantization planning is unchanged: no
@@ -231,6 +243,7 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
   mlir::hir::TargetConstraints tc;
 
   tc.profile_id = prof.profileId;
+  tc.profile_kind = prof.profileKind;
 
   if (prof.metalMaxWorkingSetMB > 0.0) {
     tc.memory_budget_mb  = prof.metalMaxWorkingSetMB;
@@ -314,6 +327,17 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
     tc.has_static_cost_supports_dma = true;
   }
   tc.static_cost_profile_truth_boundary = prof.staticCostTruthBoundary;
+
+  tc.hardware_execution_profile.physical_compute_units =
+      prof.hardwarePhysicalComputeUnits;
+  tc.hardware_execution_profile.effective_compute_units =
+      prof.hardwareEffectiveComputeUnits;
+  tc.hardware_execution_profile.max_concurrent_work_items_per_unit =
+      prof.hardwareMaxConcurrentWorkItemsPerUnit;
+  tc.hardware_execution_profile.supports_latency_hiding =
+      prof.hardwareSupportsLatencyHiding;
+  tc.hardware_execution_profile.local_memory_kind =
+      prof.hardwareLocalMemoryKind;
 
   // Lower per-backend capability declarations.
   // Cost fields and alignment fields preserve nullopt → absent in MLIR attrs.
@@ -449,6 +473,9 @@ parseDeviceProfile(llvm::StringRef path) {
         "device profile missing required field 'profileId'",
         llvm::inconvertibleErrorCode());
 
+  if (auto v = obj->getString("profileKind"))
+    prof.profileKind = v->str();
+
   if (auto v = obj->getNumber("metalMaxWorkingSetMB"))
     prof.metalMaxWorkingSetMB = *v;
 
@@ -510,6 +537,20 @@ parseDeviceProfile(llvm::StringRef path) {
       prof.staticCostSupportsDma = *v;
     if (auto v = scp->getString("truthBoundary"))
       prof.staticCostTruthBoundary = v->str();
+  }
+
+  if (auto *hep = obj->getObject("hardwareExecutionProfile")) {
+    if (auto v = hep->getInteger("physicalComputeUnits"))
+      prof.hardwarePhysicalComputeUnits = static_cast<int64_t>(*v);
+    if (auto v = hep->getInteger("effectiveComputeUnits"))
+      prof.hardwareEffectiveComputeUnits = static_cast<int64_t>(*v);
+    if (auto v = hep->getInteger("maxConcurrentWorkItemsPerUnit"))
+      prof.hardwareMaxConcurrentWorkItemsPerUnit =
+          static_cast<int64_t>(*v);
+    if (auto v = hep->getBoolean("supportsLatencyHiding"))
+      prof.hardwareSupportsLatencyHiding = *v;
+    if (auto v = hep->getString("localMemoryKind"))
+      prof.hardwareLocalMemoryKind = v->str();
   }
 
   // Optional quantization co-design policy (quantization_codesign_contract_v1).
@@ -983,6 +1024,15 @@ int main(int argc, char **argv) {
                                                                     OutPath)) {
     llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
     return 1;
+  }
+
+  // 8b. Optional Phase 26 dispatch-unit reconciliation report.
+  if (!DispatchUnitReportPath.empty()) {
+    if (auto err = mlir::hir::ExecutionPlanExporter::exportDispatchUnitReport(
+            plan, DispatchUnitReportPath)) {
+      llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
+      return 1;
+    }
   }
 
   // 9. Print terminal summary.

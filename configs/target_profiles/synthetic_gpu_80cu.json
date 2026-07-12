@@ -1,0 +1,17 @@
+{
+  "profileId": "synthetic-gpu-80cu",
+  "profileKind": "synthetic_analytical",
+  "configuredComputeUnits": "CUDA",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp32"
+  ],
+  "truthBoundary": "synthetic_analytical_profile_for_cost_model_sensitivity_only_not_a_physical_benchmark_target",
+  "hardwareExecutionProfile": {
+    "physicalComputeUnits": 80,
+    "effectiveComputeUnits": 80,
+    "maxConcurrentWorkItemsPerUnit": 1,
+    "supportsLatencyHiding": true,
+    "localMemoryKind": "software_managed_shared_memory"
+  }
+}

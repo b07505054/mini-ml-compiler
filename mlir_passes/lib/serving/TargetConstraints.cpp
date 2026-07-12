@@ -32,6 +32,8 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
 
   if (auto a = op->getAttrOfType<mlir::StringAttr>("target.profile_id"))
     tc.profile_id = a.getValue().str();
+  if (auto a = op->getAttrOfType<mlir::StringAttr>("target.profile_kind"))
+    tc.profile_kind = a.getValue().str();
 
   if (auto a = op->getAttrOfType<mlir::FloatAttr>("target.memory_budget_mb")) {
     tc.memory_budget_mb  = a.getValueAsDouble();
@@ -113,6 +115,23 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
   if (auto a = op->getAttrOfType<mlir::StringAttr>(
           "target.static_cost_profile.truth_boundary"))
     tc.static_cost_profile_truth_boundary = a.getValue().str();
+
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>(
+          "target.hardware.physical_compute_units"))
+    tc.hardware_execution_profile.physical_compute_units = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>(
+          "target.hardware.effective_compute_units"))
+    tc.hardware_execution_profile.effective_compute_units = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>(
+          "target.hardware.max_concurrent_work_items_per_unit"))
+    tc.hardware_execution_profile.max_concurrent_work_items_per_unit =
+        a.getInt();
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>(
+          "target.hardware.supports_latency_hiding"))
+    tc.hardware_execution_profile.supports_latency_hiding = a.getValue();
+  if (auto a = op->getAttrOfType<mlir::StringAttr>(
+          "target.hardware.local_memory_kind"))
+    tc.hardware_execution_profile.local_memory_kind = a.getValue().str();
 
   // Read per-backend capability entries.  The index attr lists backend names;
   // per-backend fields use flat prefix "target.backend_capabilities.{name}.*".
@@ -287,6 +306,8 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
 
   if (!profile_id.empty())
     op->setAttr("target.profile_id", mlir::StringAttr::get(ctx, profile_id));
+  if (!profile_kind.empty())
+    op->setAttr("target.profile_kind", mlir::StringAttr::get(ctx, profile_kind));
 
   if (has_memory_budget)
     op->setAttr("target.memory_budget_mb",
@@ -374,6 +395,33 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
     op->setAttr("target.static_cost_profile.truth_boundary",
                 mlir::StringAttr::get(ctx,
                                       static_cost_profile_truth_boundary));
+
+  if (hardware_execution_profile.physical_compute_units.has_value())
+    op->setAttr("target.hardware.physical_compute_units",
+                mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                       *hardware_execution_profile
+                                            .physical_compute_units));
+  if (hardware_execution_profile.effective_compute_units.has_value())
+    op->setAttr("target.hardware.effective_compute_units",
+                mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                       *hardware_execution_profile
+                                            .effective_compute_units));
+  if (hardware_execution_profile.max_concurrent_work_items_per_unit
+          .has_value())
+    op->setAttr("target.hardware.max_concurrent_work_items_per_unit",
+                mlir::IntegerAttr::get(
+                    mlir::IntegerType::get(ctx, 64),
+                    *hardware_execution_profile
+                         .max_concurrent_work_items_per_unit));
+  if (hardware_execution_profile.supports_latency_hiding.has_value())
+    op->setAttr("target.hardware.supports_latency_hiding",
+                mlir::BoolAttr::get(
+                    ctx,
+                    *hardware_execution_profile.supports_latency_hiding));
+  if (hardware_execution_profile.local_memory_kind.has_value())
+    op->setAttr("target.hardware.local_memory_kind",
+                mlir::StringAttr::get(
+                    ctx, *hardware_execution_profile.local_memory_kind));
 
   // Emit per-backend capability attrs.
   // Index: target.backend_capability_names lists the backend names.

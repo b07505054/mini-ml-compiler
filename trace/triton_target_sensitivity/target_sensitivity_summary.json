@@ -1,0 +1,1457 @@
+{
+  "schema": "triton_target_sensitivity_summary",
+  "schema_version": 1,
+  "mode": "analytical-target-sensitivity",
+  "backend": "triton_cuda",
+  "truth_boundary": "synthetic_profiles_are_analytical_only_no_benchmark_or_oracle_latency_claims",
+  "profiles": [
+    {
+      "target_id": "synthetic_gpu_8cu",
+      "profile_kind": "synthetic_analytical",
+      "physical_compute_units": 8,
+      "effective_compute_units": 8,
+      "effective_compute_units_source": "target_profile",
+      "max_concurrent_work_items_per_unit": 1,
+      "supports_latency_hiding": true,
+      "local_memory_kind": "software_managed_shared_memory",
+      "artifact_compute_units": null,
+      "compatibility_default": null,
+      "identity_validation": "matched",
+      "provenance": {
+        "physical_compute_units": "target_profile",
+        "effective_compute_units": "target_profile",
+        "max_concurrent_work_items_per_unit": "target_profile",
+        "supports_latency_hiding": "target_profile",
+        "local_memory_kind": "target_profile",
+        "effective_compute_units_resolved": "target_profile"
+      }
+    },
+    {
+      "target_id": "synthetic_gpu_16cu",
+      "profile_kind": "synthetic_analytical",
+      "physical_compute_units": 16,
+      "effective_compute_units": 16,
+      "effective_compute_units_source": "target_profile",
+      "max_concurrent_work_items_per_unit": 1,
+      "supports_latency_hiding": true,
+      "local_memory_kind": "software_managed_shared_memory",
+      "artifact_compute_units": null,
+      "compatibility_default": null,
+      "identity_validation": "matched",
+      "provenance": {
+        "physical_compute_units": "target_profile",
+        "effective_compute_units": "target_profile",
+        "max_concurrent_work_items_per_unit": "target_profile",
+        "supports_latency_hiding": "target_profile",
+        "local_memory_kind": "target_profile",
+        "effective_compute_units_resolved": "target_profile"
+      }
+    },
+    {
+      "target_id": "synthetic_gpu_40cu",
+      "profile_kind": "synthetic_analytical",
+      "physical_compute_units": 40,
+      "effective_compute_units": 40,
+      "effective_compute_units_source": "target_profile",
+      "max_concurrent_work_items_per_unit": 1,
+      "supports_latency_hiding": true,
+      "local_memory_kind": "software_managed_shared_memory",
+      "artifact_compute_units": null,
+      "compatibility_default": null,
+      "identity_validation": "matched",
+      "provenance": {
+        "physical_compute_units": "target_profile",
+        "effective_compute_units": "target_profile",
+        "max_concurrent_work_items_per_unit": "target_profile",
+        "supports_latency_hiding": "target_profile",
+        "local_memory_kind": "target_profile",
+        "effective_compute_units_resolved": "target_profile"
+      }
+    },
+    {
+      "target_id": "synthetic_gpu_80cu",
+      "profile_kind": "synthetic_analytical",
+      "physical_compute_units": 80,
+      "effective_compute_units": 80,
+      "effective_compute_units_source": "target_profile",
+      "max_concurrent_work_items_per_unit": 1,
+      "supports_latency_hiding": true,
+      "local_memory_kind": "software_managed_shared_memory",
+      "artifact_compute_units": null,
+      "compatibility_default": null,
+      "identity_validation": "matched",
+      "provenance": {
+        "physical_compute_units": "target_profile",
+        "effective_compute_units": "target_profile",
+        "max_concurrent_work_items_per_unit": "target_profile",
+        "supports_latency_hiding": "target_profile",
+        "local_memory_kind": "target_profile",
+        "effective_compute_units_resolved": "target_profile"
+      }
+    }
+  ],
+  "workload_count": 373,
+  "classification_counts": {
+    "feature-sensitive": 288,
+    "ranking-sensitive": 55,
+    "selection-sensitive": 30
+  },
+  "has_ranking_sensitive_case": true,
+  "has_selection_sensitive_case": true,
+  "example_ranking_sensitive": {
+    "workload_id": "small_square_m32_n32_k1024",
+    "family": "small_square_high_k",
+    "shape": {
+      "m": 32,
+      "n": 32,
+      "k": 1024,
+      "dtype": "f32"
+    },
+    "classification": "ranking-sensitive",
+    "selected_configs_by_profile": {
+      "synthetic_gpu_8cu": "bm16_bn16_bk32_w4_s3",
+      "synthetic_gpu_16cu": "bm16_bn16_bk32_w4_s3",
+      "synthetic_gpu_40cu": "bm16_bn16_bk32_w4_s3",
+      "synthetic_gpu_80cu": "bm16_bn16_bk32_w4_s3"
+    },
+    "rankings_by_profile": {
+      "synthetic_gpu_8cu": [
+        "bm16_bn16_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm32_bn32_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_16cu": [
+        "bm16_bn16_bk32_w4_s3",
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_40cu": [
+        "bm16_bn16_bk32_w4_s3",
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_80cu": [
+        "bm16_bn16_bk32_w4_s3",
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ]
+    },
+    "profiles": [
+      {
+        "target_profile_id": "synthetic_gpu_8cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 8,
+        "selected_config": "bm16_bn16_bk32_w4_s3",
+        "ranking": [
+          "bm16_bn16_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm32_bn32_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.5,
+              "execution_waves": 1,
+              "compute_work_per_item": 8192,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.5,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.004060629963874817,
+              "k_dominant_parallelism": 0.014618267869949339,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.015019271223970884
+            },
+            "predicted_cost_ms": 0.039726490997502716,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 2,
+              "work_items_per_compute_unit": 0.25,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.5,
+              "work_amplification": 2.0,
+              "programs_per_sm": 0.25,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0005589324633280436,
+              "low_parallelism": 0.00473740162452062,
+              "k_dominant_parallelism": 0.06821858339309692,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.006999238518740861
+            },
+            "predicted_cost_ms": 0.07685675019039188,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.125,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005075787454843521,
+              "k_dominant_parallelism": 0.0730913393497467,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.008662677256266276,
+              "calibration": -0.014243045434992052
+            },
+            "predicted_cost_ms": 0.07861508056557212,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.125,
+              "execution_waves": 1,
+              "compute_work_per_item": 131072,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.75,
+              "work_amplification": 4.0,
+              "programs_per_sm": 0.125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.008588319897651672,
+              "memory": 0.0011741553227115442,
+              "padding": 0.001676797389984131,
+              "low_parallelism": 0.005075787454843521,
+              "k_dominant_parallelism": 0.2923653573989868,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.02598803176879883,
+              "calibration": -0.09854994802684874
+            },
+            "predicted_cost_ms": 0.23902558784871092,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_16cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 16,
+        "selected_config": "bm16_bn16_bk32_w4_s3",
+        "ranking": [
+          "bm16_bn16_bk32_w4_s3",
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.25,
+              "execution_waves": 1,
+              "compute_work_per_item": 8192,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.25,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.00473740162452062,
+              "k_dominant_parallelism": 0.01705464584827423,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.016911723681879473
+            },
+            "predicted_cost_ms": 0.044732093094381996,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0625,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.0625,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005244980370004973,
+              "k_dominant_parallelism": 0.07552771732807159,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.008662677256266276,
+              "calibration": -0.014642700976390699
+            },
+            "predicted_cost_ms": 0.08082099591765982,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 2,
+              "work_items_per_compute_unit": 0.125,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.5,
+              "work_amplification": 2.0,
+              "programs_per_sm": 0.125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0005589324633280436,
+              "low_parallelism": 0.005075787454843521,
+              "k_dominant_parallelism": 0.0730913393497467,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.0074341987986621255
+            },
+            "predicted_cost_ms": 0.08163293169744329,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0625,
+              "execution_waves": 1,
+              "compute_work_per_item": 131072,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.75,
+              "work_amplification": 4.0,
+              "programs_per_sm": 0.0625,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.008588319897651672,
+              "memory": 0.0011741553227115442,
+              "padding": 0.001676797389984131,
+              "low_parallelism": 0.005244980370004973,
+              "k_dominant_parallelism": 0.30211086931228637,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.02598803176879883,
+              "calibration": -0.10144439250432585
+            },
+            "predicted_cost_ms": 0.24604584819969488,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_40cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 40,
+        "selected_config": "bm16_bn16_bk32_w4_s3",
+        "ranking": [
+          "bm16_bn16_bk32_w4_s3",
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.1,
+              "execution_waves": 1,
+              "compute_work_per_item": 8192,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.1,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005143464620908101,
+              "k_dominant_parallelism": 0.018516472635269163,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.01804719515662462
+            },
+            "predicted_cost_ms": 0.04773545435250956,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.025,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.025,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005346496119101843,
+              "k_dominant_parallelism": 0.07698954411506652,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.008662677256266276,
+              "calibration": -0.014882494301229884
+            },
+            "predicted_cost_ms": 0.08214454512891242,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 2,
+              "work_items_per_compute_unit": 0.05,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.5,
+              "work_amplification": 2.0,
+              "programs_per_sm": 0.05,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0005589324633280436,
+              "low_parallelism": 0.005278818953037262,
+              "k_dominant_parallelism": 0.07601499292373656,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.007695174966614898
+            },
+            "predicted_cost_ms": 0.08449864060167413,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.025,
+              "execution_waves": 1,
+              "compute_work_per_item": 131072,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.75,
+              "work_amplification": 4.0,
+              "programs_per_sm": 0.025,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.008588319897651672,
+              "memory": 0.0011741553227115442,
+              "padding": 0.001676797389984131,
+              "low_parallelism": 0.005346496119101843,
+              "k_dominant_parallelism": 0.3079581764602661,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.02598803176879883,
+              "calibration": -0.10318105919081205
+            },
+            "predicted_cost_ms": 0.25025800441028523,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_80cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 80,
+        "selected_config": "bm16_bn16_bk32_w4_s3",
+        "ranking": [
+          "bm16_bn16_bk32_w4_s3",
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.05,
+              "execution_waves": 1,
+              "compute_work_per_item": 8192,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.05,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005278818953037262,
+              "k_dominant_parallelism": 0.01900374823093414,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.018425685648206337
+            },
+            "predicted_cost_ms": 0.048736574771885414,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0125,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.0125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.002147079974412918,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0,
+              "low_parallelism": 0.005380334702134133,
+              "k_dominant_parallelism": 0.0774768197107315,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.008662677256266276,
+              "calibration": -0.014962425409509608
+            },
+            "predicted_cost_ms": 0.08258572819932998,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 2,
+              "work_items_per_compute_unit": 0.025,
+              "execution_waves": 1,
+              "compute_work_per_item": 32768,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.5,
+              "work_amplification": 2.0,
+              "programs_per_sm": 0.025,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.0011741553227115442,
+              "padding": 0.0005589324633280436,
+              "low_parallelism": 0.005346496119101843,
+              "k_dominant_parallelism": 0.07698954411506652,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.007782167022599151
+            },
+            "predicted_cost_ms": 0.08545387690308441,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 1024
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0125,
+              "execution_waves": 1,
+              "compute_work_per_item": 131072,
+              "reduction_dominance": 1.0,
+              "padding_waste_ratio": 0.75,
+              "work_amplification": 4.0,
+              "programs_per_sm": 0.0125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.008588319897651672,
+              "memory": 0.0011741553227115442,
+              "padding": 0.001676797389984131,
+              "low_parallelism": 0.005380334702134133,
+              "k_dominant_parallelism": 0.309907278842926,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.02598803176879883,
+              "calibration": -0.10375994808630751
+            },
+            "predicted_cost_ms": 0.251662056480482,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "example_selection_sensitive": {
+    "workload_id": "small_square_m64_n64_k512",
+    "family": "small_square_high_k",
+    "shape": {
+      "m": 64,
+      "n": 64,
+      "k": 512,
+      "dtype": "f32"
+    },
+    "classification": "selection-sensitive",
+    "selected_configs_by_profile": {
+      "synthetic_gpu_8cu": "bm16_bn16_bk32_w4_s3",
+      "synthetic_gpu_16cu": "bm32_bn32_bk32_w4_s3",
+      "synthetic_gpu_40cu": "bm32_bn32_bk32_w4_s3",
+      "synthetic_gpu_80cu": "bm32_bn32_bk32_w4_s3"
+    },
+    "rankings_by_profile": {
+      "synthetic_gpu_8cu": [
+        "bm16_bn16_bk32_w4_s3",
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_16cu": [
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn16_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_40cu": [
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm16_bn16_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ],
+      "synthetic_gpu_80cu": [
+        "bm32_bn32_bk32_w4_s3",
+        "bm16_bn64_bk32_w4_s3",
+        "bm16_bn16_bk32_w4_s3",
+        "bm64_bn64_bk32_w4_s3"
+      ]
+    },
+    "profiles": [
+      {
+        "target_profile_id": "synthetic_gpu_8cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 8,
+        "selected_config": "bm16_bn16_bk32_w4_s3",
+        "ranking": [
+          "bm16_bn16_bk32_w4_s3",
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 16,
+              "work_items_per_compute_unit": 2.0,
+              "execution_waves": 2,
+              "compute_work_per_item": 4096,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 2.0,
+              "output_program_waves": 2
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.0,
+              "k_dominant_parallelism": 0.0,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.005003014669417971
+            },
+            "predicted_cost_ms": 0.013233146552929731,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.5,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.5,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.004060629963874817,
+              "k_dominant_parallelism": 0.0073091339349746695,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.003006330389949765
+            },
+            "predicted_cost_ms": 0.016593565392411483,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.5,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.5,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.004060629963874817,
+              "k_dominant_parallelism": 0.0073091339349746695,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.001816714392737076
+            },
+            "predicted_cost_ms": 0.019948850703690738,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_8cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 8,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.125,
+              "execution_waves": 1,
+              "compute_work_per_item": 65536,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005075787454843521,
+              "k_dominant_parallelism": 0.03654566967487335,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.014553399118710238
+            },
+            "predicted_cost_ms": 0.03529818989451839,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_16cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 16,
+        "selected_config": "bm32_bn32_bk32_w4_s3",
+        "ranking": [
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn16_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.25,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.25,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.00473740162452062,
+              "k_dominant_parallelism": 0.008527322924137114,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.0032969889655124138
+            },
+            "predicted_cost_ms": 0.01819786746665708,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 16,
+              "work_items_per_compute_unit": 1.0,
+              "execution_waves": 1,
+              "compute_work_per_item": 4096,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 1.0,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.0027070866425832115,
+              "k_dominant_parallelism": 0.001218188989162445,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.007389150377215749
+            },
+            "predicted_cost_ms": 0.019544557892473165,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.25,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.25,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.00473740162452062,
+              "k_dominant_parallelism": 0.008527322924137114,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.0019748817672539005
+            },
+            "predicted_cost_ms": 0.021685643978982164,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_16cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 16,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0625,
+              "execution_waves": 1,
+              "compute_work_per_item": 65536,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.0625,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005244980370004973,
+              "k_dominant_parallelism": 0.037763858664035796,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.01495842377255515
+            },
+            "predicted_cost_ms": 0.03628054714499738,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_40cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 40,
+        "selected_config": "bm32_bn32_bk32_w4_s3",
+        "ranking": [
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm16_bn16_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.1,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.1,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005143464620908101,
+              "k_dominant_parallelism": 0.009258236317634581,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.0034713841108500003
+            },
+            "predicted_cost_ms": 0.019160448711204443,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.1,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.1,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005143464620908101,
+              "k_dominant_parallelism": 0.009258236317634581,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.002069782191963996
+            },
+            "predicted_cost_ms": 0.022727719944157017,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 16,
+              "work_items_per_compute_unit": 0.4,
+              "execution_waves": 1,
+              "compute_work_per_item": 4096,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.4,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.004331338628133139,
+              "k_dominant_parallelism": 0.0019491023826599119,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.008820831801894417
+            },
+            "predicted_cost_ms": 0.023331404696199227,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_40cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 40,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.025,
+              "execution_waves": 1,
+              "compute_work_per_item": 65536,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.025,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005346496119101843,
+              "k_dominant_parallelism": 0.03849477205753326,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.0152014385648621
+            },
+            "predicted_cost_ms": 0.036869961495284764,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      },
+      {
+        "target_profile_id": "synthetic_gpu_80cu",
+        "profile_kind": "synthetic_analytical",
+        "effective_compute_units": 80,
+        "selected_config": "bm32_bn32_bk32_w4_s3",
+        "ranking": [
+          "bm32_bn32_bk32_w4_s3",
+          "bm16_bn64_bk32_w4_s3",
+          "bm16_bn16_bk32_w4_s3",
+          "bm64_bn64_bk32_w4_s3"
+        ],
+        "candidates": [
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm32_bn32_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.05,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.05,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005278818953037262,
+              "k_dominant_parallelism": 0.00950187411546707,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.0035295158259625314
+            },
+            "predicted_cost_ms": 0.019481309126053562,
+            "rank": 1,
+            "selected": true
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm16_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 4,
+              "work_items_per_compute_unit": 0.05,
+              "execution_waves": 1,
+              "compute_work_per_item": 16384,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.05,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005278818953037262,
+              "k_dominant_parallelism": 0.00950187411546707,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.002165669314066569,
+              "calibration": -0.0021014156668673623
+            },
+            "predicted_cost_ms": 0.023075078599215298,
+            "rank": 2,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm16_bn16_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 16,
+              "work_items_per_compute_unit": 0.2,
+              "execution_waves": 1,
+              "compute_work_per_item": 4096,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.2,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.0048727559566497805,
+              "k_dominant_parallelism": 0.002192740180492401,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": 0.009298058943453974
+            },
+            "predicted_cost_ms": 0.024593686964107915,
+            "rank": 3,
+            "selected": false
+          },
+          {
+            "shape": {
+              "m": 64,
+              "n": 64,
+              "k": 512
+            },
+            "target_profile_id": "synthetic_gpu_80cu",
+            "profile_kind": "synthetic_analytical",
+            "effective_compute_units": 80,
+            "candidate": "bm64_bn64_bk32_w4_s3",
+            "features": {
+              "parallel_work_items": 1,
+              "work_items_per_compute_unit": 0.0125,
+              "execution_waves": 1,
+              "compute_work_per_item": 65536,
+              "reduction_dominance": 0.125,
+              "padding_waste_ratio": 0.0,
+              "work_amplification": 1.0,
+              "programs_per_sm": 0.0125,
+              "output_program_waves": 1
+            },
+            "cost_terms": {
+              "fixed": 0.0027070866425832115,
+              "effective_compute": 0.004294159948825836,
+              "memory": 0.001228885292102712,
+              "padding": 0.0,
+              "low_parallelism": 0.005380334702134133,
+              "k_dominant_parallelism": 0.03873840985536575,
+              "excessive_programs": 0.0,
+              "shape_config_mismatch": 0.0,
+              "calibration": -0.015282443495631085
+            },
+            "predicted_cost_ms": 0.03706643294538056,
+            "rank": 4,
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "utc_start": "2026-07-12T22:41:20.274108+00:00",
+  "utc_end": "2026-07-12T22:41:20.274177+00:00"
+}
