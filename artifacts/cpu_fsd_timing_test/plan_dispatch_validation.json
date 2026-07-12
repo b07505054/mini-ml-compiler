@@ -1,0 +1,11 @@
+{
+  "schema": "cpu_fused_schedule_plan_dispatch_validation",
+  "schema_version": 1,
+  "validations": [
+    {"candidate_id": "bm8_bn8_bk32", "plan_path": "artifacts/cpu_fsd_timing_test/plans/bm8_bn8_bk32.plan.json", "plan_matched_runtime": true},
+    {"candidate_id": "bm16_bn16_bk32", "plan_path": "artifacts/cpu_fsd_timing_test/plans/bm16_bn16_bk32.plan.json", "plan_matched_runtime": true},
+    {"candidate_id": "bm32_bn32_bk32", "plan_path": "artifacts/cpu_fsd_timing_test/plans/bm32_bn32_bk32.plan.json", "plan_matched_runtime": true},
+    {"candidate_id": "bm8_bn32_bk32", "plan_path": "artifacts/cpu_fsd_timing_test/plans/bm8_bn32_bk32.plan.json", "plan_matched_runtime": true}
+  ],
+  "total_override_count": 0
+}

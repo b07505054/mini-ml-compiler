@@ -1,0 +1,9 @@
+{
+  "schema": "cpu_fused_schedule_plan_dispatch_validation",
+  "schema_version": 1,
+  "plan_path": "artifacts/cpu_fsd_timing_test/plans/bm8_bn32_bk32.plan.json",
+  "planned": {"backend": "cpu", "kernel": "fused_matmul_bias_relu", "candidate_id": "bm8_bn32_bk32", "block_m": 8, "block_n": 32, "block_k": 32, "thread_count": 1},
+  "actual": {"backend": "cpu", "kernel": "fused_matmul_bias_relu", "candidate_id": "bm8_bn32_bk32", "block_m": 8, "block_n": 32, "block_k": 32, "thread_count": 1},
+  "plan_matched_runtime": true,
+  "override_count": 0
+}
