@@ -22,6 +22,12 @@ public:
   // Returns llvm::Error on write failure.
   static llvm::Error exportToFile(const ExecutionPlan &plan,
                                   llvm::StringRef outPath);
+
+  // Phase 26: reconciliation report for dispatch-unit materialization
+  // (op counts, classification totals, tensor binding roles, memory metric
+  // reconciliation). Diagnostic artifact; not part of the runtime contract.
+  static llvm::Error exportDispatchUnitReport(const ExecutionPlan &plan,
+                                              llvm::StringRef outPath);
 };
 
 } // namespace mlir::hir

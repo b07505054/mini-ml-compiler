@@ -248,6 +248,18 @@ ONNX
   passes, `ExecutionPlanBuilder`, and `ExecutionPlanExporter`. The Phase 23
   planning-facts JSON remains diagnostic and is not a required compiler
   boundary. See `docs/REAL_YOLOSEG_EXECUTION_PLAN.md`.
+- Phase 26 materializes runtime **dispatch units** for CV full-graph
+  functions: the GenericGraphIR-to-MLIR emitter stamps `source.*` provenance
+  attrs (node ids, ONNX name/type, dispatch group, op role) on every emitted
+  op and argument; `ExecutionPlanBuilder` groups the 929 top-level MLIR ops
+  into 268 provenance-preserving `dispatch_units` (helpers folded inside,
+  per-op decisions suppressed for CV), collects a typed `tensor_bindings`
+  ABI (image vs weights/biases, model artifact reference), corrected memory
+  metrics including a compiler-side peak-live lifetime scan, and a CV
+  postprocess contract. All units are non-executable today
+  (`no_runtime_adapter_or_registered_kernel`); backend intent stays
+  `configured_preference`. The LLM plan path is unchanged. See
+  `docs/YOLOSEG_DISPATCH_UNIT_MATERIALIZATION.md`.
 - `GraphFacts` is now explicitly a legacy Qwen/LLM adapter contract, not the
   generic ONNX importer schema. It is retained so existing Qwen behavior keeps
   working while the generic path is introduced alongside it.

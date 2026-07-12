@@ -535,11 +535,58 @@ Materializers must also report decisions they cannot express as
 
 ---
 
+## Phase 26 CV Additions (optional, additive)
+
+CV full-graph plans (currently YOLO-Seg) additionally carry — all fields
+absent for LLM plans, which stay byte-identical:
+
+- `function_plans[].dispatch_units[]` — the runtime-facing execution granule:
+  one GenericGraphIR source node (or a materialized fusion) with all helper
+  MLIR ops (`tensor.empty`/`linalg.fill`/scalar constants/pads) folded
+  inside. Carries source provenance (graph/imported node ids, ONNX names,
+  op type, operation family, semantic region), tensor IO
+  (`input_tensor_ids`/`output_tensor_ids`/`initializer_tensor_ids` — args
+  are `arg_<i>`, inter-unit tensors are `<unit_id>:o<k>`), a
+  `backend_intent {backend, intent_basis}` (vocabulary:
+  `configured_preference | capability_validated | analytically_selected |
+  measured_selected | unavailable`), a `kernel_status` (vocabulary:
+  `runtime_registered | library_available | lowering_only | deferred |
+  fallback_only | unavailable`), static byte/flop estimates, and an
+  `executable` flag that is true only for `runtime_registered`.
+- `function_plans[].op_classification` — reconciliation: every top-level
+  MLIR op classified exactly once (`dispatch_root`,
+  `dispatch_internal_compute`, `tensor_contract_operation`,
+  `allocation_helper`, `scalar_helper`, `view_operation`,
+  `non_dispatch_metadata`, `unresolved`).
+- For CV full-graph functions `per_op_decisions` is empty — internal MLIR
+  ops are not top-level runtime decisions (LLM functions keep the per-op
+  list).
+- Top-level `tensor_bindings[]` — typed ABI: role
+  (`model_input | initializer | weight | bias | shape_constant | temporary |
+  model_output`), original ONNX name, argument index, shape/dtype/layout/
+  byte size, ownership (`caller | model_state | runtime | dispatch_unit`),
+  mutability, and `model_artifact_reference` (weights referenced, never
+  embedded). `provenance.model_spec_ref` carries the model artifact path.
+- `cv_extension.memory_summary` — corrected metrics: `model_input_bytes`,
+  `initializer_bytes`, `model_output_bytes`,
+  `total_intermediate_tensor_bytes`, `total_intermediate_write_bytes`,
+  `peak_live_temporary_bytes` (static lifetime scan), `workspace_bytes`,
+  `planned_slot_bytes` (null until a slot allocator exists). The legacy
+  `memory_estimates.estimated_temporary_bytes` remains and is explicitly
+  labeled `cumulative_ssa_result_write_volume_not_peak_live_deprecated`.
+- `cv_extension.postprocess_contract` — detection/prototype tensor ids and
+  shapes, traced `detection_channel_groups`, mask-coefficient channel range,
+  `nms_required`, `mask_decode_required`, `implementation_status`
+  (`runtime_required` today), confidence, and provenance.
+
+See `docs/YOLOSEG_DISPATCH_UNIT_MATERIALIZATION.md`.
+
 ## What ExecutionPlan Does Not Contain
 
 - Runtime flag names from any specific runtime (vLLM, TensorRT-LLM, ONNX Runtime)
 - Measured performance values (latency, throughput, memory usage)
-- Model weights or weight paths
+- Model weights (Phase 26 CV plans reference the model artifact path for
+  weight binding; weight data itself is never embedded)
 - IR materialization operations (cast/dequant/layout_transform nodes are
   described as `required_boundary_ops` in KernelDecision, but not inserted)
 - Deployment policy decisions that are not compiler decisions (swap space,

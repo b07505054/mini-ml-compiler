@@ -244,7 +244,7 @@ CHECK: return
         _filecheck_mlir(
             mlir_text,
             """
-CHECK: arith.constant dense<{{.*}}> : tensor<2x3xf32>
+CHECK: arith.constant {{.*}}dense<{{.*}}> : tensor<2x3xf32>
 CHECK: return
 """,
         )
@@ -322,7 +322,7 @@ CHECK: return
         _filecheck_mlir(
             mlir_text,
             """
-CHECK: arith.constant 0.000000e+00 : f32
+CHECK: arith.constant {{.*}}0.000000e+00 : f32
 CHECK: tensor.pad
 CHECK-SAME: low[0, 0, 1, 1] high[0, 0, 1, 1]
 CHECK: linalg.conv_2d_nchw_fchw
@@ -1399,7 +1399,7 @@ CHECK: return
         _filecheck_mlir(
             mlir_text,
             """
-CHECK: arith.constant 0xFF800000 : f32
+CHECK: arith.constant {{.*}}0xFF800000 : f32
 CHECK: tensor.pad
 CHECK: linalg.fill
 CHECK: linalg.pooling_nchw_max
@@ -1482,7 +1482,7 @@ CHECK: return
         _filecheck_mlir(
             mlir_text,
             """
-CHECK: arith.constant 0xFF800000 : f32
+CHECK: arith.constant {{.*}}0xFF800000 : f32
 CHECK: linalg.generic
 CHECK-SAME: iterator_types = ["parallel", "reduction", "parallel", "parallel"]
 CHECK: arith.maximumf

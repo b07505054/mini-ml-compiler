@@ -219,6 +219,10 @@ target_link_libraries(PlanBuilderQwenFullPipelineTest
     MLIRParser
     MLIRPass
     MLIRFuncDialect
+    MLIRTensorDialect
+    MLIRLinalgDialect
+    MLIRArithDialect
+    MLIRMathDialect
     MLIRTransforms
     MLIRSupport
 )
@@ -978,3 +982,38 @@ add_test(NAME NvidiaProfileLoweringTest
 set_tests_properties(NvidiaProfileLoweringTest PROPERTIES
   DEPENDS compile-for-target
 )
+
+# ---------------------------------------------------------------------------
+# CTest: DispatchUnitBuilderTest (Phase 26)
+# Verifies dispatch-unit materialization in ExecutionPlanBuilder for CV
+# full-graph functions carrying the emitter source-provenance contract:
+# grouping, op classification totality, tensor binding ABI, corrected
+# memory metrics, and backend/kernel truth. Pure C++ + MLIR parser; no
+# passes, no exporter, no JSON.
+# ---------------------------------------------------------------------------
+add_executable(DispatchUnitBuilderTest
+  lib/serving/ExecutionPlanBuilder.cpp
+  test/serving/DispatchUnitBuilderTest.cpp
+)
+llvm_update_compile_flags(DispatchUnitBuilderTest)
+target_include_directories(DispatchUnitBuilderTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(DispatchUnitBuilderTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(DispatchUnitBuilderTest
+  PRIVATE
+    MLIRIR
+    MLIRParser
+    MLIRFuncDialect
+    MLIRTensorDialect
+    MLIRArithDialect
+    MLIRSupport
+)
+add_test(NAME DispatchUnitBuilderTest
+         COMMAND DispatchUnitBuilderTest)

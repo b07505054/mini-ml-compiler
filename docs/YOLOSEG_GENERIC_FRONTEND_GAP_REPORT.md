@@ -543,6 +543,22 @@ Use `yoloseg.diagnostics_report.json` as the primary source for:
 - model size pressure via `top_initializers_by_raw_data_bytes`
 - overall readiness via `frontend_readiness_status`
 
+## Phase 26 Source Provenance And Execution ABI
+
+The emitter now carries a source-provenance contract
+(`generic_emitter_source_attrs_v1`): every emitted top-level op receives
+`source.graph_node_id`, `source.imported_node_id`, `source.op_type`,
+`source.generic_op`, `source.onnx_name`, `source.dispatch_group`, and
+`source.op_role` as real MLIR attributes (the older `// source_node_id=...`
+comments remain for readability but are no longer the provenance carrier —
+attributes survive `mlir-opt` round-trips and downstream passes). Function
+arguments carry `source.name` / `source.arg_role`
+(`model_input`/`weight`/`bias`/`initializer`) / `source.arg_index`; the
+module carries `source.model_artifact`. This closes the Phase 25 finding
+that provenance died at the first MLIR parse, and it supplies the execution
+ABI ingredients (item 2 below) that the ExecutionPlan `tensor_bindings` now
+expose. See `docs/YOLOSEG_DISPATCH_UNIT_MATERIALIZATION.md`.
+
 ## Recommended Next Implementation Phases
 
 1. Define Phase 22 around the next boundary after verified memref/linalg:
@@ -550,6 +566,8 @@ Use `yoloseg.diagnostics_report.json` as the primary source for:
    for a CPU baseline.
 2. Specify the execution ABI before runtime work: input buffers, initializer
    buffers, returned result buffers, ownership, and deallocation.
+   (Addressed at the plan level by Phase 26 `tensor_bindings`; buffer-level
+   deallocation contracts remain future runtime work.)
 3. Add numerical/runtime validation only after a backend execution boundary is
    explicitly selected.
 4. Keep grouped/depthwise convolution support separate unless a verified

@@ -66,6 +66,21 @@ MATMUL_SAFE_FALLBACK_KERNEL = {
 
 DEFAULT_MATMUL_KERNEL_CONFIG = {"tile_m": 32, "tile_n": 32, "tile_k": 32}
 
+TRITON_PROFILE_SCHEMA = "triton_matmul_bias_relu_fixed_config_profile"
+TRITON_PROFILE_SCHEMA_VERSION = 1
+TRITON_BACKEND = "triton_cuda"
+TRITON_PATTERN = "bias_relu"
+TRITON_DTYPE = "f32"
+TRITON_PROFILE_RANKING_METRIC = "median_ms"
+TRITON_LEGAL_KERNELS = (
+    "triton_tiled_matmul_bias_relu_unfused_f32",
+    "triton_tiled_matmul_bias_relu_one_pass_f32",
+)
+TRITON_KERNEL_VARIANTS = {
+    "triton_tiled_matmul_bias_relu_unfused_f32": "V1",
+    "triton_tiled_matmul_bias_relu_one_pass_f32": "V3",
+}
+
 
 def kernel_static_properties(kernel_id):
     one_pass = kernel_id.endswith("_one_pass_f32")
@@ -186,6 +201,117 @@ def collect_matmul_profile_document(payload, source):
         for variant_key, variant in (pattern_payload.get("variants") or {}).items():
             doc["measurements"].append(
                 normalize_profile_measurement(pattern, variant_key, variant, config, machine, source)
+            )
+    doc["supported"] = True
+    return doc
+
+
+def triton_config_from_profile(cfg):
+    return {
+        "block_m": cfg.get("BLOCK_M") or cfg.get("block_m"),
+        "block_n": cfg.get("BLOCK_N") or cfg.get("block_n"),
+        "block_k": cfg.get("BLOCK_K") or cfg.get("block_k"),
+        "num_warps": cfg.get("num_warps"),
+        "num_stages": cfg.get("num_stages"),
+        "precision_mode": cfg.get("precision_mode"),
+    }
+
+
+def normalize_triton_profile_measurement(workload, variant_key, variant, config, env, source):
+    stats = ((variant.get("timing") or {}).get("statistics") or {})
+    correctness = variant.get("correctness") or {}
+    fixed_config = triton_config_from_profile(workload.get("selected_fixed_config") or config.get("fixed_config") or {})
+    shape = workload.get("shape") or {}
+    record = {
+        "pattern": TRITON_PATTERN,
+        "backend": TRITON_BACKEND,
+        "dtype": shape.get("dtype"),
+        "m": shape.get("m"),
+        "n": shape.get("n"),
+        "k": shape.get("k"),
+        "workload_id": workload.get("workload_id"),
+        "kernel_id": variant.get("kernel_id"),
+        "variant": variant.get("variant") or variant_key,
+        "fixed_config": fixed_config,
+        "correctness_passed": correctness.get("passed"),
+        "warmup_iterations": config.get("warmup"),
+        "measured_iterations": config.get("iterations"),
+        "repeats": config.get("repeats"),
+        "mean_ms": stats.get("mean_ms"),
+        "median_ms": stats.get("median_ms"),
+        "p50_ms": stats.get("p50_ms"),
+        "p95_ms": stats.get("p95_ms"),
+        "stddev_ms": stats.get("stddev_ms"),
+        "coefficient_of_variation": stats.get("coefficient_of_variation"),
+        "gpu_model": env.get("gpu_model") or env.get("gpu_model_torch"),
+        "compute_capability": env.get("compute_capability"),
+        "profile_source": source,
+    }
+    issues = []
+    if record["kernel_id"] not in TRITON_LEGAL_KERNELS:
+        issues.append("unknown_kernel_id")
+    if record["dtype"] != TRITON_DTYPE:
+        issues.append("dtype_mismatch")
+    for dim in ("m", "n", "k"):
+        if not positive_int(record[dim]):
+            issues.append(f"invalid_shape_{dim}")
+    if record["backend"] != TRITON_BACKEND:
+        issues.append("backend_mismatch")
+    if record["pattern"] != TRITON_PATTERN:
+        issues.append("pattern_mismatch")
+    for key in ("block_m", "block_n", "block_k", "num_warps", "num_stages"):
+        if not positive_int(record["fixed_config"].get(key)):
+            issues.append("config_mismatch")
+            break
+    if record["fixed_config"].get("precision_mode") != "ieee":
+        issues.append("precision_mode_mismatch")
+    for field in ("mean_ms", "median_ms", "p50_ms", "p95_ms"):
+        if not finite_positive(record[field]):
+            issues.append("invalid_profile_statistics")
+    cv = record["coefficient_of_variation"]
+    if cv is None or isinstance(cv, bool) or not isinstance(cv, (int, float)) or not math.isfinite(cv) or cv < 0:
+        issues.append("invalid_profile_statistics")
+    if record["correctness_passed"] is not True:
+        issues.append("candidate_correctness_failed")
+    record["issues"] = sorted(set(issues))
+    record["usable"] = not record["issues"]
+    return record
+
+
+def collect_triton_matmul_profile_document(payload, source):
+    doc = {
+        "path": source,
+        "schema": payload.get("schema"),
+        "schema_version": payload.get("schema_version"),
+        "mode": payload.get("mode"),
+        "backend": payload.get("backend"),
+        "supported": False,
+        "issues": [],
+        "measurements": [],
+    }
+    if payload.get("schema") != TRITON_PROFILE_SCHEMA:
+        doc["issues"].append("not_a_triton_matmul_bias_relu_profile")
+        return doc
+    if payload.get("schema_version") != TRITON_PROFILE_SCHEMA_VERSION:
+        doc["issues"].append("unsupported_profile_schema_version")
+        return doc
+    if payload.get("mode") == "use-plan":
+        doc["issues"].append("use_plan_output_rejected_as_selection_evidence")
+        return doc
+    if payload.get("mode") not in ("candidate-sweep", "fresh-oracle"):
+        doc["issues"].append("unsupported_profile_mode")
+        return doc
+    if payload.get("backend") != TRITON_BACKEND:
+        doc["issues"].append("backend_mismatch")
+        return doc
+    config = payload.get("benchmark_config") or {}
+    env = payload.get("environment") or {}
+    for workload in payload.get("workloads") or []:
+        if workload.get("status") != "completed":
+            continue
+        for variant_key, variant in (workload.get("variants") or {}).items():
+            doc["measurements"].append(
+                normalize_triton_profile_measurement(workload, variant_key, variant, config, env, source)
             )
     doc["supported"] = True
     return doc
@@ -411,6 +537,156 @@ def select_matmul_kernel(pattern, shape, kernel_config, profile):
     }
 
 
+def triton_profile_safe_result(shape, profile, reason, detail=None, candidates=None):
+    return {
+        "workload_id": shape.get("workload_id"),
+        "backend": TRITON_BACKEND,
+        "profile_match": "none",
+        "selection_source": "unsupported_exact_profile",
+        "selected_variant": None,
+        "selected_kernel": None,
+        "selected_config": None,
+        "selected_latency_ms": None,
+        "fallback_reason": reason,
+        "fallback_detail": detail,
+        "selection_statistic": TRITON_PROFILE_RANKING_METRIC,
+        "reporting_statistic": TRITON_PROFILE_RANKING_METRIC,
+        "kernel_candidates": candidates or [],
+        "profile_source": profile.get("profile_path"),
+    }
+
+
+def triton_config_matches(lhs, rhs):
+    return triton_config_from_profile(lhs) == triton_config_from_profile(rhs)
+
+
+def triton_measurement_mismatch_reasons(measurement, shape, config, target):
+    reasons = []
+    if measurement.get("backend") != TRITON_BACKEND:
+        reasons.append("backend_mismatch")
+    if measurement.get("pattern") != TRITON_PATTERN:
+        reasons.append("pattern_mismatch")
+    if measurement.get("dtype") != shape.get("dtype"):
+        reasons.append("dtype_mismatch")
+    if (
+        measurement.get("m") != shape.get("m")
+        or measurement.get("n") != shape.get("n")
+        or measurement.get("k") != shape.get("k")
+    ):
+        reasons.append("shape_mismatch")
+    if target.get("gpu_model") and measurement.get("gpu_model") != target.get("gpu_model"):
+        reasons.append("gpu_model_mismatch")
+    if target.get("compute_capability") and list(measurement.get("compute_capability") or []) != list(target.get("compute_capability")):
+        reasons.append("compute_capability_mismatch")
+    if measurement.get("fixed_config", {}).get("precision_mode") != config.get("precision_mode"):
+        reasons.append("precision_mode_mismatch")
+    if not triton_config_matches(measurement.get("fixed_config") or {}, config):
+        reasons.append("config_mismatch")
+    if "candidate_correctness_failed" in measurement.get("issues", []):
+        reasons.append("candidate_correctness_failed")
+    if "invalid_profile_statistics" in measurement.get("issues", []):
+        reasons.append("invalid_profile_statistics")
+    return sorted(set(reasons))
+
+
+def select_triton_matmul_bias_relu_kernel(shape, config, profile, target):
+    """Select a Triton V1/V3 kernel from exact measured profile evidence.
+
+    Exact-match keys: backend, pattern, dtype, M/N/K, GPU model, compute
+    capability, precision mode, and fixed config identity. Ranking metric:
+    median latency from PR A.
+    """
+    status = profile.get("profile_status", "not_provided")
+    if status in ("not_provided", "missing"):
+        return triton_profile_safe_result(shape, profile, "profile_not_provided")
+
+    documents = profile.get("triton_profile_documents", [])
+    supported_docs = [doc for doc in documents if doc["supported"]]
+    if not supported_docs:
+        issues = sorted({issue for doc in documents for issue in doc["issues"]})
+        return triton_profile_safe_result(shape, profile, "unsupported_profile_schema", ",".join(issues) or None)
+
+    measurements = [m for doc in supported_docs for m in doc["measurements"]]
+    candidates = []
+    for kernel_id in TRITON_LEGAL_KERNELS:
+        exact_for_kernel = [
+            m for m in measurements
+            if m.get("kernel_id") == kernel_id
+            and not triton_measurement_mismatch_reasons(m, shape, config, target)
+        ]
+        measurement = exact_for_kernel[-1] if exact_for_kernel else None
+        entry = {
+            "kernel_id": kernel_id,
+            "variant": TRITON_KERNEL_VARIANTS[kernel_id],
+            "eligible": False,
+            "rank": None,
+            "profile_latency_ms": None,
+            "profile_mean_ms": None,
+            "profile_p95_ms": None,
+            "profile_cv": None,
+        }
+        if measurement is None:
+            related = [m for m in measurements if m.get("kernel_id") == kernel_id]
+            mismatch_reasons = sorted({
+                reason
+                for m in related
+                for reason in triton_measurement_mismatch_reasons(m, shape, config, target)
+            })
+            entry["ineligible_reason"] = ",".join(mismatch_reasons) if mismatch_reasons else "no_exact_profile_measurement"
+        elif measurement.get("issues"):
+            entry["ineligible_reason"] = ",".join(measurement["issues"])
+        else:
+            entry.update(
+                {
+                    "eligible": True,
+                    "profile_latency_ms": measurement["median_ms"],
+                    "profile_mean_ms": measurement["mean_ms"],
+                    "profile_p95_ms": measurement["p95_ms"],
+                    "profile_cv": measurement["coefficient_of_variation"],
+                    "source": measurement["profile_source"],
+                }
+            )
+        candidates.append(entry)
+
+    eligible = [c for c in candidates if c["eligible"]]
+    if not eligible:
+        all_reasons = sorted({c.get("ineligible_reason") for c in candidates if c.get("ineligible_reason")})
+        reason = all_reasons[0] if len(all_reasons) == 1 else "no_exact_profile_match"
+        return triton_profile_safe_result(shape, profile, reason, ",".join(all_reasons), candidates)
+
+    ranked = sorted(
+        eligible,
+        key=lambda c: (
+            c["profile_latency_ms"],
+            c["profile_p95_ms"],
+            c["profile_cv"],
+            c["kernel_id"],
+        ),
+    )
+    for index, entry in enumerate(ranked):
+        entry["rank"] = index + 1
+    winner = ranked[0]
+    for candidate in candidates:
+        if candidate["kernel_id"] == winner["kernel_id"]:
+            candidate["rank"] = winner["rank"]
+    candidates.sort(key=lambda c: (c["rank"] is None, c["rank"] or 0, c["kernel_id"]))
+    return {
+        "workload_id": shape.get("workload_id"),
+        "backend": TRITON_BACKEND,
+        "profile_match": "exact",
+        "selection_source": "measured_profile_exact_match",
+        "selected_variant": winner["variant"],
+        "selected_kernel": winner["kernel_id"],
+        "selected_config": dict(config),
+        "selected_latency_ms": winner["profile_latency_ms"],
+        "fallback_reason": None,
+        "selection_statistic": TRITON_PROFILE_RANKING_METRIC,
+        "reporting_statistic": TRITON_PROFILE_RANKING_METRIC,
+        "kernel_candidates": candidates,
+        "profile_source": winner.get("source"),
+    }
+
+
 def detect_fused_matmul(text):
     hir_pattern = re.compile(
         r"(?P<result>%[\w\d_]+)\s*=\s*(?:\"hir\.fused_matmul_bias_relu\"|hir\.fused_matmul_bias_relu)\s*",
@@ -504,12 +780,18 @@ def matmul_shape_from_mlir(text, match, default):
 
 def load_kernel_profiles(paths):
     if not paths:
-        return {"profile_status": "not_provided", "kernels": {}, "matmul_profile_documents": []}
+        return {
+            "profile_status": "not_provided",
+            "kernels": {},
+            "matmul_profile_documents": [],
+            "triton_profile_documents": [],
+        }
 
     profile_paths = [Path(path) for path in paths]
     kernels = {}
     cost_table = {}
     matmul_documents = []
+    triton_documents = []
     fingerprints = {}
     loaded = []
     missing = []
@@ -523,6 +805,7 @@ def load_kernel_profiles(paths):
         loaded.append(str(profile_path))
         fingerprints[str(profile_path)] = profile_fingerprint(profile_path)
         matmul_documents.append(collect_matmul_profile_document(payload, str(profile_path)))
+        triton_documents.append(collect_triton_matmul_profile_document(payload, str(profile_path)))
         if payload.get("artifact_type") == "profile_calibrated_cost_table":
             for fusion_candidate, by_backend in payload.get("cost_table", {}).items():
                 cost_table.setdefault(fusion_candidate, {}).update(by_backend)
@@ -536,6 +819,7 @@ def load_kernel_profiles(paths):
             "missing_profiles": missing,
             "kernels": {},
             "matmul_profile_documents": [],
+            "triton_profile_documents": [],
         }
 
     return {
@@ -545,6 +829,7 @@ def load_kernel_profiles(paths):
         "kernels": kernels,
         "cost_table": cost_table,
         "matmul_profile_documents": matmul_documents,
+        "triton_profile_documents": triton_documents,
         "profile_fingerprints": fingerprints,
     }
 

@@ -62,7 +62,11 @@ class TestYoloSegExecutionPlan(unittest.TestCase):
         functions = plan["function_plans"]
         self.assertEqual(len(functions), 1)
         self.assertEqual(functions[0]["function_name"], "main_graph")
-        self.assertTrue(functions[0]["per_op_decisions"])
+        # Phase 26: CV full-graph functions are materialized as provenance-
+        # preserving dispatch units instead of a per-MLIR-op decision dump.
+        # See tests/test_yoloseg_dispatch_units.py for the full contract.
+        self.assertEqual(functions[0]["per_op_decisions"], [])
+        self.assertTrue(functions[0]["dispatch_units"])
         self.assertIn("backend", functions[0])
 
 

@@ -6,6 +6,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <map>
+
 namespace mlir::hir {
 namespace {
 
@@ -369,6 +371,103 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
   return obj;
 }
 
+static llvm::json::Array serializeShape(const std::vector<int64_t> &shape);
+
+static llvm::json::Array
+serializeStringArray(const std::vector<std::string> &values) {
+  llvm::json::Array arr;
+  for (const auto &value : values)
+    arr.push_back(value);
+  return arr;
+}
+
+static llvm::json::Array serializeI64Array(const std::vector<int64_t> &values) {
+  llvm::json::Array arr;
+  for (int64_t value : values)
+    arr.push_back(value);
+  return arr;
+}
+
+// Phase 26: runtime dispatch unit. One GenericGraphIR source node (or a
+// materialized fusion) with helper MLIR ops folded inside; the runtime-facing
+// execution granule. A unit is executable only when a concrete runtime kernel
+// was registered and selected — never from configured backend policy alone.
+static llvm::json::Object serializeDispatchUnit(const DispatchUnit &unit) {
+  llvm::json::Object obj;
+  obj["dispatch_unit_id"] = unit.dispatch_unit_id;
+  obj["source_graph_node_ids"] = serializeI64Array(unit.source_graph_node_ids);
+  obj["source_imported_node_ids"] =
+      serializeI64Array(unit.source_imported_node_ids);
+  obj["source_onnx_node_names"] =
+      serializeStringArray(unit.source_onnx_node_names);
+  obj["source_op_type"] = unit.source_op_type;
+  obj["operation_family"] = unit.operation_family;
+  if (!unit.semantic_region_id.empty())
+    obj["semantic_region_id"] = unit.semantic_region_id;
+  obj["mlir_operation_refs"] = serializeStringArray(unit.mlir_operation_refs);
+  obj["input_tensor_ids"] = serializeStringArray(unit.input_tensor_ids);
+  obj["output_tensor_ids"] = serializeStringArray(unit.output_tensor_ids);
+  obj["initializer_tensor_ids"] =
+      serializeStringArray(unit.initializer_tensor_ids);
+  llvm::json::Object intent;
+  intent["backend"] = unit.backend_intent.backend;
+  intent["intent_basis"] = unit.backend_intent.intent_basis;
+  obj["backend_intent"] = std::move(intent);
+  obj["execution_domain"] = unit.execution_domain;
+  obj["kernel_status"] = unit.kernel_status;
+  if (!unit.selected_kernel_id.empty())
+    obj["selected_kernel_id"] = unit.selected_kernel_id;
+  obj["fallback_backends"] = serializeStringArray(unit.fallback_backends);
+  obj["dtype"] = unit.dtype;
+  obj["layout"] = unit.layout;
+  obj["estimated_compute_flops"] = unit.estimated_compute_flops;
+  obj["estimated_read_bytes"] = unit.estimated_read_bytes;
+  obj["estimated_write_bytes"] = unit.estimated_write_bytes;
+  obj["workspace_bytes"] = unit.workspace_bytes;
+  obj["decision_provenance"] = unit.decision_provenance;
+  obj["executable"] = unit.executable;
+  if (!unit.non_executable_reason.empty())
+    obj["non_executable_reason"] = unit.non_executable_reason;
+  return obj;
+}
+
+static llvm::json::Object
+serializeOpClassification(const DispatchOpClassification &cls) {
+  llvm::json::Object obj;
+  obj["total_mlir_operations"] = cls.total_mlir_operations;
+  obj["dispatch_root"] = cls.dispatch_root;
+  obj["dispatch_internal_compute"] = cls.dispatch_internal_compute;
+  obj["tensor_contract_operation"] = cls.tensor_contract_operation;
+  obj["allocation_helper"] = cls.allocation_helper;
+  obj["scalar_helper"] = cls.scalar_helper;
+  obj["view_operation"] = cls.view_operation;
+  obj["non_dispatch_metadata"] = cls.non_dispatch_metadata;
+  obj["unresolved"] = cls.unresolved;
+  obj["operations_assigned_to_units"] = cls.operations_assigned_to_units;
+  obj["source_graph_node_count"] = cls.source_graph_node_count;
+  return obj;
+}
+
+static llvm::json::Object serializeTensorBinding(const TensorBinding &b) {
+  llvm::json::Object obj;
+  obj["tensor_id"] = b.tensor_id;
+  obj["original_name"] = b.original_name;
+  obj["source_value_id"] = b.source_value_id;
+  obj["role"] = b.role;
+  if (b.argument_index >= 0)
+    obj["argument_index"] = b.argument_index;
+  obj["shape"] = serializeShape(b.shape);
+  obj["dtype"] = b.dtype;
+  obj["layout"] = b.layout;
+  obj["byte_size"] = b.byte_size;
+  obj["ownership"] = b.ownership;
+  obj["mutable"] = b.is_mutable;
+  if (!b.external_data_reference.empty())
+    obj["external_data_reference"] = b.external_data_reference;
+  obj["model_artifact_reference"] = b.model_artifact_reference;
+  return obj;
+}
+
 static llvm::json::Object serializeFunctionPlan(const FunctionPlan &fp) {
   llvm::json::Object obj;
   obj["function_name"] = fp.function_name;
@@ -379,6 +478,18 @@ static llvm::json::Object serializeFunctionPlan(const FunctionPlan &fp) {
   for (const auto &bundle : fp.per_op_decisions)
     per_op.push_back(serializePerOpBundle(bundle));
   obj["per_op_decisions"] = std::move(per_op);
+
+  // Phase 26 (CV full-graph only): dispatch units replace per-op decisions
+  // as the runtime-facing list. Absent for LLM plans — Qwen output is
+  // byte-identical.
+  if (!fp.dispatch_units.empty()) {
+    llvm::json::Array units;
+    for (const auto &unit : fp.dispatch_units)
+      units.push_back(serializeDispatchUnit(unit));
+    obj["dispatch_units"] = std::move(units);
+  }
+  if (fp.op_classification)
+    obj["op_classification"] = serializeOpClassification(*fp.op_classification);
 
   return obj;
 }
@@ -437,7 +548,68 @@ static llvm::json::Object serializeCVExtension(const CVPlanExtension &cv) {
   memory["estimated_temporary_bytes"] = cv.estimated_temporary_bytes;
   memory["estimated_total_tensor_bytes"] = cv.estimated_total_tensor_bytes;
   memory["scope"] = "static_tensor_byte_estimates_no_slot_allocation";
+  if (cv.memory_summary) {
+    // Legacy field kept for compatibility; its cumulative semantics are now
+    // explicit and deprecated in favor of memory_summary.
+    memory["estimated_temporary_bytes_definition"] =
+        "cumulative_ssa_result_write_volume_not_peak_live_deprecated";
+  }
   obj["memory_estimates"] = std::move(memory);
+
+  // Phase 26 corrected memory metrics.
+  if (cv.memory_summary) {
+    const CVMemorySummary &ms = *cv.memory_summary;
+    llvm::json::Object summary;
+    summary["model_input_bytes"] = ms.model_input_bytes;
+    summary["initializer_bytes"] = ms.initializer_bytes;
+    summary["model_output_bytes"] = ms.model_output_bytes;
+    summary["total_intermediate_tensor_bytes"] =
+        ms.total_intermediate_tensor_bytes;
+    summary["total_intermediate_write_bytes"] =
+        ms.total_intermediate_write_bytes;
+    summary["peak_live_temporary_bytes"] = ms.peak_live_temporary_bytes;
+    summary["workspace_bytes"] = ms.workspace_bytes;
+    if (ms.planned_slot_bytes)
+      summary["planned_slot_bytes"] = *ms.planned_slot_bytes;
+    else
+      summary["planned_slot_bytes"] = nullptr;  // no slot allocator exists
+    summary["truth_boundary"] = ms.truth_boundary;
+    obj["memory_summary"] = std::move(summary);
+  }
+
+  // Phase 26 runtime-facing postprocess contract.
+  if (cv.postprocess_contract) {
+    const CVPostprocessContract &pc = *cv.postprocess_contract;
+    llvm::json::Object contract;
+    contract["detection_tensor_id"] = pc.detection_tensor_id;
+    contract["detection_shape"] = serializeShape(pc.detection_shape);
+    contract["prototype_tensor_id"] = pc.prototype_tensor_id;
+    contract["prototype_shape"] = serializeShape(pc.prototype_shape);
+    llvm::json::Array groups;
+    for (const auto &group : pc.detection_channel_groups) {
+      llvm::json::Object g;
+      g["channel_start"] = group.channel_start;
+      g["channel_count"] = group.channel_count;
+      g["semantic"] = group.semantic;
+      if (!group.source_region_id.empty())
+        g["source_region_id"] = group.source_region_id;
+      groups.push_back(std::move(g));
+    }
+    contract["detection_channel_groups"] = std::move(groups);
+    if (pc.mask_coefficient_channel_start >= 0) {
+      contract["mask_coefficient_channel_start"] =
+          pc.mask_coefficient_channel_start;
+      contract["mask_coefficient_channel_end"] =
+          pc.mask_coefficient_channel_end;
+    }
+    contract["nms_required"] = pc.nms_required;
+    contract["mask_decode_required"] = pc.mask_decode_required;
+    contract["implementation_status"] = pc.implementation_status;
+    contract["expected_output_semantics"] = pc.expected_output_semantics;
+    contract["confidence"] = pc.confidence;
+    contract["provenance"] = pc.provenance;
+    obj["postprocess_contract"] = std::move(contract);
+  }
 
   obj["postprocess_boundary"] = cv.postprocess_boundary;
   obj["truth_boundary"] = cv.truth_boundary;
@@ -536,6 +708,86 @@ llvm::Error ExecutionPlanExporter::exportToFile(const ExecutionPlan &plan,
   root["function_plans"]   = std::move(functionPlans);
   if (plan.cv_extension)
     root["cv_extension"] = serializeCVExtension(*plan.cv_extension);
+  // Phase 26 typed tensor ABI — emitted only when collected (CV path), so
+  // existing LLM plans stay byte-identical.
+  if (!plan.tensor_bindings.empty()) {
+    llvm::json::Array bindings;
+    for (const auto &binding : plan.tensor_bindings)
+      bindings.push_back(serializeTensorBinding(binding));
+    root["tensor_bindings"] = std::move(bindings);
+  }
+
+  return writeJSON(llvm::json::Value(std::move(root)), outPath);
+}
+
+llvm::Error
+ExecutionPlanExporter::exportDispatchUnitReport(const ExecutionPlan &plan,
+                                                llvm::StringRef outPath) {
+  llvm::json::Object root;
+  root["schema"] = "dispatch_unit_report";
+  root["schema_version"] = "1.0.0";
+  root["plan_id"] = plan.plan_id;
+  root["truth_boundary"] =
+      "real_yoloseg_dispatch_units_materialized_no_runtime_execution_"
+      "no_registered_cv_kernels_no_measured_performance_"
+      "no_memory_slot_assignment";
+
+  llvm::json::Array functions;
+  for (const auto &fp : plan.function_plans) {
+    if (fp.dispatch_units.empty() && !fp.op_classification)
+      continue;
+    llvm::json::Object fn;
+    fn["function_name"] = fp.function_name;
+    fn["dispatch_unit_count"] =
+        static_cast<int64_t>(fp.dispatch_units.size());
+    int64_t executable = 0;
+    llvm::json::Object kernelStatusCounts;
+    std::map<std::string, int64_t> statusCounts;
+    for (const auto &unit : fp.dispatch_units) {
+      if (unit.executable)
+        ++executable;
+      ++statusCounts[unit.kernel_status];
+    }
+    for (const auto &entry : statusCounts)
+      kernelStatusCounts[entry.first] = entry.second;
+    fn["executable_dispatch_unit_count"] = executable;
+    fn["non_executable_dispatch_unit_count"] =
+        static_cast<int64_t>(fp.dispatch_units.size()) - executable;
+    fn["kernel_status_counts"] = std::move(kernelStatusCounts);
+    if (fp.op_classification)
+      fn["op_classification"] =
+          serializeOpClassification(*fp.op_classification);
+    functions.push_back(std::move(fn));
+  }
+  root["function_reports"] = std::move(functions);
+
+  llvm::json::Object bindingCounts;
+  std::map<std::string, int64_t> roleCounts;
+  for (const auto &binding : plan.tensor_bindings)
+    ++roleCounts[binding.role];
+  for (const auto &entry : roleCounts)
+    bindingCounts[entry.first] = entry.second;
+  root["tensor_binding_counts_by_role"] = std::move(bindingCounts);
+  root["tensor_binding_count"] =
+      static_cast<int64_t>(plan.tensor_bindings.size());
+
+  if (plan.cv_extension && plan.cv_extension->memory_summary) {
+    const CVMemorySummary &ms = *plan.cv_extension->memory_summary;
+    llvm::json::Object memory;
+    memory["model_input_bytes"] = ms.model_input_bytes;
+    memory["initializer_bytes"] = ms.initializer_bytes;
+    memory["model_output_bytes"] = ms.model_output_bytes;
+    memory["total_intermediate_tensor_bytes"] =
+        ms.total_intermediate_tensor_bytes;
+    memory["total_intermediate_write_bytes"] =
+        ms.total_intermediate_write_bytes;
+    memory["peak_live_temporary_bytes"] = ms.peak_live_temporary_bytes;
+    memory["legacy_estimated_temporary_bytes"] =
+        plan.cv_extension->estimated_temporary_bytes;
+    memory["legacy_definition"] =
+        "cumulative_ssa_result_write_volume_not_peak_live_deprecated";
+    root["memory_metric_reconciliation"] = std::move(memory);
+  }
 
   return writeJSON(llvm::json::Value(std::move(root)), outPath);
 }

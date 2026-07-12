@@ -200,6 +200,36 @@ Truth boundary:
 real_yoloseg_execution_plan_compiler_decisions_from_static_capability_and_analysis_no_runtime_execution_no_measured_performance_no_full_memory_slot_allocation
 ```
 
+## Phase 26: Dispatch-Unit Materialization
+
+Phase 26 replaced the per-MLIR-op decision list with runtime dispatch units
+for CV full-graph functions (see
+`docs/YOLOSEG_DISPATCH_UNIT_MATERIALIZATION.md` for the full design):
+
+- the emitter stamps `source.*` provenance attrs (GenericGraphIR /
+  ImportedGraphIR node ids, ONNX name/type, `source.dispatch_group`,
+  `source.op_role`) on every op and argument, plus `source.model_artifact`
+  on the module;
+- `ExecutionPlanBuilder` groups ops by `source.dispatch_group` into 268
+  `dispatch_units` (one per GenericGraphIR node; splits are multi-output
+  units), classifies all 929 top-level ops exactly once, and emits an empty
+  `per_op_decisions` list for the CV function — helper `empty`/`fill`/
+  constant ops are unit-internal detail, not runtime decisions;
+- top-level `tensor_bindings` provide the input/weight/output ABI
+  (weights referenced via `models/yolo-seg.onnx`, never embedded);
+- `cv_extension.memory_summary` adds split input/initializer/output bytes,
+  intermediate tensor/write volumes, and `peak_live_temporary_bytes` from a
+  compiler-side lifetime scan (matches the Phase 23 analysis);
+  the legacy `estimated_temporary_bytes` is kept and explicitly labeled
+  cumulative/deprecated;
+- `cv_extension.postprocess_contract` serializes the detection/prototype
+  contract, traced channel groups (4 box + 80 class + 32 mask
+  coefficients), and NMS/mask-decode runtime obligations;
+- `scripts/run_yoloseg_execution_plan.sh` additionally writes
+  `artifacts/yoloseg_generic_frontend/yoloseg.dispatch_unit_report.json`.
+
+The Qwen/LLM plan path is unchanged and byte-identical.
+
 ## Limitations
 
 - No runtime execution.
@@ -208,5 +238,7 @@ real_yoloseg_execution_plan_compiler_decisions_from_static_capability_and_analys
 - No production CV runtime kernels are claimed unless a profile explicitly declares them.
 - No optimized multi-backend search.
 - No memory slot allocation.
-- Per-op decisions are intentionally verbose because every tensor-producing upstream op carries explicit static quant/kernel/layout evidence.
+- All 268 dispatch units are non-executable
+  (`no_runtime_adapter_or_registered_kernel`); backend intent is configured
+  preference, never a validated or measured selection.
 

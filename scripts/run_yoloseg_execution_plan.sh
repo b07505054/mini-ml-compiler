@@ -36,12 +36,14 @@ bash "${REPO_ROOT}/scripts/run_yoloseg_cv_semantic_annotation.sh"
 ANNOTATED_MLIR="${OUT_DIR}/${PREFIX}.cv_annotated.mlir"
 PLAN_JSON="${OUT_DIR}/${PREFIX}.execution_plan.json"
 PLAN_MLIR="${OUT_DIR}/${PREFIX}.execution_plan_annotated.mlir"
+DISPATCH_REPORT_JSON="${OUT_DIR}/${PREFIX}.dispatch_unit_report.json"
 
 "${COMPILE_FOR_TARGET}" \
   --device-profile "${TARGET_PROFILE}" \
   --mlir "${ANNOTATED_MLIR}" \
   --out "${PLAN_JSON}" \
-  --dump-annotated-mlir "${PLAN_MLIR}"
+  --dump-annotated-mlir "${PLAN_MLIR}" \
+  --dispatch-unit-report "${DISPATCH_REPORT_JSON}"
 
 python3 - "${PLAN_JSON}" "${TARGET_PROFILE}" <<'PY'
 import json

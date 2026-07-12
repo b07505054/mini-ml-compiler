@@ -118,6 +118,24 @@ set_tests_properties(matmul_postop_multi_shape_infrastructure PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 add_test(
+    NAME triton_matmul_bias_relu_benchmark_infrastructure
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/test_triton_matmul_bias_relu_benchmark.py
+)
+set_tests_properties(triton_matmul_bias_relu_benchmark_infrastructure PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME triton_matmul_bias_relu_exact_selection_infrastructure
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/test_triton_exact_selection.py
+)
+set_tests_properties(triton_matmul_bias_relu_exact_selection_infrastructure PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
     NAME mlir_fused_kernel_benchmark_rejects_invalid_variant
     COMMAND run_mlir_fused_kernel_benchmark --variant not-a-variant
 )
@@ -155,6 +173,46 @@ add_test(
 )
 set_tests_properties(mlir_fused_kernel_benchmark_rejects_invalid_elementwise_shape PROPERTIES
     WILL_FAIL TRUE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+
+# ---------------------------------------------------------------------------
+# Phase 1: CPU fused schedule candidate discovery and real oracle.
+# Self-contained; does not depend on or modify run_mlir_fused_kernel_benchmark.
+# ---------------------------------------------------------------------------
+add_executable(run_cpu_fused_schedule_discovery apps/run_cpu_fused_schedule_discovery.cpp)
+target_link_libraries(run_cpu_fused_schedule_discovery mlcompiler)
+
+add_test(
+    NAME cpu_fused_schedule_discovery_smoke
+    COMMAND run_cpu_fused_schedule_discovery
+        --mode discover
+        --smoke
+        --output-dir ${CMAKE_BINARY_DIR}/cpu_fused_schedule_discovery_smoke
+)
+set_tests_properties(cpu_fused_schedule_discovery_smoke PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME cpu_fused_schedule_discovery_json_schema
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/validate_cpu_fused_schedule_discovery_json.py
+        $<TARGET_FILE:run_cpu_fused_schedule_discovery>
+        ${CMAKE_BINARY_DIR}/cpu_fused_schedule_discovery_schema_check
+)
+set_tests_properties(cpu_fused_schedule_discovery_json_schema PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+add_test(
+    NAME cpu_fused_schedule_discovery_rejects_unknown_candidate
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/assert_cpu_fused_schedule_rejects_unknown_candidate.py
+        $<TARGET_FILE:run_cpu_fused_schedule_discovery>
+        ${CMAKE_BINARY_DIR}/cpu_fused_schedule_discovery_unknown_candidate
+)
+set_tests_properties(cpu_fused_schedule_discovery_rejects_unknown_candidate PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 

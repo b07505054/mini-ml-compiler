@@ -1,11 +1,15 @@
 #include "serving/ExecutionPlanBuilder.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -153,7 +157,11 @@ ExecutionPlan ExecutionPlanBuilder::build(
   plan.model_identity = collectModelIdentity(module);
 
   plan.provenance.compiler_tool   = "compile-for-target";
-  plan.provenance.model_spec_ref  = {};  // not in V1 module attrs
+  // Phase 26: the emitter stamps the model artifact reference as a module
+  // attr so the runtime can locate weight data. Empty for modules emitted
+  // before the provenance contract (e.g. the Qwen path).
+  plan.provenance.model_spec_ref =
+      strOp(module.getOperation(), "source.model_artifact");
   plan.provenance.capability_bundle = collectBundleRefs(module, capabilities);
   plan.provenance.truth_boundary  =
       "execution_planning_declared_profiles_not_measured_runtime";
@@ -167,6 +175,15 @@ ExecutionPlan ExecutionPlanBuilder::build(
       return;
     plan.function_plans.push_back(
         collectFunctionDecisions(funcOp, capabilities));
+    // Phase 26 tensor ABI: collected only for CV full-graph functions whose
+    // arguments carry the emitter's provenance contract.
+    if (strFn(funcOp, "serving.policy") == "cv_full_graph" &&
+        funcOp.getNumArguments() > 0 &&
+        funcOp.getArgAttrOfType<mlir::StringAttr>(0, "source.arg_role")) {
+      auto bindings = collectTensorBindings(module, funcOp);
+      plan.tensor_bindings.insert(plan.tensor_bindings.end(),
+                                  bindings.begin(), bindings.end());
+    }
   });
 
   return plan;
@@ -374,6 +391,32 @@ ExecutionPlanBuilder::collectCVPlanExtension(mlir::ModuleOp module) {
         ext.estimated_output_bytes + ext.estimated_temporary_bytes;
   }
 
+  // Phase 26 corrected memory metrics: present only when the attrs pass
+  // computed the split/lifetime fields (gate: peak-live attr present).
+  if (auto peak = selected->getAttrOfType<mlir::IntegerAttr>(
+          "cv.memory.peak_live_temporary_bytes")) {
+    CVMemorySummary memory;
+    auto readI64 = [&](llvm::StringRef key) -> int64_t {
+      if (auto a = selected->getAttrOfType<mlir::IntegerAttr>(key))
+        return a.getInt();
+      return 0;
+    };
+    memory.model_input_bytes = readI64("cv.memory.model_input_bytes");
+    memory.initializer_bytes = readI64("cv.memory.initializer_bytes");
+    memory.model_output_bytes = readI64("cv.memory.model_output_bytes");
+    memory.total_intermediate_tensor_bytes =
+        readI64("cv.memory.total_intermediate_tensor_bytes");
+    memory.total_intermediate_write_bytes =
+        readI64("cv.memory.total_intermediate_write_bytes");
+    memory.peak_live_temporary_bytes = peak.getInt();
+    memory.workspace_bytes = readI64("cv.memory.workspace_bytes");
+    memory.planned_slot_bytes = std::nullopt;  // no slot allocator exists
+    memory.truth_boundary = strFn(selected, "cv.memory.truth_boundary");
+    ext.memory_summary = std::move(memory);
+  }
+
+  ext.postprocess_contract = collectPostprocessContract(selected);
+
   return ext;
 }
 
@@ -385,8 +428,451 @@ ExecutionPlanBuilder::collectFunctionDecisions(
   fp.function_name    = funcOp.getName().str();
   fp.serving_phase    = detectServingPhase(funcOp);
   fp.backend          = attrToBackendDecision(funcOp);
-  fp.per_op_decisions = collectPerOpDecisionBundles(funcOp);
+  // Phase 26: CV full-graph functions are collected as dispatch units built
+  // from the emitter's source provenance; internal MLIR ops stay out of the
+  // runtime decision list. LLM functions keep the per-op decision path
+  // unchanged (Qwen plans stay byte-identical).
+  bool hasDispatchProvenance = false;
+  if (strFn(funcOp, "serving.policy") == "cv_full_graph" &&
+      !funcOp.getBody().empty()) {
+    for (mlir::Operation &op :
+         funcOp.getBody().front().without_terminator()) {
+      if (op.getAttr("source.dispatch_group")) {
+        hasDispatchProvenance = true;
+        break;
+      }
+    }
+  }
+  if (hasDispatchProvenance) {
+    collectDispatchUnits(funcOp, fp);
+  } else {
+    fp.per_op_decisions = collectPerOpDecisionBundles(funcOp);
+  }
   return fp;
+}
+
+namespace {
+
+// Weakest-wins ordering for aggregating member kernel truth into one unit
+// status. Lower rank = weaker claim.
+static int kernelStatusRank(llvm::StringRef status) {
+  if (status == "unavailable")        return 0;
+  if (status == "fallback_only")      return 1;
+  if (status == "deferred")           return 2;
+  if (status == "lowering_only")      return 3;
+  if (status == "library_available")  return 4;
+  if (status == "runtime_registered") return 5;
+  return 0;
+}
+
+static std::string memberKernelStatus(mlir::Operation *op) {
+  // Concrete runtime-kernel selection is the only source of a dispatchable
+  // claim (kernel_selection_contract_v1).
+  if (!strOp(op, "kernel_selection.selected_id").empty())
+    return "runtime_registered";
+  std::string ksStatus = strOp(op, "kernel_selection.status");
+  std::string lowering = strOp(op, "lowering.decision");
+  if (lowering == "direct_lower")
+    return boolOp(op, "kernel.exists") ? "library_available" : "lowering_only";
+  if (lowering == "rewrite_then_lower" || lowering == "dequant_then_lower")
+    return "lowering_only";
+  if (lowering == "fallback_backend")
+    return "fallback_only";
+  if (llvm::StringRef(ksStatus).starts_with("deferred"))
+    return "deferred";
+  return "unavailable";
+}
+
+} // namespace
+
+void ExecutionPlanBuilder::collectDispatchUnits(mlir::func::FuncOp funcOp,
+                                                FunctionPlan &fp) {
+  if (funcOp.getBody().empty())
+    return;
+  mlir::Block &entry = funcOp.getBody().front();
+
+  DispatchOpClassification cls;
+  cls.source_graph_node_count = 0;
+
+  struct UnitAccum {
+    DispatchUnit unit;
+    llvm::SmallPtrSet<mlir::Operation *, 16> members;
+    std::vector<mlir::Operation *> roots;
+    std::set<int64_t> nodeIds;
+    std::set<int64_t> importedIds;
+    std::set<std::string> onnxNames;
+    std::set<std::string> fallbacks;
+    int weakestKernelRank = 6;  // above strongest; lowered by members
+    std::string weakestKernelStatus = "unavailable";
+    bool sawKernelDecision = false;
+    std::string selectedKernelId;
+    int64_t flops = 0;
+  };
+  std::map<std::string, UnitAccum> accums;   // keyed by dispatch group id
+  std::vector<std::string> unitOrder;        // first-occurrence order
+  std::set<int64_t> allNodeIds;
+
+  auto readI64 = [](mlir::Operation *op, llvm::StringRef key,
+                    int64_t fallback) -> int64_t {
+    if (auto a = op->getAttrOfType<mlir::IntegerAttr>(key))
+      return a.getInt();
+    return fallback;
+  };
+
+  int opIndex = 0;
+  for (mlir::Operation &op : entry.without_terminator()) {
+    // Compiler-materialized boundary ops are plan metadata, not source ops.
+    if (op.getAttr("materialized.by")) {
+      ++cls.total_mlir_operations;
+      ++cls.non_dispatch_metadata;
+      continue;
+    }
+    ++cls.total_mlir_operations;
+    std::string role = strOp(&op, "source.op_role");
+    std::string group = strOp(&op, "source.dispatch_group");
+    if (role == "dispatch_root")                  ++cls.dispatch_root;
+    else if (role == "dispatch_internal_compute") ++cls.dispatch_internal_compute;
+    else if (role == "tensor_contract_operation") ++cls.tensor_contract_operation;
+    else if (role == "allocation_helper")         ++cls.allocation_helper;
+    else if (role == "scalar_helper")             ++cls.scalar_helper;
+    else if (role == "view_operation")            ++cls.view_operation;
+    else                                          ++cls.unresolved;
+
+    if (group.empty()) {
+      ++opIndex;
+      continue;
+    }
+    ++cls.operations_assigned_to_units;
+
+    auto inserted = accums.emplace(group, UnitAccum{});
+    UnitAccum &acc = inserted.first->second;
+    if (inserted.second)
+      unitOrder.push_back(group);
+    acc.members.insert(&op);
+    acc.unit.mlir_operation_refs.push_back(
+        "op_" + std::to_string(opIndex) + ":" +
+        op.getName().getStringRef().str());
+    if (int64_t nodeId = readI64(&op, "source.graph_node_id", -1); nodeId >= 0) {
+      acc.nodeIds.insert(nodeId);
+      allNodeIds.insert(nodeId);
+    }
+    if (int64_t impId = readI64(&op, "source.imported_node_id", -1); impId >= 0)
+      acc.importedIds.insert(impId);
+    if (std::string name = strOp(&op, "source.onnx_name"); !name.empty())
+      acc.onnxNames.insert(name);
+    if (acc.unit.source_op_type.empty())
+      acc.unit.source_op_type = strOp(&op, "source.op_type");
+    if (acc.unit.operation_family.empty())
+      acc.unit.operation_family = strOp(&op, "source.generic_op");
+    if (acc.unit.semantic_region_id.empty())
+      acc.unit.semantic_region_id = strOp(&op, "cv.region_id");
+    if (role == "dispatch_root")
+      acc.roots.push_back(&op);
+    // Kernel truth aggregation over members carrying a lowering decision or
+    // a concrete kernel selection. Helper ops that carry only a blanket
+    // kernel_selection rejection (e.g. scalar constants) do not participate —
+    // they are unit implementation detail, not dispatch candidates.
+    if (!strOp(&op, "lowering.decision").empty() ||
+        !strOp(&op, "kernel_selection.selected_id").empty()) {
+      std::string status = memberKernelStatus(&op);
+      acc.sawKernelDecision = true;
+      int rank = kernelStatusRank(status);
+      if (rank < acc.weakestKernelRank) {
+        acc.weakestKernelRank = rank;
+        acc.weakestKernelStatus = status;
+      }
+      if (status == "runtime_registered" && acc.selectedKernelId.empty())
+        acc.selectedKernelId = strOp(&op, "kernel_selection.selected_id");
+      if (std::string fb = strOp(&op, "lowering.target_backend");
+          !fb.empty() && strOp(&op, "lowering.decision") == "fallback_backend")
+        acc.fallbacks.insert(fb);
+    }
+    acc.flops += readI64(&op, "selected_plan.shape_cost.flops_estimate", 0);
+    ++opIndex;
+  }
+  cls.source_graph_node_count = static_cast<int64_t>(allNodeIds.size());
+
+  // Second pass: tensor identity. Function arguments are "arg_<i>"; each
+  // unit's escaping results become "<unit_id>:o<k>".
+  llvm::DenseMap<mlir::Value, std::string> valueId;
+  llvm::DenseMap<mlir::Value, std::string> argRole;
+  for (auto [index, arg] : llvm::enumerate(funcOp.getArguments())) {
+    valueId[arg] = "arg_" + std::to_string(index);
+    if (auto role =
+            funcOp.getArgAttrOfType<mlir::StringAttr>(index, "source.arg_role"))
+      argRole[arg] = role.getValue().str();
+  }
+
+  // Unit ids come from the dispatch group ("dg_42" -> "du_42").
+  auto unitIdFor = [](const std::string &group) {
+    llvm::StringRef ref(group);
+    if (ref.starts_with("dg_"))
+      return ("du_" + ref.drop_front(3)).str();
+    return ("du_" + ref).str();
+  };
+
+  // Map any op (possibly nested inside a member's region) to its top-level
+  // ancestor in the entry block, so region-internal uses (tensor.pad yields,
+  // tensor.generate bodies, linalg.generic bodies) resolve to their unit.
+  auto topLevelAncestor = [&entry](mlir::Operation *op) -> mlir::Operation * {
+    while (op && op->getBlock() != &entry)
+      op = op->getParentOp();
+    return op;
+  };
+
+  // Assign output ids first so later units can reference earlier outputs.
+  for (const std::string &group : unitOrder) {
+    UnitAccum &acc = accums[group];
+    acc.unit.dispatch_unit_id = unitIdFor(group);
+    int outIndex = 0;
+    for (mlir::Operation &op : entry.without_terminator()) {
+      if (!acc.members.contains(&op))
+        continue;
+      for (mlir::OpResult result : op.getResults()) {
+        bool escapes = false;
+        for (mlir::Operation *user : result.getUsers()) {
+          mlir::Operation *top = topLevelAncestor(user);
+          if (!top || !acc.members.contains(top)) {
+            escapes = true;
+            break;
+          }
+        }
+        if (!escapes)
+          continue;
+        std::string id =
+            acc.unit.dispatch_unit_id + ":o" + std::to_string(outIndex++);
+        valueId[result] = id;
+        acc.unit.output_tensor_ids.push_back(id);
+        acc.unit.estimated_write_bytes += byteSizeOf(result.getType());
+        if (acc.unit.dtype.empty())
+          acc.unit.dtype = dtypeOf(result.getType());
+        if (acc.unit.layout.empty())
+          acc.unit.layout = layoutOf(result.getType());
+      }
+    }
+  }
+
+  BackendDecision backend = attrToBackendDecision(funcOp);
+
+  for (const std::string &group : unitOrder) {
+    UnitAccum &acc = accums[group];
+    DispatchUnit &unit = acc.unit;
+    unit.source_graph_node_ids.assign(acc.nodeIds.begin(), acc.nodeIds.end());
+    unit.source_imported_node_ids.assign(acc.importedIds.begin(),
+                                         acc.importedIds.end());
+    unit.source_onnx_node_names.assign(acc.onnxNames.begin(),
+                                       acc.onnxNames.end());
+
+    // Inputs: values flowing into the unit from outside it — function
+    // arguments or other units' outputs — deduplicated in first-use order.
+    // Member regions are walked so region-internal references (e.g. the
+    // tensor.extract inside a resize's tensor.generate body) are captured.
+    // Initializer-role function arguments are listed separately.
+    llvm::SmallPtrSet<mlir::Value, 16> seen;
+    for (mlir::Operation &op : entry.without_terminator()) {
+      if (!acc.members.contains(&op))
+        continue;
+      op.walk([&](mlir::Operation *inner) {
+        for (mlir::Value operand : inner->getOperands()) {
+          if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(operand)) {
+            // Region block arguments (pad indices, linalg body scalars) are
+            // unit-internal; only entry-block arguments are unit inputs.
+            if (blockArg.getOwner() != &entry)
+              continue;
+          } else {
+            mlir::Operation *top = topLevelAncestor(operand.getDefiningOp());
+            if (!top || acc.members.contains(top))
+              continue;
+          }
+          if (!seen.insert(operand).second)
+            continue;
+          auto idIt = valueId.find(operand);
+          std::string id = idIt != valueId.end()
+                               ? idIt->second
+                               : std::string("unmapped_value");
+          auto roleIt = argRole.find(operand);
+          bool isInitializer =
+              roleIt != argRole.end() && roleIt->second != "model_input";
+          if (isInitializer)
+            unit.initializer_tensor_ids.push_back(id);
+          else
+            unit.input_tensor_ids.push_back(id);
+          unit.estimated_read_bytes += byteSizeOf(operand.getType());
+        }
+      });
+    }
+
+    unit.backend_intent.backend = backend.selected_backend;
+    unit.backend_intent.intent_basis =
+        backend.selected_backend.empty() ? "unavailable"
+                                         : "configured_preference";
+    unit.execution_domain = "unassigned";
+    unit.kernel_status =
+        acc.sawKernelDecision ? acc.weakestKernelStatus : "unavailable";
+    unit.selected_kernel_id = acc.selectedKernelId;
+    unit.fallback_backends.assign(acc.fallbacks.begin(), acc.fallbacks.end());
+    unit.estimated_compute_flops = acc.flops;
+    unit.workspace_bytes = 0;
+    unit.decision_provenance =
+        "source_attrs:generic_emitter_source_attrs_v1;"
+        "passes:cv-execution-plan-attrs,kernel-availability-planning,"
+        "lowering-decision-planning,kernel-selection";
+    unit.executable = unit.kernel_status == "runtime_registered";
+    if (!unit.executable)
+      unit.non_executable_reason = "no_runtime_adapter_or_registered_kernel";
+    fp.dispatch_units.push_back(std::move(unit));
+  }
+
+  fp.op_classification = cls;
+}
+
+std::vector<TensorBinding>
+ExecutionPlanBuilder::collectTensorBindings(mlir::ModuleOp module,
+                                            mlir::func::FuncOp funcOp) {
+  std::vector<TensorBinding> bindings;
+  std::string modelArtifact =
+      strOp(module.getOperation(), "source.model_artifact");
+
+  for (auto [index, arg] : llvm::enumerate(funcOp.getArguments())) {
+    TensorBinding binding;
+    binding.tensor_id = "arg_" + std::to_string(index);
+    if (auto name =
+            funcOp.getArgAttrOfType<mlir::StringAttr>(index, "source.name")) {
+      binding.original_name = name.getValue().str();
+      binding.source_value_id = binding.original_name;
+    }
+    std::string role = "initializer";
+    if (auto roleAttr = funcOp.getArgAttrOfType<mlir::StringAttr>(
+            index, "source.arg_role"))
+      role = roleAttr.getValue().str();
+    binding.role = role;
+    binding.argument_index = static_cast<int64_t>(index);
+    binding.shape = shapeOf(arg.getType());
+    binding.dtype = dtypeOf(arg.getType());
+    binding.layout = layoutOf(arg.getType());
+    binding.byte_size = byteSizeOf(arg.getType());
+    binding.ownership = role == "model_input" ? "caller" : "model_state";
+    binding.is_mutable = role == "model_input";
+    binding.external_data_reference = "";
+    binding.model_artifact_reference = modelArtifact;
+    bindings.push_back(std::move(binding));
+  }
+
+  if (!funcOp.getBody().empty()) {
+    if (auto ret = mlir::dyn_cast<mlir::func::ReturnOp>(
+            funcOp.getBody().front().getTerminator())) {
+      for (auto [index, operand] : llvm::enumerate(ret.getOperands())) {
+        TensorBinding binding;
+        binding.tensor_id = "result_" + std::to_string(index);
+        if (mlir::Operation *producer = operand.getDefiningOp()) {
+          binding.original_name = strOp(producer, "source.onnx_name");
+          binding.source_value_id = strOp(producer, "source.dispatch_group");
+        }
+        binding.role = "model_output";
+        binding.argument_index = -1;
+        binding.shape = shapeOf(operand.getType());
+        binding.dtype = dtypeOf(operand.getType());
+        binding.layout = layoutOf(operand.getType());
+        binding.byte_size = byteSizeOf(operand.getType());
+        binding.ownership = "caller";
+        binding.is_mutable = true;
+        binding.model_artifact_reference = modelArtifact;
+        bindings.push_back(std::move(binding));
+      }
+    }
+  }
+  return bindings;
+}
+
+std::optional<CVPostprocessContract>
+ExecutionPlanBuilder::collectPostprocessContract(mlir::func::FuncOp funcOp) {
+  if (funcOp.getBody().empty())
+    return std::nullopt;
+  auto ret = mlir::dyn_cast<mlir::func::ReturnOp>(
+      funcOp.getBody().front().getTerminator());
+  if (!ret)
+    return std::nullopt;
+
+  CVPostprocessContract contract;
+  mlir::Value detection;
+  for (auto [index, operand] : llvm::enumerate(ret.getOperands())) {
+    mlir::Operation *producer = operand.getDefiningOp();
+    std::string role =
+        producer ? strOp(producer, "cv.output_role") : std::string();
+    if (role == "detection") {
+      contract.detection_tensor_id = "result_" + std::to_string(index);
+      contract.detection_shape = shapeOf(operand.getType());
+      detection = operand;
+    } else if (role == "segmentation_prototype") {
+      contract.prototype_tensor_id = "result_" + std::to_string(index);
+      contract.prototype_shape = shapeOf(operand.getType());
+    }
+  }
+  if (contract.detection_tensor_id.empty() ||
+      contract.prototype_tensor_id.empty())
+    return std::nullopt;
+
+  // Trace the detection tensor's channel composition from the static
+  // insert_slice chain that assembles it (channel axis = 1 for [N, C, A]).
+  mlir::Value cursor = detection;
+  while (auto insert = cursor.getDefiningOp<mlir::tensor::InsertSliceOp>()) {
+    auto offsets = insert.getStaticOffsets();
+    auto sizes = insert.getStaticSizes();
+    if (offsets.size() < 2 || sizes.size() < 2)
+      break;
+    CVPostprocessContract::ChannelGroup groupInfo;
+    groupInfo.channel_start = offsets[1];
+    groupInfo.channel_count = sizes[1];
+    mlir::Operation *sourceOp = insert.getSource().getDefiningOp();
+    if (sourceOp) {
+      groupInfo.source_region_id = strOp(sourceOp, "cv.region_id");
+      std::string genericOp = strOp(sourceOp, "source.generic_op");
+      if (groupInfo.source_region_id.find("mask_coefficient") !=
+          std::string::npos) {
+        groupInfo.semantic = "mask_coefficients";
+        contract.mask_coefficient_channel_start = groupInfo.channel_start;
+        contract.mask_coefficient_channel_end =
+            groupInfo.channel_start + groupInfo.channel_count;
+      } else if (genericOp == "nn.sigmoid") {
+        groupInfo.semantic = "class_scores";
+      } else if (groupInfo.source_region_id.find("detection_head") !=
+                 std::string::npos ||
+                 groupInfo.channel_start == 0) {
+        groupInfo.semantic = "box_regression";
+      } else {
+        groupInfo.semantic = "unclassified";
+      }
+    } else {
+      groupInfo.semantic = "unclassified";
+    }
+    contract.detection_channel_groups.push_back(groupInfo);
+    cursor = insert.getDest();
+  }
+  std::sort(contract.detection_channel_groups.begin(),
+            contract.detection_channel_groups.end(),
+            [](const CVPostprocessContract::ChannelGroup &a,
+               const CVPostprocessContract::ChannelGroup &b) {
+              return a.channel_start < b.channel_start;
+            });
+
+  // The compiled graph contains no NMS or mask-decode operations (the emitted
+  // op set is linalg/tensor/arith only), so both remain runtime obligations.
+  // No thresholds or algorithms are invented here.
+  contract.nms_required = "true";
+  contract.mask_decode_required = true;
+  contract.implementation_status = "runtime_required";
+  contract.expected_output_semantics =
+      "detection tensor holds per-anchor channel vectors (box regression + "
+      "class scores + mask coefficients, see detection_channel_groups); "
+      "instance masks are decoded from mask coefficients combined with the "
+      "prototype tensor after score filtering and NMS, outside the compiled "
+      "graph";
+  bool maskProven = contract.mask_coefficient_channel_start >= 0;
+  contract.confidence = maskProven ? "high" : "medium";
+  contract.provenance =
+      "traced_static_insert_slice_offsets_and_cv_region_attrs_"
+      "no_nms_or_mask_ops_in_compiled_graph";
+  return contract;
 }
 
 std::vector<PerOpDecisionBundle>

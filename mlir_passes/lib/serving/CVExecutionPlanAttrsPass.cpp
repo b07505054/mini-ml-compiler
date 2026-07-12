@@ -237,23 +237,94 @@ struct CVExecutionPlanAttrsPass
     setString(funcOp, "cv.execution_plan.truth_boundary", kTruthBoundary);
 
     int64_t inputBytes = 0;
-    for (Type type : funcOp.getFunctionType().getInputs())
-      inputBytes += byteSize(type);
+    int64_t modelInputBytes = 0;
+    int64_t initializerBytes = 0;
+    for (auto [index, type] :
+         llvm::enumerate(funcOp.getFunctionType().getInputs())) {
+      int64_t bytes = byteSize(type);
+      inputBytes += bytes;
+      // Argument roles from the emitter's source-provenance contract
+      // (source.arg_role). Absent attrs leave the split at zero so the
+      // legacy aggregate stays authoritative for pre-Phase-26 modules.
+      auto role = funcOp.getArgAttrOfType<StringAttr>(index, "source.arg_role");
+      if (role && role.getValue() == "model_input")
+        modelInputBytes += bytes;
+      else if (role)
+        initializerBytes += bytes;
+    }
 
     int64_t outputBytes = 0;
+    llvm::SmallPtrSet<Value, 8> outputValues;
     if (!funcOp.getBody().empty()) {
       if (auto ret = dyn_cast<func::ReturnOp>(
               funcOp.getBody().front().getTerminator())) {
-        for (Value operand : ret.getOperands())
+        for (Value operand : ret.getOperands()) {
           outputBytes += byteSize(operand.getType());
+          outputValues.insert(operand);
+        }
       }
     }
 
+    // Cumulative SSA-result accounting (legacy semantics, kept explicit):
+    //   temporaryBytes         — every top-level op result (write volume)
+    //   intermediateBytes      — op results that are not function outputs
+    // Neither is peak live memory; the lifetime scan below computes that.
     int64_t temporaryBytes = 0;
+    int64_t intermediateBytes = 0;
     if (!funcOp.getBody().empty()) {
-      for (Operation &op : funcOp.getBody().front().without_terminator())
-        for (Type type : op.getResultTypes())
-          temporaryBytes += byteSize(type);
+      for (Operation &op : funcOp.getBody().front().without_terminator()) {
+        for (OpResult result : op.getResults()) {
+          int64_t bytes = byteSize(result.getType());
+          temporaryBytes += bytes;
+          if (!outputValues.contains(result))
+            intermediateBytes += bytes;
+        }
+      }
+    }
+
+    // Static lifetime scan (Phase 23 algorithm, compiler-side):
+    // temporaries live from their producer position to their last consumer
+    // position; peak is the maximum concurrently-live byte total. No slot
+    // allocation is performed or claimed.
+    int64_t peakLiveTemporaryBytes = 0;
+    if (!funcOp.getBody().empty()) {
+      Block &entry = funcOp.getBody().front();
+      llvm::DenseMap<Operation *, int64_t> position;
+      int64_t index = 0;
+      for (Operation &op : entry)
+        position[&op] = index++;
+      struct Lifetime {
+        int64_t start = 0;
+        int64_t end = 0;
+        int64_t bytes = 0;
+      };
+      std::vector<Lifetime> temporaries;
+      for (Operation &op : entry.without_terminator()) {
+        for (OpResult result : op.getResults()) {
+          if (outputValues.contains(result))
+            continue;
+          int64_t bytes = byteSize(result.getType());
+          if (bytes <= 0)
+            continue;
+          Lifetime lifetime;
+          lifetime.start = position[&op];
+          lifetime.end = lifetime.start;
+          lifetime.bytes = bytes;
+          for (Operation *user : result.getUsers()) {
+            auto it = position.find(user);
+            if (it != position.end())
+              lifetime.end = std::max(lifetime.end, it->second);
+          }
+          temporaries.push_back(lifetime);
+        }
+      }
+      for (int64_t pos = 0; pos <= index; ++pos) {
+        int64_t live = 0;
+        for (const Lifetime &lifetime : temporaries)
+          if (lifetime.start <= pos && pos <= lifetime.end)
+            live += lifetime.bytes;
+        peakLiveTemporaryBytes = std::max(peakLiveTemporaryBytes, live);
+      }
     }
 
     setI64(funcOp, "cv.memory.estimated_input_bytes", inputBytes);
@@ -261,9 +332,20 @@ struct CVExecutionPlanAttrsPass
     setI64(funcOp, "cv.memory.estimated_temporary_bytes", temporaryBytes);
     setI64(funcOp, "cv.memory.estimated_total_tensor_bytes",
            inputBytes + outputBytes + temporaryBytes);
+    setI64(funcOp, "cv.memory.model_input_bytes", modelInputBytes);
+    setI64(funcOp, "cv.memory.initializer_bytes", initializerBytes);
+    setI64(funcOp, "cv.memory.model_output_bytes", outputBytes);
+    setI64(funcOp, "cv.memory.total_intermediate_tensor_bytes",
+           intermediateBytes);
+    setI64(funcOp, "cv.memory.total_intermediate_write_bytes", temporaryBytes);
+    setI64(funcOp, "cv.memory.peak_live_temporary_bytes",
+           peakLiveTemporaryBytes);
+    setI64(funcOp, "cv.memory.workspace_bytes", 0);
+    setString(funcOp, "cv.memory.legacy_temporary_bytes_definition",
+              "cumulative_ssa_result_write_volume_not_peak_live_deprecated");
     setString(funcOp, "cv.memory.status", "estimated_static_tensor_bytes");
     setString(funcOp, "cv.memory.truth_boundary",
-              "static_tensor_byte_estimates_no_slot_allocation");
+              "static_tensor_byte_estimates_and_lifetime_scan_no_slot_allocation");
 
     if (funcOp.getBody().empty())
       return;

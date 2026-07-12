@@ -57,6 +57,16 @@ private:
   static std::vector<PerOpDecisionBundle>
   collectPerOpDecisionBundles(mlir::func::FuncOp funcOp);
 
+  // Phase 26 (CV full-graph functions only): group ops by the emitter's
+  // source.dispatch_group provenance into runtime dispatch units, classify
+  // every top-level op exactly once, and collect the typed tensor ABI.
+  // All three are collectors over existing attrs — no decisions are made here.
+  static void collectDispatchUnits(mlir::func::FuncOp funcOp, FunctionPlan& fp);
+  static std::vector<TensorBinding>
+  collectTensorBindings(mlir::ModuleOp module, mlir::func::FuncOp funcOp);
+  static std::optional<CVPostprocessContract>
+  collectPostprocessContract(mlir::func::FuncOp funcOp);
+
   // Per-attr translators: read one attr cluster, return one typed Decision.
   // Return nullopt when the primary gate attr is absent.
   static std::optional<ServingDecision>

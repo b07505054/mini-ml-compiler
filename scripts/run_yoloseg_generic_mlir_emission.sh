@@ -50,9 +50,12 @@ REPORT_JSON="${OUT_DIR}/${PREFIX}.generic_mlir_emission_report.json"
   --in "${SHAPE_IR}" \
   --out "${CONTRACT_JSON}"
 
+MODEL_ARTIFACT_REF="${MODEL_PATH#"${REPO_ROOT}"/}"
+
 "${PYTHON}" "${REPO_ROOT}/tools/generic_graph_ir_to_mlir.py" \
   --in "${SHAPE_IR}" \
-  --out "${MLIR_OUT}"
+  --out "${MLIR_OUT}" \
+  --model-artifact "${MODEL_ARTIFACT_REF}"
 
 "${MLIR_OPT}" "${MLIR_OUT}" > "${VERIFIED_MLIR}"
 

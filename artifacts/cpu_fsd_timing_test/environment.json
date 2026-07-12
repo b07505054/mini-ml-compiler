@@ -1,0 +1,23 @@
+{
+  "schema": "cpu_fused_schedule_discovery_environment",
+  "schema_version": 1,
+  "utc_timestamp": "2026-07-12T23:44:30Z",
+  "cpu_model": {"value": "Apple M5", "source": "sysctl"},
+  "os": {"value": "26.5.1", "source": "os_query(sw_vers)"},
+  "arch": {"value": "arm64", "source": "compiler_predefined_macro"},
+  "compiler": {"value": "Homebrew clang version 22.1.5", "source": "compiler_invocation(clang++ --version)"},
+  "build_type": {"value": "optimized_NDEBUG_defined", "source": "compiler_predefined_macro"},
+  "physical_cores_total": {"value": "10", "source": "sysctl"},
+  "logical_cores_total": {"value": "10", "source": "sysctl"},
+  "performance_core_count": {"value": "4", "source": "sysctl"},
+  "performance_core_l1d_bytes": {"value": "131072", "source": "sysctl"},
+  "performance_core_l2_bytes": {"value": "16777216", "source": "sysctl"},
+  "efficiency_core_count": {"value": "6", "source": "sysctl"},
+  "efficiency_core_l1d_bytes": {"value": "65536", "source": "sysctl"},
+  "efficiency_core_l2_bytes": {"value": "6291456", "source": "sysctl"},
+  "cache_line_bytes": {"value": "128", "source": "sysctl"},
+  "simd_capability": {"value": "neon_baseline_arm64", "source": "sysctl(hw.optional.neon)"},
+  "benchmark_thread_count": {"value": "1", "source": "cli_fixed_for_phase1"},
+  "thread_affinity_control": "not_controlled_os_default_scheduling",
+  "note": "Apple Silicon hosts expose heterogeneous performance/efficiency core clusters; Phase 1 fixes benchmark_thread_count=1 and does not exercise multicore scheduling. Core/cache facts are recorded for future Phase 3 hardware abstraction work, not used by this phase's candidate selection."
+}

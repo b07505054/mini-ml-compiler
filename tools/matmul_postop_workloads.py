@@ -26,9 +26,18 @@ VALID_CATEGORIES = (
     "balanced",
     "fusion_unfriendly_compute_heavy",
     "k_sweep",
+    "decision_boundary",
 )
 VALID_PATTERNS = ("bias", "elementwise_add")
 VALID_STATUSES = ("active", "skipped_resource_limit")
+VALID_BOUNDARY_EXPECTED_REGIONS = ("v1_win", "tie", "v3_win", "unstable")
+EVALUATION_ONLY_FIELDS = {
+    "expected_region",
+    "measured_winner",
+    "final_classification",
+    "oracle_latency",
+    "oracle_best_kernel",
+}
 
 DTYPE_BYTES = {"f32": 4}
 
@@ -82,6 +91,13 @@ class Workload:
     held_out: bool = False
     status: str = "active"
     skip_reason: Optional[str] = None
+    group: Optional[str] = None
+    subgroup: Optional[str] = None
+    benchmark_purpose: str = "fusion_coverage"
+    profile_role: Optional[str] = None
+    expected_region: Optional[str] = None
+    backend_eligibility: list[str] = field(default_factory=list)
+    formal: bool = True
 
     @property
     def budget(self) -> MeasurementBudget:
@@ -90,6 +106,27 @@ class Workload:
     @property
     def shape_key(self) -> str:
         return f"m{self.m}_n{self.n}_k{self.k}"
+
+    @property
+    def is_decision_boundary(self) -> bool:
+        return self.category == "decision_boundary" or self.group == "decision_boundary"
+
+    def selection_input(self) -> dict[str, Any]:
+        """Label-free shape/candidate input for future compiler selection.
+
+        Evaluation labels such as expected_region, measured winner,
+        classifications, and oracle latency intentionally do not appear here.
+        """
+        return {
+            "workload_id": self.workload_id,
+            "m": self.m,
+            "n": self.n,
+            "k": self.k,
+            "dtype": self.dtype,
+            "patterns": list(self.patterns),
+            "backend_eligibility": list(self.backend_eligibility),
+            "profile_role": self.profile_role,
+        }
 
 
 def postop_shape_for(pattern: str, m: int, n: int) -> list[int]:
@@ -120,6 +157,13 @@ def _validate_workload_entry(entry: dict[str, Any]) -> Workload:
         held_out=bool(entry.get("held_out", False)),
         status=entry.get("status", "active"),
         skip_reason=entry.get("skip_reason"),
+        group=entry.get("group"),
+        subgroup=entry.get("subgroup"),
+        benchmark_purpose=entry.get("benchmark_purpose", "fusion_coverage"),
+        profile_role=entry.get("profile_role"),
+        expected_region=entry.get("expected_region"),
+        backend_eligibility=list(entry.get("backend_eligibility", [])),
+        formal=bool(entry.get("formal", True)),
     )
     for dim_name, dim in (("m", workload.m), ("n", workload.n), ("k", workload.k)):
         if not isinstance(dim, int) or isinstance(dim, bool) or dim <= 0:
@@ -132,6 +176,23 @@ def _validate_workload_entry(entry: dict[str, Any]) -> Workload:
         raise ValueError(f"workload {workload.workload_id}: invalid patterns {workload.patterns}")
     if workload.status not in VALID_STATUSES:
         raise ValueError(f"workload {workload.workload_id}: invalid status {workload.status}")
+    if workload.is_decision_boundary:
+        if workload.benchmark_purpose != "kernel_selection":
+            raise ValueError(
+                f"workload {workload.workload_id}: decision-boundary workloads require benchmark_purpose=kernel_selection"
+            )
+        if workload.profile_role != "decision_boundary":
+            raise ValueError(
+                f"workload {workload.workload_id}: decision-boundary workloads require profile_role=decision_boundary"
+            )
+        if workload.expected_region not in VALID_BOUNDARY_EXPECTED_REGIONS:
+            raise ValueError(
+                f"workload {workload.workload_id}: invalid expected_region={workload.expected_region!r}"
+            )
+        if "triton_cuda" not in workload.backend_eligibility:
+            raise ValueError(
+                f"workload {workload.workload_id}: decision-boundary workloads require triton_cuda eligibility"
+            )
     if workload.status == "skipped_resource_limit" and not workload.skip_reason:
         raise ValueError(
             f"workload {workload.workload_id}: skipped workloads require a structured skip_reason"
@@ -163,6 +224,14 @@ def load_manifest(path: Path | str) -> list[Workload]:
     if not workloads:
         raise ValueError("manifest contains no workloads")
     return workloads
+
+
+def canonical_workloads(workloads: Sequence[Workload]) -> list[Workload]:
+    return [workload for workload in workloads if not workload.is_decision_boundary]
+
+
+def decision_boundary_workloads(workloads: Sequence[Workload]) -> list[Workload]:
+    return [workload for workload in workloads if workload.is_decision_boundary]
 
 
 def static_cost(pattern: str, m: int, n: int, k: int, dtype: str = "f32") -> dict[str, Any]:

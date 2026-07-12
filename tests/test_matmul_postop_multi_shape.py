@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from matmul_postop_workloads import (  # noqa: E402
+    canonical_workloads,
+    decision_boundary_workloads,
     geometric_mean,
     load_manifest,
     postop_shape_for,
@@ -63,7 +65,21 @@ def expect_manifest_failure(workloads: list[dict]) -> None:
 def main() -> int:
     manifest = load_manifest(ROOT / "benchmarks/matmul_postop_workloads.json")
     assert manifest
-    assert sum(1 for w in manifest if w.held_out) >= len(manifest) * 0.2
+    canonical = canonical_workloads(manifest)
+    boundary = decision_boundary_workloads(manifest)
+    assert len(canonical) == 33
+    assert len(boundary) >= 6
+    assert sum(1 for w in canonical if w.held_out) >= len(canonical) * 0.2
+    assert all(w.patterns == ["bias"] for w in boundary)
+    assert all(w.dtype == "f32" for w in boundary)
+    assert all("triton_cuda" in w.backend_eligibility for w in boundary)
+    assert {w.expected_region for w in boundary} >= {"v1_win", "tie", "v3_win"}
+    for workload in boundary:
+        selection_input = workload.selection_input()
+        assert "expected_region" not in selection_input
+        assert "measured_winner" not in selection_input
+        assert "final_classification" not in selection_input
+        assert "oracle_latency" not in selection_input
 
     expect_manifest_failure([base_workload(), base_workload()])
     expect_manifest_failure([base_workload(m=0)])

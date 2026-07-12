@@ -10,6 +10,14 @@
     "cuda"
   ],
   "truthBoundary": "declared_device_profile_not_measured_silicon_performance",
+  "hardwareExecutionProfile": {
+    "physicalComputeUnits": 16,
+    "effectiveComputeUnits": 16,
+    "maxConcurrentWorkItemsPerUnit": 1,
+    "supportsLatencyHiding": true,
+    "localMemoryKind": "software_managed_shared_memory",
+    "truthBoundary": "declared_execution_profile_from_gtx1650_maxq_tu117_public_specs_and_current_triton_selector_compatibility"
+  },
   "staticCostProfile": {
     "peakFlopsFp32": 2.46e12,
     "peakFlopsFp16": 4.92e12,

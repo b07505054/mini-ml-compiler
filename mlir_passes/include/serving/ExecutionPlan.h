@@ -105,12 +105,113 @@ struct PerOpDecisionBundle {
   std::optional<QuantizationCoDesign> quantization_codesign;
 };
 
+// ---------------------------------------------------------------------------
+// Dispatch units (Phase 26, CV full-graph functions only).
+//
+// A DispatchUnit is the runtime-consumable execution granule: one GenericGraphIR
+// source node (or a materialized fusion of several) together with all helper
+// MLIR ops (tensor.empty / linalg.fill / scalar constants / pads) emitted while
+// lowering it. Helper ops never appear as top-level runtime decisions; they are
+// internal implementation detail of their unit.
+// ---------------------------------------------------------------------------
+
+// Backend intent basis vocabulary (Phase 26 truth model):
+//   "configured_preference" — declared target-profile policy, not validated
+//   "capability_validated"  — op-level capability match performed
+//   "analytically_selected" — static cost model chose among validated options
+//   "measured_selected"     — measured evidence chose the backend
+//   "unavailable"           — no backend intent could be formed
+struct DispatchBackendIntent {
+  std::string backend;        // "coreml" | "metal" | "cpu" | ...
+  std::string intent_basis;   // vocabulary above
+};
+
+// Kernel status vocabulary (Phase 26 truth model):
+//   "runtime_registered" — a concrete runtime kernel descriptor matched
+//   "library_available"  — third-party library capability declared, no descriptor
+//   "lowering_only"      — analytic lowering path exists, no kernel claim
+//   "deferred"           — selection explicitly deferred with a reason
+//   "fallback_only"      — only an alternative-backend fallback was planned
+//   "unavailable"        — nothing dispatchable or plannable exists
+struct DispatchUnit {
+  std::string              dispatch_unit_id;        // "du_42"
+  std::vector<int64_t>     source_graph_node_ids;   // GenericGraphIR node ids
+  std::vector<int64_t>     source_imported_node_ids;// ImportedGraphIR node ids
+  std::vector<std::string> source_onnx_node_names;  // "/model.0/conv/Conv"
+  std::string              source_op_type;          // ONNX op type, "Conv"
+  std::string              operation_family;        // generic op, "nn.conv2d"
+  std::string              semantic_region_id;      // "" when not in a CV region
+  // Positional references into the annotated MLIR function body
+  // ("op_<index>:<mlir_op_name>"), for diagnostics only.
+  std::vector<std::string> mlir_operation_refs;
+  std::vector<std::string> input_tensor_ids;
+  std::vector<std::string> output_tensor_ids;
+  std::vector<std::string> initializer_tensor_ids;
+  DispatchBackendIntent    backend_intent;
+  std::string              execution_domain;        // "unassigned" until validated
+  std::string              kernel_status;           // vocabulary above
+  std::string              selected_kernel_id;      // "" unless runtime_registered
+  std::vector<std::string> fallback_backends;
+  std::string              dtype;
+  std::string              layout;
+  int64_t                  estimated_compute_flops = 0;   // 0 = no estimate
+  int64_t                  estimated_read_bytes = 0;
+  int64_t                  estimated_write_bytes = 0;
+  int64_t                  workspace_bytes = 0;           // no kernel contracts yet
+  std::string              decision_provenance;     // source passes / attrs
+  bool                     executable = false;
+  std::string              non_executable_reason;   // "" when executable
+};
+
+// Per-op classification reconciliation for one CV function. Every top-level
+// MLIR op receives exactly one classification; the totals must reconcile.
+struct DispatchOpClassification {
+  int64_t total_mlir_operations = 0;
+  int64_t dispatch_root = 0;
+  int64_t dispatch_internal_compute = 0;
+  int64_t tensor_contract_operation = 0;
+  int64_t allocation_helper = 0;
+  int64_t scalar_helper = 0;
+  int64_t view_operation = 0;
+  int64_t non_dispatch_metadata = 0;
+  int64_t unresolved = 0;
+  int64_t operations_assigned_to_units = 0;
+  int64_t source_graph_node_count = 0;
+};
+
+// Typed tensor binding ABI (Phase 26). Distinguishes the model image input
+// from initializers/weights/biases and identifies outputs, so a runtime can
+// bind tensors without out-of-band knowledge. Weights are NOT embedded; the
+// model artifact reference locates them.
+struct TensorBinding {
+  std::string          tensor_id;        // "arg_0", "result_0"
+  std::string          original_name;    // "images", "model.0.conv.weight"
+  std::string          source_value_id;  // GenericGraphIR value name
+  // role: model_input | initializer | weight | bias | shape_constant |
+  //       temporary | model_output
+  std::string          role;
+  int64_t              argument_index = -1;  // -1 when not a function argument
+  std::vector<int64_t> shape;
+  std::string          dtype;
+  std::string          layout;
+  int64_t              byte_size = 0;
+  // ownership: caller | model_state | runtime | dispatch_unit
+  std::string          ownership;
+  bool                 is_mutable = false;
+  std::string          external_data_reference;   // "" — weights live in model file
+  std::string          model_artifact_reference;  // "models/yolo-seg.onnx"
+};
+
 // Plan for one serving function (prefill or decode).
 struct FunctionPlan {
   std::string                      function_name;   // "qwen_prefill", "qwen_decode"
   ServingPhase                     serving_phase;   // reuses existing ServingPhase enum
   BackendDecision                  backend;
   std::vector<PerOpDecisionBundle> per_op_decisions;
+  // Phase 26: populated only for CV full-graph functions; empty for LLM
+  // functions, whose plans stay byte-identical.
+  std::vector<DispatchUnit>               dispatch_units;
+  std::optional<DispatchOpClassification> op_classification;
 };
 
 struct TensorContract {
@@ -129,6 +230,56 @@ struct CVSemanticRegion {
   std::vector<std::string> feature_scales;
 };
 
+// Corrected memory metrics (Phase 26). The legacy estimated_temporary_bytes
+// field was cumulative SSA-result write volume — NOT peak live memory — and is
+// preserved for schema compatibility with an explicit deprecated definition.
+struct CVMemorySummary {
+  int64_t model_input_bytes = 0;             // model image inputs only
+  int64_t initializer_bytes = 0;             // weights/biases/constants as args
+  int64_t model_output_bytes = 0;
+  // Cumulative static byte size of intermediate SSA tensor results that are
+  // not function outputs (no deduplication across empty/fill/compute chains).
+  int64_t total_intermediate_tensor_bytes = 0;
+  // Cumulative static write volume: every top-level op result, incl. outputs.
+  int64_t total_intermediate_write_bytes = 0;
+  // Static lifetime-scan peak of concurrently live temporaries
+  // (Phase 23 algorithm; no slot allocation, no runtime validation).
+  int64_t peak_live_temporary_bytes = 0;
+  int64_t workspace_bytes = 0;               // no kernel workspace contracts yet
+  std::optional<int64_t> planned_slot_bytes; // absent until a slot allocator exists
+  std::string truth_boundary;
+};
+
+// Runtime-facing CV postprocess contract (Phase 26). Describes what the
+// runtime must do beyond the model output boundary; never invents thresholds
+// or algorithms the compiler has not proven.
+struct CVPostprocessContract {
+  std::string detection_tensor_id;
+  std::vector<int64_t> detection_shape;
+  std::string prototype_tensor_id;
+  std::vector<int64_t> prototype_shape;
+  // Channel decomposition of the detection tensor, traced from static
+  // insert_slice offsets. Empty when the trace failed.
+  struct ChannelGroup {
+    int64_t     channel_start = 0;
+    int64_t     channel_count = 0;
+    std::string semantic;          // "box_regression" | "class_scores" | "mask_coefficients"
+    std::string source_region_id;  // "" when untraced
+  };
+  std::vector<ChannelGroup> detection_channel_groups;
+  // [-1,-1] when unproven; otherwise [start, end) channel range of mask
+  // coefficients within the detection tensor.
+  int64_t mask_coefficient_channel_start = -1;
+  int64_t mask_coefficient_channel_end = -1;
+  std::string nms_required;            // "true" | "false" | "unknown"
+  bool mask_decode_required = false;
+  // "runtime_required" | "external_framework_required" | "implemented" | "unavailable"
+  std::string implementation_status;
+  std::string expected_output_semantics;
+  std::string confidence;
+  std::string provenance;
+};
+
 struct CVPlanExtension {
   std::string                    model_family;
   std::string                    function_name;
@@ -142,6 +293,9 @@ struct CVPlanExtension {
   int64_t                        estimated_total_tensor_bytes = 0;
   std::string                    postprocess_boundary;
   std::string                    truth_boundary;
+  // Phase 26 additions; optional so pre-Phase-26 plans stay serializable.
+  std::optional<CVMemorySummary>       memory_summary;
+  std::optional<CVPostprocessContract> postprocess_contract;
 };
 
 // ExecutionPlan — the canonical compiler output.
@@ -156,6 +310,8 @@ struct ExecutionPlan {
   GlobalDecisions             global_decisions;
   std::vector<FunctionPlan>   function_plans;
   std::optional<CVPlanExtension> cv_extension;
+  // Phase 26: typed tensor ABI. Empty for LLM plans (byte-stable Qwen output).
+  std::vector<TensorBinding>  tensor_bindings;
 };
 
 } // namespace mlir::hir

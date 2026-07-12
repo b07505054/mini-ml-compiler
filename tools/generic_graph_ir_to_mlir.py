@@ -369,6 +369,159 @@ def _source_comment(node: dict[str, Any]) -> str:
     )
 
 
+PROVENANCE_CONTRACT = "generic_emitter_source_attrs_v1"
+
+# Op roles for dispatch-unit grouping (Phase 26). Every top-level emitted op
+# receives exactly one role; helper ops never become runtime dispatch units.
+_ROLE_DISPATCH_ROOT = "dispatch_root"
+_ROLE_INTERNAL = "dispatch_internal_compute"
+_ROLE_TENSOR_CONTRACT = "tensor_contract_operation"
+_ROLE_ALLOCATION = "allocation_helper"
+_ROLE_SCALAR = "scalar_helper"
+_ROLE_VIEW = "view_operation"
+
+_DEF_LINE_RE = re.compile(r"^    (%[A-Za-z0-9_$.\-]+) = ([a-z_]+\.[a-z0-9_.]+)")
+
+
+def _escape_attr_string(text: str) -> str:
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _op_role(mnemonic: str, is_root: bool) -> str:
+    if is_root:
+        return _ROLE_DISPATCH_ROOT
+    if mnemonic in ("tensor.empty", "linalg.fill"):
+        return _ROLE_ALLOCATION
+    if mnemonic == "arith.constant":
+        return _ROLE_SCALAR
+    if mnemonic == "tensor.pad":
+        return _ROLE_TENSOR_CONTRACT
+    if mnemonic == "tensor.insert_slice":
+        # Non-final concat inserts perform real writes into the output buffer.
+        return _ROLE_INTERNAL
+    if mnemonic in (
+        "tensor.extract_slice",
+        "tensor.collapse_shape",
+        "tensor.expand_shape",
+        "tensor.cast",
+        "tensor.generate",
+    ):
+        return _ROLE_VIEW
+    if mnemonic.startswith("linalg."):
+        return _ROLE_INTERNAL
+    return "unresolved"
+
+
+def _provenance_attr_text(node: dict[str, Any], role: str) -> str:
+    node_id = node.get("id")
+    imported_id = node.get("source_node_id", node_id)
+    return (
+        f"source.graph_node_id = {node_id} : i64, "
+        f"source.imported_node_id = {imported_id} : i64, "
+        f'source.op_type = "{_escape_attr_string(str(node.get("source_op_type", "")))}", '
+        f'source.generic_op = "{_escape_attr_string(str(node.get("op", "")))}", '
+        f'source.onnx_name = "{_escape_attr_string(str(node.get("source_name", "")))}", '
+        f'source.dispatch_group = "dg_{node_id}", '
+        f'source.op_role = "{role}"'
+    )
+
+
+def _inject_before_last_type_colon(line: str, attr_text: str) -> str:
+    index = line.rfind(" : ")
+    if index < 0:
+        raise GenericGraphIRToMLIRError(
+            f"internal error: cannot place provenance attrs on line: {line.strip()}"
+        )
+    return line[:index] + " {" + attr_text + "}" + line[index:]
+
+
+def _attach_provenance(
+    lines: list[str],
+    node: dict[str, Any],
+    root_ssa_names: set[str],
+) -> list[str]:
+    """Attach source.* provenance attrs to every top-level op emitted for one node.
+
+    The emitted-line grammar is fully owned by this file, so placement is
+    resolved per op mnemonic. Region-carrying ops (tensor.pad, tensor.generate)
+    receive their attr-dict on the region-close line, which is where MLIR
+    expects it.
+    """
+    annotated: list[str] = []
+    pending_close: str | None = None  # attr text awaiting a region-close line
+    for line in lines:
+        if pending_close is not None and line.startswith("    } : "):
+            annotated.append("    } {" + pending_close + "}" + line[len("    }"):])
+            pending_close = None
+            continue
+        match = _DEF_LINE_RE.match(line)
+        if match is None:
+            annotated.append(line)
+            continue
+        ssa_name, mnemonic = match.group(1), match.group(2)
+        role = _op_role(mnemonic, ssa_name in root_ssa_names)
+        attr_text = _provenance_attr_text(node, role)
+        if mnemonic == "arith.constant":
+            annotated.append(
+                line.replace("arith.constant ", "arith.constant {" + attr_text + "} ", 1)
+            )
+        elif mnemonic == "tensor.empty":
+            annotated.append(
+                line.replace("tensor.empty() : ", "tensor.empty() {" + attr_text + "} : ", 1)
+            )
+        elif mnemonic == "linalg.fill":
+            annotated.append(
+                line.replace("linalg.fill ins(", "linalg.fill {" + attr_text + "} ins(", 1)
+            )
+        elif mnemonic in ("linalg.conv_2d_nchw_fchw", "linalg.pooling_nchw_max"):
+            annotated.append(line.replace("} ins(", ", " + attr_text + "} ins(", 1))
+        elif mnemonic == "linalg.transpose":
+            annotated.append(line + " {" + attr_text + "}")
+        elif mnemonic == "linalg.generic":
+            if not line.rstrip().endswith("linalg.generic {"):
+                raise GenericGraphIRToMLIRError(
+                    f"internal error: unexpected linalg.generic line: {line.strip()}"
+                )
+            annotated.append(line + attr_text + ",")
+        elif mnemonic in ("tensor.pad", "tensor.generate"):
+            annotated.append(line)
+            pending_close = attr_text
+        elif mnemonic in (
+            "tensor.extract_slice",
+            "tensor.insert_slice",
+            "tensor.collapse_shape",
+            "tensor.expand_shape",
+            "tensor.cast",
+        ):
+            annotated.append(_inject_before_last_type_colon(line, attr_text))
+        else:
+            raise GenericGraphIRToMLIRError(
+                f"internal error: no provenance placement rule for op '{mnemonic}'"
+            )
+    if pending_close is not None:
+        raise GenericGraphIRToMLIRError(
+            "internal error: region-close line for provenance attrs not found"
+        )
+    return annotated
+
+
+def _argument_roles(graph_ir: dict[str, Any]) -> dict[str, str]:
+    """Classify every function argument: model_input, weight, bias, initializer."""
+    roles: dict[str, str] = {}
+    graph = graph_ir.get("graph", {})
+    for name in graph.get("inputs", []):
+        if isinstance(name, str):
+            roles[name] = "model_input"
+    for node in graph_ir.get("nodes", []):
+        if node.get("op") in ("nn.conv2d", "nn.conv_transpose2d"):
+            inputs = [n for n in node.get("inputs", []) if isinstance(n, str)]
+            if len(inputs) >= 2:
+                roles.setdefault(inputs[1], "weight")
+            if len(inputs) >= 3:
+                roles.setdefault(inputs[2], "bias")
+    return roles
+
+
 def _emit_binary(
     node: dict[str, Any],
     records: dict[str, dict[str, Any]],
@@ -1236,10 +1389,15 @@ def _validate_emitter_subset(graph_ir: dict[str, Any]) -> None:
         )
 
 
-def emit_mlir(graph_ir: dict[str, Any], allow_partial: bool = False) -> str:
+def emit_mlir(
+    graph_ir: dict[str, Any],
+    allow_partial: bool = False,
+    model_artifact: str | None = None,
+) -> str:
     _validate_emitter_subset(graph_ir)
     records = _record_map(graph_ir)
     producers = _node_by_output(graph_ir)
+    argument_roles = _argument_roles(graph_ir)
     graph = graph_ir.get("graph", {})
     graph_inputs = list(graph.get("inputs", []))
     graph_outputs = list(graph.get("outputs", []))
@@ -1261,13 +1419,19 @@ def emit_mlir(graph_ir: dict[str, Any], allow_partial: bool = False) -> str:
     used_ssa: set[str] = set()
     ssa: dict[str, str] = {}
     arg_parts = []
-    for input_name in external_arg_names:
+    for arg_index, input_name in enumerate(external_arg_names):
         record = records.get(input_name)
         if record is None:
             raise GenericGraphIRToMLIRError(f"graph input '{input_name}' has no value metadata")
         value = _ssa_name(input_name, used_ssa)
         ssa[input_name] = value
-        arg_parts.append(f"{value}: {_mlir_tensor_type(record)}")
+        arg_role = argument_roles.get(input_name, "initializer")
+        arg_attrs = (
+            f'source.name = "{_escape_attr_string(input_name)}", '
+            f'source.arg_role = "{arg_role}", '
+            f"source.arg_index = {arg_index} : i64"
+        )
+        arg_parts.append(f"{value}: {_mlir_tensor_type(record)} {{{arg_attrs}}}")
 
     return_types = []
     for output_name in graph_outputs:
@@ -1276,10 +1440,15 @@ def emit_mlir(graph_ir: dict[str, Any], allow_partial: bool = False) -> str:
             raise GenericGraphIRToMLIRError(f"graph output '{output_name}' has no value metadata")
         return_types.append(_mlir_tensor_type(record))
 
+    module_attrs = [f'source.provenance_contract = "{PROVENANCE_CONTRACT}"']
+    if model_artifact:
+        module_attrs.append(
+            f'source.model_artifact = "{_escape_attr_string(model_artifact)}"'
+        )
     lines = [
         "// Generated from GenericGraphIR v0.",
         f"// truth_boundary={TRUTH_BOUNDARY_COMMENT}",
-        "module {",
+        "module attributes {" + ", ".join(module_attrs) + "} {",
         f"  func.func @{_sanitize_symbol(str(graph.get('name', 'graph')))}("
         + ", ".join(arg_parts)
         + ") -> "
@@ -1312,7 +1481,11 @@ def emit_mlir(graph_ir: dict[str, Any], allow_partial: bool = False) -> str:
             if not outputs:
                 raise GenericGraphIRToMLIRError("nn.split requires at least one output")
             output_ssas = [_ssa_name(output, used_ssa) for output in outputs]
-            lines.extend(_emit_split(node, records, ssa, output_ssas))
+            lines.extend(
+                _attach_provenance(
+                    _emit_split(node, records, ssa, output_ssas), node, set(output_ssas)
+                )
+            )
             for output_name, output_ssa in zip(outputs, output_ssas):
                 ssa[output_name] = output_ssa
             continue
@@ -1321,31 +1494,32 @@ def emit_mlir(graph_ir: dict[str, Any], allow_partial: bool = False) -> str:
             raise GenericGraphIRToMLIRError(f"emitter v0 requires one output for op '{op}'")
         output_ssa = _ssa_name(outputs[0], used_ssa)
         if op == "nn.constant":
-            lines.extend(_emit_constant(node, records, output_ssa))
+            node_lines = _emit_constant(node, records, output_ssa)
         elif op == "nn.conv2d":
-            lines.extend(_emit_conv2d(node, records, ssa, output_ssa))
+            node_lines = _emit_conv2d(node, records, ssa, output_ssa)
         elif op == "nn.conv_transpose2d":
-            lines.extend(_emit_conv_transpose2d(node, records, ssa, output_ssa))
+            node_lines = _emit_conv_transpose2d(node, records, ssa, output_ssa)
         elif op in BINARY_ARITH:
-            lines.extend(_emit_binary(node, records, ssa, output_ssa))
+            node_lines = _emit_binary(node, records, ssa, output_ssa)
         elif op in {"nn.relu", "nn.sigmoid"}:
-            lines.extend(_emit_unary(node, records, ssa, output_ssa))
+            node_lines = _emit_unary(node, records, ssa, output_ssa)
         elif op == "nn.reshape":
-            lines.extend(_emit_reshape(node, records, ssa, output_ssa))
+            node_lines = _emit_reshape(node, records, ssa, output_ssa)
         elif op == "nn.maxpool2d":
-            lines.extend(_emit_maxpool2d(node, records, ssa, output_ssa))
+            node_lines = _emit_maxpool2d(node, records, ssa, output_ssa)
         elif op == "nn.softmax":
-            lines.extend(_emit_softmax(node, records, ssa, output_ssa))
+            node_lines = _emit_softmax(node, records, ssa, output_ssa)
         elif op == "nn.transpose":
-            lines.extend(_emit_transpose(node, records, ssa, output_ssa))
+            node_lines = _emit_transpose(node, records, ssa, output_ssa)
         elif op == "nn.resize":
-            lines.extend(_emit_resize(node, records, ssa, output_ssa))
+            node_lines = _emit_resize(node, records, ssa, output_ssa)
         elif op == "nn.slice":
-            lines.extend(_emit_slice(node, records, ssa, output_ssa))
+            node_lines = _emit_slice(node, records, ssa, output_ssa)
         elif op == "nn.concat":
-            lines.extend(_emit_concat(node, records, ssa, output_ssa))
+            node_lines = _emit_concat(node, records, ssa, output_ssa)
         else:
             raise GenericGraphIRToMLIRError(f"internal error: unsupported op '{op}'")
+        lines.extend(_attach_provenance(node_lines, node, {output_ssa}))
         ssa[outputs[0]] = output_ssa
 
     missing_returns = [name for name in graph_outputs if name not in ssa and name in producers]
@@ -1373,13 +1547,17 @@ def main() -> int:
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--allow-partial", action="store_true",
                         help="Emit comments for unsupported nodes when possible.")
+    parser.add_argument("--model-artifact", default=None,
+                        help="Model artifact reference (e.g. models/yolo-seg.onnx) "
+                             "stamped as a module attribute for runtime weight binding.")
     args = parser.parse_args()
 
     try:
         graph_ir = json.loads(args.input_path.read_text(encoding="utf-8"))
         if not isinstance(graph_ir, dict):
             raise GenericGraphIRToMLIRError("root JSON value must be an object")
-        mlir_text = emit_mlir(graph_ir, allow_partial=args.allow_partial)
+        mlir_text = emit_mlir(graph_ir, allow_partial=args.allow_partial,
+                              model_artifact=args.model_artifact)
     except (OSError, json.JSONDecodeError, GenericGraphIRToMLIRError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
