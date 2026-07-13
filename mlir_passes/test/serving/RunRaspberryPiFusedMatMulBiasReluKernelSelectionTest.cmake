@@ -12,6 +12,13 @@
 # hir.fused_matmul_bias_relu op it targets, and that no other capability was
 # fabricated (the two upstream weight/bias producer ops must NOT get a
 # kernel selected).
+#
+# Phase P1C.1: the profile's default candidate changed from
+# bm32_bn32_bk32 to bm32_bn128_bk32 (evidence-backed low-regret static
+# default, see DOC/result/P1C1_*.md) -- this test's expected selected_kernel
+# was updated to match. It still proves the SAME thing: the declared default
+# candidate is actually selected end to end, and no other op gets a
+# fabricated selection.
 
 execute_process(
   COMMAND "${TOOL}"
@@ -47,8 +54,9 @@ macro(assert_contains _needle)
   endif()
 endmacro()
 
-# The declared kernel must be selected for the fused op.
-assert_contains("\"selected_kernel\": \"portable_fused_matmul_bias_relu_bm32_bn32_bk32\"")
+# The declared default kernel must be selected for the fused op (P1C.1:
+# bm32_bn128_bk32, previously bm32_bn32_bk32).
+assert_contains("\"selected_kernel\": \"portable_fused_matmul_bias_relu_bm32_bn128_bk32\"")
 assert_contains("\"status\": \"selected\"")
 assert_contains("\"hir.fused_matmul_bias_relu\"")
 assert_contains("\"hardware_profile_ref\": \"raspberry-pi5-cortex-a76-cpu\"")

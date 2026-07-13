@@ -9,6 +9,20 @@
   },
   "runtimeKernels": [
     {
+      "kernelId": "portable_fused_matmul_bias_relu_bm32_bn128_bk32",
+      "opName": "fused_matmul_bias_relu",
+      "backend": "cpu",
+      "supportedDtypes": ["f32"],
+      "supportedQuantModes": ["none"],
+      "supportedLayouts": [],
+      "supportedTileShapes": [],
+      "requiresStaticShape": true,
+      "requiresLocalMemoryBytes": 0,
+      "source": "handwritten_runtime",
+      "implementationRef": "heterogeneous-inference-runtime: native/cpu_kernels/portable_fused_matmul_bias_relu.cpp (candidate bm32_bn128_bk32, N-dominant rectangular)",
+      "truthBoundary": "p1c1_low_regret_static_default_selected_via_calibration_only_offline_analysis_dispatch_validated_on_raspberry_pi_see_doc_p1c1_report_not_a_shape_aware_decision_not_a_universal_optimum"
+    },
+    {
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn32_bk32",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
@@ -20,7 +34,7 @@
       "requiresLocalMemoryBytes": 0,
       "source": "handwritten_runtime",
       "implementationRef": "heterogeneous-inference-runtime: native/cpu_kernels/portable_fused_matmul_bias_relu.cpp (candidate bm32_bn32_bk32) + deployment/execution_plan/path_builder.py:_portable_cpu_fused_matmul_bias_relu_path",
-      "truthBoundary": "handwritten_kernel_source_in_sibling_repo_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance"
+      "truthBoundary": "handwritten_kernel_source_in_sibling_repo_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance_no_longer_the_default_as_of_p1c1_see_doc_p1c1_report"
     },
     {
       "kernelId": "portable_fused_matmul_bias_relu_bm48_bn48_bk48",
@@ -79,20 +93,6 @@
       "truthBoundary": "p1c_candidate_m_dominant_rectangular_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance_in_this_declaration"
     },
     {
-      "kernelId": "portable_fused_matmul_bias_relu_bm32_bn128_bk32",
-      "opName": "fused_matmul_bias_relu",
-      "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
-      "supportedLayouts": [],
-      "supportedTileShapes": [],
-      "requiresStaticShape": true,
-      "requiresLocalMemoryBytes": 0,
-      "source": "handwritten_runtime",
-      "implementationRef": "heterogeneous-inference-runtime: native/cpu_kernels/portable_fused_matmul_bias_relu.cpp (candidate bm32_bn128_bk32, N-dominant rectangular)",
-      "truthBoundary": "p1c_candidate_n_dominant_rectangular_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance_in_this_declaration"
-    },
-    {
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn32_bk128",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
@@ -121,5 +121,5 @@
       "truthBoundary": "p1c_candidate_exceeds_l1d_fits_l2_deep_k_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance_in_this_declaration"
     }
   ],
-  "runtimeKernelsNote": "kernel_selection_contract_v1 registry, extended in Phase P1C from the single P1B baseline candidate to a frozen 8-candidate tile/schedule family for the same fused_matmul_bias_relu op (identical semantics, dtype f32, backend cpu, one thread, same compiler flags -- only block_m/block_n/block_k differ; see DOC/result/P1C_*.md for the full working-set-vs-Cortex-A76-cache rationale). bm32_bn32_bk32 remains declared FIRST for exact backward compatibility with the accepted P1B behavior. IMPORTANT, VERIFIED ARCHITECTURAL LIMITATION (audited in Phase P1C, not fabricated): KernelSelectionPass matches candidates on (op_name, backend, dtype, quant_mode, layout, tile-plan, local-memory) and picks the FIRST full match in declaration order, short-circuiting the search -- it has NO signal that varies with an op's concrete (M,N,K) shape, so it cannot and does not perform shape-aware or cache-aware candidate selection today. Declaring a supportedTileShapes constraint per candidate would not fix this: TilePlanningPass never produces a tile plan on this profile (staticCostProfile.localMemoryBytes is deliberately undeclared, per the P1A decision that this Cortex-A76's hardware-managed cache is not a software-managed scratchpad), so every candidate's tile-shape check would defer (deferred_missing_tile_plan) rather than select. Consequently: for ANY workload shape, this profile's live compiler selection is, and will remain, bm32_bn32_bk32 -- the other 7 candidates are declared (so Runtime can recognize and dispatch them, and so P1C's oracle/regret measurement can invoke them directly) but are NOT reachable through today's live KernelSelectionPass for any input shape. The candidate-space discovery, oracle comparison, and any calibrated-policy evaluation in Phase P1C were therefore performed by invoking Runtime directly with each declared candidate ID, the same methodology Phase 1/R1's CPU schedule-discovery tool already used, independent of live compiler selection. This is a real, verified gap, documented here rather than worked around by fabricating shape-aware pass logic in this phase. The schema/pass also cannot retain 'candidates considered but not selected' when a match succeeds (the match loop breaks on the first full match), so only the winning descriptor's identity is ever exported in kernel_selection.* -- also documented here rather than fabricated. ml-platform-capabilities is not consulted by this declaration (existing architectural bypass predating P1B, unchanged here)."
+  "runtimeKernelsNote": "kernel_selection_contract_v1 registry, extended in Phase P1C from the single P1B baseline candidate to a frozen 8-candidate tile/schedule family for the same fused_matmul_bias_relu op (identical semantics, dtype f32, backend cpu, one thread, same compiler flags -- only block_m/block_n/block_k differ; see DOC/result/P1C_*.md for the full working-set-vs-Cortex-A76-cache rationale). IMPORTANT, VERIFIED ARCHITECTURAL LIMITATION (audited in Phase P1C, not fabricated, re-confirmed unchanged in P1C.1): KernelSelectionPass matches candidates on (op_name, backend, dtype, quant_mode, layout, tile-plan, local-memory) and picks the FIRST full match in declaration order, short-circuiting the search -- it has NO signal that varies with an op's concrete (M,N,K) shape, so it cannot and does not perform shape-aware or cache-aware candidate selection today. Declaring a supportedTileShapes constraint per candidate would not fix this: TilePlanningPass never produces a tile plan on this profile (staticCostProfile.localMemoryBytes is deliberately undeclared, per the P1A decision that this Cortex-A76's hardware-managed cache is not a software-managed scratchpad), so every candidate's tile-shape check would defer (deferred_missing_tile_plan) rather than select. Consequently, declaration ORDER is the only lever this compiler has for choosing a default on this profile. PHASE P1C.1 CHANGE: bm32_bn128_bk32 is now declared FIRST (previously bm32_bn32_bk32). This is an evidence-backed LOW-REGRET STATIC DEFAULT change, not a dynamic or shape-aware selector: P1C's Raspberry Pi measurement (432/432 correct, 3 independent performance-governor-pinned sessions, 19 held-out+calibration timed workloads) found bm32_bn128_bk32 has the lowest mean-of-medians latency and the most raw wins both across the full dataset AND when the ranking is restricted to calibration-only workloads (13/24 wins, re-verified in the P1C.1 leakage review -- the choice does not depend on held-out labels), and achieves 0.078% mean regret against the measured oracle on held-out workloads (vs 3.889% mean regret for the previous bm32_bn32_bk32 default) -- see DOC/result/P1C1_*.md. Zero of 17 measured workloads met the pre-registered stable-winner bar (same winner in all 3 sessions with >=5% margin): this remains an aggregate low-regret static preference, not a demonstrated per-shape decision boundary, and not a claim of universal optimality for every possible shape. For ANY workload shape, this profile's live compiler selection is, and will remain, bm32_bn128_bk32 -- the other 7 candidates (including the former default, bm32_bn32_bk32) stay declared so Runtime can still recognize and dispatch them by exact ID, and so future oracle/regret work can still invoke them directly, the same methodology Phase 1/R1's CPU schedule-discovery tool used, independent of live compiler selection. The schema/pass also cannot retain 'candidates considered but not selected' when a match succeeds (the match loop breaks on the first full match), so only the winning descriptor's identity is ever exported in kernel_selection.* -- documented here rather than fabricated. ml-platform-capabilities is not consulted by this declaration (existing architectural bypass predating P1B, unchanged here)."
 }
