@@ -28,6 +28,7 @@
 
 #include "serving/OpShapeFacts.h"
 #include "serving/ImplementationCandidate.h"
+#include "serving/PortableCPUProvider.h"
 #include "FusionPasses.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -39,6 +40,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace mlir::hir {
@@ -329,111 +331,47 @@ static bool safeMul3(int64_t a, int64_t b, int64_t c, int64_t& out) {
   return true;
 }
 
-static std::optional<TileCandidateSpec> parseTileIdentityFromKernelId(
-    StringRef kernelId) {
-  auto readPart = [&](StringRef marker) -> std::optional<int64_t> {
-    size_t pos = kernelId.find(marker);
-    if (pos == StringRef::npos)
-      return std::nullopt;
-    pos += marker.size();
-    int64_t value = 0;
-    bool sawDigit = false;
-    while (pos < kernelId.size() && kernelId[pos] >= '0' &&
-           kernelId[pos] <= '9') {
-      sawDigit = true;
-      value = value * 10 + (kernelId[pos] - '0');
-      ++pos;
-    }
-    if (!sawDigit)
-      return std::nullopt;
-    return value;
-  };
-  auto bm = readPart("bm");
-  auto bn = readPart("bn");
-  auto bk = readPart("bk");
-  if (!bm || !bn || !bk)
-    return std::nullopt;
-  TileCandidateSpec tile;
-  tile.present = true;
-  tile.blockM = *bm;
-  tile.blockN = *bn;
-  tile.blockK = *bk;
-  return tile;
-}
-
-static std::string tileIdentity(const TileCandidateSpec& tile) {
-  if (!tile.present)
-    return "";
-  return "bm" + std::to_string(tile.blockM) + "_bn" +
-         std::to_string(tile.blockN) + "_bk" +
-         std::to_string(tile.blockK);
-}
-
-static bool descriptorAcceptsCandidateTile(const DescriptorView& selected,
-                                           const TileCandidateSpec& tile) {
-  if (!tile.present)
-    return false;
-  if (selected.supported_tile_shapes.empty())
-    return true;
-  std::string shape = std::to_string(tile.blockM) + "x" +
-                      std::to_string(tile.blockN) + "x" +
-                      std::to_string(tile.blockK);
-  return inList(selected.supported_tile_shapes, shape) ||
-         inList(selected.supported_tile_shapes, tileIdentity(tile));
-}
-
-struct ThreadScheduleCandidateView {
-  ImplementationCandidate candidate;
-  ThreadScheduleOption option;
-};
-
-static ImplementationCandidate buildThreadScheduleCandidate(
-    const OpContext& opCtx,
-    const DescriptorView& selected,
-    const ThreadScheduleOption& option,
-    StringRef targetProfileId,
-    StringRef reason,
-    CandidateFeasibilityStatus feasibilityStatus,
-    StringRef feasibilityReason) {
-  ImplementationCandidate candidate;
-  candidate.providerId = "kernel_selection_thread_schedule_candidates";
-  candidate.targetProfileId = targetProfileId.str();
-  candidate.scopeKind = CandidateScopeKind::FusedRegion;
-  candidate.semanticTargetRef = opCtx.op_name;
-  candidate.backend = selected.backend;
-  candidate.implementationKind = "opaque_portable_cpu_native_kernel";
-  candidate.runtimeContractKind = "portable_cpu_kernel_adapter_contract";
-  candidate.kernelId = selected.kernel_id;
-  candidate.dtype = opCtx.dtype;
-  if (auto tile = parseTileIdentityFromKernelId(selected.kernel_id))
-    candidate.tile = *tile;
-  candidate.threadSchedule.present = true;
-  candidate.threadSchedule.threadCount = option.thread_count;
-  candidate.threadSchedule.partitionAxis = option.partition_axis;
-  candidate.threadSchedule.partitionStrategy = option.partition_strategy;
-  candidate.candidateReason = reason.str();
-  candidate.truthBoundary = kTruth.str();
-  candidate.feasibility.status = feasibilityStatus;
-  candidate.feasibility.reason = feasibilityReason.str();
-  if (!candidate.tile.present) {
-    candidate.feasibility.status = CandidateFeasibilityStatus::Rejected;
-    candidate.feasibility.reason = "kernel_tile_identity_unresolved";
-  } else if (!descriptorAcceptsCandidateTile(selected, candidate.tile)) {
-    candidate.feasibility.status = CandidateFeasibilityStatus::Rejected;
-    candidate.feasibility.reason = "kernel_tile_identity_mismatch";
-  }
-  candidate.candidateId = makeFallbackCandidateId(candidate);
-  return candidate;
-}
-
 static bool hasCandidateIdCollision(
-    const std::vector<ThreadScheduleCandidateView>& candidates) {
+    const std::vector<PortableCpuCandidateView>& candidates) {
   for (size_t i = 0; i < candidates.size(); ++i)
     for (size_t j = i + 1; j < candidates.size(); ++j)
       if (candidates[i].candidate.candidateId ==
           candidates[j].candidate.candidateId)
         return true;
   return false;
+}
+
+static PortableCpuRuntimeKernelDescriptor
+toPortableCpuDescriptor(const DescriptorView& selected) {
+  PortableCpuRuntimeKernelDescriptor descriptor;
+  descriptor.kernelId = selected.kernel_id;
+  descriptor.opName = selected.op_name;
+  descriptor.backend = selected.backend;
+  descriptor.supportedDtypes = selected.supported_dtypes;
+  descriptor.supportedTileShapes = selected.supported_tile_shapes;
+  descriptor.truthBoundary = selected.truth_boundary;
+  for (const auto& schedule : selected.supported_thread_schedules) {
+    PortableCpuThreadSchedule providerSchedule;
+    providerSchedule.threadCount = schedule.thread_count;
+    providerSchedule.partitionAxis = schedule.partition_axis;
+    providerSchedule.partitionStrategy = schedule.partition_strategy;
+    descriptor.supportedThreadSchedules.push_back(
+        std::move(providerSchedule));
+  }
+  return descriptor;
+}
+
+static PortableCpuProviderContext
+toPortableCpuProviderContext(const OpContext& opCtx,
+                             StringRef targetProfileId) {
+  PortableCpuProviderContext ctx;
+  ctx.semanticTargetRef = opCtx.op_name;
+  ctx.scopeKind = CandidateScopeKind::FusedRegion;
+  ctx.targetProfileId = targetProfileId.str();
+  ctx.backend = opCtx.backend;
+  ctx.dtype = opCtx.dtype;
+  ctx.truthBoundary = kTruth.str();
+  return ctx;
 }
 
 static ThreadScheduleResult resolveThreadScheduleStatic(
@@ -505,23 +443,29 @@ static ThreadScheduleResult resolveThreadSchedule(
   const ThreadScheduleOption* parallel =
       findDeclaredSchedule(selected, policy.at_or_above_threshold);
 
-  std::vector<ThreadScheduleCandidateView> candidates;
-  if (serial) {
-    candidates.push_back({buildThreadScheduleCandidate(
-                              opCtx, selected, *serial, targetProfileId,
-                              "p1d1_below_threshold_serial_candidate",
-                              CandidateFeasibilityStatus::Feasible,
-                              "serial_schedule_declared_legal"),
-                          *serial});
+  if (serial && parallel && sameSchedule(*serial, *parallel)) {
+    ThreadScheduleResult collision;
+    collision.policy_id = policy.policy_id;
+    collision.policy_version = policy.policy_version;
+    collision.policy_metric = policy.metric;
+    collision.policy_threshold = policy.threshold;
+    collision.policy_boundary_rule = policy.boundary_rule;
+    collision.policy_evidence_ref = policy.calibration_evidence_ref;
+    collision.policy_evidence_sha256 = policy.evidence_sha256;
+    collision.policy_truth_boundary = policy.truth_boundary;
+    collision.status = "rejected_thread_schedule_candidate_id_collision";
+    collision.rejection_reasons.push_back(
+        "thread_schedule_candidate_id_collision");
+    collision.policy_selection_reason = "candidate_identity_collision";
+    return collision;
   }
-  if (parallel) {
-    candidates.push_back({buildThreadScheduleCandidate(
-                              opCtx, selected, *parallel, targetProfileId,
-                              "p1d1_at_or_above_threshold_parallel_candidate",
-                              CandidateFeasibilityStatus::Feasible,
-                              "parallel_schedule_declared_structurally_legal"),
-                          *parallel});
-  }
+
+  PortableCPUProvider provider;
+  PortableCpuProviderResult providerResult = provider.enumerateCandidates(
+      toPortableCpuProviderContext(opCtx, targetProfileId),
+      toPortableCpuDescriptor(selected));
+  std::vector<PortableCpuCandidateView> candidates =
+      std::move(providerResult.candidates);
   for (const auto& candidate : candidates)
     r.considered_candidate_ids.push_back(candidate.candidate.candidateId);
   if (hasCandidateIdCollision(candidates)) {
@@ -532,10 +476,12 @@ static ThreadScheduleResult resolveThreadSchedule(
   }
 
   auto findCandidateFor = [&](const ThreadScheduleOption* option)
-      -> const ThreadScheduleCandidateView* {
+      -> const PortableCpuCandidateView* {
     if (!option) return nullptr;
     for (const auto& candidate : candidates)
-      if (sameSchedule(candidate.option, *option) &&
+      if (candidate.schedule.threadCount == option->thread_count &&
+          candidate.schedule.partitionAxis == option->partition_axis &&
+          candidate.schedule.partitionStrategy == option->partition_strategy &&
           candidate.candidate.feasibility.status ==
               CandidateFeasibilityStatus::Feasible)
         return &candidate;
@@ -552,7 +498,7 @@ static ThreadScheduleResult resolveThreadSchedule(
 
   auto chooseSerial = [&](StringRef reason) {
     if (serial) {
-      const ThreadScheduleCandidateView* selectedCandidate =
+      const PortableCpuCandidateView* selectedCandidate =
           findCandidateFor(serial);
       r.status = "selected";
       r.option = serial;
@@ -637,7 +583,7 @@ static ThreadScheduleResult resolveThreadSchedule(
     chooseSerial("metric_at_or_above_threshold_but_compute_units_insufficient_serial_fallback");
     return r;
   }
-  const ThreadScheduleCandidateView* selectedCandidate =
+  const PortableCpuCandidateView* selectedCandidate =
       findCandidateFor(parallel);
   r.status = "selected";
   r.option = parallel;
@@ -796,6 +742,8 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
         if (selectedImplementation) {
           op.setAttr("implementation_candidate.selected_id",
                      S(selectedImplementation->candidateId));
+          op.setAttr("implementation_candidate.provider_id",
+                     S(selectedImplementation->providerId));
           op.setAttr("implementation_candidate.backend",
                      S(selectedImplementation->backend));
           op.setAttr("implementation_candidate.implementation_kind",
@@ -808,7 +756,8 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
                      S(selectedImplementation->dtype));
           if (selectedImplementation->tile.present) {
             op.setAttr("implementation_candidate.tile_identity",
-                       S(tileIdentity(selectedImplementation->tile)));
+                       S(PortableCPUProvider::tileIdentity(
+                           selectedImplementation->tile)));
             op.setAttr("implementation_candidate.tile_block_m",
                        IntegerAttr::get(IntegerType::get(ctx, 64),
                                         selectedImplementation->tile.blockM));

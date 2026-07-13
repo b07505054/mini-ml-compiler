@@ -18,7 +18,7 @@ The system is an IR-centered, hardware-aware implementation-decision compiler fo
 
 ## Current Phase
 
-P1D, P1D.1, A1, A2, and A3 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
+P1D, P1D.1, A1, A2, A3, and A4 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. A4 extracts construction of those two complete candidates into a dedicated in-process `PortableCPUProvider`; policy and materialization remain outside the provider. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
 
 Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
 
@@ -33,6 +33,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 - A1: compiler-internal op-scoped `ImplementationCandidate` type, shared encode/decode helpers, minimal feasibility summary, and `PolicyResult` separation are implemented for the active compiler candidate/evaluation/selection path.
 - A2: P1D.1 now enumerates serial and 4-thread split-M thread-schedule `ImplementationCandidate`s, evaluates typed feasibility, applies the unchanged policy, and materializes the selected candidate into the existing `thread_schedule` ExecutionPlan contract.
 - A3: the active Raspberry Pi portable CPU candidates now include complete executable identity for the fixed fused MatMul + Bias + ReLU path: CPU backend, opaque portable native kernel contract, kernel ID `portable_fused_matmul_bias_relu_bm32_bn128_bk32`, tile `BM=32, BN=128, BK=32`, compiler-normalized dtype `fp32`, and serial/4-thread split-M schedule variants.
+- A4: `PortableCPUProvider` now owns enumeration/construction of those active complete portable CPU candidates. `KernelSelectionPass` still owns descriptor matching, feasibility/policy orchestration, and ExecutionPlan materialization.
 
 ## What Is Real and Executable
 

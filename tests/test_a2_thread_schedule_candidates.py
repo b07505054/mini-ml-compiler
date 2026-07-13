@@ -122,6 +122,13 @@ def _selected_candidate(line: str) -> str:
     return match.group(1)
 
 
+def _considered_candidates(line: str) -> list[str]:
+    match = re.search(r'thread_schedule.considered_candidate_ids = \[(.*?)\]', line)
+    if not match:
+        raise AssertionError(line)
+    return re.findall(r'"([^"]+)"', match.group(1))
+
+
 def _attr(line: str, name: str) -> str:
     match = re.search(rf'{re.escape(name)} = "([^"]+)"', line)
     if not match:
@@ -140,6 +147,7 @@ class A2ThreadScheduleCandidateTest(unittest.TestCase):
         self.assertIn("thread_schedule.thread_count = 1", line)
         self.assertIn("metric_below_threshold_select_serial", line)
         selected = _selected_candidate(line)
+        self.assertEqual(_attr(line, "implementation_candidate.provider_id"), "portable_cpu_provider")
         self.assertEqual(_attr(line, "implementation_candidate.backend"), "cpu")
         self.assertEqual(
             _attr(line, "implementation_candidate.implementation_kind"),
@@ -166,6 +174,19 @@ class A2ThreadScheduleCandidateTest(unittest.TestCase):
         self.assertIn("strategy=serial", selected)
         self.assertIn("threads=4", line)
         self.assertIn("metric_below_threshold", line)
+
+    def test_provider_outputs_same_candidate_set_below_and_above_threshold(self):
+        tiny = _thread_op(_run_kernel_selection(_fixture("8", "8", "8")))
+        large = _thread_op(_run_kernel_selection(_fixture("256", "256", "256")))
+        self.assertEqual(_considered_candidates(tiny), _considered_candidates(large))
+        self.assertEqual(len(_considered_candidates(tiny)), 2)
+        self.assertIn("thread_schedule.thread_count = 1", tiny)
+        self.assertIn("thread_schedule.thread_count = 4", large)
+
+    def test_threshold_value_remains_outside_portable_cpu_provider(self):
+        provider_header = REPO_ROOT / "mlir_passes" / "include" / "serving" / "PortableCPUProvider.h"
+        self.assertTrue(provider_header.exists())
+        self.assertNotIn("262144", provider_header.read_text())
 
     def test_threshold_selects_parallel_candidate(self):
         line = _thread_op(_run_kernel_selection(_fixture("64", "64", "64")))

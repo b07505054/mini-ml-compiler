@@ -44,7 +44,7 @@ Real: GenericGraphIR/MLIR/HIR paths, fusion legality, HIR lowering, target const
 
 Parallel/unintegrated: Triton measured selector, AWQ/vLLM deployment, multiple candidate schemas.
 
-A1 provides a narrow compiler-internal `ImplementationCandidate` core for the active op-candidate generation/evaluation/selection path. A2 routes the P1D.1 Raspberry Pi thread-schedule decision through serial/parallel implementation candidates before exporting the unchanged ExecutionPlan contract. A3 makes those two live Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel ID, tile identity, dtype, and thread schedule without changing policy or Runtime behavior. Not yet mature: project-wide candidate/provider unification, unified policy engine, DMA/memory-space/synchronization/NPU Implementation IR.
+A1 provides a narrow compiler-internal `ImplementationCandidate` core for the active op-candidate generation/evaluation/selection path. A2 routes the P1D.1 Raspberry Pi thread-schedule decision through serial/parallel implementation candidates before exporting the unchanged ExecutionPlan contract. A3 makes those two live Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel ID, tile identity, dtype, and thread schedule without changing policy or Runtime behavior. A4 extracts their enumeration into `PortableCPUProvider`; policy and ExecutionPlan materialization remain outside the provider. Not yet mature: project-wide candidate/provider unification, unified policy engine, DMA/memory-space/synchronization/NPU Implementation IR.
 
 ## Runtime Capabilities
 
@@ -69,7 +69,7 @@ IVP validates runtime artifacts, compiler/runtime consistency, and generated rep
 
 ## Completed Milestone History
 
-P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy -> A1 minimal compiler-internal `ImplementationCandidate` foundation -> A2 P1D.1 candidate migration -> A3 complete portable CPU candidate identity for the active fixed kernel/tile/dtype/thread path.
+P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy -> A1 minimal compiler-internal `ImplementationCandidate` foundation -> A2 P1D.1 candidate migration -> A3 complete portable CPU candidate identity for the active fixed kernel/tile/dtype/thread path -> A4 dedicated in-process `PortableCPUProvider` extraction.
 
 ## Current Research Conclusions
 
@@ -80,6 +80,7 @@ P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C
 - A1 reduces duplicated candidate parsing in the active compiler-internal candidate path without changing Runtime behavior or claiming Triton/AWQ/thread/tile unification.
 - A2 proves one real calibrated implementation decision can use the candidate core without changing the threshold, policy metric, Runtime code, or ExecutionPlan semantics.
 - A3 proves the active portable CPU path can select between complete opaque implementation candidates that include kernel, tile, dtype, and thread identity, while still leaving inactive tile alternatives and external provider paths outside the candidate core.
+- A4 proves candidate enumeration can be separated from policy for the active portable CPU path without adding a global registry, changing Runtime behavior, or changing plan semantics.
 
 ## Remaining Research Questions
 

@@ -1,4 +1,5 @@
 #include "serving/ImplementationCandidate.h"
+#include "serving/PortableCPUProvider.h"
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -6,6 +7,7 @@
 #include <cassert>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::hir;
@@ -225,6 +227,106 @@ int main() {
   sameCompleteIdentity.cost.penaltyScore = 999;
   assert(makeFallbackCandidateId(sameCompleteIdentity) ==
          parallelSchedule.candidateId);
+
+  PortableCPUProvider provider;
+  assert(provider.providerId() == "portable_cpu_provider");
+  assert(provider.providerVersion() == "a4.v1");
+
+  PortableCpuProviderContext providerCtx;
+  providerCtx.semanticTargetRef = "fused_matmul_bias_relu";
+  providerCtx.scopeKind = CandidateScopeKind::FusedRegion;
+  providerCtx.targetProfileId = "raspberry-pi5-cortex-a76-cpu";
+  providerCtx.backend = "cpu";
+  providerCtx.dtype = "fp32";
+  providerCtx.truthBoundary = "kernel_selection_static_descriptor_match_not_runtime_execution";
+
+  PortableCpuRuntimeKernelDescriptor descriptor;
+  descriptor.kernelId =
+      "portable_fused_matmul_bias_relu_bm32_bn128_bk32";
+  descriptor.opName = "fused_matmul_bias_relu";
+  descriptor.backend = "cpu";
+  descriptor.supportedDtypes = {"fp32"};
+  descriptor.supportedThreadSchedules = {
+      {1, "none", "serial"},
+      {4, "m", "contiguous_chunks"},
+      {2, "m", "contiguous_chunks"},
+      {4, "n", "contiguous_chunks"}};
+  descriptor.truthBoundary = "test_descriptor";
+
+  assert(provider.supportsScope(providerCtx));
+  PortableCpuProviderResult providerResult =
+      provider.enumerateCandidates(providerCtx, descriptor);
+  assert(providerResult.candidates.size() == 2);
+  assert(providerResult.candidates[0].candidate.providerId ==
+         "portable_cpu_provider");
+  assert(providerResult.candidates[1].candidate.providerId ==
+         "portable_cpu_provider");
+  assert(providerResult.candidates[0].candidate.semanticTargetRef ==
+         providerResult.candidates[1].candidate.semanticTargetRef);
+  assert(providerResult.candidates[0].candidate.kernelId ==
+         providerResult.candidates[1].candidate.kernelId);
+  assert(providerResult.candidates[0].candidate.tile.blockM == 32);
+  assert(providerResult.candidates[0].candidate.tile.blockN == 128);
+  assert(providerResult.candidates[0].candidate.tile.blockK == 32);
+  assert(providerResult.candidates[0].candidate.dtype == "fp32");
+  assert(providerResult.candidates[1].candidate.dtype == "fp32");
+  assert(providerResult.candidates[0].candidate.candidateId !=
+         providerResult.candidates[1].candidate.candidateId);
+  assert(providerResult.candidates[0].schedule.threadCount == 1);
+  assert(providerResult.candidates[1].schedule.threadCount == 4);
+
+  for (const auto& emitted : providerResult.candidates) {
+    assert(emitted.schedule.threadCount == 1 ||
+           emitted.schedule.threadCount == 4);
+    assert(emitted.schedule.partitionAxis != "n");
+    assert(emitted.candidate.kernelId.find("bm32_bn128_bk32") !=
+           std::string::npos);
+  }
+
+  PortableCpuProviderContext largeShapeSameContext = providerCtx;
+  PortableCpuProviderResult providerResultLarge =
+      provider.enumerateCandidates(largeShapeSameContext, descriptor);
+  assert(providerResultLarge.candidates.size() == providerResult.candidates.size());
+  assert(providerResultLarge.candidates[0].candidate.candidateId ==
+         providerResult.candidates[0].candidate.candidateId);
+  assert(providerResultLarge.candidates[1].candidate.candidateId ==
+         providerResult.candidates[1].candidate.candidateId);
+
+  PortableCpuProviderContext wrongOpCtx = providerCtx;
+  wrongOpCtx.semanticTargetRef = "rmsnorm";
+  PortableCpuProviderResult wrongOp =
+      provider.enumerateCandidates(wrongOpCtx, descriptor);
+  assert(wrongOp.candidates.empty());
+  assert(!wrongOp.diagnostics.empty());
+  assert(wrongOp.diagnostics[0].reason == "unsupported_semantic_scope");
+
+  PortableCpuRuntimeKernelDescriptor wrongDtype = descriptor;
+  wrongDtype.supportedDtypes = {"fp16"};
+  PortableCpuProviderResult wrongDtypeResult =
+      provider.enumerateCandidates(providerCtx, wrongDtype);
+  assert(wrongDtypeResult.candidates.empty());
+  assert(!wrongDtypeResult.diagnostics.empty());
+  assert(wrongDtypeResult.diagnostics[0].reason == "wrong_dtype");
+
+  PortableCpuRuntimeKernelDescriptor missingParallel = descriptor;
+  missingParallel.supportedThreadSchedules = {{1, "none", "serial"}};
+  PortableCpuProviderResult missingParallelResult =
+      provider.enumerateCandidates(providerCtx, missingParallel);
+  assert(missingParallelResult.candidates.size() == 1);
+  bool sawMissingParallel = false;
+  for (const auto& diagnostic : missingParallelResult.diagnostics)
+    if (diagnostic.reason == "missing_parallel_schedule")
+      sawMissingParallel = true;
+  assert(sawMissingParallel);
+
+  PortableCpuRuntimeKernelDescriptor tileMismatch = descriptor;
+  tileMismatch.supportedTileShapes = {"64x64x64"};
+  PortableCpuProviderResult tileMismatchResult =
+      provider.enumerateCandidates(providerCtx, tileMismatch);
+  assert(tileMismatchResult.candidates.empty());
+  assert(!tileMismatchResult.diagnostics.empty());
+  assert(tileMismatchResult.diagnostics[0].reason ==
+         "kernel_tile_identity_mismatch");
 
   std::puts("ImplementationCandidateTest passed");
   return 0;
