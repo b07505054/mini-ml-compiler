@@ -135,9 +135,16 @@ int main() {
   serialSchedule.targetProfileId = "raspberry-pi5-cortex-a76-cpu";
   serialSchedule.scopeKind = CandidateScopeKind::FusedRegion;
   serialSchedule.semanticTargetRef = "fused_matmul_bias_relu";
-  serialSchedule.implementationKind = "portable_cpu_opaque_kernel_thread_schedule";
+  serialSchedule.backend = "cpu";
+  serialSchedule.implementationKind = "opaque_portable_cpu_native_kernel";
+  serialSchedule.runtimeContractKind = "portable_cpu_kernel_adapter_contract";
   serialSchedule.kernelId =
       "portable_fused_matmul_bias_relu_bm32_bn128_bk32";
+  serialSchedule.dtype = "fp32";
+  serialSchedule.tile.present = true;
+  serialSchedule.tile.blockM = 32;
+  serialSchedule.tile.blockN = 128;
+  serialSchedule.tile.blockK = 32;
   serialSchedule.threadSchedule.present = true;
   serialSchedule.threadSchedule.threadCount = 1;
   serialSchedule.threadSchedule.partitionAxis = "none";
@@ -151,6 +158,19 @@ int main() {
   parallelSchedule.candidateId = makeFallbackCandidateId(parallelSchedule);
 
   assert(serialSchedule.candidateId != parallelSchedule.candidateId);
+  assert(serialSchedule.candidateId.find("scope=fused_region") !=
+         std::string::npos);
+  assert(serialSchedule.candidateId.find("backend=cpu") !=
+         std::string::npos);
+  assert(serialSchedule.candidateId.find(
+             "opaque_portable_cpu_native_kernel") != std::string::npos);
+  assert(serialSchedule.candidateId.find(
+             "contract=portable_cpu_kernel_adapter_contract") !=
+         std::string::npos);
+  assert(serialSchedule.candidateId.find("tile=bm32_bn128_bk32") !=
+         std::string::npos);
+  assert(serialSchedule.candidateId.find("dtype=fp32") !=
+         std::string::npos);
   assert(serialSchedule.candidateId.find("threads=1") != std::string::npos);
   assert(parallelSchedule.candidateId.find("threads=4") != std::string::npos);
   assert(parallelSchedule.candidateId.find("axis=m") != std::string::npos);
@@ -163,7 +183,17 @@ int main() {
   ImplementationCandidate decodedSchedule =
       decodeImplementationCandidate(encodedSchedule, "test_provider");
   assert(decodedSchedule.candidateId == parallelSchedule.candidateId);
+  assert(decodedSchedule.backend == parallelSchedule.backend);
+  assert(decodedSchedule.implementationKind ==
+         parallelSchedule.implementationKind);
+  assert(decodedSchedule.runtimeContractKind ==
+         parallelSchedule.runtimeContractKind);
   assert(decodedSchedule.kernelId == parallelSchedule.kernelId);
+  assert(decodedSchedule.dtype == parallelSchedule.dtype);
+  assert(decodedSchedule.tile.present);
+  assert(decodedSchedule.tile.blockM == 32);
+  assert(decodedSchedule.tile.blockN == 128);
+  assert(decodedSchedule.tile.blockK == 32);
   assert(decodedSchedule.threadSchedule.present);
   assert(decodedSchedule.threadSchedule.threadCount == 4);
   assert(decodedSchedule.threadSchedule.partitionAxis == "m");
@@ -173,6 +203,28 @@ int main() {
   ImplementationCandidate duplicateSchedule = parallelSchedule;
   duplicateSchedule.feasibility.reason = "different_state_must_not_change_id";
   assert(duplicateSchedule.candidateId == parallelSchedule.candidateId);
+
+  ImplementationCandidate differentKernel = parallelSchedule;
+  differentKernel.kernelId =
+      "portable_fused_matmul_bias_relu_bm32_bn32_bk32";
+  differentKernel.candidateId = makeFallbackCandidateId(differentKernel);
+  assert(differentKernel.candidateId != parallelSchedule.candidateId);
+
+  ImplementationCandidate differentTile = parallelSchedule;
+  differentTile.tile.blockN = 32;
+  differentTile.candidateId = makeFallbackCandidateId(differentTile);
+  assert(differentTile.candidateId != parallelSchedule.candidateId);
+
+  ImplementationCandidate differentDtype = parallelSchedule;
+  differentDtype.dtype = "fp16";
+  differentDtype.candidateId = makeFallbackCandidateId(differentDtype);
+  assert(differentDtype.candidateId != parallelSchedule.candidateId);
+
+  ImplementationCandidate sameCompleteIdentity = parallelSchedule;
+  sameCompleteIdentity.cost.hasPenaltyScore = true;
+  sameCompleteIdentity.cost.penaltyScore = 999;
+  assert(makeFallbackCandidateId(sameCompleteIdentity) ==
+         parallelSchedule.candidateId);
 
   std::puts("ImplementationCandidateTest passed");
   return 0;

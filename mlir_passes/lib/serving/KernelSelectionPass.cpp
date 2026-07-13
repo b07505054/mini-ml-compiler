@@ -231,6 +231,8 @@ struct ThreadScheduleResult {
   std::string policy_evidence_sha256;
   std::string policy_truth_boundary;
   std::string selected_candidate_id;
+  ImplementationCandidate selected_candidate;
+  bool has_selected_candidate = false;
   std::vector<std::string> considered_candidate_ids;
   std::vector<PolicyResultCandidateRejection> candidate_rejections;
 };
@@ -327,6 +329,59 @@ static bool safeMul3(int64_t a, int64_t b, int64_t c, int64_t& out) {
   return true;
 }
 
+static std::optional<TileCandidateSpec> parseTileIdentityFromKernelId(
+    StringRef kernelId) {
+  auto readPart = [&](StringRef marker) -> std::optional<int64_t> {
+    size_t pos = kernelId.find(marker);
+    if (pos == StringRef::npos)
+      return std::nullopt;
+    pos += marker.size();
+    int64_t value = 0;
+    bool sawDigit = false;
+    while (pos < kernelId.size() && kernelId[pos] >= '0' &&
+           kernelId[pos] <= '9') {
+      sawDigit = true;
+      value = value * 10 + (kernelId[pos] - '0');
+      ++pos;
+    }
+    if (!sawDigit)
+      return std::nullopt;
+    return value;
+  };
+  auto bm = readPart("bm");
+  auto bn = readPart("bn");
+  auto bk = readPart("bk");
+  if (!bm || !bn || !bk)
+    return std::nullopt;
+  TileCandidateSpec tile;
+  tile.present = true;
+  tile.blockM = *bm;
+  tile.blockN = *bn;
+  tile.blockK = *bk;
+  return tile;
+}
+
+static std::string tileIdentity(const TileCandidateSpec& tile) {
+  if (!tile.present)
+    return "";
+  return "bm" + std::to_string(tile.blockM) + "_bn" +
+         std::to_string(tile.blockN) + "_bk" +
+         std::to_string(tile.blockK);
+}
+
+static bool descriptorAcceptsCandidateTile(const DescriptorView& selected,
+                                           const TileCandidateSpec& tile) {
+  if (!tile.present)
+    return false;
+  if (selected.supported_tile_shapes.empty())
+    return true;
+  std::string shape = std::to_string(tile.blockM) + "x" +
+                      std::to_string(tile.blockN) + "x" +
+                      std::to_string(tile.blockK);
+  return inList(selected.supported_tile_shapes, shape) ||
+         inList(selected.supported_tile_shapes, tileIdentity(tile));
+}
+
 struct ThreadScheduleCandidateView {
   ImplementationCandidate candidate;
   ThreadScheduleOption option;
@@ -345,8 +400,13 @@ static ImplementationCandidate buildThreadScheduleCandidate(
   candidate.targetProfileId = targetProfileId.str();
   candidate.scopeKind = CandidateScopeKind::FusedRegion;
   candidate.semanticTargetRef = opCtx.op_name;
-  candidate.implementationKind = "portable_cpu_opaque_kernel_thread_schedule";
+  candidate.backend = selected.backend;
+  candidate.implementationKind = "opaque_portable_cpu_native_kernel";
+  candidate.runtimeContractKind = "portable_cpu_kernel_adapter_contract";
   candidate.kernelId = selected.kernel_id;
+  candidate.dtype = opCtx.dtype;
+  if (auto tile = parseTileIdentityFromKernelId(selected.kernel_id))
+    candidate.tile = *tile;
   candidate.threadSchedule.present = true;
   candidate.threadSchedule.threadCount = option.thread_count;
   candidate.threadSchedule.partitionAxis = option.partition_axis;
@@ -355,6 +415,13 @@ static ImplementationCandidate buildThreadScheduleCandidate(
   candidate.truthBoundary = kTruth.str();
   candidate.feasibility.status = feasibilityStatus;
   candidate.feasibility.reason = feasibilityReason.str();
+  if (!candidate.tile.present) {
+    candidate.feasibility.status = CandidateFeasibilityStatus::Rejected;
+    candidate.feasibility.reason = "kernel_tile_identity_unresolved";
+  } else if (!descriptorAcceptsCandidateTile(selected, candidate.tile)) {
+    candidate.feasibility.status = CandidateFeasibilityStatus::Rejected;
+    candidate.feasibility.reason = "kernel_tile_identity_mismatch";
+  }
   candidate.candidateId = makeFallbackCandidateId(candidate);
   return candidate;
 }
@@ -451,8 +518,8 @@ static ThreadScheduleResult resolveThreadSchedule(
     candidates.push_back({buildThreadScheduleCandidate(
                               opCtx, selected, *parallel, targetProfileId,
                               "p1d1_at_or_above_threshold_parallel_candidate",
-                              CandidateFeasibilityStatus::Unknown,
-                              "parallel_feasibility_not_evaluated"),
+                              CandidateFeasibilityStatus::Feasible,
+                              "parallel_schedule_declared_structurally_legal"),
                           *parallel});
   }
   for (const auto& candidate : candidates)
@@ -468,7 +535,10 @@ static ThreadScheduleResult resolveThreadSchedule(
       -> const ThreadScheduleCandidateView* {
     if (!option) return nullptr;
     for (const auto& candidate : candidates)
-      if (sameSchedule(candidate.option, *option)) return &candidate;
+      if (sameSchedule(candidate.option, *option) &&
+          candidate.candidate.feasibility.status ==
+              CandidateFeasibilityStatus::Feasible)
+        return &candidate;
     return nullptr;
   };
 
@@ -486,8 +556,11 @@ static ThreadScheduleResult resolveThreadSchedule(
           findCandidateFor(serial);
       r.status = "selected";
       r.option = serial;
-      if (selectedCandidate)
+      if (selectedCandidate) {
         r.selected_candidate_id = selectedCandidate->candidate.candidateId;
+        r.selected_candidate = selectedCandidate->candidate;
+        r.has_selected_candidate = true;
+      }
       r.policy_selection_reason = reason.str();
     } else {
       r.status = "rejected_missing_serial_thread_schedule";
@@ -568,8 +641,11 @@ static ThreadScheduleResult resolveThreadSchedule(
       findCandidateFor(parallel);
   r.status = "selected";
   r.option = parallel;
-  if (selectedCandidate)
+  if (selectedCandidate) {
     r.selected_candidate_id = selectedCandidate->candidate.candidateId;
+    r.selected_candidate = selectedCandidate->candidate;
+    r.has_selected_candidate = true;
+  }
   rejectCandidate(serial, "metric_at_or_above_threshold");
   r.policy_selection_reason = "metric_at_or_above_threshold_select_parallel";
   return r;
@@ -696,8 +772,6 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
 
       if (selected) {
         op.setAttr("kernel_selection.status", S("selected"));
-        op.setAttr("kernel_selection.selected_id", S(selected->kernel_id));
-        op.setAttr("kernel_selection.source", S(selected->source));
         if (!selected->truth_boundary.empty())
           op.setAttr("kernel_selection.truth_boundary",
                      S(selected->truth_boundary));
@@ -711,6 +785,41 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
             resolveThreadSchedule(*selected, physicalComputeUnits,
                                   offlineThreadPolicy, opCtx, op,
                                   targetProfileId);
+        const ImplementationCandidate* selectedImplementation =
+            tsResult.has_selected_candidate ? &tsResult.selected_candidate
+                                            : nullptr;
+        op.setAttr("kernel_selection.selected_id",
+                   S(selectedImplementation
+                         ? selectedImplementation->kernelId
+                         : selected->kernel_id));
+        op.setAttr("kernel_selection.source", S(selected->source));
+        if (selectedImplementation) {
+          op.setAttr("implementation_candidate.selected_id",
+                     S(selectedImplementation->candidateId));
+          op.setAttr("implementation_candidate.backend",
+                     S(selectedImplementation->backend));
+          op.setAttr("implementation_candidate.implementation_kind",
+                     S(selectedImplementation->implementationKind));
+          op.setAttr("implementation_candidate.runtime_contract_kind",
+                     S(selectedImplementation->runtimeContractKind));
+          op.setAttr("implementation_candidate.kernel_id",
+                     S(selectedImplementation->kernelId));
+          op.setAttr("implementation_candidate.dtype",
+                     S(selectedImplementation->dtype));
+          if (selectedImplementation->tile.present) {
+            op.setAttr("implementation_candidate.tile_identity",
+                       S(tileIdentity(selectedImplementation->tile)));
+            op.setAttr("implementation_candidate.tile_block_m",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        selectedImplementation->tile.blockM));
+            op.setAttr("implementation_candidate.tile_block_n",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        selectedImplementation->tile.blockN));
+            op.setAttr("implementation_candidate.tile_block_k",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        selectedImplementation->tile.blockK));
+          }
+        }
         if (!tsResult.status.empty()) {
           op.setAttr("thread_schedule.contract_version",
                      S("thread_schedule_contract_v1"));

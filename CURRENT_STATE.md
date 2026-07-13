@@ -18,7 +18,7 @@ The system is an IR-centered, hardware-aware implementation-decision compiler fo
 
 ## Current Phase
 
-P1D, P1D.1, A1, and A2 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
+P1D, P1D.1, A1, A2, and A3 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
 
 Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
 
@@ -32,6 +32,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 - P1D.1: compiler-side offline-calibrated Raspberry Pi policy selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold for the fixed fused MatMul + Bias + ReLU portable CPU kernel.
 - A1: compiler-internal op-scoped `ImplementationCandidate` type, shared encode/decode helpers, minimal feasibility summary, and `PolicyResult` separation are implemented for the active compiler candidate/evaluation/selection path.
 - A2: P1D.1 now enumerates serial and 4-thread split-M thread-schedule `ImplementationCandidate`s, evaluates typed feasibility, applies the unchanged policy, and materializes the selected candidate into the existing `thread_schedule` ExecutionPlan contract.
+- A3: the active Raspberry Pi portable CPU candidates now include complete executable identity for the fixed fused MatMul + Bias + ReLU path: CPU backend, opaque portable native kernel contract, kernel ID `portable_fused_matmul_bias_relu_bm32_bn128_bk32`, tile `BM=32, BN=128, BK=32`, compiler-normalized dtype `fp32`, and serial/4-thread split-M schedule variants.
 
 ## What Is Real and Executable
 
@@ -60,13 +61,13 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 ## Parallel / Unintegrated Paths
 
 - Triton/CUDA measured selector uses a private schema and is not yet canonical ExecutionPlan/Runtime dispatch.
-- AWQ/vLLM is executable but not integrated into the A1 compiler-internal candidate core or one unified candidate/policy architecture.
+- AWQ/vLLM is executable but not integrated into the A1/A2/A3 compiler-internal candidate core or one unified candidate/policy architecture.
 - CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, KernelSelection, TilePlanning, ThreadSchedule, Triton selection, and AWQ deployment use separate candidate/decision representations.
 - Compiler-local target profiles are richer than `ml-platform-capabilities`.
 
 ## Not Implemented
 
-- Project-wide `ImplementationCandidate` unification across TilePlan, KernelSelection, Triton, AWQ/vLLM, deployment candidates, serving candidates, and external providers.
+- Project-wide `ImplementationCandidate` unification across inactive tile alternatives, generic TilePlan, unrelated KernelSelection paths, Triton, AWQ/vLLM, deployment candidates, serving candidates, and external providers.
 - Unified policy engine across CPU, Triton, AWQ, vLLM, and future NPU paths.
 - Complete dequant/layout-transform IR materialization.
 - Mature memory-space/DMA/synchronization/NPU Implementation IR.

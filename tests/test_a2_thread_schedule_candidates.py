@@ -122,6 +122,13 @@ def _selected_candidate(line: str) -> str:
     return match.group(1)
 
 
+def _attr(line: str, name: str) -> str:
+    match = re.search(rf'{re.escape(name)} = "([^"]+)"', line)
+    if not match:
+        raise AssertionError(f"{name} missing from: {line}")
+    return match.group(1)
+
+
 class A2ThreadScheduleCandidateTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -133,7 +140,28 @@ class A2ThreadScheduleCandidateTest(unittest.TestCase):
         self.assertIn("thread_schedule.thread_count = 1", line)
         self.assertIn("metric_below_threshold_select_serial", line)
         selected = _selected_candidate(line)
+        self.assertEqual(_attr(line, "implementation_candidate.backend"), "cpu")
+        self.assertEqual(
+            _attr(line, "implementation_candidate.implementation_kind"),
+            "opaque_portable_cpu_native_kernel",
+        )
+        self.assertEqual(
+            _attr(line, "implementation_candidate.runtime_contract_kind"),
+            "portable_cpu_kernel_adapter_contract",
+        )
+        self.assertEqual(_attr(line, "implementation_candidate.kernel_id"), KERNEL_ID)
+        self.assertEqual(_attr(line, "implementation_candidate.dtype"), "fp32")
+        self.assertEqual(
+            _attr(line, "implementation_candidate.tile_identity"),
+            "bm32_bn128_bk32",
+        )
         self.assertIn("threads=1", selected)
+        self.assertIn("scope=fused_region", selected)
+        self.assertIn("backend=cpu", selected)
+        self.assertIn("opaque_portable_cpu_native_kernel", selected)
+        self.assertIn("contract=portable_cpu_kernel_adapter_contract", selected)
+        self.assertIn("tile=bm32_bn128_bk32", selected)
+        self.assertIn("dtype=fp32", selected)
         self.assertIn("axis=none", selected)
         self.assertIn("strategy=serial", selected)
         self.assertIn("threads=4", line)
@@ -147,7 +175,19 @@ class A2ThreadScheduleCandidateTest(unittest.TestCase):
         self.assertIn("threads=4", selected)
         self.assertIn("axis=m", selected)
         self.assertIn("contiguous_chunks", selected)
+        self.assertIn("kernel=" + KERNEL_ID, selected)
+        self.assertIn("tile=bm32_bn128_bk32", selected)
+        self.assertIn("dtype=fp32", selected)
         self.assertIn("metric_at_or_above_threshold", line)
+
+    def test_materialized_kernel_tile_dtype_come_from_selected_candidate(self):
+        line = _thread_op(_run_kernel_selection(_fixture("64", "64", "64")))
+        selected = _selected_candidate(line)
+        self.assertEqual(_attr(line, "implementation_candidate.selected_id"), selected)
+        self.assertEqual(_attr(line, "kernel_selection.selected_id"), KERNEL_ID)
+        self.assertIn("implementation_candidate.tile_block_m = 32", line)
+        self.assertIn("implementation_candidate.tile_block_n = 128", line)
+        self.assertIn("implementation_candidate.tile_block_k = 32", line)
 
     def test_candidate_ids_are_deterministic(self):
         line_a = _thread_op(_run_kernel_selection(_fixture("64", "64", "64")))

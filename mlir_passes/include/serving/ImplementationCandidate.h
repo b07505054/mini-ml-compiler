@@ -49,6 +49,13 @@ struct ThreadScheduleCandidateSpec {
   std::string partitionStrategy;
 };
 
+struct TileCandidateSpec {
+  bool present = false;
+  int64_t blockM = 0;
+  int64_t blockN = 0;
+  int64_t blockK = 0;
+};
+
 struct ImplementationCandidate {
   std::string candidateId;
   std::string providerId;
@@ -56,8 +63,12 @@ struct ImplementationCandidate {
   CandidateScopeKind scopeKind = CandidateScopeKind::Unknown;
   std::string semanticTargetRef;
   std::string functionRef;
+  std::string backend;
   std::string implementationKind;
+  std::string runtimeContractKind;
   std::string kernelId;
+  std::string dtype;
+  TileCandidateSpec tile;
   ThreadScheduleCandidateSpec threadSchedule;
   std::string candidateReason;
   std::vector<std::string> requiredBoundaryOps;
@@ -200,14 +211,36 @@ inline std::string makeFallbackCandidateId(
     id += candidate.semanticTargetRef;
   else
     id += "unknown_scope";
+  id += ":scope=";
+  id += stringifyScopeKind(candidate.scopeKind).str();
+  if (!candidate.backend.empty()) {
+    id += ":backend=";
+    id += candidate.backend;
+  }
   id += ":";
   if (!candidate.implementationKind.empty())
     id += candidate.implementationKind;
   else
     id += "unknown_implementation";
+  if (!candidate.runtimeContractKind.empty()) {
+    id += ":contract=";
+    id += candidate.runtimeContractKind;
+  }
   if (!candidate.kernelId.empty()) {
     id += ":kernel=";
     id += candidate.kernelId;
+  }
+  if (candidate.tile.present) {
+    id += ":tile=bm";
+    id += std::to_string(candidate.tile.blockM);
+    id += "_bn";
+    id += std::to_string(candidate.tile.blockN);
+    id += "_bk";
+    id += std::to_string(candidate.tile.blockK);
+  }
+  if (!candidate.dtype.empty()) {
+    id += ":dtype=";
+    id += candidate.dtype;
   }
   if (candidate.threadSchedule.present) {
     id += ":threads=";
@@ -312,10 +345,22 @@ inline ImplementationCandidate decodeImplementationCandidate(
   if (candidate.semanticTargetRef.empty())
     candidate.semanticTargetRef = getCandidateString(dict, "source_op");
   candidate.functionRef = getCandidateString(dict, "function_ref");
+  candidate.backend = getCandidateString(dict, "backend");
   candidate.implementationKind = getCandidateString(dict, "implementation_kind");
   if (candidate.implementationKind.empty())
     candidate.implementationKind = getCandidateString(dict, "candidate_type");
+  candidate.runtimeContractKind =
+      getCandidateString(dict, "runtime_contract_kind");
   candidate.kernelId = getCandidateString(dict, "kernel_id");
+  candidate.dtype = getCandidateString(dict, "dtype");
+  if (hasCandidateI64(dict, "tile.block_m") &&
+      hasCandidateI64(dict, "tile.block_n") &&
+      hasCandidateI64(dict, "tile.block_k")) {
+    candidate.tile.present = true;
+    candidate.tile.blockM = getCandidateI64(dict, "tile.block_m");
+    candidate.tile.blockN = getCandidateI64(dict, "tile.block_n");
+    candidate.tile.blockK = getCandidateI64(dict, "tile.block_k");
+  }
   if (hasCandidateI64(dict, "thread_schedule.thread_count")) {
     candidate.threadSchedule.present = true;
     candidate.threadSchedule.threadCount =
@@ -382,15 +427,35 @@ inline DictionaryAttr encodeImplementationCandidate(
   if (!candidate.functionRef.empty())
     upsertCandidateAttr(attrs, ctx, "function_ref",
                         stringAttr(candidate.functionRef));
+  if (!candidate.backend.empty())
+    upsertCandidateAttr(attrs, ctx, "backend",
+                        stringAttr(candidate.backend));
   upsertCandidateAttr(attrs, ctx, "implementation_kind",
                       stringAttr(candidate.implementationKind));
   upsertCandidateAttr(attrs, ctx, "candidate_type",
                       stringAttr(candidate.implementationKind));
   upsertCandidateAttr(attrs, ctx, "source_op",
                       stringAttr(candidate.semanticTargetRef));
+  if (!candidate.runtimeContractKind.empty())
+    upsertCandidateAttr(attrs, ctx, "runtime_contract_kind",
+                        stringAttr(candidate.runtimeContractKind));
   if (!candidate.kernelId.empty())
     upsertCandidateAttr(attrs, ctx, "kernel_id",
                         stringAttr(candidate.kernelId));
+  if (!candidate.dtype.empty())
+    upsertCandidateAttr(attrs, ctx, "dtype",
+                        stringAttr(candidate.dtype));
+  if (candidate.tile.present) {
+    upsertCandidateAttr(attrs, ctx, "tile.block_m",
+                        IntegerAttr::get(IntegerType::get(ctx, 64),
+                                         candidate.tile.blockM));
+    upsertCandidateAttr(attrs, ctx, "tile.block_n",
+                        IntegerAttr::get(IntegerType::get(ctx, 64),
+                                         candidate.tile.blockN));
+    upsertCandidateAttr(attrs, ctx, "tile.block_k",
+                        IntegerAttr::get(IntegerType::get(ctx, 64),
+                                         candidate.tile.blockK));
+  }
   if (candidate.threadSchedule.present) {
     upsertCandidateAttr(
         attrs, ctx, "thread_schedule.thread_count",
