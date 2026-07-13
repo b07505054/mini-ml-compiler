@@ -1067,3 +1067,10 @@ target_link_libraries(DispatchUnitBuilderTest
 )
 add_test(NAME DispatchUnitBuilderTest
          COMMAND DispatchUnitBuilderTest)
+
+add_test(NAME TritonShadowCandidateProviderTest
+         COMMAND python3
+                 ${CMAKE_CURRENT_SOURCE_DIR}/../tests/test_triton_shadow_candidate_provider.py)
+set_tests_properties(TritonShadowCandidateProviderTest PROPERTIES
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
