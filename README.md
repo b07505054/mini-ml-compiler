@@ -1,3 +1,22 @@
+
+## Canonical Architecture Status (Phase D0)
+
+Last verified: 2026-07-13 on GPU Linux.
+
+This repository is the canonical documentation host for the project architecture. Start here:
+
+- [Architecture Constitution](ARCHITECTURE_CONSTITUTION.md)
+- [Current State](CURRENT_STATE.md)
+- [Architecture Status](ARCHITECTURE_STATUS.md)
+- [Known Gaps](KNOWN_GAPS.md)
+- [Project Status 2026](PROJECT_STATUS_2026.md)
+- [Architecture Paths](ARCHITECTURE_PATHS.md)
+- [Documentation Inventory](DOCUMENTATION_INVENTORY.md)
+
+Canonical identity: an IR-centered, hardware-aware implementation-decision compiler for Edge AI backends. `ExecutionPlan` is the current serialized Execution Contract; it is derived from IR and is not semantic IR. Runtime validates and executes exact contracts. Evidence ranks legal candidates after legality; evidence does not define legality.
+
+Phase note: P1D is complete and locally committed. P1D.1 has not started. The P1D threshold policy is evidence-backed offline research and is not documented as shipped compiler behavior.
+
 ## ML Graph Compiler and Runtime Infrastructure
 
 This repository is a prototype **execution-planning ML compiler**. It reuses
@@ -298,7 +317,7 @@ vLLM benchmark:
   awq, quantized_model_artifact_ref, truth_boundary:
   experimental_forced_quant_not_native_int4_support_on_gtx1650}`. GPTQ is not
   implemented. No measured C results exist yet — this repo's development
-  machine has no CUDA and no AutoAWQ, so `scripts/run_qwen_quant_benchmark.sh`
+  Mac development machine used for that historical note had no CUDA and no AutoAWQ. GPU Linux has later CUDA/Triton and AWQ/vLLM evidence paths, so `scripts/run_qwen_quant_benchmark.sh`
   (runtime repo) materializes all three (A/B/C) vLLM server commands but
   stops after materialization until run on a CUDA-capable host with the AWQ
   artifact present.

@@ -1,3 +1,9 @@
+DOCUMENT STATUS: HISTORICAL HOST-SCOPED AUDIT
+
+Superseded for current project state by: CURRENT_STATE.md, ARCHITECTURE_STATUS.md, and ARCHITECTURE_PATHS.md.
+
+Truth boundary: This document reflects a Mac-host YOLO-Seg audit before the current GPU Linux/P1D state. Mac-only statements such as no CUDA/Triton are not project-wide current facts.
+
 # YOLO-Seg ExecutionPlan — Environment Identity and Runtime-Scope Verification Audit
 
 Follow-up to `docs/YOLOSEG_EXECUTION_PLAN_RUNTIME_READINESS_AUDIT.md` (Phase 25).

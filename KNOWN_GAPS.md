@@ -1,0 +1,20 @@
+# Known Gaps
+
+Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD: e30c54cc477aab771525661d4dfc3c53419cd8a9 (master, ahead 1 of origin/master)\nVerified runtime HEAD: f4cc98bc93e1e8e5ecea32ffb0779b0a5c801097 (main, ahead 1 of origin/main)\nVerified capabilities HEAD: 84cf1d229788390f3b95254416636672fabe8d20 (main, origin-aligned)\nIVP source: Mac-only divergent checkout at 3f11a0422123e88eab7f90cff06d8ab7a7d48f24, ahead 1 / behind 2\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+
+| Gap | Classification | Current status | Why it matters |
+|---|---|---|---|
+| No canonical `ImplementationCandidate` | missing | Multiple candidate concepts exist, but no single type/interface. | Prevents unified candidate/provider/policy architecture. |
+| Separate candidate structs | implemented but unintegrated | CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, Triton, CPU descriptors, AWQ deployment all differ. | Causes parallel decision systems. |
+| Private Triton schema | implemented but unintegrated | Real measured Triton path exists outside canonical ExecutionPlan dispatch. | Real capability is easy to miss and hard to govern. |
+| P1D evidence-to-policy edge | implemented but unintegrated | Threshold policy evidence exists offline; shipped compiler remains effectively always serial. | Current runtime can execute better schedules, but policy is not integrated. |
+| Capability DB duplication | implemented but unintegrated | Compiler-local profiles are richer/newer than `ml-platform-capabilities`. | Canonical capability ownership is not yet real. |
+| Runtime schema drift | implemented but unintegrated | Runtime Python schema is not perfect one-to-one mirror of C++ ExecutionPlan schema. | Contract validation can lose fields or semantics. |
+| Limited IR materialization | implemented but incomplete | `hir.cast` materialization exists; many decisions remain attrs/contracts. | Compiler backend identity depends on implementation decisions becoming IR when needed. |
+| Missing dequant/layout IR | missing | Dequant deferred due missing scale/zero-point metadata; layout transform op absent. | Quant/layout decisions cannot fully lower. |
+| Missing memory-space/DMA/synchronization IR | missing | Tile planning has memory hierarchy facts; no mature DMA/sync IR. | Edge/NPU backend cannot be compiler-complete without data movement IR. |
+| Missing AWQ accuracy evidence | blocked by evidence | AWQ artifact and serving path exist; complete accuracy/perplexity validation absent. | Quantization policy cannot be trusted beyond execution/perf boundary. |
+| No unified objective model | missing | Ranking policies are local/private. | Multi-objective compiler decisions cannot be compared consistently. |
+| Incomplete Edge/NPU path | planning_only | NPU profiles/plans exist at concept level. | Edge AI target requires heterogeneous CPU/GPU/NPU partitioning. |
+| Incomplete ExecuTorch head-to-head contract | experimental | Standalone paths exist. | Project goal is fair narrow comparison, not universal superiority. |
+| Stale/superseded documentation risk | intentionally deferred | Historical docs/reports preserve phase evidence. | New engineers need canonical status docs before reading history. |

@@ -1,3 +1,9 @@
+DOCUMENT STATUS: HISTORICAL PLANNING NOTES
+
+Superseded for architecture authority by: ARCHITECTURE_CONSTITUTION.md and KNOWN_GAPS.md.
+
+Truth boundary: This document may contain older planning assumptions. Current architecture invariants and gap classifications live in the canonical Phase D0 documents.
+
 # Future Work
 
 ## Completed Recently
