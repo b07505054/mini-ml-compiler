@@ -44,6 +44,7 @@
 #if defined(__linux__)
 #include <unistd.h>
 #endif
+#include <unistd.h> // gethostname (POSIX; available on both macOS and Linux)
 
 namespace {
 
@@ -117,6 +118,41 @@ int extract_int_field(const std::string& text, const std::string& key) {
         throw std::runtime_error("plan missing required integer field: " + key);
     }
     return std::stoi(match[1].str());
+}
+
+// ---------------------------------------------------------------------------
+// Provenance: fields every emitted artifact must carry (target host, target
+// profile ID, git commit, thread count, timestamp). target_profile_id is
+// caller-supplied (--target-profile-id) because this tool has no target-
+// profile-resolution logic of its own; an empty value is recorded honestly
+// rather than guessed.
+// ---------------------------------------------------------------------------
+
+struct Provenance {
+    std::string target_host;
+    std::string git_commit;
+    std::string target_profile_id;
+    std::string utc_timestamp;
+};
+
+std::string get_hostname() {
+    char buf[256] = {0};
+    if (gethostname(buf, sizeof(buf) - 1) == 0) return std::string(buf);
+    return "unknown";
+}
+
+std::string get_git_commit() {
+    std::string commit = run_command_capture("git rev-parse HEAD 2>/dev/null");
+    return commit.empty() ? "unknown_not_a_git_checkout_or_git_unavailable" : commit;
+}
+
+void write_provenance_json(std::ostream& out, const std::string& indent, const Provenance& prov) {
+    out << indent << "\"provenance\": {\n";
+    out << indent << "  \"target_host\": \"" << prov.target_host << "\",\n";
+    out << indent << "  \"git_commit\": \"" << prov.git_commit << "\",\n";
+    out << indent << "  \"target_profile_id\": \"" << prov.target_profile_id << "\",\n";
+    out << indent << "  \"utc_timestamp\": \"" << prov.utc_timestamp << "\"\n";
+    out << indent << "},\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -199,18 +235,44 @@ Environment collect_environment(int benchmark_threads) {
         "awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo"), "os_query(/proc/cpuinfo)"};
     env.os = {run_command_capture("uname -r"), "os_query(uname)"};
     long nproc = sysconf(_SC_NPROCESSORS_ONLN);
-    env.physical_cores = {"unknown", "unavailable"};  // no portable P/E split without lscpu parsing
     env.logical_cores = {nproc > 0 ? std::to_string(nproc) : "unknown",
                          nproc > 0 ? "sysconf(_SC_NPROCESSORS_ONLN)" : "unavailable"};
-    env.perf_core_count = {"unknown", "unavailable"};
+    // Physical core count: Core(s) per socket * Socket(s) from lscpu. This
+    // CPU (Intel Comet Lake mobile) has no heterogeneous P/E clusters, so
+    // "physical_cores" alone is sufficient; perf/efficiency split fields
+    // stay "unknown" (honestly absent, never fabricated) rather than
+    // guessed for a non-hybrid part.
+    std::string cores_per_socket = run_command_capture(
+        "lscpu | awk -F': *' '/^Core\\(s\\) per socket/{print $2}'");
+    std::string sockets = run_command_capture(
+        "lscpu | awk -F': *' '/^Socket\\(s\\)/{print $2}'");
+    if (!cores_per_socket.empty() && !sockets.empty()) {
+        try {
+            int total = std::stoi(cores_per_socket) * std::stoi(sockets);
+            env.physical_cores = {std::to_string(total), "os_query(lscpu: Core(s) per socket * Socket(s))"};
+        } catch (...) {
+            env.physical_cores = {"unknown", "unavailable"};
+        }
+    } else {
+        env.physical_cores = {"unknown", "unavailable"};
+    }
+    env.perf_core_count = {"not_applicable_non_hybrid_cpu", "declared_from_lscpu_single_core_type"};
     env.perf_core_l1d_bytes = {"unknown", "unavailable"};
     env.perf_core_l2_bytes = {"unknown", "unavailable"};
-    env.efficiency_core_count = {"unknown", "unavailable"};
+    env.efficiency_core_count = {"not_applicable_non_hybrid_cpu", "declared_from_lscpu_single_core_type"};
     env.efficiency_core_l1d_bytes = {"unknown", "unavailable"};
     env.efficiency_core_l2_bytes = {"unknown", "unavailable"};
     env.cache_line_bytes = {run_command_capture(
         "getconf LEVEL1_DCACHE_LINESIZE 2>/dev/null"), "os_query(getconf)"};
-    env.simd_capability = {"unknown_not_queried_on_linux_path", "unavailable"};
+    {
+        std::string flags = run_command_capture(
+            "awk -F': ' '/^flags/{print $2; exit}' /proc/cpuinfo");
+        bool has_avx512 = flags.find("avx512") != std::string::npos;
+        bool has_avx2 = flags.find(" avx2 ") != std::string::npos || flags.find(" avx2") != std::string::npos;
+        bool has_avx = flags.find(" avx ") != std::string::npos || flags.find(" avx") != std::string::npos;
+        std::string simd = has_avx512 ? "avx512" : has_avx2 ? "avx2" : has_avx ? "avx" : "sse_baseline_or_unknown";
+        env.simd_capability = {simd, flags.empty() ? "unavailable" : "os_query(/proc/cpuinfo flags)"};
+    }
 #else
     env.cpu_model = {"unknown", "unavailable"};
     env.os = {"unknown", "unavailable"};
@@ -234,20 +296,27 @@ Environment collect_environment(int benchmark_threads) {
     env.arch = {"unknown", "unavailable"};
 #endif
 
-    std::string clang_version = run_command_capture("clang++ --version 2>/dev/null | head -1");
-    if (!clang_version.empty()) {
-        env.compiler = {clang_version, "compiler_invocation(clang++ --version)"};
-    } else {
+    // Portability note: the compiler that built THIS binary is only known
+    // truthfully via predefined macros (__VERSION__ + family macro).
+    // Invoking a hardcoded binary name (e.g. "clang++ --version") is
+    // unreliable cross-toolchain: on a host where CMake is configured to
+    // use g++ (CMAKE_CXX_COMPILER=/usr/bin/c++) but clang++ also happens
+    // to be installed on PATH, that would silently report the wrong
+    // compiler. The macro-derived identity is primary and always correct
+    // for this binary; the matching family binary is invoked only for a
+    // supplementary descriptive string, never as the source of truth.
 #if defined(__clang__)
-        env.compiler = {"clang (version macro __clang_major__.__clang_minor__ = " +
-            std::to_string(__clang_major__) + "." + std::to_string(__clang_minor__) + ")",
-            "compiler_predefined_macro"};
+    env.compiler = {std::string("clang ") + __VERSION__, "compiler_predefined_macro(__clang__,__VERSION__)"};
+    std::string raw = run_command_capture("clang++ --version 2>/dev/null | head -1");
 #elif defined(__GNUC__)
-        env.compiler = {"gcc " + std::to_string(__GNUC__) + "." + std::to_string(__GNUC_MINOR__),
-            "compiler_predefined_macro"};
+    env.compiler = {std::string("gcc ") + __VERSION__, "compiler_predefined_macro(__GNUC__,__VERSION__)"};
+    std::string raw = run_command_capture("c++ --version 2>/dev/null | head -1");
 #else
-        env.compiler = {"unknown", "unavailable"};
+    env.compiler = {"unknown", "unavailable"};
+    std::string raw;
 #endif
+    if (!raw.empty()) {
+        env.compiler.value += " [PATH binary reports: " + raw + "]";
     }
 
 #if defined(NDEBUG)
@@ -267,11 +336,12 @@ void write_env_fact(std::ostream& out, const std::string& indent, const std::str
         << (trailing_comma ? ",\n" : "\n");
 }
 
-void write_environment_json(const std::string& path, const Environment& env) {
+void write_environment_json(const std::string& path, const Environment& env, const Provenance& prov) {
     std::ostringstream out;
     out << "{\n";
     out << "  \"schema\": \"cpu_fused_schedule_discovery_environment\",\n";
     out << "  \"schema_version\": 1,\n";
+    write_provenance_json(out, "  ", prov);
     out << "  \"utc_timestamp\": \"" << env.utc_timestamp << "\",\n";
     write_env_fact(out, "  ", "cpu_model", env.cpu_model, true);
     write_env_fact(out, "  ", "os", env.os, true);
@@ -290,10 +360,12 @@ void write_environment_json(const std::string& path, const Environment& env) {
     write_env_fact(out, "  ", "simd_capability", env.simd_capability, true);
     write_env_fact(out, "  ", "benchmark_thread_count", env.benchmark_thread_count, true);
     out << "  \"thread_affinity_control\": \"not_controlled_os_default_scheduling\",\n";
-    out << "  \"note\": \"Apple Silicon hosts expose heterogeneous performance/efficiency "
-           "core clusters; Phase 1 fixes benchmark_thread_count=1 and does not exercise "
-           "multicore scheduling. Core/cache facts are recorded for future Phase 3 hardware "
-           "abstraction work, not used by this phase's candidate selection.\"\n";
+    out << "  \"note\": \"This run fixes benchmark_thread_count=1 and does not exercise "
+           "multicore scheduling. Some hosts expose heterogeneous performance/efficiency "
+           "core clusters (see performance_core_count/efficiency_core_count; "
+           "'not_applicable_non_hybrid_cpu' means this host has a single core type). "
+           "Core/cache facts are recorded for future hardware-abstraction work, not used "
+           "by this phase's candidate selection.\"\n";
     out << "}\n";
     write_text_file(path, out.str());
 }
@@ -322,7 +394,13 @@ struct Candidate {
     int full_size_intermediates = 0;
 };
 
-std::vector<Candidate> make_candidates() {
+// Original Phase-1 candidate tier. Kept for reference/attribution only —
+// both the local Apple M5 run and a remote Intel i5-10210U pilot session
+// (trace/remote_intel_cpu_fused_schedule_discovery/pilot_session/) showed
+// this set collapses to one dominant candidate (bm32_bn32_bk32) on BOTH
+// hosts: only block_n was ever varied meaningfully (block_k fixed at 32
+// throughout, all tile footprints ≤4 KiB, far below either host's L1D).
+std::vector<Candidate> make_original_phase1_candidates() {
     return {
         {"bm8_bn8_bk32", 8, 8, 32, 1},
         {"bm16_bn16_bk32", 16, 16, 32, 1},
@@ -331,11 +409,46 @@ std::vector<Candidate> make_candidates() {
     };
 }
 
-void write_candidate_contract_json(const std::string& path, const std::vector<Candidate>& candidates) {
+// R1 candidate-space repair (spec-directed): varies block_m/block_n/block_k
+// independently, spanning tile footprints from far below to above a real
+// measured per-core L1D (this host: 32 KiB; Apple M5: 64-128 KiB) and
+// varying block_k for the first time. Footprint = block_m*block_n*4 bytes
+// (f32 tile-local accumulator):
+//   bm16_bn16_bk16   ->   1,024 B  (small footprint, small K)
+//   bm32_bn32_bk32   ->   4,096 B  (Phase-1 baseline, medium K)
+//   bm64_bn64_bk32   ->  16,384 B  (near/half L1D, medium K)
+//   bm64_bn64_bk128  ->  16,384 B  (near/half L1D, large K)
+//   bm128_bn128_bk32 ->  65,536 B  (above L1D on this host, medium K)
+//   bm128_bn128_bk256->  65,536 B  (above L1D, large K)
+//   bm16_bn128_bk32  ->   8,192 B  (rectangular: skinny-M/wide-N tile)
+//   bm128_bn16_bk32  ->   8,192 B  (rectangular: wide-M/skinny-N tile)
+// No packing, manual SIMD, or multithreading added — thread_count stays 1
+// for every candidate, per the phase's controlled-variable contract.
+std::vector<Candidate> make_repaired_candidates() {
+    return {
+        {"bm16_bn16_bk16", 16, 16, 16, 1},
+        {"bm32_bn32_bk32", 32, 32, 32, 1},
+        {"bm64_bn64_bk32", 64, 64, 32, 1},
+        {"bm64_bn64_bk128", 64, 64, 128, 1},
+        {"bm128_bn128_bk32", 128, 128, 32, 1},
+        {"bm128_bn128_bk256", 128, 128, 256, 1},
+        {"bm16_bn128_bk32", 16, 128, 32, 1},
+        {"bm128_bn16_bk32", 128, 16, 32, 1},
+    };
+}
+
+std::vector<Candidate> make_candidates(const std::string& candidate_set) {
+    return candidate_set == "original" ? make_original_phase1_candidates() : make_repaired_candidates();
+}
+
+void write_candidate_contract_json(const std::string& path, const std::vector<Candidate>& candidates,
+                                   const Provenance& prov, const std::string& candidate_set) {
     std::ostringstream out;
     out << "{\n";
     out << "  \"schema\": \"cpu_fused_schedule_candidate_contract\",\n";
     out << "  \"schema_version\": 1,\n";
+    write_provenance_json(out, "  ", prov);
+    out << "  \"candidate_set\": \"" << candidate_set << "\",\n";
     out << "  \"controlled_variables\": {\n";
     out << "    \"semantics\": \"matmul_bias_relu\",\n";
     out << "    \"dtype\": \"f32\",\n";
@@ -441,11 +554,13 @@ std::vector<Workload> make_workloads() {
     return w;
 }
 
-void write_workload_manifest_json(const std::string& path, const std::vector<Workload>& workloads) {
+void write_workload_manifest_json(const std::string& path, const std::vector<Workload>& workloads,
+                                  const Provenance& prov) {
     std::ostringstream out;
     out << "{\n";
     out << "  \"schema\": \"cpu_fused_schedule_workload_manifest\",\n";
     out << "  \"schema_version\": 1,\n";
+    write_provenance_json(out, "  ", prov);
     out << "  \"note\": \"Representative documented subset across six shape families; "
            "full Cartesian product not used to bound benchmark runtime.\",\n";
     out << "  \"workloads\": [\n";
@@ -921,11 +1036,13 @@ std::vector<WorkloadMeasurement> run_discovery(
 }
 
 void write_benchmark_measurements_json(const std::string& path, const std::vector<WorkloadMeasurement>& results,
-                                       const FusionAttributionResult& fusion_baseline) {
+                                       const FusionAttributionResult& fusion_baseline,
+                                       const Provenance& prov) {
     std::ostringstream out;
     out << "{\n";
     out << "  \"schema\": \"cpu_fused_schedule_benchmark_measurements\",\n";
     out << "  \"schema_version\": 1,\n";
+    write_provenance_json(out, "  ", prov);
     out << "  \"fusion_attribution_baseline\": ";
     write_fusion_attribution_json(out, fusion_baseline);
     out << ",\n";
@@ -988,6 +1105,7 @@ void write_benchmark_measurements_json(const std::string& path, const std::vecto
 // ---------------------------------------------------------------------------
 
 struct PlanRequest {
+    std::string target_profile_id;
     std::string backend;
     std::string kernel;
     std::string candidate_id;
@@ -997,6 +1115,7 @@ struct PlanRequest {
 PlanRequest load_plan(const std::string& path) {
     const std::string text = read_text_file(path);
     PlanRequest req;
+    req.target_profile_id = extract_string_field(text, "target_profile_id");
     req.backend = extract_string_field(text, "backend");
     req.kernel = extract_string_field(text, "kernel");
     const size_t schedule_pos = text.find("\"schedule\"");
@@ -1012,10 +1131,21 @@ PlanRequest load_plan(const std::string& path) {
     return req;
 }
 
-void run_use_plan_validation(const std::string& plan_path, const std::string& output_path) {
-    const std::vector<Candidate> candidates = make_candidates();
+void run_use_plan_validation(const std::string& plan_path, const std::string& output_path,
+                             const std::string& expected_target_profile_id_raw,
+                             const std::string& candidate_set) {
+    const std::vector<Candidate> candidates = make_candidates(candidate_set);
     PlanRequest req = load_plan(plan_path);
+    // Empty means "not provided": skip cross-target enforcement, but still
+    // show an honest sentinel (never a blank string) in the JSON output.
+    const std::string expected_target_profile_id = expected_target_profile_id_raw.empty()
+        ? "unspecified_no_target_profile_id_provided" : expected_target_profile_id_raw;
 
+    if (!expected_target_profile_id_raw.empty() && req.target_profile_id != expected_target_profile_id) {
+        throw std::runtime_error(
+            "plan target_profile_id '" + req.target_profile_id + "' does not match this run's "
+            "target profile '" + expected_target_profile_id + "' (refusing cross-target dispatch)");
+    }
     if (req.backend != "cpu") {
         throw std::runtime_error("unsupported backend in plan: " + req.backend);
     }
@@ -1063,11 +1193,13 @@ void run_use_plan_validation(const std::string& plan_path, const std::string& ou
     out << "  \"schema\": \"cpu_fused_schedule_plan_dispatch_validation\",\n";
     out << "  \"schema_version\": 1,\n";
     out << "  \"plan_path\": \"" << json_escape(plan_path) << "\",\n";
-    out << "  \"planned\": {\"backend\": \"" << req.backend << "\", \"kernel\": \"" << req.kernel
+    out << "  \"planned\": {\"target_profile_id\": \"" << req.target_profile_id
+        << "\", \"backend\": \"" << req.backend << "\", \"kernel\": \"" << req.kernel
         << "\", \"candidate_id\": \"" << req.candidate_id << "\", \"block_m\": " << req.block_m
         << ", \"block_n\": " << req.block_n << ", \"block_k\": " << req.block_k
         << ", \"thread_count\": " << req.thread_count << "},\n";
-    out << "  \"actual\": {\"backend\": \"cpu\", \"kernel\": \"fused_matmul_bias_relu\", "
+    out << "  \"actual\": {\"target_profile_id\": \"" << expected_target_profile_id
+        << "\", \"backend\": \"cpu\", \"kernel\": \"fused_matmul_bias_relu\", "
         << "\"candidate_id\": \"" << actual_candidate_id << "\", \"block_m\": " << actual_block_m
         << ", \"block_n\": " << actual_block_n << ", \"block_k\": " << actual_block_k
         << ", \"thread_count\": " << actual_thread_count << "},\n";
@@ -1081,9 +1213,10 @@ void run_use_plan_validation(const std::string& plan_path, const std::string& ou
     }
 }
 
-void write_plan_file(const std::string& path, const Candidate& c) {
+void write_plan_file(const std::string& path, const Candidate& c, const std::string& target_profile_id) {
     std::ostringstream out;
     out << "{\n";
+    out << "  \"target_profile_id\": \"" << target_profile_id << "\",\n";
     out << "  \"backend\": \"cpu\",\n";
     out << "  \"kernel\": \"fused_matmul_bias_relu\",\n";
     out << "  \"schedule\": {\n";
@@ -1101,6 +1234,8 @@ struct CliArgs {
     std::string mode = "discover";
     std::string output_dir = "trace/cpu_fused_schedule_discovery";
     std::string plan_path;
+    std::string target_profile_id;
+    std::string candidate_set = "repaired";
     bool smoke = false;
 };
 
@@ -1118,11 +1253,16 @@ CliArgs parse_args(int argc, char** argv) {
             args.output_dir = require_value(arg);
         } else if (arg == "--plan") {
             args.plan_path = require_value(arg);
+        } else if (arg == "--target-profile-id") {
+            args.target_profile_id = require_value(arg);
+        } else if (arg == "--candidate-set") {
+            args.candidate_set = require_value(arg);
         } else if (arg == "--smoke") {
             args.smoke = true;
         } else if (arg == "--help" || arg == "-h") {
             std::cout << "Usage: " << argv[0]
-                      << " [--mode discover|use-plan] [--output-dir DIR] [--plan PATH] [--smoke]\n";
+                      << " [--mode discover|use-plan] [--output-dir DIR] [--plan PATH] "
+                      << "[--target-profile-id ID] [--candidate-set original|repaired] [--smoke]\n";
             std::exit(0);
         } else {
             throw std::invalid_argument("unknown argument: " + arg);
@@ -1133,6 +1273,9 @@ CliArgs parse_args(int argc, char** argv) {
     }
     if (args.mode == "use-plan" && args.plan_path.empty()) {
         throw std::invalid_argument("--mode use-plan requires --plan PATH");
+    }
+    if (args.candidate_set != "original" && args.candidate_set != "repaired") {
+        throw std::invalid_argument("invalid --candidate-set: " + args.candidate_set);
     }
     return args;
 }
@@ -1145,40 +1288,60 @@ int main(int argc, char** argv) {
         const std::string mkdir_cmd = "mkdir -p " + args.output_dir + " " + args.output_dir + "/plans";
         std::system(mkdir_cmd.c_str());
 
+        Provenance prov;
+        prov.target_host = get_hostname();
+        prov.git_commit = get_git_commit();
+        prov.target_profile_id = args.target_profile_id.empty()
+            ? "unspecified_no_target_profile_id_provided" : args.target_profile_id;
+        {
+            std::time_t now = std::time(nullptr);
+            char ts[64];
+            std::strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&now));
+            prov.utc_timestamp = ts;
+        }
+
         if (args.mode == "use-plan") {
-            run_use_plan_validation(args.plan_path, args.output_dir + "/plan_dispatch_validation.json");
+            // Raw --target-profile-id (possibly empty): an unset value means
+            // "don't enforce cross-target rejection", distinct from the
+            // Provenance struct's substituted sentinel used for JSON output.
+            run_use_plan_validation(args.plan_path, args.output_dir + "/plan_dispatch_validation.json",
+                                    args.target_profile_id, args.candidate_set);
             std::cout << "use-plan validation passed: " << args.plan_path << "\n";
             return 0;
         }
 
-        const std::vector<Candidate> candidates = make_candidates();
+        const std::vector<Candidate> candidates = make_candidates(args.candidate_set);
         const std::vector<Workload> workloads = make_workloads();
 
-        write_environment_json(args.output_dir + "/environment.json", collect_environment(1));
-        write_candidate_contract_json(args.output_dir + "/candidate_contract.json", candidates);
-        write_workload_manifest_json(args.output_dir + "/workload_manifest.json", workloads);
+        write_environment_json(args.output_dir + "/environment.json", collect_environment(1), prov);
+        write_candidate_contract_json(args.output_dir + "/candidate_contract.json", candidates, prov,
+                                      args.candidate_set);
+        write_workload_manifest_json(args.output_dir + "/workload_manifest.json", workloads, prov);
 
-        std::cout << "Running CPU fused schedule discovery: " << workloads.size()
-                  << " workloads x " << candidates.size() << " candidates"
+        std::cout << "Running CPU fused schedule discovery (" << args.candidate_set << " candidate set): "
+                  << workloads.size() << " workloads x " << candidates.size() << " candidates"
                   << (args.smoke ? " (smoke mode)" : "") << "\n";
 
         std::vector<WorkloadMeasurement> results = run_discovery(candidates, workloads, args.smoke);
         std::cout << "Running fusion attribution baseline (separate from schedule oracle)...\n";
         FusionAttributionResult fusion_baseline = run_fusion_attribution_baseline(args.smoke);
-        write_benchmark_measurements_json(args.output_dir + "/benchmark_measurements.json", results, fusion_baseline);
+        write_benchmark_measurements_json(args.output_dir + "/benchmark_measurements.json", results,
+                                          fusion_baseline, prov);
 
         // Generate one plan file per candidate and validate exact dispatch
         // for each, aggregating into a single plan_dispatch_validation.json.
         std::ostringstream agg;
         agg << "{\n  \"schema\": \"cpu_fused_schedule_plan_dispatch_validation\",\n";
-        agg << "  \"schema_version\": 1,\n  \"validations\": [\n";
+        agg << "  \"schema_version\": 1,\n";
+        write_provenance_json(agg, "  ", prov);
+        agg << "  \"validations\": [\n";
         int override_total = 0;
         for (size_t i = 0; i < candidates.size(); ++i) {
             const Candidate& c = candidates[i];
             const std::string plan_path = args.output_dir + "/plans/" + c.candidate_id + ".plan.json";
-            write_plan_file(plan_path, c);
+            write_plan_file(plan_path, c, prov.target_profile_id);
             const std::string single_out = args.output_dir + "/plans/" + c.candidate_id + ".validation.json";
-            run_use_plan_validation(plan_path, single_out);
+            run_use_plan_validation(plan_path, single_out, prov.target_profile_id, args.candidate_set);
             const std::string single_text = read_text_file(single_out);
             const bool matched = single_text.find("\"plan_matched_runtime\": true") != std::string::npos;
             if (!matched) ++override_total;

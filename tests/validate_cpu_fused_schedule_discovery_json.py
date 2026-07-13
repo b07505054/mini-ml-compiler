@@ -12,7 +12,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-CANDIDATE_IDS = {"bm8_bn8_bk32", "bm16_bn16_bk32", "bm32_bn32_bk32", "bm8_bn32_bk32"}
+# Repaired candidate set (default): the original 4-candidate tier collapsed
+# to one dominant candidate on both Apple M5 and remote Intel i5-10210U, so
+# the default tool invocation now uses this repaired, wider set (varies
+# block_k for the first time; spans small/near-L1/above-L1/rectangular tile
+# footprints). See apps/run_cpu_fused_schedule_discovery.cpp make_repaired_candidates().
+CANDIDATE_IDS = {
+    "bm16_bn16_bk16", "bm32_bn32_bk32", "bm64_bn64_bk32", "bm64_bn64_bk128",
+    "bm128_bn128_bk32", "bm128_bn128_bk256", "bm16_bn128_bk32", "bm128_bn16_bk32",
+}
 
 
 def fail(message: str) -> None:
@@ -26,13 +34,25 @@ def main() -> int:
     benchmark_exe, output_dir = sys.argv[1], Path(sys.argv[2])
 
     subprocess.run(
-        [benchmark_exe, "--mode", "discover", "--smoke", "--output-dir", str(output_dir)],
+        [benchmark_exe, "--mode", "discover", "--smoke",
+         "--target-profile-id", "test-schema-check", "--output-dir", str(output_dir)],
         check=True,
     )
 
     environment = json.loads((output_dir / "environment.json").read_text())
     if environment["schema"] != "cpu_fused_schedule_discovery_environment":
         fail("environment.json: wrong schema")
+    for artifact_name in ("environment.json", "candidate_contract.json", "workload_manifest.json",
+                          "benchmark_measurements.json", "plan_dispatch_validation.json"):
+        payload = json.loads((output_dir / artifact_name).read_text())
+        prov = payload.get("provenance")
+        if not isinstance(prov, dict):
+            fail(f"{artifact_name}: missing required 'provenance' block")
+        for field in ("target_host", "git_commit", "target_profile_id", "utc_timestamp"):
+            if not prov.get(field):
+                fail(f"{artifact_name}: provenance missing or empty field '{field}'")
+        if prov["target_profile_id"] != "test-schema-check":
+            fail(f"{artifact_name}: target_profile_id was not threaded through from CLI")
     for key in ("cpu_model", "os", "arch", "compiler", "benchmark_thread_count"):
         fact = environment.get(key)
         if not isinstance(fact, dict) or "value" not in fact or "source" not in fact:

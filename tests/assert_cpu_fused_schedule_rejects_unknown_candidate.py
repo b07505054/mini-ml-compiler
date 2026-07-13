@@ -24,6 +24,7 @@ def main() -> int:
     bad_plan.write_text(
         json.dumps(
             {
+                "target_profile_id": "test-profile",
                 "backend": "cpu",
                 "kernel": "fused_matmul_bias_relu",
                 "schedule": {
@@ -55,11 +56,12 @@ def main() -> int:
     mismatched_plan.write_text(
         json.dumps(
             {
+                "target_profile_id": "test-profile",
                 "backend": "cpu",
                 "kernel": "fused_matmul_bias_relu",
                 "schedule": {
-                    "candidate_id": "bm16_bn16_bk32",
-                    "block_m": 16,
+                    "candidate_id": "bm32_bn32_bk32",
+                    "block_m": 32,
                     "block_n": 999,
                     "block_k": 32,
                     "thread_count": 1,
