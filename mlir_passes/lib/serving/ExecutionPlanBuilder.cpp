@@ -1002,6 +1002,31 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       kernelSelection = std::move(ks);
     }
 
+    // Thread-decomposition schedule from KernelSelectionPass (Phase P1D,
+    // thread_schedule_contract_v1). Absent when the selected kernel (or no
+    // kernel) declares no thread schedules -- existing P1B/P1C plans stay
+    // byte-identical (no thread_schedule.* attrs are ever set for them).
+    std::optional<ThreadSchedule> threadSchedule;
+    if (auto st =
+            op.getAttrOfType<mlir::StringAttr>("thread_schedule.status")) {
+      ThreadSchedule tsched;
+      tsched.status = st.getValue().str();
+      if (auto tc = op.getAttrOfType<mlir::IntegerAttr>(
+              "thread_schedule.thread_count"))
+        tsched.thread_count = tc.getInt();
+      tsched.partition_axis     = strOp(&op, "thread_schedule.partition_axis");
+      tsched.partition_strategy = strOp(&op, "thread_schedule.partition_strategy");
+      tsched.source             = strOp(&op, "thread_schedule.source");
+      tsched.contract_version   = strOp(&op, "thread_schedule.contract_version");
+      tsched.truth_boundary     = strOp(&op, "thread_schedule.truth_boundary");
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "thread_schedule.rejection_reasons"))
+        for (mlir::Attribute elem : arr)
+          if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+            tsched.rejection_reasons.push_back(s.getValue().str());
+      threadSchedule = std::move(tsched);
+    }
+
     // Quantization co-design evidence (quantization_codesign_contract_v1).
     // Present only when the co-design pass ran under an explicit policy.
     std::optional<QuantizationCoDesign> quantCoDesign;
@@ -1084,7 +1109,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
 
     if (quant || kernel || fallback || !materialized.empty() ||
         !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle ||
-        kernelSelection || quantCoDesign) {
+        kernelSelection || quantCoDesign || threadSchedule) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
@@ -1098,6 +1123,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       bundle.layout       = std::move(layout);
       bundle.kernel_selection = std::move(kernelSelection);
       bundle.quantization_codesign = std::move(quantCoDesign);
+      bundle.thread_schedule = std::move(threadSchedule);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;

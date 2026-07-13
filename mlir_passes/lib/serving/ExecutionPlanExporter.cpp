@@ -300,6 +300,31 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     ksObj["truth_boundary"]   = ks.truth_boundary;
     obj["kernel_selection"] = std::move(ksObj);
   }
+  // Thread-decomposition schedule (Phase P1D, thread_schedule_contract_v1).
+  // A decision SEPARATE from kernel_selection: which kernel/tile runs vs.
+  // how many threads and what partitioning it uses. Absent when the
+  // selected kernel (or no kernel) declares no thread schedules -- never
+  // a claim of runtime execution or measured performance.
+  if (b.thread_schedule) {
+    const ThreadSchedule &tsched = *b.thread_schedule;
+    llvm::json::Object tsObj;
+    tsObj["status"] = tsched.status;
+    if (tsched.status == "selected") {
+      tsObj["thread_count"]       = tsched.thread_count;
+      tsObj["partition_axis"]     = tsched.partition_axis;
+      tsObj["partition_strategy"] = tsched.partition_strategy;
+      tsObj["source"]             = tsched.source;
+    }
+    if (!tsched.rejection_reasons.empty()) {
+      llvm::json::Array reasons;
+      for (const auto &r : tsched.rejection_reasons)
+        reasons.push_back(r);
+      tsObj["rejection_reasons"] = std::move(reasons);
+    }
+    tsObj["contract_version"] = tsched.contract_version;
+    tsObj["truth_boundary"]   = tsched.truth_boundary;
+    obj["thread_schedule"] = std::move(tsObj);
+  }
   // Quantization co-design evidence (quantization_codesign_contract_v1).
   // Named "quantization_codesign" to stay distinct from the existing
   // "quantization" object (QuantizationStrategyPlanningPass output).

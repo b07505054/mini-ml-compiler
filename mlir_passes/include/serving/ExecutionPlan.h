@@ -103,6 +103,13 @@ struct PerOpDecisionBundle {
   // Absent when the co-design pass/policy did not run — existing plans
   // stay byte-identical by default.
   std::optional<QuantizationCoDesign> quantization_codesign;
+  // Thread-decomposition schedule (Phase P1D, thread_schedule_contract_v1).
+  // A decision SEPARATE from kernel_selection: which kernel/tile runs vs.
+  // how many threads and what partitioning it uses. Absent when
+  // kernel_selection did not select a kernel, or the selected kernel
+  // declares no supported_thread_schedules — existing P1B/P1C plans (no
+  // thread schedules declared anywhere) stay byte-identical by default.
+  std::optional<ThreadSchedule> thread_schedule;
 };
 
 // ---------------------------------------------------------------------------

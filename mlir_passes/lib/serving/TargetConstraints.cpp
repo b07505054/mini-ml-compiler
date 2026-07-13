@@ -670,6 +670,22 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
       auto add = [&](llvm::StringRef k, mlir::Attribute v) {
         fields.emplace_back(mlir::StringAttr::get(ctx, k), v);
       };
+      // Thread-decomposition options (Phase P1D, thread_schedule_contract_v1):
+      // an ArrayAttr of small DictionaryAttrs, same nesting style as the
+      // outer runtime_kernels list itself. Empty when the kernel declares
+      // no thread schedules (pre-P1D profiles) — absent capacity, never
+      // invented.
+      llvm::SmallVector<mlir::Attribute> threadScheduleEntries;
+      for (const auto &ts : rk.supported_thread_schedules) {
+        llvm::SmallVector<mlir::NamedAttribute> tsFields;
+        tsFields.emplace_back(mlir::StringAttr::get(ctx, "thread_count"),
+                               mlir::IntegerAttr::get(i64, ts.thread_count));
+        tsFields.emplace_back(mlir::StringAttr::get(ctx, "partition_axis"),
+                               S(ts.partition_axis));
+        tsFields.emplace_back(mlir::StringAttr::get(ctx, "partition_strategy"),
+                               S(ts.partition_strategy));
+        threadScheduleEntries.push_back(mlir::DictionaryAttr::get(ctx, tsFields));
+      }
       // Sorted alphabetically (DictionaryAttr requirement):
       add("backend",                     S(rk.backend));
       add("kernel_id",                   S(rk.kernel_id));
@@ -682,6 +698,8 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
       add("supported_dtypes",            A(rk.supported_dtypes));
       add("supported_layouts",           A(rk.supported_layouts));
       add("supported_quant_modes",       A(rk.supported_quant_modes));
+      add("supported_thread_schedules",
+          mlir::ArrayAttr::get(ctx, threadScheduleEntries));
       add("supported_tile_shapes",       A(rk.supported_tile_shapes));
       add("truth_boundary",              S(rk.truth_boundary));
       entries.push_back(mlir::DictionaryAttr::get(ctx, fields));

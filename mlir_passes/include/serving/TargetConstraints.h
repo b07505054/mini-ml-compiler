@@ -167,6 +167,16 @@ struct KernelLibraryCapability {
 // op, dtype, quant mode, layout, tile plan, and memory hierarchy — never
 // by inference or wishful coverage. The registry is expected to be small
 // and honest: if the runtime only has RMSNorm, only RMSNorm is declared.
+// One thread-decomposition option a kernel can be dispatched with (Phase
+// P1D, thread_schedule_contract_v1). Declared per-kernel in the profile,
+// exactly like supported_tile_shapes is declared per-kernel today —
+// backend-neutral naming, no hardware-specific conditions.
+struct RuntimeThreadScheduleOption {
+  int64_t     thread_count = 1;
+  std::string partition_axis;      // "none" | "m" | "n" | "two_dimensional"
+  std::string partition_strategy;  // "serial" | "contiguous_chunks" | "static_2d"
+};
+
 struct RuntimeKernelDescriptor {
   std::string kernel_id;   // stable id, e.g. "metal_rmsnorm_f32_v1"
   std::string op_name;     // short op name it implements, e.g. "rmsnorm"
@@ -178,6 +188,12 @@ struct RuntimeKernelDescriptor {
   // Tile shapes ("MxNxK") the kernel is written for; empty = no tile
   // constraint. Non-empty requires a planned tile.plan to match against.
   std::vector<std::string> supported_tile_shapes;
+  // Thread-decomposition options this kernel is written for; empty = no
+  // thread schedule declared (thread_schedule stays absent in the plan,
+  // same "absence != invented capability" convention as everywhere else
+  // in this contract). Declaration order is the selection order (first
+  // entry preferred), exactly like runtimeKernels[] itself.
+  std::vector<RuntimeThreadScheduleOption> supported_thread_schedules;
 
   bool    requires_static_shape       = true;
   int64_t requires_local_memory_bytes = 0; // 0 = no local-memory requirement

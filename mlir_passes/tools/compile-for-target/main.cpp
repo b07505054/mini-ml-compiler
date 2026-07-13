@@ -763,6 +763,23 @@ parseDeviceProfile(llvm::StringRef path) {
       rk.supported_quant_modes = readStrings(ro, "supportedQuantModes");
       rk.supported_layouts     = readStrings(ro, "supportedLayouts");
       rk.supported_tile_shapes = readStrings(ro, "supportedTileShapes");
+      // Thread-decomposition options (Phase P1D, thread_schedule_contract_v1).
+      // Absent in every pre-P1D profile; declaration order is preference
+      // order, same convention as runtimeKernels[] itself.
+      if (auto *tsArr = ro->getArray("threadSchedules")) {
+        for (const auto &tsElem : *tsArr) {
+          const llvm::json::Object *tso = tsElem.getAsObject();
+          if (!tso) continue;
+          mlir::hir::RuntimeThreadScheduleOption ts;
+          if (auto v = tso->getInteger("threadCount"))
+            ts.thread_count = static_cast<int64_t>(*v);
+          if (auto v = tso->getString("partitionAxis"))
+            ts.partition_axis = v->str();
+          if (auto v = tso->getString("partitionStrategy"))
+            ts.partition_strategy = v->str();
+          rk.supported_thread_schedules.push_back(std::move(ts));
+        }
+      }
       if (auto v = ro->getBoolean("requiresStaticShape"))
         rk.requires_static_shape = *v;
       if (auto v = ro->getInteger("requiresLocalMemoryBytes"))

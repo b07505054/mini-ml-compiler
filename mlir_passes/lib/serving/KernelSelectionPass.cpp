@@ -48,6 +48,14 @@ static constexpr StringLiteral kContractVersion = "kernel_selection_contract_v1"
 static constexpr StringLiteral kTruth =
     "kernel_selection_static_descriptor_match_not_runtime_execution";
 
+// One declared thread-decomposition option (Phase P1D,
+// thread_schedule_contract_v1).
+struct ThreadScheduleOption {
+  int64_t thread_count = 1;
+  std::string partition_axis;
+  std::string partition_strategy;
+};
+
 // Minimal in-pass view of one RuntimeKernelDescriptor dict.
 struct DescriptorView {
   std::string kernel_id;
@@ -57,6 +65,7 @@ struct DescriptorView {
   std::vector<std::string> supported_quant_modes;
   std::vector<std::string> supported_layouts;
   std::vector<std::string> supported_tile_shapes;
+  std::vector<ThreadScheduleOption> supported_thread_schedules;
   bool requires_static_shape = true;
   int64_t requires_local_memory_bytes = 0;
   std::string source;
@@ -85,6 +94,19 @@ static DescriptorView parseDescriptor(DictionaryAttr dict) {
   d.supported_quant_modes = rStrs("supported_quant_modes");
   d.supported_layouts     = rStrs("supported_layouts");
   d.supported_tile_shapes = rStrs("supported_tile_shapes");
+  if (auto a = dict.get("supported_thread_schedules"))
+    if (auto arr = dyn_cast<ArrayAttr>(a))
+      for (auto e : arr)
+        if (auto tsDict = dyn_cast<DictionaryAttr>(e)) {
+          ThreadScheduleOption ts;
+          if (auto tc = tsDict.get("thread_count"))
+            if (auto ia = dyn_cast<IntegerAttr>(tc)) ts.thread_count = ia.getInt();
+          if (auto pa = tsDict.get("partition_axis"))
+            if (auto s = dyn_cast<StringAttr>(pa)) ts.partition_axis = s.getValue().str();
+          if (auto ps = tsDict.get("partition_strategy"))
+            if (auto s = dyn_cast<StringAttr>(ps)) ts.partition_strategy = s.getValue().str();
+          d.supported_thread_schedules.push_back(std::move(ts));
+        }
   if (auto a = dict.get("requires_static_shape"))
     if (auto b = dyn_cast<BoolAttr>(a)) d.requires_static_shape = b.getValue();
   if (auto a = dict.get("requires_local_memory_bytes"))
@@ -185,6 +207,64 @@ static std::string statusFor(const MatchResult& m) {
   return "rejected_" + m.reason;
 }
 
+// Thread-schedule resolution (Phase P1D, thread_schedule_contract_v1),
+// resolved AFTER kernel selection, for the already-selected kernel only.
+// This is a SEPARATE decision from kernel_selection: which kernel/tile
+// runs vs. how many threads and what partitioning it uses. Declaration
+// order is preference order (same convention as kernel selection itself):
+// the first declared schedule whose thread_count fits the profile's
+// verified available compute units wins. physicalComputeUnits absent
+// means one-thread-only eligibility -- never invented parallel capacity.
+struct ThreadScheduleResult {
+  std::string status;   // "selected" | "rejected_*" | "deferred_*"
+  const ThreadScheduleOption* option = nullptr;
+  std::vector<std::string> rejection_reasons;
+};
+
+static ThreadScheduleResult resolveThreadSchedule(
+    const DescriptorView& selected,
+    std::optional<int64_t> physicalComputeUnits) {
+  ThreadScheduleResult r;
+  if (selected.supported_thread_schedules.empty()) {
+    // No thread schedules declared for this kernel at all -- absence is
+    // never invented; leave completely absent from the plan (handled by
+    // the caller, which skips emitting thread_schedule.* attrs entirely).
+    r.status = "";
+    return r;
+  }
+  for (const ThreadScheduleOption& ts : selected.supported_thread_schedules) {
+    if (ts.thread_count <= 1) {
+      r.status = "selected";
+      r.option = &ts;
+      return r;
+    }
+    if (!physicalComputeUnits.has_value()) {
+      r.rejection_reasons.push_back(
+          ts.partition_axis + "_threads_" + std::to_string(ts.thread_count) +
+          ":deferred_missing_compute_units");
+      continue;
+    }
+    if (ts.thread_count > *physicalComputeUnits) {
+      r.rejection_reasons.push_back(
+          ts.partition_axis + "_threads_" + std::to_string(ts.thread_count) +
+          ":rejected_exceeds_compute_units");
+      continue;
+    }
+    r.status = "selected";
+    r.option = &ts;
+    return r;
+  }
+  // Nothing fit. Honest deferral if it was purely a missing-profile-fact
+  // issue for every candidate; otherwise an explicit rejection.
+  bool anyDeferred = false;
+  for (const auto& reason : r.rejection_reasons)
+    if (reason.find("deferred_missing_compute_units") != std::string::npos)
+      anyDeferred = true;
+  r.status = anyDeferred ? "deferred_missing_compute_units"
+                         : "rejected_exceeds_compute_units";
+  return r;
+}
+
 struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
@@ -220,6 +300,19 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
 
     int64_t declaredLocalMemory =
         readProfileNums(module).memory_hierarchy.local_memory_bytes;
+
+    // Phase P1D: the profile's verified available compute units, read
+    // directly from the module attr TargetConstraints::attachToModule
+    // already lowers (target.hardware.physical_compute_units). This is
+    // the first pass to actually CONSUME that attr for a decision --
+    // previously round-tripped but unused by any pass (confirmed by the
+    // P1B/P1C audits). Absence means one-thread-only eligibility below,
+    // never invented parallel capacity.
+    std::optional<int64_t> physicalComputeUnits;
+    if (module)
+      if (auto a = module->getAttrOfType<IntegerAttr>(
+              "target.hardware.physical_compute_units"))
+        physicalComputeUnits = a.getInt();
 
     for (Operation& op : funcOp.getBody().front().without_terminator()) {
       op.setAttr("kernel_selection.contract_version", S(kContractVersion));
@@ -293,6 +386,38 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
         if (!selected->truth_boundary.empty())
           op.setAttr("kernel_selection.truth_boundary",
                      S(selected->truth_boundary));
+
+        // Phase P1D: resolve a thread-decomposition schedule for the
+        // already-selected kernel, a SEPARATE decision from which
+        // kernel/tile runs. Absent entirely (no attrs set) when this
+        // kernel declares no thread schedules at all -- old P1B/P1C
+        // profiles stay byte-identical.
+        ThreadScheduleResult tsResult =
+            resolveThreadSchedule(*selected, physicalComputeUnits);
+        if (!tsResult.status.empty()) {
+          op.setAttr("thread_schedule.contract_version",
+                     S("thread_schedule_contract_v1"));
+          op.setAttr("thread_schedule.truth_boundary",
+                     S("thread_schedule_static_descriptor_match_not_runtime_execution"));
+          op.setAttr("thread_schedule.status", S(tsResult.status));
+          if (tsResult.option) {
+            op.setAttr("thread_schedule.thread_count",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        tsResult.option->thread_count));
+            op.setAttr("thread_schedule.partition_axis",
+                       S(tsResult.option->partition_axis));
+            op.setAttr("thread_schedule.partition_strategy",
+                       S(tsResult.option->partition_strategy));
+            op.setAttr("thread_schedule.source", S(selected->source));
+          }
+          if (!tsResult.rejection_reasons.empty()) {
+            SmallVector<Attribute> tsReasons;
+            for (const auto& reason : tsResult.rejection_reasons)
+              tsReasons.push_back(S(reason));
+            op.setAttr("thread_schedule.rejection_reasons",
+                       ArrayAttr::get(ctx, tsReasons));
+          }
+        }
         continue;
       }
 

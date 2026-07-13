@@ -2,7 +2,10 @@
   "profileId": "raspberry-pi5-cortex-a76-cpu",
   "configuredComputeUnits": "CPU",
   "staticShapeSupport": true,
-  "supportedPrecisions": ["fp32", "fp16"],
+  "supportedPrecisions": [
+    "fp32",
+    "fp16"
+  ],
   "truthBoundary": "raspberry_pi5_live_hardware_evidence_cpu_only_no_verified_gpu_or_npu_kernel_library_declared_not_measured_performance",
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
@@ -12,22 +15,57 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn128_bk32",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
       "requiresLocalMemoryBytes": 0,
       "source": "handwritten_runtime",
       "implementationRef": "heterogeneous-inference-runtime: native/cpu_kernels/portable_fused_matmul_bias_relu.cpp (candidate bm32_bn128_bk32, N-dominant rectangular)",
-      "truthBoundary": "p1c1_low_regret_static_default_selected_via_calibration_only_offline_analysis_dispatch_validated_on_raspberry_pi_see_doc_p1c1_report_not_a_shape_aware_decision_not_a_universal_optimum"
+      "truthBoundary": "p1c1_low_regret_static_default_selected_via_calibration_only_offline_analysis_dispatch_validated_on_raspberry_pi_see_doc_p1c1_report_not_a_shape_aware_decision_not_a_universal_optimum",
+      "threadSchedules": [
+        {
+          "threadCount": 1,
+          "partitionAxis": "none",
+          "partitionStrategy": "serial"
+        },
+        {
+          "threadCount": 2,
+          "partitionAxis": "m",
+          "partitionStrategy": "contiguous_chunks"
+        },
+        {
+          "threadCount": 4,
+          "partitionAxis": "m",
+          "partitionStrategy": "contiguous_chunks"
+        },
+        {
+          "threadCount": 2,
+          "partitionAxis": "n",
+          "partitionStrategy": "contiguous_chunks"
+        },
+        {
+          "threadCount": 4,
+          "partitionAxis": "n",
+          "partitionStrategy": "contiguous_chunks"
+        }
+      ]
     },
     {
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn32_bk32",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -40,8 +78,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm48_bn48_bk48",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -54,8 +96,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm64_bn64_bk64",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -68,8 +114,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm128_bn128_bk32",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -82,8 +132,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm128_bn32_bk32",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -96,8 +150,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn32_bk128",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,
@@ -110,8 +168,12 @@
       "kernelId": "portable_fused_matmul_bias_relu_bm64_bn64_bk128",
       "opName": "fused_matmul_bias_relu",
       "backend": "cpu",
-      "supportedDtypes": ["f32"],
-      "supportedQuantModes": ["none"],
+      "supportedDtypes": [
+        "f32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
       "supportedLayouts": [],
       "supportedTileShapes": [],
       "requiresStaticShape": true,

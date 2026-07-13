@@ -182,6 +182,33 @@ struct KernelSelection {
   std::string truth_boundary;
 };
 
+// Thread-decomposition schedule decision (Phase P1D,
+// thread_schedule_contract_v1). A SEPARATE decision from KernelSelection:
+// KernelSelection identifies WHICH kernel/tile implementation runs;
+// ThreadSchedule identifies HOW MANY threads and what partitioning that
+// already-selected kernel uses. Resolved only after a kernel_selection ==
+// "selected" for the same op, from that kernel's declared
+// supported_thread_schedules (RuntimeKernelDescriptor,
+// kernel_selection_contract_v1's registry) -- never invented, never
+// benchmarked. thread_count is additionally capped by the target profile's
+// declared hardwareExecutionProfile.physicalComputeUnits when present;
+// absence of that field yields one-thread-only eligibility, never invented
+// parallel capacity.
+// truth_boundary:
+//   thread_schedule_static_descriptor_match_not_runtime_execution
+struct ThreadSchedule {
+  // "selected" | "rejected_*" | "deferred_*" (see ThreadSchedule resolution
+  // in KernelSelectionPass)
+  std::string status;
+  int64_t     thread_count = 0;         // valid when status == "selected"
+  std::string partition_axis;           // "none" | "m" | "n" | "two_dimensional"
+  std::string partition_strategy;       // "serial" | "contiguous_chunks" | "static_2d"
+  std::string source;                   // same vocabulary as KernelSelection.source
+  std::vector<std::string> rejection_reasons;
+  std::string contract_version;         // "thread_schedule_contract_v1"
+  std::string truth_boundary;
+};
+
 // Quantization co-design evidence (quantization_codesign_contract_v1,
 // QuantizationCoDesignPass). Deliberately SEPARATE facts: representation,
 // algorithm declaration, backend legality, concrete runtime-kernel support,
