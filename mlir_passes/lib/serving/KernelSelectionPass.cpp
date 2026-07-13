@@ -367,11 +367,73 @@ toPortableCpuProviderContext(const OpContext& opCtx,
   PortableCpuProviderContext ctx;
   ctx.semanticTargetRef = opCtx.op_name;
   ctx.scopeKind = CandidateScopeKind::FusedRegion;
+  ctx.hasStaticShape = !opCtx.has_dynamic_shape;
   ctx.targetProfileId = targetProfileId.str();
   ctx.backend = opCtx.backend;
   ctx.dtype = opCtx.dtype;
   ctx.truthBoundary = kTruth.str();
   return ctx;
+}
+
+static PortableCpuFeasibilityContext
+toPortableCpuFeasibilityContext(const OpContext& opCtx,
+                                StringRef targetProfileId,
+                                std::optional<int64_t> physicalComputeUnits) {
+  PortableCpuFeasibilityContext ctx;
+  ctx.semanticTargetRef = opCtx.op_name;
+  ctx.scopeKind = CandidateScopeKind::FusedRegion;
+  ctx.hasStaticShape = !opCtx.has_dynamic_shape;
+  ctx.targetProfileId = targetProfileId.str();
+  ctx.backend = opCtx.backend;
+  ctx.dtype = opCtx.dtype;
+  ctx.physicalComputeUnits = physicalComputeUnits;
+  return ctx;
+}
+
+static void evaluatePortableCpuCandidates(
+    std::vector<PortableCpuCandidateView>& candidates,
+    const PortableCpuFeasibilityContext& feasibilityContext) {
+  PortableCPUFeasibilityEvaluator evaluator;
+  for (auto& candidate : candidates)
+    candidate.candidate.feasibility =
+        evaluator.evaluate(candidate.candidate, feasibilityContext);
+}
+
+static void materializeSelectedPortableCpuCandidate(
+    Operation& op,
+    MLIRContext* ctx,
+    StringRef source,
+    const ImplementationCandidate& selected) {
+  auto S = [&](StringRef s) { return StringAttr::get(ctx, s); };
+  op.setAttr("kernel_selection.selected_id", S(selected.kernelId));
+  op.setAttr("kernel_selection.source", S(source));
+  op.setAttr("implementation_candidate.selected_id",
+             S(selected.candidateId));
+  op.setAttr("implementation_candidate.provider_id",
+             S(selected.providerId));
+  op.setAttr("implementation_candidate.backend",
+             S(selected.backend));
+  op.setAttr("implementation_candidate.implementation_kind",
+             S(selected.implementationKind));
+  op.setAttr("implementation_candidate.runtime_contract_kind",
+             S(selected.runtimeContractKind));
+  op.setAttr("implementation_candidate.kernel_id",
+             S(selected.kernelId));
+  op.setAttr("implementation_candidate.dtype",
+             S(selected.dtype));
+  if (selected.tile.present) {
+    op.setAttr("implementation_candidate.tile_identity",
+               S(PortableCPUProvider::tileIdentity(selected.tile)));
+    op.setAttr("implementation_candidate.tile_block_m",
+               IntegerAttr::get(IntegerType::get(ctx, 64),
+                                selected.tile.blockM));
+    op.setAttr("implementation_candidate.tile_block_n",
+               IntegerAttr::get(IntegerType::get(ctx, 64),
+                                selected.tile.blockN));
+    op.setAttr("implementation_candidate.tile_block_k",
+               IntegerAttr::get(IntegerType::get(ctx, 64),
+                                selected.tile.blockK));
+  }
 }
 
 static ThreadScheduleResult resolveThreadScheduleStatic(
@@ -466,6 +528,10 @@ static ThreadScheduleResult resolveThreadSchedule(
       toPortableCpuDescriptor(selected));
   std::vector<PortableCpuCandidateView> candidates =
       std::move(providerResult.candidates);
+  evaluatePortableCpuCandidates(
+      candidates,
+      toPortableCpuFeasibilityContext(opCtx, targetProfileId,
+                                      physicalComputeUnits));
   for (const auto& candidate : candidates)
     r.considered_candidate_ids.push_back(candidate.candidate.candidateId);
   if (hasCandidateIdCollision(candidates)) {
@@ -490,7 +556,17 @@ static ThreadScheduleResult resolveThreadSchedule(
 
   auto rejectCandidate = [&](const ThreadScheduleOption* option,
                              StringRef reason) {
-    if (auto candidate = findCandidateFor(option)) {
+    auto findAnyCandidateFor = [&](const ThreadScheduleOption* option)
+        -> const PortableCpuCandidateView* {
+      if (!option) return nullptr;
+      for (const auto& candidate : candidates)
+        if (candidate.schedule.threadCount == option->thread_count &&
+            candidate.schedule.partitionAxis == option->partition_axis &&
+            candidate.schedule.partitionStrategy == option->partition_strategy)
+          return &candidate;
+      return nullptr;
+    };
+    if (auto candidate = findAnyCandidateFor(option)) {
       r.candidate_rejections.push_back(
           {candidate->candidate.candidateId, reason.str()});
     }
@@ -734,40 +810,12 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
         const ImplementationCandidate* selectedImplementation =
             tsResult.has_selected_candidate ? &tsResult.selected_candidate
                                             : nullptr;
-        op.setAttr("kernel_selection.selected_id",
-                   S(selectedImplementation
-                         ? selectedImplementation->kernelId
-                         : selected->kernel_id));
-        op.setAttr("kernel_selection.source", S(selected->source));
-        if (selectedImplementation) {
-          op.setAttr("implementation_candidate.selected_id",
-                     S(selectedImplementation->candidateId));
-          op.setAttr("implementation_candidate.provider_id",
-                     S(selectedImplementation->providerId));
-          op.setAttr("implementation_candidate.backend",
-                     S(selectedImplementation->backend));
-          op.setAttr("implementation_candidate.implementation_kind",
-                     S(selectedImplementation->implementationKind));
-          op.setAttr("implementation_candidate.runtime_contract_kind",
-                     S(selectedImplementation->runtimeContractKind));
-          op.setAttr("implementation_candidate.kernel_id",
-                     S(selectedImplementation->kernelId));
-          op.setAttr("implementation_candidate.dtype",
-                     S(selectedImplementation->dtype));
-          if (selectedImplementation->tile.present) {
-            op.setAttr("implementation_candidate.tile_identity",
-                       S(PortableCPUProvider::tileIdentity(
-                           selectedImplementation->tile)));
-            op.setAttr("implementation_candidate.tile_block_m",
-                       IntegerAttr::get(IntegerType::get(ctx, 64),
-                                        selectedImplementation->tile.blockM));
-            op.setAttr("implementation_candidate.tile_block_n",
-                       IntegerAttr::get(IntegerType::get(ctx, 64),
-                                        selectedImplementation->tile.blockN));
-            op.setAttr("implementation_candidate.tile_block_k",
-                       IntegerAttr::get(IntegerType::get(ctx, 64),
-                                        selectedImplementation->tile.blockK));
-          }
+        if (selectedImplementation)
+          materializeSelectedPortableCpuCandidate(
+              op, ctx, selected->source, *selectedImplementation);
+        else {
+          op.setAttr("kernel_selection.selected_id", S(selected->kernel_id));
+          op.setAttr("kernel_selection.source", S(selected->source));
         }
         if (!tsResult.status.empty()) {
           op.setAttr("thread_schedule.contract_version",

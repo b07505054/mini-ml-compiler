@@ -1,6 +1,6 @@
 # Current State
 
-Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler base before A1: 5822a04aa600ec41fcca5ef00619cc27d3e37c40 (master, ahead 3 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout; not modified in A1\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD before A5: b81830e6883d6284e867fe5e19cc44ccd85f0e23 (master, ahead 7 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout; not modified in A1\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
 
 ## Five-Minute Summary
 
@@ -18,7 +18,7 @@ The system is an IR-centered, hardware-aware implementation-decision compiler fo
 
 ## Current Phase
 
-P1D, P1D.1, A1, A2, A3, and A4 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. A4 extracts construction of those two complete candidates into a dedicated in-process `PortableCPUProvider`; policy and materialization remain outside the provider. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
+P1D, P1D.1, A1, A2, A3, A4, and A5 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. A4 extracts construction of those two complete candidates into a dedicated in-process `PortableCPUProvider`. A5 hardens that provider boundary so enumeration, typed feasibility evaluation, policy, and selected-candidate materialization are explicit and separate while preserving candidate IDs and ExecutionPlan semantics. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, global provider registry, or new policy phase has started.
 
 Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
 
@@ -34,6 +34,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 - A2: P1D.1 now enumerates serial and 4-thread split-M thread-schedule `ImplementationCandidate`s, evaluates typed feasibility, applies the unchanged policy, and materializes the selected candidate into the existing `thread_schedule` ExecutionPlan contract.
 - A3: the active Raspberry Pi portable CPU candidates now include complete executable identity for the fixed fused MatMul + Bias + ReLU path: CPU backend, opaque portable native kernel contract, kernel ID `portable_fused_matmul_bias_relu_bm32_bn128_bk32`, tile `BM=32, BN=128, BK=32`, compiler-normalized dtype `fp32`, and serial/4-thread split-M schedule variants.
 - A4: `PortableCPUProvider` now owns enumeration/construction of those active complete portable CPU candidates. `KernelSelectionPass` still owns descriptor matching, feasibility/policy orchestration, and ExecutionPlan materialization.
+- A5: `PortableCPUProvider` output is now an explicit enumeration boundary with unknown feasibility; `PortableCPUFeasibilityEvaluator` evaluates target/workload feasibility; policy consumes feasible candidates; and materialization derives kernel, tile, dtype, provider, candidate, and thread-schedule attributes from the selected candidate.
 
 ## What Is Real and Executable
 
@@ -69,6 +70,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 ## Not Implemented
 
 - Project-wide `ImplementationCandidate` unification across inactive tile alternatives, generic TilePlan, unrelated KernelSelection paths, Triton, AWQ/vLLM, deployment candidates, serving candidates, and external providers.
+- Generic provider registry, external provider API, and cross-backend feasibility architecture.
 - Unified policy engine across CPU, Triton, AWQ, vLLM, and future NPU paths.
 - Complete dequant/layout-transform IR materialization.
 - Mature memory-space/DMA/synchronization/NPU Implementation IR.

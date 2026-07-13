@@ -235,6 +235,7 @@ int main() {
   PortableCpuProviderContext providerCtx;
   providerCtx.semanticTargetRef = "fused_matmul_bias_relu";
   providerCtx.scopeKind = CandidateScopeKind::FusedRegion;
+  providerCtx.hasStaticShape = true;
   providerCtx.targetProfileId = "raspberry-pi5-cortex-a76-cpu";
   providerCtx.backend = "cpu";
   providerCtx.dtype = "fp32";
@@ -274,6 +275,10 @@ int main() {
          providerResult.candidates[1].candidate.candidateId);
   assert(providerResult.candidates[0].schedule.threadCount == 1);
   assert(providerResult.candidates[1].schedule.threadCount == 4);
+  assert(providerResult.candidates[0].candidate.feasibility.status ==
+         CandidateFeasibilityStatus::Unknown);
+  assert(providerResult.candidates[1].candidate.feasibility.status ==
+         CandidateFeasibilityStatus::Unknown);
 
   for (const auto& emitted : providerResult.candidates) {
     assert(emitted.schedule.threadCount == 1 ||
@@ -291,6 +296,40 @@ int main() {
          providerResult.candidates[0].candidate.candidateId);
   assert(providerResultLarge.candidates[1].candidate.candidateId ==
          providerResult.candidates[1].candidate.candidateId);
+
+  PortableCPUFeasibilityEvaluator feasibilityEvaluator;
+  PortableCpuFeasibilityContext feasibilityCtx;
+  feasibilityCtx.semanticTargetRef = providerCtx.semanticTargetRef;
+  feasibilityCtx.scopeKind = providerCtx.scopeKind;
+  feasibilityCtx.hasStaticShape = true;
+  feasibilityCtx.targetProfileId = providerCtx.targetProfileId;
+  feasibilityCtx.backend = providerCtx.backend;
+  feasibilityCtx.dtype = providerCtx.dtype;
+  feasibilityCtx.physicalComputeUnits = 4;
+  CandidateFeasibilitySummary serialFeasibility =
+      feasibilityEvaluator.evaluate(providerResult.candidates[0].candidate,
+                                    feasibilityCtx);
+  CandidateFeasibilitySummary parallelFeasibility =
+      feasibilityEvaluator.evaluate(providerResult.candidates[1].candidate,
+                                    feasibilityCtx);
+  assert(serialFeasibility.status == CandidateFeasibilityStatus::Feasible);
+  assert(parallelFeasibility.status == CandidateFeasibilityStatus::Feasible);
+
+  PortableCpuFeasibilityContext insufficientCompute = feasibilityCtx;
+  insufficientCompute.physicalComputeUnits = 2;
+  CandidateFeasibilitySummary rejectedParallel =
+      feasibilityEvaluator.evaluate(providerResult.candidates[1].candidate,
+                                    insufficientCompute);
+  assert(rejectedParallel.status == CandidateFeasibilityStatus::Rejected);
+  assert(rejectedParallel.reason == "rejected_exceeds_compute_units");
+
+  PortableCpuFeasibilityContext missingShape = feasibilityCtx;
+  missingShape.hasStaticShape = false;
+  CandidateFeasibilitySummary deferredSerial =
+      feasibilityEvaluator.evaluate(providerResult.candidates[0].candidate,
+                                    missingShape);
+  assert(deferredSerial.status == CandidateFeasibilityStatus::Deferred);
+  assert(deferredSerial.reason == "missing_static_shape");
 
   PortableCpuProviderContext wrongOpCtx = providerCtx;
   wrongOpCtx.semanticTargetRef = "rmsnorm";

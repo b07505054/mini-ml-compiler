@@ -29,6 +29,7 @@ struct PortableCpuRuntimeKernelDescriptor {
 struct PortableCpuProviderContext {
   std::string semanticTargetRef;
   CandidateScopeKind scopeKind = CandidateScopeKind::Unknown;
+  bool hasStaticShape = false;
   std::string targetProfileId;
   std::string backend;
   std::string dtype;
@@ -47,6 +48,93 @@ struct PortableCpuCandidateView {
 struct PortableCpuProviderResult {
   std::vector<PortableCpuCandidateView> candidates;
   std::vector<PortableCpuProviderDiagnostic> diagnostics;
+};
+
+struct PortableCpuFeasibilityContext {
+  std::string semanticTargetRef;
+  CandidateScopeKind scopeKind = CandidateScopeKind::Unknown;
+  bool hasStaticShape = false;
+  std::string targetProfileId;
+  std::string backend;
+  std::string dtype;
+  std::optional<int64_t> physicalComputeUnits;
+};
+
+class PortableCPUFeasibilityEvaluator {
+public:
+  CandidateFeasibilitySummary evaluate(
+      const ImplementationCandidate& candidate,
+      const PortableCpuFeasibilityContext& ctx) const {
+    CandidateFeasibilitySummary summary;
+    if (candidate.semanticTargetRef != ctx.semanticTargetRef ||
+        candidate.scopeKind != ctx.scopeKind) {
+      summary.status = CandidateFeasibilityStatus::Unsupported;
+      summary.reason = "wrong_semantic_scope";
+      return summary;
+    }
+    if (candidate.targetProfileId != ctx.targetProfileId) {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "target_profile_mismatch";
+      return summary;
+    }
+    if (candidate.backend != ctx.backend || candidate.backend != "cpu") {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "backend_unavailable";
+      return summary;
+    }
+    if (candidate.dtype != ctx.dtype || candidate.dtype != "fp32") {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "wrong_dtype";
+      return summary;
+    }
+    if (candidate.kernelId.empty()) {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "no_matching_kernel_descriptor";
+      return summary;
+    }
+    if (!candidate.tile.present || candidate.tile.blockM != 32 ||
+        candidate.tile.blockN != 128 || candidate.tile.blockK != 32) {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "kernel_tile_identity_mismatch";
+      return summary;
+    }
+    if (!candidate.threadSchedule.present) {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "missing_thread_schedule";
+      return summary;
+    }
+    const auto& ts = candidate.threadSchedule;
+    bool serial = ts.threadCount == 1 && ts.partitionAxis == "none" &&
+                  ts.partitionStrategy == "serial";
+    bool splitM4 = ts.threadCount == 4 && ts.partitionAxis == "m" &&
+                   ts.partitionStrategy == "contiguous_chunks";
+    if (!serial && !splitM4) {
+      summary.status = CandidateFeasibilityStatus::Rejected;
+      summary.reason = "invalid_schedule_tuple";
+      return summary;
+    }
+    if (!ctx.hasStaticShape) {
+      summary.status = CandidateFeasibilityStatus::Deferred;
+      summary.reason = "missing_static_shape";
+      return summary;
+    }
+    if (splitM4) {
+      if (!ctx.physicalComputeUnits.has_value()) {
+        summary.status = CandidateFeasibilityStatus::Deferred;
+        summary.reason = "deferred_missing_compute_units";
+        return summary;
+      }
+      if (*ctx.physicalComputeUnits < ts.threadCount) {
+        summary.status = CandidateFeasibilityStatus::Rejected;
+        summary.reason = "rejected_exceeds_compute_units";
+        return summary;
+      }
+    }
+    summary.status = CandidateFeasibilityStatus::Feasible;
+    summary.reason = serial ? "serial_schedule_declared_legal"
+                            : "parallel_schedule_declared_legal";
+    return summary;
+  }
 };
 
 class PortableCPUProvider {
@@ -235,8 +323,10 @@ private:
     candidate.truthBoundary = ctx.truthBoundary.empty()
                                   ? descriptor.truthBoundary
                                   : ctx.truthBoundary;
-    candidate.feasibility.status = CandidateFeasibilityStatus::Feasible;
-    candidate.feasibility.reason = feasibilityReason.str();
+    candidate.feasibility.status = CandidateFeasibilityStatus::Unknown;
+    candidate.feasibility.reason =
+        std::string("provider_enumerated_requires_feasibility:") +
+        feasibilityReason.str();
     candidate.candidateId = makeFallbackCandidateId(candidate);
     return {candidate, schedule};
   }
