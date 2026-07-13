@@ -4,8 +4,8 @@ Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml
 
 | Gap | Classification | Current status | Why it matters |
 |---|---|---|---|
-| No canonical `ImplementationCandidate` | missing | Multiple candidate concepts exist, but no single type/interface. | Prevents unified candidate/provider/policy architecture. |
-| Separate candidate structs | implemented but unintegrated | CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, Triton, CPU descriptors, AWQ deployment all differ. | Causes parallel decision systems. |
+| No project-wide `ImplementationCandidate` | partially implemented | A1 adds a compiler-internal op-scoped type and shared codec for CandidateGenerationPass, ServingCostModelPass, and PlanSelectionPass. Triton, AWQ/vLLM, ThreadSchedule, TilePlan, KernelSelection, deployment, and serving candidates remain outside it. | Prevents unified candidate/provider/policy architecture beyond the active internal path. |
+| Separate candidate systems outside A1 core | implemented but unintegrated | CandidateGenerationPass/ServingCostModelPass/PlanSelectionPass now share an internal representation, but Triton, CPU descriptors, AWQ deployment, ThreadSchedule, TilePlan, QuantizationDecision, and BackendDecision still differ. | Causes parallel decision systems outside the A1 scope. |
 | Private Triton schema | implemented but unintegrated | Real measured Triton path exists outside canonical ExecutionPlan dispatch. | Real capability is easy to miss and hard to govern. |
 | P1D evidence-to-policy edge | implemented for one path | P1D.1 integrates an offline-calibrated threshold policy for Raspberry Pi fused MatMul + Bias + ReLU with fixed kernel `bm32_bn128_bk32`. | Still not a unified policy engine and not generic ARM scheduling. |
 | Capability DB duplication | implemented but unintegrated | Compiler-local profiles are richer/newer than `ml-platform-capabilities`. | Canonical capability ownership is not yet real. |

@@ -265,6 +265,34 @@ add_test(NAME ServingStaticCostModelV1Test
          COMMAND ServingStaticCostModelV1Test)
 
 # ---------------------------------------------------------------------------
+# CTest: ImplementationCandidate unit test
+# Verifies the compiler-internal candidate encode/decode boundary, stable
+# fallback identity, feasibility mapping, and PolicyResult separation.
+# No Runtime, JSON, target profile, or ExecutionPlan export.
+# ---------------------------------------------------------------------------
+add_executable(ImplementationCandidateTest
+  test/serving/ImplementationCandidateTest.cpp
+)
+llvm_update_compile_flags(ImplementationCandidateTest)
+target_include_directories(ImplementationCandidateTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ImplementationCandidateTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(ImplementationCandidateTest
+  PRIVATE
+    MLIRIR
+    MLIRSupport
+)
+add_test(NAME ImplementationCandidateTest
+         COMMAND ImplementationCandidateTest)
+
+# ---------------------------------------------------------------------------
 # CTest: TargetConstraints unit test
 # Exercises TargetConstraints::fromModule and ::attachToModule directly.
 # No passes, no plugin loading, no Python, no JSON.

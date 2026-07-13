@@ -1,0 +1,374 @@
+#pragma once
+
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace mlir::hir {
+
+enum class CandidateScopeKind {
+  Operator,
+  FusedRegion,
+  Function,
+  Unknown,
+};
+
+enum class CandidateFeasibilityStatus {
+  Feasible,
+  Deferred,
+  Rejected,
+  Unsupported,
+  Unknown,
+};
+
+struct CandidateFeasibilitySummary {
+  CandidateFeasibilityStatus status = CandidateFeasibilityStatus::Unknown;
+  std::string reason;
+  std::vector<std::string> requiredCapabilityRefs;
+};
+
+struct ImplementationCandidateCostSummary {
+  bool hasPenaltyScore = false;
+  int64_t penaltyScore = 0;
+  std::string evaluationStatus;
+  std::string evaluationReason;
+  std::string costModelId;
+  std::string truthBoundary;
+};
+
+struct ImplementationCandidate {
+  std::string candidateId;
+  std::string providerId;
+  CandidateScopeKind scopeKind = CandidateScopeKind::Unknown;
+  std::string semanticTargetRef;
+  std::string functionRef;
+  std::string implementationKind;
+  std::string candidateReason;
+  std::vector<std::string> requiredBoundaryOps;
+  std::string fallbackBackend;
+  CandidateFeasibilitySummary feasibility;
+  ImplementationCandidateCostSummary cost;
+  std::string truthBoundary;
+};
+
+struct PolicyResultCandidateRejection {
+  std::string candidateId;
+  std::string reason;
+};
+
+struct PolicyResult {
+  std::string selectedCandidateId;
+  std::vector<std::string> consideredCandidateIds;
+  std::vector<PolicyResultCandidateRejection> rejectedCandidates;
+  std::string policyId;
+  std::string selectionReason;
+  std::string objectiveSummary;
+  std::string truthBoundary;
+};
+
+inline llvm::StringRef stringifyScopeKind(CandidateScopeKind kind) {
+  switch (kind) {
+  case CandidateScopeKind::Operator:
+    return "operator";
+  case CandidateScopeKind::FusedRegion:
+    return "fused_region";
+  case CandidateScopeKind::Function:
+    return "function";
+  case CandidateScopeKind::Unknown:
+    return "unknown";
+  }
+  return "unknown";
+}
+
+inline CandidateScopeKind parseScopeKind(llvm::StringRef value) {
+  if (value == "operator")
+    return CandidateScopeKind::Operator;
+  if (value == "fused_region")
+    return CandidateScopeKind::FusedRegion;
+  if (value == "function")
+    return CandidateScopeKind::Function;
+  return CandidateScopeKind::Unknown;
+}
+
+inline llvm::StringRef stringifyFeasibilityStatus(
+    CandidateFeasibilityStatus status) {
+  switch (status) {
+  case CandidateFeasibilityStatus::Feasible:
+    return "feasible";
+  case CandidateFeasibilityStatus::Deferred:
+    return "deferred";
+  case CandidateFeasibilityStatus::Rejected:
+    return "rejected";
+  case CandidateFeasibilityStatus::Unsupported:
+    return "unsupported";
+  case CandidateFeasibilityStatus::Unknown:
+    return "unknown";
+  }
+  return "unknown";
+}
+
+inline CandidateFeasibilityStatus parseFeasibilityStatus(
+    llvm::StringRef value) {
+  if (value == "feasible")
+    return CandidateFeasibilityStatus::Feasible;
+  if (value == "deferred")
+    return CandidateFeasibilityStatus::Deferred;
+  if (value == "rejected")
+    return CandidateFeasibilityStatus::Rejected;
+  if (value == "unsupported")
+    return CandidateFeasibilityStatus::Unsupported;
+  return CandidateFeasibilityStatus::Unknown;
+}
+
+inline std::string getCandidateString(DictionaryAttr dict, llvm::StringRef key) {
+  if (!dict)
+    return {};
+  if (auto attr = dict.get(key))
+    if (auto stringAttr = dyn_cast<StringAttr>(attr))
+      return stringAttr.getValue().str();
+  return {};
+}
+
+inline int64_t getCandidateI64(DictionaryAttr dict, llvm::StringRef key,
+                               int64_t defaultValue = 0) {
+  if (!dict)
+    return defaultValue;
+  if (auto attr = dict.get(key))
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+      return intAttr.getInt();
+  return defaultValue;
+}
+
+inline bool hasCandidateI64(DictionaryAttr dict, llvm::StringRef key) {
+  return dict && dict.get(key) && isa<IntegerAttr>(dict.get(key));
+}
+
+inline std::vector<std::string> getCandidateStringArray(DictionaryAttr dict,
+                                                        llvm::StringRef key) {
+  std::vector<std::string> out;
+  if (!dict)
+    return out;
+  if (auto attr = dict.get(key))
+    if (auto arr = dyn_cast<ArrayAttr>(attr))
+      for (auto elem : arr)
+        if (auto stringAttr = dyn_cast<StringAttr>(elem))
+          out.push_back(stringAttr.getValue().str());
+  return out;
+}
+
+inline void upsertCandidateAttr(SmallVectorImpl<NamedAttribute> &attrs,
+                                MLIRContext *ctx, llvm::StringRef key,
+                                Attribute value) {
+  for (NamedAttribute &attr : attrs) {
+    if (attr.getName() == key) {
+      attr = NamedAttribute(StringAttr::get(ctx, key), value);
+      return;
+    }
+  }
+  attrs.push_back(NamedAttribute(StringAttr::get(ctx, key), value));
+}
+
+inline ArrayAttr makeCandidateStringArray(MLIRContext *ctx,
+                                          const std::vector<std::string> &values) {
+  SmallVector<Attribute> attrs;
+  attrs.reserve(values.size());
+  for (const std::string &value : values)
+    attrs.push_back(StringAttr::get(ctx, value));
+  return ArrayAttr::get(ctx, attrs);
+}
+
+inline std::string makeFallbackCandidateId(
+    const ImplementationCandidate &candidate) {
+  std::string id;
+  if (!candidate.semanticTargetRef.empty())
+    id += candidate.semanticTargetRef;
+  else
+    id += "unknown_scope";
+  id += ":";
+  if (!candidate.implementationKind.empty())
+    id += candidate.implementationKind;
+  else
+    id += "unknown_implementation";
+  return id;
+}
+
+inline CandidateFeasibilitySummary inferCandidateFeasibility(
+    DictionaryAttr dict, const ImplementationCandidate &candidate) {
+  CandidateFeasibilitySummary feasibility;
+
+  std::string explicitStatus = getCandidateString(dict, "feasibility.status");
+  if (!explicitStatus.empty()) {
+    feasibility.status = parseFeasibilityStatus(explicitStatus);
+    feasibility.reason = getCandidateString(dict, "feasibility.reason");
+    feasibility.requiredCapabilityRefs =
+        getCandidateStringArray(dict, "feasibility.required_capability_refs");
+    return feasibility;
+  }
+
+  std::string rejectionReason = getCandidateString(dict, "rejection_reason");
+  if (!rejectionReason.empty()) {
+    feasibility.status = CandidateFeasibilityStatus::Rejected;
+    feasibility.reason = rejectionReason;
+    return feasibility;
+  }
+
+  std::string evalStatus = getCandidateString(dict, "evaluation.status");
+  if (evalStatus == "evaluated") {
+    feasibility.status = CandidateFeasibilityStatus::Feasible;
+    feasibility.reason = getCandidateString(dict, "evaluation.reason");
+    return feasibility;
+  }
+  if (evalStatus == "partially_evaluated") {
+    feasibility.status = CandidateFeasibilityStatus::Deferred;
+    feasibility.reason = getCandidateString(dict, "evaluation.reason");
+    return feasibility;
+  }
+  if (evalStatus == "rejected") {
+    feasibility.status = candidate.implementationKind == "unsupported"
+                             ? CandidateFeasibilityStatus::Unsupported
+                             : CandidateFeasibilityStatus::Rejected;
+    feasibility.reason = getCandidateString(dict, "evaluation.reason");
+    return feasibility;
+  }
+
+  std::string constraintStatus = getCandidateString(dict, "constraint_status");
+  if (constraintStatus == "pass") {
+    feasibility.status = CandidateFeasibilityStatus::Feasible;
+    feasibility.reason = "constraints_passed";
+    return feasibility;
+  }
+  if (constraintStatus == "fail") {
+    feasibility.status = CandidateFeasibilityStatus::Rejected;
+    feasibility.reason = getCandidateString(dict, "failed_constraints");
+    return feasibility;
+  }
+
+  if (candidate.implementationKind == "unsupported") {
+    feasibility.status = CandidateFeasibilityStatus::Unsupported;
+    feasibility.reason = candidate.candidateReason.empty()
+                             ? "no_viable_lowering_path"
+                             : candidate.candidateReason;
+    return feasibility;
+  }
+
+  if (!candidate.implementationKind.empty()) {
+    feasibility.status = CandidateFeasibilityStatus::Feasible;
+    feasibility.reason = candidate.candidateReason;
+    return feasibility;
+  }
+
+  feasibility.status = CandidateFeasibilityStatus::Unknown;
+  feasibility.reason = "candidate_status_not_declared";
+  return feasibility;
+}
+
+inline ImplementationCandidate decodeImplementationCandidate(
+    DictionaryAttr dict, llvm::StringRef providerId = "compiler.internal") {
+  ImplementationCandidate candidate;
+  candidate.providerId = getCandidateString(dict, "provider_id");
+  if (candidate.providerId.empty())
+    candidate.providerId = providerId.str();
+  candidate.scopeKind = parseScopeKind(getCandidateString(dict, "scope_kind"));
+  if (candidate.scopeKind == CandidateScopeKind::Unknown && dict)
+    candidate.scopeKind = CandidateScopeKind::Operator;
+  candidate.semanticTargetRef = getCandidateString(dict, "semantic_target_ref");
+  if (candidate.semanticTargetRef.empty())
+    candidate.semanticTargetRef = getCandidateString(dict, "source_op");
+  candidate.functionRef = getCandidateString(dict, "function_ref");
+  candidate.implementationKind = getCandidateString(dict, "implementation_kind");
+  if (candidate.implementationKind.empty())
+    candidate.implementationKind = getCandidateString(dict, "candidate_type");
+  candidate.candidateReason = getCandidateString(dict, "candidate_reason");
+  candidate.requiredBoundaryOps =
+      getCandidateStringArray(dict, "required_boundary_ops");
+  candidate.fallbackBackend = getCandidateString(dict, "fallback_backend");
+  candidate.truthBoundary = getCandidateString(dict, "truth_boundary");
+
+  candidate.candidateId = getCandidateString(dict, "candidate_id");
+  if (candidate.candidateId.empty())
+    candidate.candidateId = getCandidateString(dict, "id");
+  if (candidate.candidateId.empty())
+    candidate.candidateId = makeFallbackCandidateId(candidate);
+
+  candidate.cost.evaluationStatus =
+      getCandidateString(dict, "evaluation.status");
+  candidate.cost.evaluationReason =
+      getCandidateString(dict, "evaluation.reason");
+  candidate.cost.costModelId =
+      getCandidateString(dict, "evaluation.cost.model_id");
+  candidate.cost.truthBoundary =
+      getCandidateString(dict, "evaluation.cost.truth_boundary");
+  if (hasCandidateI64(dict, "evaluation.penalty_score")) {
+    candidate.cost.hasPenaltyScore = true;
+    candidate.cost.penaltyScore =
+        getCandidateI64(dict, "evaluation.penalty_score");
+  }
+
+  candidate.feasibility = inferCandidateFeasibility(dict, candidate);
+  return candidate;
+}
+
+inline DictionaryAttr encodeImplementationCandidate(
+    MLIRContext *ctx, const ImplementationCandidate &candidate,
+    DictionaryAttr base = {}) {
+  SmallVector<NamedAttribute> attrs;
+  if (base)
+    attrs.append(base.begin(), base.end());
+
+  auto stringAttr = [&](llvm::StringRef value) -> Attribute {
+    return StringAttr::get(ctx, value);
+  };
+
+  std::string candidateId = candidate.candidateId.empty()
+                                ? makeFallbackCandidateId(candidate)
+                                : candidate.candidateId;
+  upsertCandidateAttr(attrs, ctx, "candidate_id", stringAttr(candidateId));
+  upsertCandidateAttr(attrs, ctx, "provider_id",
+                      stringAttr(candidate.providerId));
+  upsertCandidateAttr(attrs, ctx, "scope_kind",
+                      stringAttr(stringifyScopeKind(candidate.scopeKind)));
+  upsertCandidateAttr(attrs, ctx, "semantic_target_ref",
+                      stringAttr(candidate.semanticTargetRef));
+  if (!candidate.functionRef.empty())
+    upsertCandidateAttr(attrs, ctx, "function_ref",
+                        stringAttr(candidate.functionRef));
+  upsertCandidateAttr(attrs, ctx, "implementation_kind",
+                      stringAttr(candidate.implementationKind));
+  upsertCandidateAttr(attrs, ctx, "candidate_type",
+                      stringAttr(candidate.implementationKind));
+  upsertCandidateAttr(attrs, ctx, "source_op",
+                      stringAttr(candidate.semanticTargetRef));
+  if (!candidate.candidateReason.empty())
+    upsertCandidateAttr(attrs, ctx, "candidate_reason",
+                        stringAttr(candidate.candidateReason));
+  upsertCandidateAttr(attrs, ctx, "required_boundary_ops",
+                      makeCandidateStringArray(ctx,
+                                               candidate.requiredBoundaryOps));
+  if (!candidate.fallbackBackend.empty())
+    upsertCandidateAttr(attrs, ctx, "fallback_backend",
+                        stringAttr(candidate.fallbackBackend));
+  if (!candidate.truthBoundary.empty())
+    upsertCandidateAttr(attrs, ctx, "truth_boundary",
+                        stringAttr(candidate.truthBoundary));
+
+  upsertCandidateAttr(attrs, ctx, "feasibility.status",
+                      stringAttr(stringifyFeasibilityStatus(
+                          candidate.feasibility.status)));
+  if (!candidate.feasibility.reason.empty())
+    upsertCandidateAttr(attrs, ctx, "feasibility.reason",
+                        stringAttr(candidate.feasibility.reason));
+  if (!candidate.feasibility.requiredCapabilityRefs.empty())
+    upsertCandidateAttr(
+        attrs, ctx, "feasibility.required_capability_refs",
+        makeCandidateStringArray(ctx,
+                                 candidate.feasibility.requiredCapabilityRefs));
+
+  return DictionaryAttr::get(ctx, attrs);
+}
+
+} // namespace mlir::hir

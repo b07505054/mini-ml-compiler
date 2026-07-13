@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "serving/ImplementationCandidate.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -39,36 +40,11 @@ static std::string readStrOp(Operation *op, StringRef key) {
   return {};
 }
 
-static std::string readStrDict(DictionaryAttr dict, StringRef key) {
-  if (!dict) return {};
-  if (auto a = dict.get(key))
-    if (auto s = dyn_cast<StringAttr>(a)) return s.getValue().str();
-  return {};
-}
-
-static int64_t readI64Dict(DictionaryAttr dict, StringRef key,
-                           int64_t def = 0) {
-  if (!dict) return def;
-  if (auto a = dict.get(key))
-    if (auto ia = dyn_cast<IntegerAttr>(a)) return ia.getInt();
-  return def;
-}
-
-static std::vector<std::string> readStrsDict(DictionaryAttr dict,
-                                             StringRef key) {
-  std::vector<std::string> out;
-  if (!dict) return out;
-  if (auto a = dict.get(key))
-    if (auto arr = dyn_cast<ArrayAttr>(a))
-      for (auto e : arr)
-        if (auto s = dyn_cast<StringAttr>(e)) out.push_back(s.getValue().str());
-  return out;
-}
-
 // ---------------------------------------------------------------------------
 // Candidate info for selection
 // ---------------------------------------------------------------------------
 struct CandidateInfo {
+  ImplementationCandidate candidate;
   DictionaryAttr dict;
   std::string type;
   std::string status;
@@ -117,10 +93,13 @@ struct PlanSelectionPass
         auto dict = dyn_cast<DictionaryAttr>(elem);
         if (!dict) continue;
         CandidateInfo ci;
-        ci.dict             = dict;
-        ci.type             = readStrDict(dict, "candidate_type");
-        ci.status           = readStrDict(dict, "evaluation.status");
-        ci.penaltyScore     = readI64Dict(dict, "evaluation.penalty_score");
+        ci.candidate = decodeImplementationCandidate(dict, "plan_selection_pass");
+        ci.dict = encodeImplementationCandidate(ctx, ci.candidate, dict);
+        ci.type             = ci.candidate.implementationKind;
+        ci.status           = ci.candidate.cost.evaluationStatus;
+        ci.penaltyScore     = ci.candidate.cost.hasPenaltyScore
+                                  ? ci.candidate.cost.penaltyScore
+                                  : 0;
         ci.tiebreakPriority = tiebreakPriorityFor(ci.type);
         ci.isFallback       = (ci.type == "backend_fallback");
         ci.isUnsupported    = (ci.type == "unsupported");
@@ -143,13 +122,27 @@ struct PlanSelectionPass
       default: reason = "no_valid_lowering_path";             break;
       }
 
+      PolicyResult policyResult;
+      policyResult.selectedCandidateId = best.candidate.candidateId;
+      policyResult.policyId = "plan_selection_static_penalty_v1";
+      policyResult.selectionReason = reason;
+      policyResult.objectiveSummary = "tier_then_penalty_then_tiebreak";
+      policyResult.truthBoundary = kTruth.str();
+      for (const CandidateInfo &candidate : candidates)
+        policyResult.consideredCandidateIds.push_back(
+            candidate.candidate.candidateId);
+      for (size_t i = 1; i < candidates.size(); ++i) {
+        policyResult.rejectedCandidates.push_back(
+            {candidates[i].candidate.candidateId, "not_lowest_ranked"});
+      }
+
       // Read op-level kernel.* attrs for provenance (empty string when absent).
       std::string backend   = readStrOp(&op, "kernel.backend");
       std::string kLibrary  = readStrOp(&op, "kernel.library");
       std::string kName     = readStrOp(&op, "kernel.name");
 
       // Boundary ops forwarded from the winning candidate.
-      auto boundaryOps = readStrsDict(best.dict, "required_boundary_ops");
+      auto boundaryOps = best.candidate.requiredBoundaryOps;
 
       auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
       auto I64 = [&](int64_t v) -> Attribute {
@@ -162,6 +155,8 @@ struct PlanSelectionPass
       // is irrelevant — MLIR sorts all op attr keys on output).
       op.setAttr("selected_plan.backend",             S(backend));
       op.setAttr("selected_plan.candidate_id",        S("plan_0"));
+      op.setAttr("selected_plan.implementation_candidate_id",
+                 S(policyResult.selectedCandidateId));
       op.setAttr("selected_plan.candidate_type",      S(best.type));
       op.setAttr("selected_plan.kernel_library",      S(kLibrary));
       op.setAttr("selected_plan.kernel_name",         S(kName));
@@ -173,38 +168,39 @@ struct PlanSelectionPass
 
       // Promote V1 structured cost evidence from the winning candidate.
       // These flat attrs are consumed by ExecutionPlanBuilder for meta.evidence.cost.
-      // If ServingCostModelPass did not run, the evaluation.cost.* keys are absent
-      // and readI64Dict returns 0 — cost attrs are still emitted (all zeros) so that
-      // the builder can gate on selected_plan.cost.total presence (zero is legitimate).
-      // readStrDict returns "" for absent model_id/truth_boundary.
+      // If ServingCostModelPass did not run, the evaluation.cost.* keys are
+      // absent and getCandidateI64 returns 0 — cost attrs are still emitted
+      // (all zeros) so that the builder can gate on selected_plan.cost.total
+      // presence (zero is legitimate). getCandidateString returns "" for
+      // absent model_id/truth_boundary.
       op.setAttr("selected_plan.cost.backend_switch",
-                 I64(readI64Dict(best.dict, "evaluation.cost.backend_switch")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.backend_switch")));
       op.setAttr("selected_plan.cost.cast",
-                 I64(readI64Dict(best.dict, "evaluation.cost.cast")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.cast")));
       op.setAttr("selected_plan.cost.compute",
-                 I64(readI64Dict(best.dict, "evaluation.cost.compute")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.compute")));
       op.setAttr("selected_plan.cost.dequant",
-                 I64(readI64Dict(best.dict, "evaluation.cost.dequant")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.dequant")));
       op.setAttr("selected_plan.cost.kv_cache",
-                 I64(readI64Dict(best.dict, "evaluation.cost.kv_cache")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.kv_cache")));
       op.setAttr("selected_plan.cost.launch_overhead",
-                 I64(readI64Dict(best.dict, "evaluation.cost.launch_overhead")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.launch_overhead")));
       op.setAttr("selected_plan.cost.layout_transform",
-                 I64(readI64Dict(best.dict, "evaluation.cost.layout_transform")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.layout_transform")));
       op.setAttr("selected_plan.cost.memory",
-                 I64(readI64Dict(best.dict, "evaluation.cost.memory")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.memory")));
       op.setAttr("selected_plan.cost.model_id",
-                 S(readStrDict(best.dict, "evaluation.cost.model_id")));
+                 S(getCandidateString(best.dict, "evaluation.cost.model_id")));
       op.setAttr("selected_plan.cost.requant",
-                 I64(readI64Dict(best.dict, "evaluation.cost.requant")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.requant")));
       op.setAttr("selected_plan.cost.total",
-                 I64(readI64Dict(best.dict, "evaluation.cost.total")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.total")));
       op.setAttr("selected_plan.cost.transfer",
-                 I64(readI64Dict(best.dict, "evaluation.cost.transfer")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.transfer")));
       op.setAttr("selected_plan.cost.truth_boundary",
-                 S(readStrDict(best.dict, "evaluation.cost.truth_boundary")));
+                 S(getCandidateString(best.dict, "evaluation.cost.truth_boundary")));
       op.setAttr("selected_plan.cost.unsupported",
-                 I64(readI64Dict(best.dict, "evaluation.cost.unsupported")));
+                 I64(getCandidateI64(best.dict, "evaluation.cost.unsupported")));
 
       // Promote V2 shape-aware cost evidence from the winning candidate.
       // Gated on presence (unlike cost.*): shape_cost exists only for
@@ -244,6 +240,18 @@ struct PlanSelectionPass
       // Selected candidate as a 1-element array for downstream consumers.
       op.setAttr("compiler.selected_candidates",
                  ArrayAttr::get(ctx, {best.dict}));
+
+      SmallVector<Attribute> consideredIds;
+      for (const std::string &id : policyResult.consideredCandidateIds)
+        consideredIds.push_back(StringAttr::get(ctx, id));
+      op.setAttr("compiler.policy_result.considered_candidate_ids",
+                 ArrayAttr::get(ctx, consideredIds));
+      op.setAttr("compiler.policy_result.policy_id",
+                 S(policyResult.policyId));
+      op.setAttr("compiler.policy_result.selected_candidate_id",
+                 S(policyResult.selectedCandidateId));
+      op.setAttr("compiler.policy_result.truth_boundary",
+                 S(policyResult.truthBoundary));
 
       // All non-selected evaluated candidates.
       SmallVector<Attribute> rejections;

@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "serving/ImplementationCandidate.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -173,25 +174,37 @@ static std::vector<std::string> dictStrs(DictionaryAttr dict, StringRef key) {
 }
 
 // Build a per-op executable candidate dict.
+static ImplementationCandidate buildOpCandidate(
+    StringRef candidate_type,
+    StringRef source_op,
+    StringRef candidate_reason,
+    const std::vector<std::string> &required_boundary_ops) {
+  ImplementationCandidate candidate;
+  candidate.providerId = "candidate_generation_pass";
+  candidate.scopeKind = CandidateScopeKind::Operator;
+  candidate.semanticTargetRef = source_op.str();
+  candidate.implementationKind = candidate_type.str();
+  candidate.candidateReason = candidate_reason.str();
+  candidate.requiredBoundaryOps = required_boundary_ops;
+  candidate.truthBoundary = kTruth.str();
+  candidate.candidateId = makeFallbackCandidateId(candidate);
+  candidate.feasibility.status =
+      candidate.implementationKind == "unsupported"
+          ? CandidateFeasibilityStatus::Unsupported
+          : CandidateFeasibilityStatus::Feasible;
+  candidate.feasibility.reason = candidate.candidateReason;
+  return candidate;
+}
+
 static DictionaryAttr buildOpExecCandidate(
     MLIRContext *ctx,
     StringRef candidate_type,
     StringRef source_op,
     StringRef candidate_reason,
     const std::vector<std::string> &required_boundary_ops) {
-  auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
-  SmallVector<Attribute> bOps;
-  for (const auto &b : required_boundary_ops)
-    bOps.push_back(StringAttr::get(ctx, b));
-  // DictionaryAttr::get sorts keys alphabetically.
-  SmallVector<NamedAttribute> entries = {
-    {StringAttr::get(ctx, "candidate_reason"),      S(candidate_reason)},
-    {StringAttr::get(ctx, "candidate_type"),        S(candidate_type)},
-    {StringAttr::get(ctx, "required_boundary_ops"), ArrayAttr::get(ctx, bOps)},
-    {StringAttr::get(ctx, "source_op"),             S(source_op)},
-    {StringAttr::get(ctx, "truth_boundary"),        S(kTruth)},
-  };
-  return DictionaryAttr::get(ctx, entries);
+  return encodeImplementationCandidate(
+      ctx, buildOpCandidate(candidate_type, source_op, candidate_reason,
+                            required_boundary_ops));
 }
 
 // Build a per-op rejected candidate dict (invalid alternative, not promoted).
@@ -200,13 +213,14 @@ static DictionaryAttr buildOpRejectedCandidate(
     StringRef candidate_type,
     StringRef source_op,
     StringRef rejection_reason) {
-  auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
-  SmallVector<NamedAttribute> entries = {
-    {StringAttr::get(ctx, "candidate_type"),   S(candidate_type)},
-    {StringAttr::get(ctx, "rejection_reason"), S(rejection_reason)},
-    {StringAttr::get(ctx, "source_op"),        S(source_op)},
-    {StringAttr::get(ctx, "truth_boundary"),   S(kTruth)},
-  };
+  ImplementationCandidate candidate =
+      buildOpCandidate(candidate_type, source_op, "rejected_alternative", {});
+  candidate.feasibility.status = CandidateFeasibilityStatus::Rejected;
+  candidate.feasibility.reason = rejection_reason.str();
+  auto dict = encodeImplementationCandidate(ctx, candidate);
+  SmallVector<NamedAttribute> entries(dict.begin(), dict.end());
+  upsertCandidateAttr(entries, ctx, "rejection_reason",
+                      StringAttr::get(ctx, rejection_reason));
   return DictionaryAttr::get(ctx, entries);
 }
 

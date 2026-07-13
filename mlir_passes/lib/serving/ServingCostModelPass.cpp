@@ -40,6 +40,7 @@
 // alias createCandidateEvaluationPass() declared in FusionPasses.h.
 
 #include "serving/OpShapeFacts.h"
+#include "serving/ImplementationCandidate.h"
 #include "serving/ServingCostModel.h"
 #include "serving/ShapeCostModel.h"
 #include "FusionPasses.h"
@@ -80,27 +81,6 @@ static constexpr StringLiteral kV0Truth =
     "candidate_evaluation_static_penalty_not_measured_latency";
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-static std::string readStr(DictionaryAttr dict, StringRef key) {
-  if (!dict) return {};
-  if (auto a = dict.get(key))
-    if (auto s = dyn_cast<StringAttr>(a)) return s.getValue().str();
-  return {};
-}
-
-static std::vector<std::string> readStrs(DictionaryAttr dict, StringRef key) {
-  std::vector<std::string> out;
-  if (!dict) return out;
-  if (auto a = dict.get(key))
-    if (auto arr = dyn_cast<ArrayAttr>(a))
-      for (auto e : arr)
-        if (auto s = dyn_cast<StringAttr>(e)) out.push_back(s.getValue().str());
-  return out;
-}
-
-// ---------------------------------------------------------------------------
 // V2 shape-fact helpers (shape_cost_model_v2)
 // ---------------------------------------------------------------------------
 // Shape-fact derivation (classifyOpKind, computeShapeFacts, readProfileNums)
@@ -114,7 +94,7 @@ static std::string resolveActivationDtype(DictionaryAttr dict,
                                           const std::string& candType,
                                           Operation& op,
                                           const std::string& effectiveDtype) {
-  std::string d = readStr(dict, "dtype");
+  std::string d = getCandidateString(dict, "dtype");
   if (dtypeBits(d) > 0) return d;
   if (candType == "cast_conversion" && dtypeBits(effectiveDtype) > 0)
     return effectiveDtype;
@@ -193,6 +173,7 @@ static V0Eval evaluatePenaltyV0(const std::string& candType,
 // shape_aware_v2 ranking mode can be decided per op across all candidates).
 // ---------------------------------------------------------------------------
 struct CandidateEval {
+  ImplementationCandidate candidate;
   DictionaryAttr dict;      // original candidate fields
   V0Eval v0;
   DecisionCost v1;
@@ -214,8 +195,12 @@ static DictionaryAttr assembleCandidate(MLIRContext* ctx,
   };
   auto S = [&](StringRef s) -> Attribute { return StringAttr::get(ctx, s); };
 
-  // Copy original candidate fields and append evaluation.* fields.
-  SmallVector<NamedAttribute> augmented(ce.dict.begin(), ce.dict.end());
+  // Copy original candidate fields, normalize canonical candidate fields, and
+  // append evaluation.* fields.
+  DictionaryAttr canonicalBase =
+      encodeImplementationCandidate(ctx, ce.candidate, ce.dict);
+  SmallVector<NamedAttribute> augmented(canonicalBase.begin(),
+                                        canonicalBase.end());
 
   // Ranking score: V0 heuristic by default. In shape_aware_v2 mode (only
   // when every evaluated candidate of the op has a time estimate), evaluated
@@ -335,9 +320,11 @@ struct ServingCostModelPass
 
         CandidateEval ce;
         ce.dict = dict;
-        std::string candType  = readStr(dict, "candidate_type");
-        std::string fbBackend = readStr(dict, "fallback_backend");
-        auto boundaryOps      = readStrs(dict, "required_boundary_ops");
+        ce.candidate =
+            decodeImplementationCandidate(dict, "serving_cost_model_pass");
+        std::string candType = ce.candidate.implementationKind;
+        std::string fbBackend = ce.candidate.fallbackBackend;
+        auto boundaryOps = ce.candidate.requiredBoundaryOps;
 
         ce.v0 = evaluatePenaltyV0(candType, boundaryOps);
         ce.v1 = model.compute(candType, boundaryOps, fbBackend);

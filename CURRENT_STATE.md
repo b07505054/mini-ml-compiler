@@ -1,6 +1,6 @@
 # Current State
 
-Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD: e30c54cc477aab771525661d4dfc3c53419cd8a9 (master, ahead 1 of origin/master)\nVerified runtime HEAD: f4cc98bc93e1e8e5ecea32ffb0779b0a5c801097 (main, ahead 1 of origin/main)\nVerified capabilities HEAD: 84cf1d229788390f3b95254416636672fabe8d20 (main, origin-aligned)\nIVP source: Mac-only divergent checkout at 3f11a0422123e88eab7f90cff06d8ab7a7d48f24, ahead 1 / behind 2\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler base before A1: 5822a04aa600ec41fcca5ef00619cc27d3e37c40 (master, ahead 3 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout; not modified in A1\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
 
 ## Five-Minute Summary
 
@@ -18,7 +18,7 @@ The system is an IR-centered, hardware-aware implementation-decision compiler fo
 
 ## Current Phase
 
-P1D and P1D.1 are complete locally. P1D.1 implemented an IR-derived, offline-calibrated Raspberry Pi thread-schedule policy. No next phase has started.
+P1D, P1D.1, and A1 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. No Triton, AWQ, NPU, DMA, NEON, ExecuTorch comparison, or new policy phase has started.
 
 Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
 
@@ -30,6 +30,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 - P1C.1: `portable_fused_matmul_bias_relu_bm32_bn128_bk32` adopted as calibration-only low-regret Raspberry Pi static default.
 - P1D: backend-neutral ThreadSchedule planning and runtime execution for serial, 2/4-thread split-M, and 2/4-thread split-N schedules.
 - P1D.1: compiler-side offline-calibrated Raspberry Pi policy selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold for the fixed fused MatMul + Bias + ReLU portable CPU kernel.
+- A1: compiler-internal op-scoped `ImplementationCandidate` type, shared encode/decode helpers, minimal feasibility summary, and `PolicyResult` separation are implemented for the active compiler candidate/evaluation/selection path.
 
 ## What Is Real and Executable
 
@@ -58,13 +59,13 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 ## Parallel / Unintegrated Paths
 
 - Triton/CUDA measured selector uses a private schema and is not yet canonical ExecutionPlan/Runtime dispatch.
-- AWQ/vLLM is executable but not integrated into one unified candidate/policy architecture.
+- AWQ/vLLM is executable but not integrated into the A1 compiler-internal candidate core or one unified candidate/policy architecture.
 - CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, KernelSelection, TilePlanning, ThreadSchedule, Triton selection, and AWQ deployment use separate candidate/decision representations.
 - Compiler-local target profiles are richer than `ml-platform-capabilities`.
 
 ## Not Implemented
 
-- Canonical `ImplementationCandidate` type.
+- Project-wide `ImplementationCandidate` unification across ThreadSchedule, TilePlan, KernelSelection, Triton, AWQ/vLLM, deployment candidates, and external providers.
 - Unified policy engine across CPU, Triton, AWQ, vLLM, and future NPU paths.
 - Complete dequant/layout-transform IR materialization.
 - Mature memory-space/DMA/synchronization/NPU Implementation IR.

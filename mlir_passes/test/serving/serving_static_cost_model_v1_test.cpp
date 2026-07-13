@@ -145,7 +145,11 @@ int main() {
 
   mlir::PassManager pm(&ctx);
   pm.addNestedPass<mlir::func::FuncOp>(mlir::hir::createServingCostModelPass());
-  assert(pm.run(*module).succeeded() && "ServingCostModelPass failed");
+  if (mlir::failed(pm.run(*module))) {
+    std::fprintf(stderr, "ServingCostModelPass failed\n");
+    module->dump();
+    return 1;
+  }
 
   // Walk the function and collect evaluated candidate dicts in order.
   mlir::func::FuncOp funcOp;
@@ -155,7 +159,12 @@ int main() {
   std::vector<CostFields> results;
   for (mlir::Operation& op : funcOp.getBody().front().without_terminator()) {
     auto arr = op.getAttrOfType<mlir::ArrayAttr>("compiler.evaluated_candidates");
-    assert(arr && arr.size() == 1 && "Each test op must have exactly 1 candidate");
+    if (!arr || arr.size() != 1) {
+      std::fprintf(stderr, "missing compiler.evaluated_candidates on op: %s\n",
+                   op.getName().getStringRef().str().c_str());
+      op.dump();
+      return 1;
+    }
     auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(arr[0]);
     assert(dict && "Evaluated candidate must be a DictionaryAttr");
     results.emplace_back(dict);
