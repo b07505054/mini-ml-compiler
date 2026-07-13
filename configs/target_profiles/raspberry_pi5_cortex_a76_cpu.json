@@ -6,5 +6,22 @@
   "truthBoundary": "raspberry_pi5_live_hardware_evidence_cpu_only_no_verified_gpu_or_npu_kernel_library_declared_not_measured_performance",
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
-  }
+  },
+  "runtimeKernels": [
+    {
+      "kernelId": "portable_fused_matmul_bias_relu_bm32_bn32_bk32",
+      "opName": "fused_matmul_bias_relu",
+      "backend": "cpu",
+      "supportedDtypes": ["f32"],
+      "supportedQuantModes": ["none"],
+      "supportedLayouts": [],
+      "supportedTileShapes": [],
+      "requiresStaticShape": true,
+      "requiresLocalMemoryBytes": 0,
+      "source": "handwritten_runtime",
+      "implementationRef": "heterogeneous-inference-runtime: native/portable_fused_matmul_bias_relu.cpp + deployment/execution_plan/path_builder.py:_portable_cpu_fused_matmul_bias_relu_path",
+      "truthBoundary": "handwritten_kernel_source_in_sibling_repo_dispatch_validated_on_raspberry_pi_not_benchmarked_for_performance"
+    }
+  ],
+  "runtimeKernelsNote": "kernel_selection_contract_v1 registry, mirroring the existing precedent in apple_a17pro_mobile.json (Metal RMSNorm f32). Deliberately small and honest: exactly ONE dispatchable kernel is declared for this target -- a portable scalar C++ fused MatMul+Bias+ReLU kernel reusing the bm32_bn32_bk32 tile candidate identity from the CPU fused-schedule-discovery work (Phase 1 / R1, see apps/run_cpu_fused_schedule_discovery.cpp), reimplemented as new native code in the sibling heterogeneous-inference-runtime repo rather than shared source across repos (portfolio repo-independence). Every other op on this target remains rejected or deferred with an explicit reason -- this is a kernel-selection framework, not broad coverage. Architectural note: kernel_selection_contract_v1 matches on (op_name, backend, dtype, quant_mode, layout, tile-plan, local-memory) but has no native mechanism to gate on concrete (M,N,K) shape values or tensor rank; that finer-grained shape/rank/layout validation is intentionally enforced by the runtime adapter at dispatch time (see heterogeneous-inference-runtime), not by this static declaration -- documented here rather than silently assumed or left for the runtime to discover. ml-platform-capabilities is not consulted by this declaration (existing architectural bypass predating this PR, unchanged here)."
 }

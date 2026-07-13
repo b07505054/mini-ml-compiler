@@ -521,6 +521,28 @@ set_tests_properties(CompileForTargetTest PROPERTIES
 )
 
 # ---------------------------------------------------------------------------
+# CTest: RaspberryPiFusedMatMulBiasReluKernelSelectionTest (Phase P1B)
+# Proves the ONE evidence-backed runtime kernel declaration in
+# raspberry_pi5_cortex_a76_cpu.json (kernel_selection_contract_v1) is
+# actually selected end to end by the real, unmodified compile-for-target
+# pipeline for hir.fused_matmul_bias_relu, and that no other op receives a
+# fabricated selection. See DOC/result/ for the full P1B report.
+# ---------------------------------------------------------------------------
+set(_P1B_CANONICAL "${CMAKE_CURRENT_BINARY_DIR}/test_p1b_raspberry_pi_execution_plan.json")
+
+add_test(NAME RaspberryPiFusedMatMulBiasReluKernelSelectionTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/raspberry_pi5_cortex_a76_cpu.json
+    -DMLIR=${REPO_ROOT}/mlir/p1b_fused_matmul_bias_relu_cpu.mlir
+    -DOUT=${_P1B_CANONICAL}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunRaspberryPiFusedMatMulBiasReluKernelSelectionTest.cmake
+)
+set_tests_properties(RaspberryPiFusedMatMulBiasReluKernelSelectionTest PROPERTIES
+  DEPENDS compile-for-target
+)
+
+# ---------------------------------------------------------------------------
 # CTest: QuantStrategyExportTest
 # Verifies per_op_quantization_decisions appear in the exported JSON when
 # QuantizationStrategyPlanningPass has run (Commit H).
