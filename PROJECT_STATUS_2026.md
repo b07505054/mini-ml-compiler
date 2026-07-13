@@ -44,7 +44,7 @@ Real: GenericGraphIR/MLIR/HIR paths, fusion legality, HIR lowering, target const
 
 Parallel/unintegrated: Triton measured selector, AWQ/vLLM deployment, multiple candidate schemas.
 
-A1 now provides a narrow compiler-internal `ImplementationCandidate` core for the active op-candidate generation/evaluation/selection path. Not yet mature: project-wide candidate/provider unification, unified policy engine, DMA/memory-space/synchronization/NPU Implementation IR.
+A1 provides a narrow compiler-internal `ImplementationCandidate` core for the active op-candidate generation/evaluation/selection path. A2 routes the P1D.1 Raspberry Pi thread-schedule decision through serial/parallel implementation candidates before exporting the unchanged ExecutionPlan contract. Not yet mature: project-wide candidate/provider unification, unified policy engine, DMA/memory-space/synchronization/NPU Implementation IR.
 
 ## Runtime Capabilities
 
@@ -69,7 +69,7 @@ IVP validates runtime artifacts, compiler/runtime consistency, and generated rep
 
 ## Completed Milestone History
 
-P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy -> A1 minimal compiler-internal `ImplementationCandidate` foundation.
+P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy -> A1 minimal compiler-internal `ImplementationCandidate` foundation -> A2 P1D.1 candidate migration.
 
 ## Current Research Conclusions
 
@@ -78,6 +78,7 @@ P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C
 - Edge backend credibility requires memory hierarchy and data movement to become compiler IR concepts.
 - P1D.1 ships the first narrow offline-calibrated policy edge: Raspberry Pi fused MatMul + Bias + ReLU selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold.
 - A1 reduces duplicated candidate parsing in the active compiler-internal candidate path without changing Runtime behavior or claiming Triton/AWQ/thread/tile unification.
+- A2 proves one real calibrated implementation decision can use the candidate core without changing the threshold, policy metric, Runtime code, or ExecutionPlan semantics.
 
 ## Remaining Research Questions
 

@@ -27,6 +27,7 @@
 // the runtime, not an execution claim.
 
 #include "serving/OpShapeFacts.h"
+#include "serving/ImplementationCandidate.h"
 #include "FusionPasses.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -229,6 +230,9 @@ struct ThreadScheduleResult {
   std::string policy_evidence_ref;
   std::string policy_evidence_sha256;
   std::string policy_truth_boundary;
+  std::string selected_candidate_id;
+  std::vector<std::string> considered_candidate_ids;
+  std::vector<PolicyResultCandidateRejection> candidate_rejections;
 };
 
 struct OfflineThreadPolicyView {
@@ -323,6 +327,48 @@ static bool safeMul3(int64_t a, int64_t b, int64_t c, int64_t& out) {
   return true;
 }
 
+struct ThreadScheduleCandidateView {
+  ImplementationCandidate candidate;
+  ThreadScheduleOption option;
+};
+
+static ImplementationCandidate buildThreadScheduleCandidate(
+    const OpContext& opCtx,
+    const DescriptorView& selected,
+    const ThreadScheduleOption& option,
+    StringRef targetProfileId,
+    StringRef reason,
+    CandidateFeasibilityStatus feasibilityStatus,
+    StringRef feasibilityReason) {
+  ImplementationCandidate candidate;
+  candidate.providerId = "kernel_selection_thread_schedule_candidates";
+  candidate.targetProfileId = targetProfileId.str();
+  candidate.scopeKind = CandidateScopeKind::FusedRegion;
+  candidate.semanticTargetRef = opCtx.op_name;
+  candidate.implementationKind = "portable_cpu_opaque_kernel_thread_schedule";
+  candidate.kernelId = selected.kernel_id;
+  candidate.threadSchedule.present = true;
+  candidate.threadSchedule.threadCount = option.thread_count;
+  candidate.threadSchedule.partitionAxis = option.partition_axis;
+  candidate.threadSchedule.partitionStrategy = option.partition_strategy;
+  candidate.candidateReason = reason.str();
+  candidate.truthBoundary = kTruth.str();
+  candidate.feasibility.status = feasibilityStatus;
+  candidate.feasibility.reason = feasibilityReason.str();
+  candidate.candidateId = makeFallbackCandidateId(candidate);
+  return candidate;
+}
+
+static bool hasCandidateIdCollision(
+    const std::vector<ThreadScheduleCandidateView>& candidates) {
+  for (size_t i = 0; i < candidates.size(); ++i)
+    for (size_t j = i + 1; j < candidates.size(); ++j)
+      if (candidates[i].candidate.candidateId ==
+          candidates[j].candidate.candidateId)
+        return true;
+  return false;
+}
+
 static ThreadScheduleResult resolveThreadScheduleStatic(
     const DescriptorView& selected,
     std::optional<int64_t> physicalComputeUnits) {
@@ -391,10 +437,57 @@ static ThreadScheduleResult resolveThreadSchedule(
       findDeclaredSchedule(selected, policy.below_threshold);
   const ThreadScheduleOption* parallel =
       findDeclaredSchedule(selected, policy.at_or_above_threshold);
+
+  std::vector<ThreadScheduleCandidateView> candidates;
+  if (serial) {
+    candidates.push_back({buildThreadScheduleCandidate(
+                              opCtx, selected, *serial, targetProfileId,
+                              "p1d1_below_threshold_serial_candidate",
+                              CandidateFeasibilityStatus::Feasible,
+                              "serial_schedule_declared_legal"),
+                          *serial});
+  }
+  if (parallel) {
+    candidates.push_back({buildThreadScheduleCandidate(
+                              opCtx, selected, *parallel, targetProfileId,
+                              "p1d1_at_or_above_threshold_parallel_candidate",
+                              CandidateFeasibilityStatus::Unknown,
+                              "parallel_feasibility_not_evaluated"),
+                          *parallel});
+  }
+  for (const auto& candidate : candidates)
+    r.considered_candidate_ids.push_back(candidate.candidate.candidateId);
+  if (hasCandidateIdCollision(candidates)) {
+    r.status = "rejected_thread_schedule_candidate_id_collision";
+    r.rejection_reasons.push_back("thread_schedule_candidate_id_collision");
+    r.policy_selection_reason = "candidate_identity_collision";
+    return r;
+  }
+
+  auto findCandidateFor = [&](const ThreadScheduleOption* option)
+      -> const ThreadScheduleCandidateView* {
+    if (!option) return nullptr;
+    for (const auto& candidate : candidates)
+      if (sameSchedule(candidate.option, *option)) return &candidate;
+    return nullptr;
+  };
+
+  auto rejectCandidate = [&](const ThreadScheduleOption* option,
+                             StringRef reason) {
+    if (auto candidate = findCandidateFor(option)) {
+      r.candidate_rejections.push_back(
+          {candidate->candidate.candidateId, reason.str()});
+    }
+  };
+
   auto chooseSerial = [&](StringRef reason) {
     if (serial) {
+      const ThreadScheduleCandidateView* selectedCandidate =
+          findCandidateFor(serial);
       r.status = "selected";
       r.option = serial;
+      if (selectedCandidate)
+        r.selected_candidate_id = selectedCandidate->candidate.candidateId;
       r.policy_selection_reason = reason.str();
     } else {
       r.status = "rejected_missing_serial_thread_schedule";
@@ -411,26 +504,32 @@ static ThreadScheduleResult resolveThreadSchedule(
   }
 
   if (policy.target_profile_id != targetProfileId) {
+    rejectCandidate(parallel, "policy_target_profile_mismatch");
     chooseSerial("policy_target_profile_mismatch_serial_fallback");
     return r;
   }
   if (policy.fused_region_identity != opCtx.op_name) {
+    rejectCandidate(parallel, "policy_fused_region_mismatch");
     chooseSerial("policy_fused_region_mismatch_serial_fallback");
     return r;
   }
   if (policy.dtype != opCtx.dtype) {
+    rejectCandidate(parallel, "policy_dtype_mismatch");
     chooseSerial("policy_dtype_mismatch_serial_fallback");
     return r;
   }
   if (policy.kernel_id != selected.kernel_id) {
+    rejectCandidate(parallel, "policy_kernel_mismatch");
     chooseSerial("policy_kernel_mismatch_serial_fallback");
     return r;
   }
   if (policy.metric != "matmul_mnk") {
+    rejectCandidate(parallel, "policy_metric_unsupported");
     chooseSerial("policy_metric_unsupported_serial_fallback");
     return r;
   }
   if (policy.boundary_rule != "at_or_above_threshold_selects_parallel") {
+    rejectCandidate(parallel, "policy_boundary_rule_unsupported");
     chooseSerial("policy_boundary_rule_unsupported_serial_fallback");
     return r;
   }
@@ -438,11 +537,13 @@ static ThreadScheduleResult resolveThreadSchedule(
   int64_t metric = 0;
   if (facts.status != "static_shapes" ||
       !safeMul3(facts.m, facts.n, facts.k, metric)) {
+    rejectCandidate(parallel, "policy_missing_static_mnk");
     chooseSerial("policy_missing_static_mnk_serial_fallback");
     return r;
   }
   r.policy_metric_value = metric;
   if (metric < policy.threshold) {
+    rejectCandidate(parallel, "metric_below_threshold");
     chooseSerial("metric_below_threshold_select_serial");
     return r;
   }
@@ -453,16 +554,23 @@ static ThreadScheduleResult resolveThreadSchedule(
   }
   if (!physicalComputeUnits.has_value()) {
     r.rejection_reasons.push_back("policy_parallel_deferred_missing_compute_units");
+    rejectCandidate(parallel, "deferred_missing_compute_units");
     chooseSerial("metric_at_or_above_threshold_but_missing_compute_units_serial_fallback");
     return r;
   }
   if (!eligibleForComputeUnits(*parallel, physicalComputeUnits)) {
     r.rejection_reasons.push_back("policy_parallel_rejected_exceeds_compute_units");
+    rejectCandidate(parallel, "rejected_exceeds_compute_units");
     chooseSerial("metric_at_or_above_threshold_but_compute_units_insufficient_serial_fallback");
     return r;
   }
+  const ThreadScheduleCandidateView* selectedCandidate =
+      findCandidateFor(parallel);
   r.status = "selected";
   r.option = parallel;
+  if (selectedCandidate)
+    r.selected_candidate_id = selectedCandidate->candidate.candidateId;
+  rejectCandidate(serial, "metric_at_or_above_threshold");
   r.policy_selection_reason = "metric_at_or_above_threshold_select_parallel";
   return r;
 }
@@ -639,6 +747,29 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
                        S(tsResult.policy_evidence_sha256));
             op.setAttr("thread_schedule.policy_truth_boundary",
                        S(tsResult.policy_truth_boundary));
+          }
+          if (!tsResult.selected_candidate_id.empty()) {
+            op.setAttr("thread_schedule.selected_candidate_id",
+                       S(tsResult.selected_candidate_id));
+          }
+          if (!tsResult.considered_candidate_ids.empty()) {
+            SmallVector<Attribute> candidateIds;
+            for (const auto& id : tsResult.considered_candidate_ids)
+              candidateIds.push_back(S(id));
+            op.setAttr("thread_schedule.considered_candidate_ids",
+                       ArrayAttr::get(ctx, candidateIds));
+          }
+          if (!tsResult.candidate_rejections.empty()) {
+            SmallVector<Attribute> rejectedIds;
+            SmallVector<Attribute> rejectedReasons;
+            for (const auto& rejection : tsResult.candidate_rejections) {
+              rejectedIds.push_back(S(rejection.candidateId));
+              rejectedReasons.push_back(S(rejection.reason));
+            }
+            op.setAttr("thread_schedule.rejected_candidate_ids",
+                       ArrayAttr::get(ctx, rejectedIds));
+            op.setAttr("thread_schedule.rejected_candidate_reasons",
+                       ArrayAttr::get(ctx, rejectedReasons));
           }
           if (!tsResult.rejection_reasons.empty()) {
             SmallVector<Attribute> tsReasons;

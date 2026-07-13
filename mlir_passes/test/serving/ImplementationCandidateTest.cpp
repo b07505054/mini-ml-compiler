@@ -130,6 +130,50 @@ int main() {
   assert(result.consideredCandidateIds.size() == 2);
   assert(result.rejectedCandidates[0].candidateId == "gelu:backend_fallback");
 
+  ImplementationCandidate serialSchedule;
+  serialSchedule.providerId = "kernel_selection_thread_schedule_candidates";
+  serialSchedule.targetProfileId = "raspberry-pi5-cortex-a76-cpu";
+  serialSchedule.scopeKind = CandidateScopeKind::FusedRegion;
+  serialSchedule.semanticTargetRef = "fused_matmul_bias_relu";
+  serialSchedule.implementationKind = "portable_cpu_opaque_kernel_thread_schedule";
+  serialSchedule.kernelId =
+      "portable_fused_matmul_bias_relu_bm32_bn128_bk32";
+  serialSchedule.threadSchedule.present = true;
+  serialSchedule.threadSchedule.threadCount = 1;
+  serialSchedule.threadSchedule.partitionAxis = "none";
+  serialSchedule.threadSchedule.partitionStrategy = "serial";
+  serialSchedule.candidateId = makeFallbackCandidateId(serialSchedule);
+
+  ImplementationCandidate parallelSchedule = serialSchedule;
+  parallelSchedule.threadSchedule.threadCount = 4;
+  parallelSchedule.threadSchedule.partitionAxis = "m";
+  parallelSchedule.threadSchedule.partitionStrategy = "contiguous_chunks";
+  parallelSchedule.candidateId = makeFallbackCandidateId(parallelSchedule);
+
+  assert(serialSchedule.candidateId != parallelSchedule.candidateId);
+  assert(serialSchedule.candidateId.find("threads=1") != std::string::npos);
+  assert(parallelSchedule.candidateId.find("threads=4") != std::string::npos);
+  assert(parallelSchedule.candidateId.find("axis=m") != std::string::npos);
+  assert(parallelSchedule.candidateId.find(
+             "portable_fused_matmul_bias_relu_bm32_bn128_bk32") !=
+         std::string::npos);
+
+  DictionaryAttr encodedSchedule =
+      encodeImplementationCandidate(&ctx, parallelSchedule);
+  ImplementationCandidate decodedSchedule =
+      decodeImplementationCandidate(encodedSchedule, "test_provider");
+  assert(decodedSchedule.candidateId == parallelSchedule.candidateId);
+  assert(decodedSchedule.kernelId == parallelSchedule.kernelId);
+  assert(decodedSchedule.threadSchedule.present);
+  assert(decodedSchedule.threadSchedule.threadCount == 4);
+  assert(decodedSchedule.threadSchedule.partitionAxis == "m");
+  assert(decodedSchedule.threadSchedule.partitionStrategy ==
+         "contiguous_chunks");
+
+  ImplementationCandidate duplicateSchedule = parallelSchedule;
+  duplicateSchedule.feasibility.reason = "different_state_must_not_change_id";
+  assert(duplicateSchedule.candidateId == parallelSchedule.candidateId);
+
   std::puts("ImplementationCandidateTest passed");
   return 0;
 }

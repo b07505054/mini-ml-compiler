@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,13 +42,23 @@ struct ImplementationCandidateCostSummary {
   std::string truthBoundary;
 };
 
+struct ThreadScheduleCandidateSpec {
+  bool present = false;
+  int64_t threadCount = 1;
+  std::string partitionAxis;
+  std::string partitionStrategy;
+};
+
 struct ImplementationCandidate {
   std::string candidateId;
   std::string providerId;
+  std::string targetProfileId;
   CandidateScopeKind scopeKind = CandidateScopeKind::Unknown;
   std::string semanticTargetRef;
   std::string functionRef;
   std::string implementationKind;
+  std::string kernelId;
+  ThreadScheduleCandidateSpec threadSchedule;
   std::string candidateReason;
   std::vector<std::string> requiredBoundaryOps;
   std::string fallbackBackend;
@@ -194,6 +205,26 @@ inline std::string makeFallbackCandidateId(
     id += candidate.implementationKind;
   else
     id += "unknown_implementation";
+  if (!candidate.kernelId.empty()) {
+    id += ":kernel=";
+    id += candidate.kernelId;
+  }
+  if (candidate.threadSchedule.present) {
+    id += ":threads=";
+    id += std::to_string(candidate.threadSchedule.threadCount);
+    id += ":axis=";
+    id += candidate.threadSchedule.partitionAxis.empty()
+              ? "unknown"
+              : candidate.threadSchedule.partitionAxis;
+    id += ":strategy=";
+    id += candidate.threadSchedule.partitionStrategy.empty()
+              ? "unknown"
+              : candidate.threadSchedule.partitionStrategy;
+  }
+  if (!candidate.targetProfileId.empty()) {
+    id += ":target=";
+    id += candidate.targetProfileId;
+  }
   return id;
 }
 
@@ -273,6 +304,7 @@ inline ImplementationCandidate decodeImplementationCandidate(
   candidate.providerId = getCandidateString(dict, "provider_id");
   if (candidate.providerId.empty())
     candidate.providerId = providerId.str();
+  candidate.targetProfileId = getCandidateString(dict, "target_profile_id");
   candidate.scopeKind = parseScopeKind(getCandidateString(dict, "scope_kind"));
   if (candidate.scopeKind == CandidateScopeKind::Unknown && dict)
     candidate.scopeKind = CandidateScopeKind::Operator;
@@ -283,6 +315,16 @@ inline ImplementationCandidate decodeImplementationCandidate(
   candidate.implementationKind = getCandidateString(dict, "implementation_kind");
   if (candidate.implementationKind.empty())
     candidate.implementationKind = getCandidateString(dict, "candidate_type");
+  candidate.kernelId = getCandidateString(dict, "kernel_id");
+  if (hasCandidateI64(dict, "thread_schedule.thread_count")) {
+    candidate.threadSchedule.present = true;
+    candidate.threadSchedule.threadCount =
+        getCandidateI64(dict, "thread_schedule.thread_count", 1);
+    candidate.threadSchedule.partitionAxis =
+        getCandidateString(dict, "thread_schedule.partition_axis");
+    candidate.threadSchedule.partitionStrategy =
+        getCandidateString(dict, "thread_schedule.partition_strategy");
+  }
   candidate.candidateReason = getCandidateString(dict, "candidate_reason");
   candidate.requiredBoundaryOps =
       getCandidateStringArray(dict, "required_boundary_ops");
@@ -330,6 +372,9 @@ inline DictionaryAttr encodeImplementationCandidate(
   upsertCandidateAttr(attrs, ctx, "candidate_id", stringAttr(candidateId));
   upsertCandidateAttr(attrs, ctx, "provider_id",
                       stringAttr(candidate.providerId));
+  if (!candidate.targetProfileId.empty())
+    upsertCandidateAttr(attrs, ctx, "target_profile_id",
+                        stringAttr(candidate.targetProfileId));
   upsertCandidateAttr(attrs, ctx, "scope_kind",
                       stringAttr(stringifyScopeKind(candidate.scopeKind)));
   upsertCandidateAttr(attrs, ctx, "semantic_target_ref",
@@ -343,6 +388,19 @@ inline DictionaryAttr encodeImplementationCandidate(
                       stringAttr(candidate.implementationKind));
   upsertCandidateAttr(attrs, ctx, "source_op",
                       stringAttr(candidate.semanticTargetRef));
+  if (!candidate.kernelId.empty())
+    upsertCandidateAttr(attrs, ctx, "kernel_id",
+                        stringAttr(candidate.kernelId));
+  if (candidate.threadSchedule.present) {
+    upsertCandidateAttr(
+        attrs, ctx, "thread_schedule.thread_count",
+        IntegerAttr::get(IntegerType::get(ctx, 64),
+                         candidate.threadSchedule.threadCount));
+    upsertCandidateAttr(attrs, ctx, "thread_schedule.partition_axis",
+                        stringAttr(candidate.threadSchedule.partitionAxis));
+    upsertCandidateAttr(attrs, ctx, "thread_schedule.partition_strategy",
+                        stringAttr(candidate.threadSchedule.partitionStrategy));
+  }
   if (!candidate.candidateReason.empty())
     upsertCandidateAttr(attrs, ctx, "candidate_reason",
                         stringAttr(candidate.candidateReason));
