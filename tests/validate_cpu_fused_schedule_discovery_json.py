@@ -67,6 +67,14 @@ def main() -> int:
     measurements = json.loads((output_dir / "benchmark_measurements.json").read_text())
     if len(measurements["workloads"]) != len(workloads):
         fail("benchmark_measurements.json: workload count does not match manifest")
+
+    baseline = measurements.get("fusion_attribution_baseline")
+    if not baseline:
+        fail("benchmark_measurements.json: missing fusion_attribution_baseline (must be kept separate from schedule oracle)")
+    if not baseline["unfused"]["correctness_passed"] or not baseline["fused"]["correctness_passed"]:
+        fail("fusion_attribution_baseline: correctness failed")
+    if baseline["unfused"]["launch_count"] != 3 or baseline["fused"]["launch_count"] != 1:
+        fail("fusion_attribution_baseline: launch counts must be 3 (unfused) and 1 (fused)")
     for wl in measurements["workloads"]:
         cand_ids = {c["candidate_id"] for c in wl["candidates"]}
         if cand_ids != CANDIDATE_IDS:

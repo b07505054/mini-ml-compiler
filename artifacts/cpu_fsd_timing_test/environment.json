@@ -1,11 +1,11 @@
 {
   "schema": "cpu_fused_schedule_discovery_environment",
   "schema_version": 1,
-  "utc_timestamp": "2026-07-12T23:44:30Z",
+  "utc_timestamp": "2026-07-13T00:06:00Z",
   "cpu_model": {"value": "Apple M5", "source": "sysctl"},
   "os": {"value": "26.5.1", "source": "os_query(sw_vers)"},
   "arch": {"value": "arm64", "source": "compiler_predefined_macro"},
-  "compiler": {"value": "Homebrew clang version 22.1.5", "source": "compiler_invocation(clang++ --version)"},
+  "compiler": {"value": "Apple clang version 21.0.0 (clang-2100.1.1.101)", "source": "compiler_invocation(clang++ --version)"},
   "build_type": {"value": "optimized_NDEBUG_defined", "source": "compiler_predefined_macro"},
   "physical_cores_total": {"value": "10", "source": "sysctl"},
   "logical_cores_total": {"value": "10", "source": "sysctl"},

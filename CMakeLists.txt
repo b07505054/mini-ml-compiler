@@ -215,6 +215,16 @@ add_test(
 set_tests_properties(cpu_fused_schedule_discovery_rejects_unknown_candidate PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+add_test(
+    NAME cpu_fused_schedule_discovery_analysis_unit_tests
+    COMMAND
+        ${Python3_EXECUTABLE}
+        -m unittest
+        ${CMAKE_SOURCE_DIR}/tests/test_cpu_fused_schedule_discovery_analysis.py
+)
+set_tests_properties(cpu_fused_schedule_discovery_analysis_unit_tests PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
 
 add_executable(run_attention_demo apps/run_attention_demo.cpp)
 target_link_libraries(run_attention_demo mlcompiler)

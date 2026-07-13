@@ -661,6 +661,159 @@ Inputs make_inputs(int m, int k, int n, unsigned seed) {
 }
 
 // ---------------------------------------------------------------------------
+// Fusion attribution baseline (Phase 1 spec section 7) — DELIBERATELY
+// SEPARATE from the schedule-selection oracle below. This compares a tiled
+// matmul followed by separate bias/relu passes (3 launches, 2 full-size
+// intermediates) against the SAME tile config used one-pass fused (1
+// launch, 0 full-size intermediates). It attributes the value of fusion
+// itself; it must never be read as evidence about which schedule wins.
+// ---------------------------------------------------------------------------
+
+void run_tiled_matmul_only(
+    const Tensor& input, const Tensor& weight, Tensor& output,
+    int M, int N, int K, int block_m, int block_n, int block_k,
+    std::vector<float>& tile_scratch
+) {
+    const float* a = input.data.data();
+    const float* b = weight.data.data();
+    float* out = output.data.data();
+    for (int ii = 0; ii < M; ii += block_m) {
+        const int i_end = std::min(ii + block_m, M);
+        for (int jj = 0; jj < N; jj += block_n) {
+            const int j_end = std::min(jj + block_n, N);
+            const int tile_rows = i_end - ii;
+            const int tile_cols = j_end - jj;
+            const size_t scratch_size = static_cast<size_t>(tile_rows) * tile_cols;
+            std::fill(tile_scratch.begin(), tile_scratch.begin() + scratch_size, 0.0f);
+            for (int kk = 0; kk < K; kk += block_k) {
+                const int k_end = std::min(kk + block_k, K);
+                for (int i = ii; i < i_end; ++i) {
+                    const float* a_row = a + static_cast<size_t>(i) * K;
+                    float* scratch_row = tile_scratch.data() + static_cast<size_t>(i - ii) * tile_cols;
+                    for (int k = kk; k < k_end; ++k) {
+                        const float a_value = a_row[k];
+                        const float* b_row = b + static_cast<size_t>(k) * N + jj;
+                        for (int j = 0; j < tile_cols; ++j) scratch_row[j] += a_value * b_row[j];
+                    }
+                }
+            }
+            for (int i = ii; i < i_end; ++i) {
+                const float* scratch_row = tile_scratch.data() + static_cast<size_t>(i - ii) * tile_cols;
+                float* out_row = out + static_cast<size_t>(i) * N + jj;
+                for (int j = 0; j < tile_cols; ++j) out_row[j] = scratch_row[j];
+            }
+        }
+    }
+}
+
+void run_separate_bias_relu(const Tensor& matmul_out, const Tensor& bias, Tensor& add_out, Tensor& out,
+                            int M, int N) {
+    for (int i = 0; i < M; ++i) {
+        for (int j = 0; j < N; ++j) {
+            add_out.data[static_cast<size_t>(i) * N + j] =
+                matmul_out.data[static_cast<size_t>(i) * N + j] + bias.data[j];
+        }
+    }
+    for (size_t idx = 0; idx < out.data.size(); ++idx) {
+        out.data[idx] = std::max(0.0f, add_out.data[idx]);
+    }
+}
+
+struct FusionAttributionResult {
+    int m = 0, n = 0, k = 0;
+    int block_m = 0, block_n = 0, block_k = 0;
+    Correctness unfused_correctness;
+    Correctness fused_correctness;
+    Stats unfused_stats;
+    Stats fused_stats;
+    int unfused_launch_count = 3;
+    int fused_launch_count = 1;
+    int unfused_full_size_intermediates = 2;
+    int fused_full_size_intermediates = 0;
+};
+
+FusionAttributionResult run_fusion_attribution_baseline(bool smoke) {
+    // Fixed representative shape and tile config (matches the schedule
+    // oracle's most common winner, bm32_bn32_bk32) — NOT swept, NOT used to
+    // pick a schedule candidate.
+    const int m = 256, n = 256, k = 512;
+    const int block_m = 32, block_n = 32, block_k = 32;
+    FusionAttributionResult result;
+    result.m = m; result.n = n; result.k = k;
+    result.block_m = block_m; result.block_n = block_n; result.block_k = block_k;
+
+    Inputs inputs = make_inputs(m, k, n, /*seed=*/9001u);
+    Tensor reference("reference", {m, n});
+    run_naive_fused_matmul_bias_relu(inputs.a, inputs.b, inputs.bias, reference, m, n, k);
+
+    Tensor matmul_out("matmul_out", {m, n});
+    Tensor add_out("add_out", {m, n});
+    Tensor unfused_out("unfused_out", {m, n});
+    Tensor fused_out("fused_out", {m, n});
+    std::vector<float> scratch(static_cast<size_t>(block_m) * block_n, 0.0f);
+
+    run_tiled_matmul_only(inputs.a, inputs.b, matmul_out, m, n, k, block_m, block_n, block_k, scratch);
+    run_separate_bias_relu(matmul_out, inputs.bias, add_out, unfused_out, m, n);
+    result.unfused_correctness = compare_outputs(reference, unfused_out, 1e-4, 1e-4);
+
+    run_fused_tiled_matmul_bias_relu(inputs.a, inputs.b, inputs.bias, fused_out, m, n, k,
+                                     block_m, block_n, block_k, 1, scratch);
+    result.fused_correctness = compare_outputs(reference, fused_out, 1e-4, 1e-4);
+
+    const Budget budget = budget_for_flops(2.0 * m * n * k, smoke);
+    std::vector<double> unfused_samples, fused_samples;
+    for (int repeat = 0; repeat < budget.repeats; ++repeat) {
+        for (int w = 0; w < budget.warmup; ++w) {
+            run_tiled_matmul_only(inputs.a, inputs.b, matmul_out, m, n, k, block_m, block_n, block_k, scratch);
+            run_separate_bias_relu(matmul_out, inputs.bias, add_out, unfused_out, m, n);
+        }
+        Timer t1; t1.start();
+        for (int it = 0; it < budget.iterations; ++it) {
+            run_tiled_matmul_only(inputs.a, inputs.b, matmul_out, m, n, k, block_m, block_n, block_k, scratch);
+            run_separate_bias_relu(matmul_out, inputs.bias, add_out, unfused_out, m, n);
+        }
+        unfused_samples.push_back(t1.stop_ms() / budget.iterations);
+
+        for (int w = 0; w < budget.warmup; ++w) {
+            run_fused_tiled_matmul_bias_relu(inputs.a, inputs.b, inputs.bias, fused_out, m, n, k,
+                                             block_m, block_n, block_k, 1, scratch);
+        }
+        Timer t2; t2.start();
+        for (int it = 0; it < budget.iterations; ++it) {
+            run_fused_tiled_matmul_bias_relu(inputs.a, inputs.b, inputs.bias, fused_out, m, n, k,
+                                             block_m, block_n, block_k, 1, scratch);
+        }
+        fused_samples.push_back(t2.stop_ms() / budget.iterations);
+    }
+    result.unfused_stats = summarize(unfused_samples);
+    result.fused_stats = summarize(fused_samples);
+    return result;
+}
+
+void write_fusion_attribution_json(std::ostream& out, const FusionAttributionResult& r) {
+    out << "{\n";
+    out << "    \"note\": \"SEPARATE from the schedule-selection oracle: attributes the value "
+           "of one-pass fusion itself at a single fixed tile config, not schedule choice.\",\n";
+    out << "    \"shape\": {\"m\": " << r.m << ", \"n\": " << r.n << ", \"k\": " << r.k << "},\n";
+    out << "    \"tile_config\": {\"block_m\": " << r.block_m << ", \"block_n\": " << r.block_n
+        << ", \"block_k\": " << r.block_k << "},\n";
+    out << "    \"unfused\": {\"launch_count\": " << r.unfused_launch_count
+        << ", \"full_size_intermediates\": " << r.unfused_full_size_intermediates
+        << ", \"correctness_passed\": " << (r.unfused_correctness.passed ? "true" : "false")
+        << ", \"mean_ms\": " << r.unfused_stats.mean_ms
+        << ", \"coefficient_of_variation\": " << r.unfused_stats.coefficient_of_variation << "},\n";
+    out << "    \"fused\": {\"launch_count\": " << r.fused_launch_count
+        << ", \"full_size_intermediates\": " << r.fused_full_size_intermediates
+        << ", \"correctness_passed\": " << (r.fused_correctness.passed ? "true" : "false")
+        << ", \"mean_ms\": " << r.fused_stats.mean_ms
+        << ", \"coefficient_of_variation\": " << r.fused_stats.coefficient_of_variation << "},\n";
+    const double speedup = r.fused_stats.mean_ms > 0 ? r.unfused_stats.mean_ms / r.fused_stats.mean_ms : 0.0;
+    out << "    \"fusion_speedup\": " << speedup << ",\n";
+    out << "    \"latency_reduction_percent\": " << (speedup > 0 ? (1.0 - 1.0 / speedup) * 100.0 : 0.0) << "\n";
+    out << "  }";
+}
+
+// ---------------------------------------------------------------------------
 // Per-candidate, per-workload measurement record.
 // ---------------------------------------------------------------------------
 
@@ -767,11 +920,15 @@ std::vector<WorkloadMeasurement> run_discovery(
     return results;
 }
 
-void write_benchmark_measurements_json(const std::string& path, const std::vector<WorkloadMeasurement>& results) {
+void write_benchmark_measurements_json(const std::string& path, const std::vector<WorkloadMeasurement>& results,
+                                       const FusionAttributionResult& fusion_baseline) {
     std::ostringstream out;
     out << "{\n";
     out << "  \"schema\": \"cpu_fused_schedule_benchmark_measurements\",\n";
     out << "  \"schema_version\": 1,\n";
+    out << "  \"fusion_attribution_baseline\": ";
+    write_fusion_attribution_json(out, fusion_baseline);
+    out << ",\n";
     out << "  \"timing_methodology\": \"Timer starts immediately before the timed iteration "
            "loop and stops immediately after; tensor allocation, input fill, and reference "
            "computation happen outside the timed region. Each repeat's sample is total timed "
@@ -1006,7 +1163,9 @@ int main(int argc, char** argv) {
                   << (args.smoke ? " (smoke mode)" : "") << "\n";
 
         std::vector<WorkloadMeasurement> results = run_discovery(candidates, workloads, args.smoke);
-        write_benchmark_measurements_json(args.output_dir + "/benchmark_measurements.json", results);
+        std::cout << "Running fusion attribution baseline (separate from schedule oracle)...\n";
+        FusionAttributionResult fusion_baseline = run_fusion_attribution_baseline(args.smoke);
+        write_benchmark_measurements_json(args.output_dir + "/benchmark_measurements.json", results, fusion_baseline);
 
         // Generate one plan file per candidate and validate exact dispatch
         // for each, aggregating into a single plan_dispatch_validation.json.
