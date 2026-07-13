@@ -34,7 +34,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -207,28 +209,125 @@ static std::string statusFor(const MatchResult& m) {
   return "rejected_" + m.reason;
 }
 
-// Thread-schedule resolution (Phase P1D, thread_schedule_contract_v1),
+// Thread-schedule resolution (Phase P1D/P1D.1, thread_schedule_contract_v1),
 // resolved AFTER kernel selection, for the already-selected kernel only.
-// This is a SEPARATE decision from kernel_selection: which kernel/tile
-// runs vs. how many threads and what partitioning it uses. Declaration
-// order is preference order (same convention as kernel selection itself):
-// the first declared schedule whose thread_count fits the profile's
-// verified available compute units wins. physicalComputeUnits absent
-// means one-thread-only eligibility -- never invented parallel capacity.
+// P1D default behavior is preserved when no validated offline policy exists:
+// declaration order remains preference order. P1D.1 policy may only choose
+// between already-declared legal schedules; it never creates a schedule and
+// never uses measurement to override kernel/op/dtype/shape legality.
 struct ThreadScheduleResult {
   std::string status;   // "selected" | "rejected_*" | "deferred_*"
   const ThreadScheduleOption* option = nullptr;
   std::vector<std::string> rejection_reasons;
+  std::string policy_id;
+  std::string policy_version;
+  std::string policy_metric;
+  int64_t policy_metric_value = 0;
+  int64_t policy_threshold = 0;
+  std::string policy_boundary_rule;
+  std::string policy_selection_reason;
+  std::string policy_evidence_ref;
+  std::string policy_evidence_sha256;
+  std::string policy_truth_boundary;
 };
 
-static ThreadScheduleResult resolveThreadSchedule(
+struct OfflineThreadPolicyView {
+  bool active = false;
+  std::string policy_id;
+  std::string policy_version;
+  std::string target_profile_id;
+  std::string fused_region_identity;
+  std::string dtype;
+  std::string kernel_id;
+  std::string metric;
+  int64_t threshold = 0;
+  std::string boundary_rule;
+  ThreadScheduleOption below_threshold;
+  ThreadScheduleOption at_or_above_threshold;
+  std::string calibration_evidence_ref;
+  std::string evidence_sha256;
+  std::string truth_boundary;
+};
+
+static std::string moduleStringAttr(Operation* module, StringRef key) {
+  if (!module) return {};
+  if (auto a = module->getAttrOfType<StringAttr>(key))
+    return a.getValue().str();
+  return {};
+}
+
+static std::optional<int64_t> moduleI64Attr(Operation* module, StringRef key) {
+  if (!module) return std::nullopt;
+  if (auto a = module->getAttrOfType<IntegerAttr>(key))
+    return a.getInt();
+  return std::nullopt;
+}
+
+static ThreadScheduleOption readPolicySchedule(Operation* module,
+                                               StringRef prefix) {
+  ThreadScheduleOption ts;
+  if (auto v = moduleI64Attr(module, (prefix + ".thread_count").str()))
+    ts.thread_count = *v;
+  ts.partition_axis = moduleStringAttr(module, (prefix + ".partition_axis").str());
+  ts.partition_strategy = moduleStringAttr(module, (prefix + ".partition_strategy").str());
+  return ts;
+}
+
+static OfflineThreadPolicyView readOfflineThreadPolicy(Operation* module) {
+  OfflineThreadPolicyView p;
+  p.policy_id = moduleStringAttr(module, "target.thread_schedule_policy.policy_id");
+  if (p.policy_id.empty()) return p;
+  p.active = true;
+  p.policy_version = moduleStringAttr(module, "target.thread_schedule_policy.policy_version");
+  p.target_profile_id = moduleStringAttr(module, "target.thread_schedule_policy.target_profile_id");
+  p.fused_region_identity = moduleStringAttr(module, "target.thread_schedule_policy.fused_region_identity");
+  p.dtype = moduleStringAttr(module, "target.thread_schedule_policy.dtype");
+  p.kernel_id = moduleStringAttr(module, "target.thread_schedule_policy.kernel_id");
+  p.metric = moduleStringAttr(module, "target.thread_schedule_policy.metric");
+  p.threshold = moduleI64Attr(module, "target.thread_schedule_policy.threshold").value_or(0);
+  p.boundary_rule = moduleStringAttr(module, "target.thread_schedule_policy.boundary_rule");
+  p.below_threshold = readPolicySchedule(module, "target.thread_schedule_policy.below_threshold");
+  p.at_or_above_threshold = readPolicySchedule(module, "target.thread_schedule_policy.at_or_above_threshold");
+  p.calibration_evidence_ref = moduleStringAttr(module, "target.thread_schedule_policy.calibration_evidence_ref");
+  p.evidence_sha256 = moduleStringAttr(module, "target.thread_schedule_policy.evidence_sha256");
+  p.truth_boundary = moduleStringAttr(module, "target.thread_schedule_policy.truth_boundary");
+  return p;
+}
+
+static bool sameSchedule(const ThreadScheduleOption& a,
+                         const ThreadScheduleOption& b) {
+  return a.thread_count == b.thread_count &&
+         a.partition_axis == b.partition_axis &&
+         a.partition_strategy == b.partition_strategy;
+}
+
+static const ThreadScheduleOption*
+findDeclaredSchedule(const DescriptorView& selected,
+                     const ThreadScheduleOption& wanted) {
+  for (const ThreadScheduleOption& ts : selected.supported_thread_schedules)
+    if (sameSchedule(ts, wanted)) return &ts;
+  return nullptr;
+}
+
+static bool eligibleForComputeUnits(const ThreadScheduleOption& ts,
+                                    std::optional<int64_t> physicalComputeUnits) {
+  if (ts.thread_count <= 1) return true;
+  return physicalComputeUnits.has_value() && ts.thread_count <= *physicalComputeUnits;
+}
+
+static bool safeMul3(int64_t a, int64_t b, int64_t c, int64_t& out) {
+  if (a <= 0 || b <= 0 || c <= 0) return false;
+  __int128 product = static_cast<__int128>(a) * b * c;
+  if (product > std::numeric_limits<int64_t>::max()) return false;
+  out = static_cast<int64_t>(product);
+  return true;
+}
+
+static ThreadScheduleResult resolveThreadScheduleStatic(
     const DescriptorView& selected,
     std::optional<int64_t> physicalComputeUnits) {
   ThreadScheduleResult r;
   if (selected.supported_thread_schedules.empty()) {
-    // No thread schedules declared for this kernel at all -- absence is
-    // never invented; leave completely absent from the plan (handled by
-    // the caller, which skips emitting thread_schedule.* attrs entirely).
     r.status = "";
     return r;
   }
@@ -254,14 +353,117 @@ static ThreadScheduleResult resolveThreadSchedule(
     r.option = &ts;
     return r;
   }
-  // Nothing fit. Honest deferral if it was purely a missing-profile-fact
-  // issue for every candidate; otherwise an explicit rejection.
   bool anyDeferred = false;
   for (const auto& reason : r.rejection_reasons)
     if (reason.find("deferred_missing_compute_units") != std::string::npos)
       anyDeferred = true;
   r.status = anyDeferred ? "deferred_missing_compute_units"
                          : "rejected_exceeds_compute_units";
+  return r;
+}
+
+static ThreadScheduleResult resolveThreadSchedule(
+    const DescriptorView& selected,
+    std::optional<int64_t> physicalComputeUnits,
+    const OfflineThreadPolicyView& policy,
+    const OpContext& opCtx,
+    Operation& op,
+    StringRef targetProfileId) {
+  if (selected.supported_thread_schedules.empty()) {
+    ThreadScheduleResult r;
+    r.status = "";
+    return r;
+  }
+  if (!policy.active)
+    return resolveThreadScheduleStatic(selected, physicalComputeUnits);
+
+  ThreadScheduleResult r;
+  r.policy_id = policy.policy_id;
+  r.policy_version = policy.policy_version;
+  r.policy_metric = policy.metric;
+  r.policy_threshold = policy.threshold;
+  r.policy_boundary_rule = policy.boundary_rule;
+  r.policy_evidence_ref = policy.calibration_evidence_ref;
+  r.policy_evidence_sha256 = policy.evidence_sha256;
+  r.policy_truth_boundary = policy.truth_boundary;
+
+  const ThreadScheduleOption* serial =
+      findDeclaredSchedule(selected, policy.below_threshold);
+  const ThreadScheduleOption* parallel =
+      findDeclaredSchedule(selected, policy.at_or_above_threshold);
+  auto chooseSerial = [&](StringRef reason) {
+    if (serial) {
+      r.status = "selected";
+      r.option = serial;
+      r.policy_selection_reason = reason.str();
+    } else {
+      r.status = "rejected_missing_serial_thread_schedule";
+      r.rejection_reasons.push_back("policy_serial_schedule_not_declared");
+      r.policy_selection_reason = reason.str();
+    }
+  };
+
+  if (!serial) {
+    r.status = "rejected_missing_serial_thread_schedule";
+    r.rejection_reasons.push_back("policy_serial_schedule_not_declared");
+    r.policy_selection_reason = "policy_cannot_apply_without_declared_serial_fallback";
+    return r;
+  }
+
+  if (policy.target_profile_id != targetProfileId) {
+    chooseSerial("policy_target_profile_mismatch_serial_fallback");
+    return r;
+  }
+  if (policy.fused_region_identity != opCtx.op_name) {
+    chooseSerial("policy_fused_region_mismatch_serial_fallback");
+    return r;
+  }
+  if (policy.dtype != opCtx.dtype) {
+    chooseSerial("policy_dtype_mismatch_serial_fallback");
+    return r;
+  }
+  if (policy.kernel_id != selected.kernel_id) {
+    chooseSerial("policy_kernel_mismatch_serial_fallback");
+    return r;
+  }
+  if (policy.metric != "matmul_mnk") {
+    chooseSerial("policy_metric_unsupported_serial_fallback");
+    return r;
+  }
+  if (policy.boundary_rule != "at_or_above_threshold_selects_parallel") {
+    chooseSerial("policy_boundary_rule_unsupported_serial_fallback");
+    return r;
+  }
+  ShapeFacts facts = computeShapeFacts(op);
+  int64_t metric = 0;
+  if (facts.status != "static_shapes" ||
+      !safeMul3(facts.m, facts.n, facts.k, metric)) {
+    chooseSerial("policy_missing_static_mnk_serial_fallback");
+    return r;
+  }
+  r.policy_metric_value = metric;
+  if (metric < policy.threshold) {
+    chooseSerial("metric_below_threshold_select_serial");
+    return r;
+  }
+  if (!parallel) {
+    r.rejection_reasons.push_back("policy_parallel_schedule_not_declared");
+    chooseSerial("metric_at_or_above_threshold_but_parallel_not_declared_serial_fallback");
+    return r;
+  }
+  if (!physicalComputeUnits.has_value()) {
+    r.rejection_reasons.push_back("policy_parallel_deferred_missing_compute_units");
+    chooseSerial("metric_at_or_above_threshold_but_missing_compute_units_serial_fallback");
+    return r;
+  }
+  if (!eligibleForComputeUnits(*parallel, physicalComputeUnits)) {
+    r.rejection_reasons.push_back("policy_parallel_rejected_exceeds_compute_units");
+    chooseSerial("metric_at_or_above_threshold_but_compute_units_insufficient_serial_fallback");
+    return r;
+  }
+  r.status = "selected";
+  r.option = parallel;
+  r.policy_selection_reason = "metric_at_or_above_threshold_select_parallel";
   return r;
 }
 
@@ -313,6 +515,11 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
       if (auto a = module->getAttrOfType<IntegerAttr>(
               "target.hardware.physical_compute_units"))
         physicalComputeUnits = a.getInt();
+
+    OfflineThreadPolicyView offlineThreadPolicy =
+        readOfflineThreadPolicy(module);
+    std::string targetProfileId =
+        moduleStringAttr(module, "target.profile_id");
 
     for (Operation& op : funcOp.getBody().front().without_terminator()) {
       op.setAttr("kernel_selection.contract_version", S(kContractVersion));
@@ -393,7 +600,9 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
         // kernel declares no thread schedules at all -- old P1B/P1C
         // profiles stay byte-identical.
         ThreadScheduleResult tsResult =
-            resolveThreadSchedule(*selected, physicalComputeUnits);
+            resolveThreadSchedule(*selected, physicalComputeUnits,
+                                  offlineThreadPolicy, opCtx, op,
+                                  targetProfileId);
         if (!tsResult.status.empty()) {
           op.setAttr("thread_schedule.contract_version",
                      S("thread_schedule_contract_v1"));
@@ -409,6 +618,27 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
             op.setAttr("thread_schedule.partition_strategy",
                        S(tsResult.option->partition_strategy));
             op.setAttr("thread_schedule.source", S(selected->source));
+          }
+          if (!tsResult.policy_id.empty()) {
+            op.setAttr("thread_schedule.policy_id", S(tsResult.policy_id));
+            op.setAttr("thread_schedule.policy_version", S(tsResult.policy_version));
+            op.setAttr("thread_schedule.policy_metric", S(tsResult.policy_metric));
+            op.setAttr("thread_schedule.policy_metric_value",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        tsResult.policy_metric_value));
+            op.setAttr("thread_schedule.policy_threshold",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        tsResult.policy_threshold));
+            op.setAttr("thread_schedule.policy_boundary_rule",
+                       S(tsResult.policy_boundary_rule));
+            op.setAttr("thread_schedule.policy_selection_reason",
+                       S(tsResult.policy_selection_reason));
+            op.setAttr("thread_schedule.policy_evidence_ref",
+                       S(tsResult.policy_evidence_ref));
+            op.setAttr("thread_schedule.policy_evidence_sha256",
+                       S(tsResult.policy_evidence_sha256));
+            op.setAttr("thread_schedule.policy_truth_boundary",
+                       S(tsResult.policy_truth_boundary));
           }
           if (!tsResult.rejection_reasons.empty()) {
             SmallVector<Attribute> tsReasons;

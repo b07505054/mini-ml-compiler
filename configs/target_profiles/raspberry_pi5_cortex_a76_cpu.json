@@ -10,6 +10,11 @@
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
   },
+  "threadSchedulePolicy": {
+    "path": "../thread_schedule_policies/raspberry_pi5_cortex_a76_p1d1_thread_policy.json",
+    "expectedPolicyId": "raspberry_pi5_fused_matmul_bias_relu_thread_schedule_p1d1",
+    "expectedEvidenceSha256": "sha256:92aba0b1dd80846b469c870b921293c9c63054c84fa43bb9bdcf2afc4b6fa375"
+  },
   "runtimeKernels": [
     {
       "kernelId": "portable_fused_matmul_bias_relu_bm32_bn128_bk32",

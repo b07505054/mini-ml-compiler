@@ -200,6 +200,11 @@ struct TargetDeviceProfile {
   // Optional quantization co-design policy; "" = co-design pass inert.
   std::string quantizationCoDesignPolicy;
 
+  // Optional Phase P1D.1 offline-calibrated thread-schedule policy.
+  // Loaded from a compiler-local policy artifact referenced by the profile;
+  // raw latency evidence stays outside the target profile.
+  mlir::hir::OfflineThreadSchedulePolicy offlineThreadSchedulePolicy;
+
   // Optional static cost profile for shape_cost_model_v2: declared
   // theoretical peak numbers (public docs or declared profile — never
   // measured). 0 = not declared; the cost model then emits shape facts
@@ -233,6 +238,89 @@ struct TargetDeviceProfile {
   std::string forcedQuantArtifactRef;      // e.g. "artifacts/qwen_awq"
   std::string forcedQuantTruthBoundary;
 };
+
+static std::string resolveProfileRelativePath(llvm::StringRef profilePath,
+                                              llvm::StringRef ref) {
+  llvm::SmallString<256> resolved;
+  if (llvm::sys::path::is_relative(ref)) {
+    llvm::SmallString<256> dir(profilePath);
+    llvm::sys::path::remove_filename(dir);
+    llvm::sys::path::append(resolved, dir, ref);
+  } else {
+    resolved = ref;
+  }
+  llvm::sys::path::remove_dots(resolved, true);
+  return resolved.str().str();
+}
+
+static mlir::hir::RuntimeThreadScheduleOption
+parsePolicySchedule(const llvm::json::Object *obj) {
+  mlir::hir::RuntimeThreadScheduleOption ts;
+  if (!obj) return ts;
+  if (auto v = obj->getInteger("thread_count"))
+    ts.thread_count = static_cast<int64_t>(*v);
+  if (auto v = obj->getString("partition_axis"))
+    ts.partition_axis = v->str();
+  if (auto v = obj->getString("partition_strategy"))
+    ts.partition_strategy = v->str();
+  return ts;
+}
+
+static llvm::Expected<mlir::hir::OfflineThreadSchedulePolicy>
+parseOfflineThreadSchedulePolicy(llvm::StringRef artifactPath,
+                                 llvm::StringRef expectedPolicyId,
+                                 llvm::StringRef expectedEvidenceSha256,
+                                 llvm::StringRef expectedTargetProfileId) {
+  mlir::hir::OfflineThreadSchedulePolicy policy;
+  policy.artifact_ref = artifactPath.str();
+
+  auto buf = llvm::MemoryBuffer::getFile(artifactPath);
+  if (!buf)
+    return llvm::make_error<llvm::StringError>(
+        "cannot read thread schedule policy artifact '" + artifactPath.str() +
+            "': " + buf.getError().message(),
+        llvm::inconvertibleErrorCode());
+
+  auto json = llvm::json::parse((*buf)->getBuffer());
+  if (!json)
+    return llvm::make_error<llvm::StringError>(
+        "JSON parse error in thread schedule policy artifact '" +
+            artifactPath.str() + "': " + llvm::toString(json.takeError()),
+        llvm::inconvertibleErrorCode());
+
+  const llvm::json::Object *obj = json->getAsObject();
+  if (!obj)
+    return llvm::make_error<llvm::StringError>(
+        "thread schedule policy artifact must be a JSON object",
+        llvm::inconvertibleErrorCode());
+
+  if (auto v = obj->getString("policy_id")) policy.policy_id = v->str();
+  if (auto v = obj->getString("policy_version")) policy.policy_version = v->str();
+  if (auto v = obj->getString("target_profile_id")) policy.target_profile_id = v->str();
+  if (auto v = obj->getString("operation_or_fused_region_identity"))
+    policy.fused_region_identity = v->str();
+  if (auto v = obj->getString("dtype")) policy.dtype = v->str();
+  if (auto v = obj->getString("kernel_id")) policy.kernel_id = v->str();
+  if (auto v = obj->getString("metric")) policy.metric = v->str();
+  if (auto v = obj->getInteger("threshold")) policy.threshold = static_cast<int64_t>(*v);
+  if (auto v = obj->getString("boundary_rule")) policy.boundary_rule = v->str();
+  policy.below_threshold_schedule = parsePolicySchedule(obj->getObject("below_threshold_thread_schedule"));
+  policy.at_or_above_threshold_schedule = parsePolicySchedule(obj->getObject("at_or_above_threshold_thread_schedule"));
+  if (auto v = obj->getString("calibration_evidence_ref")) policy.calibration_evidence_ref = v->str();
+  if (auto v = obj->getString("evidence_sha256")) policy.evidence_sha256 = v->str();
+  if (auto v = obj->getString("calibration_workload_scope")) policy.calibration_workload_scope = v->str();
+  if (auto v = obj->getString("generated_at")) policy.generated_at = v->str();
+  if (auto v = obj->getString("calibration_compiler_commit")) policy.calibration_compiler_commit = v->str();
+  if (auto v = obj->getString("calibration_runtime_commit")) policy.calibration_runtime_commit = v->str();
+  if (auto v = obj->getString("truth_boundary")) policy.truth_boundary = v->str();
+
+  const bool matchesExpected =
+      policy.policy_id == expectedPolicyId &&
+      policy.evidence_sha256 == expectedEvidenceSha256 &&
+      policy.target_profile_id == expectedTargetProfileId;
+  policy.active = matchesExpected;
+  return policy;
+}
 
 // ---------------------------------------------------------------------------
 // TargetProfileLowering — tool-boundary mapping
@@ -431,6 +519,8 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
     tc.kernel_library_capabilities.push_back(std::move(ke));
   }
 
+  tc.offline_thread_schedule_policy = prof.offlineThreadSchedulePolicy;
+
   // Runtime kernel descriptors pass through unchanged (already the
   // compiler-side type).
   tc.runtime_kernels = prof.runtimeKernels;
@@ -558,6 +648,30 @@ parseDeviceProfile(llvm::StringRef path) {
   // existing artifacts stay byte-identical.
   if (auto v = obj->getString("quantizationCoDesignPolicy"))
     prof.quantizationCoDesignPolicy = v->str();
+
+  // Optional Phase P1D.1 offline thread-schedule policy reference. The
+  // profile carries only a pointer and expected identity/hash; the policy
+  // artifact carries calibration provenance. Raw latency rows remain in the
+  // Runtime evidence directory, not in the target profile.
+  if (auto *tsp = obj->getObject("threadSchedulePolicy")) {
+    std::string artifactPath;
+    std::string expectedPolicyId;
+    std::string expectedEvidenceSha256;
+    if (auto v = tsp->getString("path"))
+      artifactPath = resolveProfileRelativePath(path, *v);
+    if (auto v = tsp->getString("expectedPolicyId"))
+      expectedPolicyId = v->str();
+    if (auto v = tsp->getString("expectedEvidenceSha256"))
+      expectedEvidenceSha256 = v->str();
+    if (!artifactPath.empty()) {
+      auto policyOrErr = parseOfflineThreadSchedulePolicy(
+          artifactPath, expectedPolicyId, expectedEvidenceSha256,
+          prof.profileId);
+      if (!policyOrErr)
+        return policyOrErr.takeError();
+      prof.offlineThreadSchedulePolicy = std::move(*policyOrErr);
+    }
+  }
 
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
   // Absent in every existing profile; only present in profiles that opt in

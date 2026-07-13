@@ -1,0 +1,29 @@
+{
+  "schema": "offline_thread_schedule_policy_v1",
+  "policy_id": "raspberry_pi5_fused_matmul_bias_relu_thread_schedule_p1d1",
+  "policy_version": "p1d1.v1",
+  "target_profile_id": "raspberry-pi5-cortex-a76-cpu",
+  "operation_or_fused_region_identity": "fused_matmul_bias_relu",
+  "dtype": "f32",
+  "kernel_id": "portable_fused_matmul_bias_relu_bm32_bn128_bk32",
+  "metric": "matmul_mnk",
+  "threshold": 262144,
+  "boundary_rule": "at_or_above_threshold_selects_parallel",
+  "below_threshold_thread_schedule": {
+    "thread_count": 1,
+    "partition_axis": "none",
+    "partition_strategy": "serial"
+  },
+  "at_or_above_threshold_thread_schedule": {
+    "thread_count": 4,
+    "partition_axis": "m",
+    "partition_strategy": "contiguous_chunks"
+  },
+  "calibration_evidence_ref": "heterogeneous-inference-runtime:results/p1d_raspberry_pi_thread_decomposition/p1d_raw_measurements.json",
+  "evidence_sha256": "sha256:92aba0b1dd80846b469c870b921293c9c63054c84fa43bb9bdcf2afc4b6fa375",
+  "calibration_workload_scope": "8 calibration workloads from p1d_workload_manifest.json only; held-out and correctness-only workloads excluded from fitting",
+  "generated_at": "2026-07-13T17:20:00Z",
+  "calibration_compiler_commit": "1ebc233b90f0fac152f1aaf666933c9bc7be16b3",
+  "calibration_runtime_commit": "eabfaf0f46b43e7399ecc440289328860c5fcd1b",
+  "truth_boundary": "offline_calibration_from_raspberry_pi_p1d_measurements_not_current_compile_measurement_not_generic_arm_not_accuracy_evidence_valid_only_for_declared_profile_kernel_dtype_and_region"
+}

@@ -1017,6 +1017,25 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       tsched.partition_axis     = strOp(&op, "thread_schedule.partition_axis");
       tsched.partition_strategy = strOp(&op, "thread_schedule.partition_strategy");
       tsched.source             = strOp(&op, "thread_schedule.source");
+      tsched.policy_id          = strOp(&op, "thread_schedule.policy_id");
+      tsched.policy_version     = strOp(&op, "thread_schedule.policy_version");
+      tsched.policy_metric      = strOp(&op, "thread_schedule.policy_metric");
+      if (auto v = op.getAttrOfType<mlir::IntegerAttr>(
+              "thread_schedule.policy_metric_value"))
+        tsched.policy_metric_value = v.getInt();
+      if (auto v = op.getAttrOfType<mlir::IntegerAttr>(
+              "thread_schedule.policy_threshold"))
+        tsched.policy_threshold = v.getInt();
+      tsched.policy_boundary_rule =
+          strOp(&op, "thread_schedule.policy_boundary_rule");
+      tsched.policy_selection_reason =
+          strOp(&op, "thread_schedule.policy_selection_reason");
+      tsched.policy_evidence_ref =
+          strOp(&op, "thread_schedule.policy_evidence_ref");
+      tsched.policy_evidence_sha256 =
+          strOp(&op, "thread_schedule.policy_evidence_sha256");
+      tsched.policy_truth_boundary =
+          strOp(&op, "thread_schedule.policy_truth_boundary");
       tsched.contract_version   = strOp(&op, "thread_schedule.contract_version");
       tsched.truth_boundary     = strOp(&op, "thread_schedule.truth_boundary");
       if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(

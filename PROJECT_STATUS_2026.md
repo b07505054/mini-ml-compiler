@@ -69,14 +69,14 @@ IVP validates runtime artifacts, compiler/runtime consistency, and generated rep
 
 ## Completed Milestone History
 
-P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution.
+P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy.
 
 ## Current Research Conclusions
 
 - The primary weakness is fragmentation and integration debt, not absence of meaningful implementation.
 - Measurement is valuable only after legality.
 - Edge backend credibility requires memory hierarchy and data movement to become compiler IR concepts.
-- P1D evidence shows a real multi-region thread decision, but the threshold policy is not shipped.
+- P1D.1 ships the first narrow offline-calibrated policy edge: Raspberry Pi fused MatMul + Bias + ReLU selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold.
 
 ## Remaining Research Questions
 

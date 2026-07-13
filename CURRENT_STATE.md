@@ -18,7 +18,7 @@ The system is an IR-centered, hardware-aware implementation-decision compiler fo
 
 ## Current Phase
 
-P1D is complete and locally committed in compiler and runtime. P1D.1 has not started.
+P1D and P1D.1 are complete locally. P1D.1 implemented an IR-derived, offline-calibrated Raspberry Pi thread-schedule policy. No next phase has started.
 
 Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
 
@@ -29,6 +29,7 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 - P1C: portable fused MatMul + Bias + ReLU expanded to eight tile candidates.
 - P1C.1: `portable_fused_matmul_bias_relu_bm32_bn128_bk32` adopted as calibration-only low-regret Raspberry Pi static default.
 - P1D: backend-neutral ThreadSchedule planning and runtime execution for serial, 2/4-thread split-M, and 2/4-thread split-N schedules.
+- P1D.1: compiler-side offline-calibrated Raspberry Pi policy selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold for the fixed fused MatMul + Bias + ReLU portable CPU kernel.
 
 ## What Is Real and Executable
 
@@ -65,7 +66,6 @@ Phase D0 is documentation-only canonicalization. No compiler passes, runtime beh
 
 - Canonical `ImplementationCandidate` type.
 - Unified policy engine across CPU, Triton, AWQ, vLLM, and future NPU paths.
-- P1D.1 threshold policy in shipped compiler behavior.
 - Complete dequant/layout-transform IR materialization.
 - Mature memory-space/DMA/synchronization/NPU Implementation IR.
 - Complete AWQ accuracy/perplexity validation.

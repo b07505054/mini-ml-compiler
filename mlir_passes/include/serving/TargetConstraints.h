@@ -177,6 +177,35 @@ struct RuntimeThreadScheduleOption {
   std::string partition_strategy;  // "serial" | "contiguous_chunks" | "static_2d"
 };
 
+
+// Offline-calibrated thread-schedule policy (Phase P1D.1).
+// This is compiler policy metadata, not hardware capability and not raw
+// measurement evidence. It is lowered from a compiler-local policy artifact
+// referenced by a target profile, then consumed only after kernel/schedule
+// legality is established.
+struct OfflineThreadSchedulePolicy {
+  bool active = false;
+  std::string policy_id;
+  std::string policy_version;
+  std::string target_profile_id;
+  std::string fused_region_identity;
+  std::string dtype;
+  std::string kernel_id;
+  std::string metric;
+  int64_t threshold = 0;
+  std::string boundary_rule;
+  RuntimeThreadScheduleOption below_threshold_schedule;
+  RuntimeThreadScheduleOption at_or_above_threshold_schedule;
+  std::string calibration_evidence_ref;
+  std::string evidence_sha256;
+  std::string calibration_workload_scope;
+  std::string generated_at;
+  std::string calibration_compiler_commit;
+  std::string calibration_runtime_commit;
+  std::string truth_boundary;
+  std::string artifact_ref;
+};
+
 struct RuntimeKernelDescriptor {
   std::string kernel_id;   // stable id, e.g. "metal_rmsnorm_f32_v1"
   std::string op_name;     // short op name it implements, e.g. "rmsnorm"
@@ -286,6 +315,9 @@ struct TargetConstraints {
   // as target.kernel_libraries.{backend} ArrayAttr of DictionaryAttr.
   // Empty when the profile predates the kernelLibraries schema.
   std::vector<KernelLibraryCapability> kernel_library_capabilities;
+
+  // Optional offline thread-schedule policy (Phase P1D.1).
+  OfflineThreadSchedulePolicy offline_thread_schedule_policy;
 
   // Concrete runtime kernel descriptors (kernel_selection_contract_v1).
   // Lowered from the target profile JSON runtimeKernels array; stored in

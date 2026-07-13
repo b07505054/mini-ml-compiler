@@ -423,6 +423,48 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
                 mlir::StringAttr::get(
                     ctx, *hardware_execution_profile.local_memory_kind));
 
+  // Phase P1D.1 offline thread-schedule policy. These attrs are policy
+  // provenance and selection inputs, not hardware capability and not raw
+  // measured evidence.
+  if (offline_thread_schedule_policy.active) {
+    const auto &p = offline_thread_schedule_policy;
+    auto setS = [&](llvm::StringRef key, const std::string &value) {
+      if (!value.empty())
+        op->setAttr(("target.thread_schedule_policy." + key).str(),
+                    mlir::StringAttr::get(ctx, value));
+    };
+    auto setI = [&](llvm::StringRef key, int64_t value) {
+      op->setAttr(("target.thread_schedule_policy." + key).str(),
+                  mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
+                                         value));
+    };
+    auto setSchedule = [&](llvm::StringRef prefix,
+                           const RuntimeThreadScheduleOption &ts) {
+      setI((prefix + ".thread_count").str(), ts.thread_count);
+      setS((prefix + ".partition_axis").str(), ts.partition_axis);
+      setS((prefix + ".partition_strategy").str(), ts.partition_strategy);
+    };
+    setS("policy_id", p.policy_id);
+    setS("policy_version", p.policy_version);
+    setS("target_profile_id", p.target_profile_id);
+    setS("fused_region_identity", p.fused_region_identity);
+    setS("dtype", p.dtype);
+    setS("kernel_id", p.kernel_id);
+    setS("metric", p.metric);
+    setI("threshold", p.threshold);
+    setS("boundary_rule", p.boundary_rule);
+    setSchedule("below_threshold", p.below_threshold_schedule);
+    setSchedule("at_or_above_threshold", p.at_or_above_threshold_schedule);
+    setS("calibration_evidence_ref", p.calibration_evidence_ref);
+    setS("evidence_sha256", p.evidence_sha256);
+    setS("calibration_workload_scope", p.calibration_workload_scope);
+    setS("generated_at", p.generated_at);
+    setS("calibration_compiler_commit", p.calibration_compiler_commit);
+    setS("calibration_runtime_commit", p.calibration_runtime_commit);
+    setS("truth_boundary", p.truth_boundary);
+    setS("artifact_ref", p.artifact_ref);
+  }
+
   // Emit per-backend capability attrs.
   // Index: target.backend_capability_names lists the backend names.
   // Per-backend fields use flat prefix target.backend_capabilities.{name}.*

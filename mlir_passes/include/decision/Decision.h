@@ -205,6 +205,18 @@ struct ThreadSchedule {
   std::string partition_strategy;       // "serial" | "contiguous_chunks" | "static_2d"
   std::string source;                   // same vocabulary as KernelSelection.source
   std::vector<std::string> rejection_reasons;
+  // Optional Phase P1D.1 offline-calibrated policy provenance. Empty when
+  // the static P1D descriptor-order resolver selected the schedule.
+  std::string policy_id;
+  std::string policy_version;
+  std::string policy_metric;
+  int64_t     policy_metric_value = 0;
+  int64_t     policy_threshold = 0;
+  std::string policy_boundary_rule;
+  std::string policy_selection_reason;
+  std::string policy_evidence_ref;
+  std::string policy_evidence_sha256;
+  std::string policy_truth_boundary;
   std::string contract_version;         // "thread_schedule_contract_v1"
   std::string truth_boundary;
 };

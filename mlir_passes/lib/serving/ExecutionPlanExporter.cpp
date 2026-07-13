@@ -315,6 +315,18 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
       tsObj["partition_strategy"] = tsched.partition_strategy;
       tsObj["source"]             = tsched.source;
     }
+    if (!tsched.policy_id.empty()) {
+      tsObj["policy_id"] = tsched.policy_id;
+      tsObj["policy_version"] = tsched.policy_version;
+      tsObj["policy_metric"] = tsched.policy_metric;
+      tsObj["policy_metric_value"] = tsched.policy_metric_value;
+      tsObj["policy_threshold"] = tsched.policy_threshold;
+      tsObj["policy_boundary_rule"] = tsched.policy_boundary_rule;
+      tsObj["policy_selection_reason"] = tsched.policy_selection_reason;
+      tsObj["policy_evidence_ref"] = tsched.policy_evidence_ref;
+      tsObj["policy_evidence_sha256"] = tsched.policy_evidence_sha256;
+      tsObj["policy_truth_boundary"] = tsched.policy_truth_boundary;
+    }
     if (!tsched.rejection_reasons.empty()) {
       llvm::json::Array reasons;
       for (const auto &r : tsched.rejection_reasons)

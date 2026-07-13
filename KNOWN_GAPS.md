@@ -7,7 +7,7 @@ Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml
 | No canonical `ImplementationCandidate` | missing | Multiple candidate concepts exist, but no single type/interface. | Prevents unified candidate/provider/policy architecture. |
 | Separate candidate structs | implemented but unintegrated | CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, Triton, CPU descriptors, AWQ deployment all differ. | Causes parallel decision systems. |
 | Private Triton schema | implemented but unintegrated | Real measured Triton path exists outside canonical ExecutionPlan dispatch. | Real capability is easy to miss and hard to govern. |
-| P1D evidence-to-policy edge | implemented but unintegrated | Threshold policy evidence exists offline; shipped compiler remains effectively always serial. | Current runtime can execute better schedules, but policy is not integrated. |
+| P1D evidence-to-policy edge | implemented for one path | P1D.1 integrates an offline-calibrated threshold policy for Raspberry Pi fused MatMul + Bias + ReLU with fixed kernel `bm32_bn128_bk32`. | Still not a unified policy engine and not generic ARM scheduling. |
 | Capability DB duplication | implemented but unintegrated | Compiler-local profiles are richer/newer than `ml-platform-capabilities`. | Canonical capability ownership is not yet real. |
 | Runtime schema drift | implemented but unintegrated | Runtime Python schema is not perfect one-to-one mirror of C++ ExecutionPlan schema. | Contract validation can lose fields or semantics. |
 | Limited IR materialization | implemented but incomplete | `hir.cast` materialization exists; many decisions remain attrs/contracts. | Compiler backend identity depends on implementation decisions becoming IR when needed. |
