@@ -49,6 +49,21 @@ struct ThreadScheduleCandidateSpec {
   std::string partitionStrategy;
 };
 
+struct QuantizationCandidateSpec {
+  bool present = false;
+  std::string scheme;
+  std::string activationDtype;
+  std::string weightDtype;
+  std::string accumulatorDtype;
+  std::string outputDtype;
+  std::string granularity;
+  int64_t groupSize = 0;
+  bool calibrationRequired = false;
+  bool calibrationAvailable = false;
+  std::string requiredBackendCapability;
+  std::string requiredKernelCapability;
+};
+
 struct TileCandidateSpec {
   bool present = false;
   int64_t blockM = 0;
@@ -77,6 +92,7 @@ struct ImplementationCandidate {
   std::string xnnpackCommit;
   TileCandidateSpec tile;
   ThreadScheduleCandidateSpec threadSchedule;
+  QuantizationCandidateSpec quantization;
   std::string candidateReason;
   std::vector<std::string> requiredBoundaryOps;
   std::string fallbackBackend;
@@ -253,6 +269,36 @@ inline std::string makeFallbackCandidateId(
     id += ":dtype=";
     id += candidate.dtype;
   }
+  if (candidate.quantization.present) {
+    id += ":quant=";
+    id += candidate.quantization.scheme.empty()
+              ? "unknown"
+              : candidate.quantization.scheme;
+    id += ":act=";
+    id += candidate.quantization.activationDtype.empty()
+              ? "unknown"
+              : candidate.quantization.activationDtype;
+    id += ":weight=";
+    id += candidate.quantization.weightDtype.empty()
+              ? "unknown"
+              : candidate.quantization.weightDtype;
+    id += ":acc=";
+    id += candidate.quantization.accumulatorDtype.empty()
+              ? "unknown"
+              : candidate.quantization.accumulatorDtype;
+    id += ":out=";
+    id += candidate.quantization.outputDtype.empty()
+              ? "unknown"
+              : candidate.quantization.outputDtype;
+    if (!candidate.quantization.granularity.empty()) {
+      id += ":gran=";
+      id += candidate.quantization.granularity;
+    }
+    if (candidate.quantization.groupSize > 0) {
+      id += ":group=";
+      id += std::to_string(candidate.quantization.groupSize);
+    }
+  }
   if (!candidate.pteSha256.empty()) {
     id += ":pte=";
     id += candidate.pteSha256.substr(0, 12);
@@ -392,6 +438,31 @@ inline ImplementationCandidate decodeImplementationCandidate(
     candidate.threadSchedule.partitionStrategy =
         getCandidateString(dict, "thread_schedule.partition_strategy");
   }
+  std::string quantScheme = getCandidateString(dict, "quantization.scheme");
+  if (!quantScheme.empty()) {
+    candidate.quantization.present = true;
+    candidate.quantization.scheme = quantScheme;
+    candidate.quantization.activationDtype =
+        getCandidateString(dict, "quantization.activation_dtype");
+    candidate.quantization.weightDtype =
+        getCandidateString(dict, "quantization.weight_dtype");
+    candidate.quantization.accumulatorDtype =
+        getCandidateString(dict, "quantization.accumulator_dtype");
+    candidate.quantization.outputDtype =
+        getCandidateString(dict, "quantization.output_dtype");
+    candidate.quantization.granularity =
+        getCandidateString(dict, "quantization.granularity");
+    candidate.quantization.groupSize =
+        getCandidateI64(dict, "quantization.group_size", 0);
+    candidate.quantization.requiredBackendCapability =
+        getCandidateString(dict, "quantization.required_backend_capability");
+    candidate.quantization.requiredKernelCapability =
+        getCandidateString(dict, "quantization.required_kernel_capability");
+    candidate.quantization.calibrationRequired =
+        getCandidateString(dict, "quantization.calibration_required") == "true";
+    candidate.quantization.calibrationAvailable =
+        getCandidateString(dict, "quantization.calibration_available") == "true";
+  }
   candidate.candidateReason = getCandidateString(dict, "candidate_reason");
   candidate.requiredBoundaryOps =
       getCandidateStringArray(dict, "required_boundary_ops");
@@ -508,6 +579,41 @@ inline DictionaryAttr encodeImplementationCandidate(
                         stringAttr(candidate.threadSchedule.partitionAxis));
     upsertCandidateAttr(attrs, ctx, "thread_schedule.partition_strategy",
                         stringAttr(candidate.threadSchedule.partitionStrategy));
+  }
+  if (candidate.quantization.present) {
+    upsertCandidateAttr(attrs, ctx, "quantization.scheme",
+                        stringAttr(candidate.quantization.scheme));
+    upsertCandidateAttr(attrs, ctx, "quantization.activation_dtype",
+                        stringAttr(candidate.quantization.activationDtype));
+    upsertCandidateAttr(attrs, ctx, "quantization.weight_dtype",
+                        stringAttr(candidate.quantization.weightDtype));
+    upsertCandidateAttr(attrs, ctx, "quantization.accumulator_dtype",
+                        stringAttr(candidate.quantization.accumulatorDtype));
+    upsertCandidateAttr(attrs, ctx, "quantization.output_dtype",
+                        stringAttr(candidate.quantization.outputDtype));
+    if (!candidate.quantization.granularity.empty())
+      upsertCandidateAttr(attrs, ctx, "quantization.granularity",
+                          stringAttr(candidate.quantization.granularity));
+    if (candidate.quantization.groupSize > 0)
+      upsertCandidateAttr(attrs, ctx, "quantization.group_size",
+                          IntegerAttr::get(IntegerType::get(ctx, 64),
+                                           candidate.quantization.groupSize));
+    upsertCandidateAttr(attrs, ctx, "quantization.calibration_required",
+                        stringAttr(candidate.quantization.calibrationRequired
+                                       ? "true"
+                                       : "false"));
+    upsertCandidateAttr(attrs, ctx, "quantization.calibration_available",
+                        stringAttr(candidate.quantization.calibrationAvailable
+                                       ? "true"
+                                       : "false"));
+    if (!candidate.quantization.requiredBackendCapability.empty())
+      upsertCandidateAttr(
+          attrs, ctx, "quantization.required_backend_capability",
+          stringAttr(candidate.quantization.requiredBackendCapability));
+    if (!candidate.quantization.requiredKernelCapability.empty())
+      upsertCandidateAttr(
+          attrs, ctx, "quantization.required_kernel_capability",
+          stringAttr(candidate.quantization.requiredKernelCapability));
   }
   if (!candidate.candidateReason.empty())
     upsertCandidateAttr(attrs, ctx, "candidate_reason",
