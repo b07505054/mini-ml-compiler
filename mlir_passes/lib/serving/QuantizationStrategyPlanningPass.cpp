@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "serving/QuantizationCandidateProvider.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
@@ -94,6 +95,31 @@ static std::vector<std::string> readStringArr(Operation *op, llvm::StringRef att
   return out;
 }
 
+static std::vector<int64_t> readI64Arr(Operation *op, llvm::StringRef attr) {
+  std::vector<int64_t> out;
+  if (auto a = op->getAttrOfType<ArrayAttr>(attr))
+    for (Attribute elem : a)
+      if (auto i = dyn_cast<IntegerAttr>(elem))
+        out.push_back(i.getInt());
+  return out;
+}
+
+static ArrayAttr makeStringArr(MLIRContext *ctx,
+                               const std::vector<std::string> &values) {
+  SmallVector<Attribute> attrs;
+  for (const auto &value : values)
+    attrs.push_back(StringAttr::get(ctx, value));
+  return ArrayAttr::get(ctx, attrs);
+}
+
+static std::string normalizePlanDtype(std::string dtype) {
+  if (dtype == "f32") return "fp32";
+  if (dtype == "f16") return "fp16";
+  if (dtype == "i8") return "int8";
+  if (dtype == "i4") return "int4";
+  return dtype;
+}
+
 struct QuantizationStrategyPlanningPass
     : impl::QuantizationStrategyPlanningBase<QuantizationStrategyPlanningPass> {
 
@@ -131,42 +157,33 @@ struct QuantizationStrategyPlanningPass
       else              weightsExplicitlyNonConstant = true;
     }
 
-    // Backend capability reads.
+    // Backend capability reads. Slice 1 fields are explicit: missing arrays
+    // mean unknown/unsupported, never inferred support.
     std::string bcPrefix = "target.backend_capabilities." + backend + ".";
-    std::vector<std::string> supportedQuantModes;
-    std::vector<std::string> supportedDtypes;
-    std::vector<std::string> accumDtypes;
+    std::vector<std::string> supportedQuantizationSchemes;
+    std::vector<std::string> supportedActivationDtypes;
+    std::vector<std::string> supportedWeightDtypes;
+    std::vector<std::string> supportedAccumulatorDtypes;
+    std::vector<std::string> supportedOutputDtypes;
     std::vector<std::string> allowedQuantGranularity;
-    std::string reqActivationQuantMode;
-    std::string reqWeightQuantMode;
-    bool backendSupportsDequant = false;
+    std::vector<int64_t> supportedGroupSizes;
+    std::vector<std::string> calibrationAvailableSchemes;
+    std::vector<std::string> requiredKernelCapabilities;
+    bool supportsPerChannelQuantization = false;
 
     if (module && !backend.empty()) {
-      supportedQuantModes    = readStringArr(module, bcPrefix + "supported_quant_modes");
-      supportedDtypes        = readStringArr(module, bcPrefix + "supported_dtypes");
-      accumDtypes            = readStringArr(module, bcPrefix + "accumulation_dtypes");
+      supportedQuantizationSchemes = readStringArr(module, bcPrefix + "supported_quantization_schemes");
+      supportedActivationDtypes = readStringArr(module, bcPrefix + "supported_activation_dtypes");
+      supportedWeightDtypes = readStringArr(module, bcPrefix + "supported_weight_dtypes");
+      supportedAccumulatorDtypes = readStringArr(module, bcPrefix + "supported_accumulator_dtypes");
+      supportedOutputDtypes = readStringArr(module, bcPrefix + "supported_output_dtypes");
       allowedQuantGranularity = readStringArr(module, bcPrefix + "allowed_quant_granularity");
-      if (auto a = module->getAttrOfType<StringAttr>(bcPrefix + "required_activation_quant_mode"))
-        reqActivationQuantMode = a.getValue().str();
-      if (auto a = module->getAttrOfType<StringAttr>(bcPrefix + "required_weight_quant_mode"))
-        reqWeightQuantMode = a.getValue().str();
-      if (auto a = module->getAttrOfType<BoolAttr>(bcPrefix + "supports_dequant_boundary"))
-        backendSupportsDequant = a.getValue();
+      supportedGroupSizes = readI64Arr(module, bcPrefix + "supported_quantization_group_sizes");
+      calibrationAvailableSchemes = readStringArr(module, bcPrefix + "calibration_available_schemes");
+      requiredKernelCapabilities = readStringArr(module, bcPrefix + "required_quantization_kernel_capabilities");
+      if (auto a = module->getAttrOfType<BoolAttr>(bcPrefix + "supports_per_channel_quantization"))
+        supportsPerChannelQuantization = a.getValue();
     }
-
-    // Derive capability flags.
-    bool hasActivationInt8 = false;
-    bool hasWeightInt8 = false;
-    for (const auto &mode : supportedQuantModes) {
-      if (mode == "static_int8") { hasActivationInt8 = true; hasWeightInt8 = true; }
-      if (mode == "weight_only") { hasWeightInt8 = true; }
-    }
-    for (const auto &dtype : supportedDtypes)
-      if (dtype == "int8" || dtype == "i8") hasWeightInt8 = true;
-
-    std::string granularity = !allowedQuantGranularity.empty()
-        ? allowedQuantGranularity[0] : "per_channel";
-    std::string accumDtype = !accumDtypes.empty() ? accumDtypes[0] : "fp32";
 
     if (funcOp.getBody().empty()) return;
     Block &entry = funcOp.getBody().front();
@@ -182,6 +199,7 @@ struct QuantizationStrategyPlanningPass
 
       std::string strategy, weightDtype, activationDtype, outputDtype, accumDtypeForOp;
       std::string quantMode, weightQuantMode, activationQuantMode;
+      std::string granularity = "per_tensor";
       std::string decisionReason, fallbackReason, accuracyRisk;
       bool requiresDequantBoundary = false;
       bool requiresRequantBoundary = false;
@@ -277,39 +295,98 @@ struct QuantizationStrategyPlanningPass
         fallbackReason = "weight_not_constant";
         accuracyRisk = "low";
 
-      } else if (hasWeightInt8) {
-        // Rules 1, 2, 3: backend supports int8 weight and weights are constant.
-        // Rule 1: always prefer weight-only (fp16 activations) over full int8.
-        // Rule 2: int8 weight when backend supports it.
-        // Rule 3: fp16 activation when activation int8 is absent or unsafe.
-        strategy = "weight_only_int8";
-        weightDtype = "int8";
-        activationDtype = effectiveDtype;   // fp16 per Rule 1+3
-        outputDtype = !resultDtype.empty() ? resultDtype : effectiveDtype;
-        // Rule 4: use int32 accumulation for int8 matmul/conv when declared.
-        accumDtypeForOp = accumDtype;
-        quantMode = "weight_only";
-        weightQuantMode = reqWeightQuantMode.empty() ? "weight_only_int8" : reqWeightQuantMode;
-        activationQuantMode = reqActivationQuantMode.empty() ? "none" : reqActivationQuantMode;
-        decisionReason = hasActivationInt8
-            ? "weight_only_int8_prefer_weight_only_per_rule1"
-            : "weight_only_int8_backend_lacks_activation_int8";
-        fallbackReason = "";
-        accuracyRisk = "unknown";  // Rule 10: no calibration
-
       } else {
-        // Backend lacks all int8 support.
-        strategy = "fp16_fallback";
-        weightDtype = effectiveDtype;
-        activationDtype = effectiveDtype;
-        outputDtype = !resultDtype.empty() ? resultDtype : effectiveDtype;
-        accumDtypeForOp = effectiveDtype;
-        quantMode = "none";
-        weightQuantMode = "none";
-        activationQuantMode = "none";
-        decisionReason = "backend_lacks_activation_int8";
-        fallbackReason = "backend_lacks_activation_int8";
-        accuracyRisk = "low";
+        QuantizationCapabilityContext qctx;
+        qctx.semanticTargetRef = opName;
+        qctx.scopeKind = CandidateScopeKind::Operator;
+        if (module)
+          if (auto a = module->getAttrOfType<StringAttr>("target.profile_id"))
+            qctx.targetProfileId = a.getValue().str();
+        qctx.backend = backend.empty() ? "cpu" : backend;
+        qctx.activationDtype = "fp32";
+        qctx.outputDtype = "fp32";
+        qctx.supportedQuantizationSchemes = supportedQuantizationSchemes;
+        qctx.supportedActivationDtypes = supportedActivationDtypes;
+        qctx.supportedWeightDtypes = supportedWeightDtypes;
+        qctx.supportedAccumulatorDtypes = supportedAccumulatorDtypes;
+        qctx.supportedOutputDtypes = supportedOutputDtypes;
+        qctx.supportedGranularities = allowedQuantGranularity;
+        qctx.supportsPerChannel = supportsPerChannelQuantization;
+        qctx.supportedGroupSizes = supportedGroupSizes;
+        qctx.calibrationAvailableSchemes = calibrationAvailableSchemes;
+        qctx.requiredKernelCapabilities = requiredKernelCapabilities;
+
+        StringRef fullName = op.getName().getStringRef();
+        StringRef shortName = fullName;
+        if (auto dot = fullName.find('.'); dot != StringRef::npos)
+          shortName = fullName.substr(dot + 1);
+        if (module) {
+          if (auto registry = module->getAttrOfType<ArrayAttr>("target.runtime_kernels")) {
+            for (Attribute elem : registry) {
+              auto dict = dyn_cast<DictionaryAttr>(elem);
+              if (!dict) continue;
+              auto getS = [&](StringRef key) -> std::string {
+                if (auto a = dict.get(key))
+                  if (auto st = dyn_cast<StringAttr>(a)) return st.getValue().str();
+                return {};
+              };
+              auto getArr = [&](StringRef key) -> std::vector<std::string> {
+                std::vector<std::string> values;
+                if (auto a = dict.get(key))
+                  if (auto arr = dyn_cast<ArrayAttr>(a))
+                    for (Attribute item : arr)
+                      if (auto st = dyn_cast<StringAttr>(item))
+                        values.push_back(st.getValue().str());
+                return values;
+              };
+              if (getS("op_name") != shortName.str()) continue;
+              if (getS("backend") != qctx.backend) continue;
+              qctx.kernelId = getS("kernel_id");
+              qctx.runtimeKernelQuantModes = getArr("supported_quant_modes");
+              qctx.runtimeKernelDtypes = getArr("supported_dtypes");
+              break;
+            }
+          }
+        }
+        if (qctx.requiredKernelCapabilities.empty() &&
+            quantListContains(qctx.runtimeKernelQuantModes, "none"))
+          qctx.requiredKernelCapabilities.push_back("quant_kernel.none");
+
+        QuantizationCandidateProvider provider;
+        QuantizationProviderResult qres = provider.enumerateAndSelect(qctx);
+        const ImplementationCandidate *selected = nullptr;
+        for (const auto &candidate : qres.candidates)
+          if (candidate.candidateId == qres.policy.selectedCandidateId)
+            selected = &candidate;
+        if (!selected) {
+          strategy = "unsupported";
+          weightDtype = "";
+          activationDtype = "";
+          outputDtype = "";
+          accumDtypeForOp = "";
+          quantMode = "unsupported";
+          weightQuantMode = "unsupported";
+          activationQuantMode = "unsupported";
+          decisionReason = "no_legal_quantization_candidate";
+          fallbackReason = "no_legal_quantization_candidate";
+          accuracyRisk = "unknown";
+        } else {
+          strategy = selected->quantization.scheme;
+          granularity = selected->quantization.granularity;
+          weightDtype = selected->quantization.weightDtype;
+          activationDtype = selected->quantization.activationDtype;
+          outputDtype = selected->quantization.outputDtype;
+          accumDtypeForOp = selected->quantization.accumulatorDtype;
+          quantMode = selected->quantization.scheme == "fp32_baseline" ? "none" : selected->quantization.scheme;
+          weightQuantMode = selected->quantization.scheme;
+          activationQuantMode = selected->quantization.scheme == "int8_static" ? "int8_static" : "none";
+          decisionReason = qres.policy.selectionReason;
+          fallbackReason = selected->quantization.scheme == "fp32_baseline" ? "fallback_fp32_selected" : "";
+          accuracyRisk = selected->quantization.calibrationRequired &&
+                         !selected->quantization.calibrationAvailable
+                             ? "unknown"
+                             : "low";
+        }
       }
 
       // Rule 6: op produces quantized output but func effective dtype is float → dequant boundary.
@@ -338,6 +415,92 @@ struct QuantizationStrategyPlanningPass
       set("quant.fallback_reason",       fallbackReason);
       set("quant.accuracy_risk",         accuracyRisk);
       set("quant.truth_boundary",        kTruth);
+
+      if (quantizable && isConstant && !accuracySensitive) {
+        QuantizationCapabilityContext qctx;
+        qctx.semanticTargetRef = opName;
+        qctx.scopeKind = CandidateScopeKind::Operator;
+        if (module)
+          if (auto a = module->getAttrOfType<StringAttr>("target.profile_id"))
+            qctx.targetProfileId = a.getValue().str();
+        qctx.backend = backend.empty() ? "cpu" : backend;
+        qctx.supportedQuantizationSchemes = supportedQuantizationSchemes;
+        qctx.supportedActivationDtypes = supportedActivationDtypes;
+        qctx.supportedWeightDtypes = supportedWeightDtypes;
+        qctx.supportedAccumulatorDtypes = supportedAccumulatorDtypes;
+        qctx.supportedOutputDtypes = supportedOutputDtypes;
+        qctx.supportedGranularities = allowedQuantGranularity;
+        qctx.supportsPerChannel = supportsPerChannelQuantization;
+        qctx.supportedGroupSizes = supportedGroupSizes;
+        qctx.calibrationAvailableSchemes = calibrationAvailableSchemes;
+        qctx.requiredKernelCapabilities = requiredKernelCapabilities;
+        StringRef fullName = op.getName().getStringRef();
+        StringRef shortName = fullName;
+        if (auto dot = fullName.find('.'); dot != StringRef::npos)
+          shortName = fullName.substr(dot + 1);
+        if (module) {
+          if (auto registry = module->getAttrOfType<ArrayAttr>("target.runtime_kernels")) {
+            for (Attribute elem : registry) {
+              auto dict = dyn_cast<DictionaryAttr>(elem);
+              if (!dict) continue;
+              auto getS = [&](StringRef key) -> std::string {
+                if (auto a = dict.get(key))
+                  if (auto st = dyn_cast<StringAttr>(a)) return st.getValue().str();
+                return {};
+              };
+              auto getArr = [&](StringRef key) -> std::vector<std::string> {
+                std::vector<std::string> values;
+                if (auto a = dict.get(key))
+                  if (auto arr = dyn_cast<ArrayAttr>(a))
+                    for (Attribute item : arr)
+                      if (auto st = dyn_cast<StringAttr>(item))
+                        values.push_back(st.getValue().str());
+                return values;
+              };
+              if (getS("op_name") != shortName.str()) continue;
+              if (getS("backend") != qctx.backend) continue;
+              qctx.kernelId = getS("kernel_id");
+              qctx.runtimeKernelQuantModes = getArr("supported_quant_modes");
+              qctx.runtimeKernelDtypes = getArr("supported_dtypes");
+              break;
+            }
+          }
+        }
+        if (qctx.requiredKernelCapabilities.empty() &&
+            quantListContains(qctx.runtimeKernelQuantModes, "none"))
+          qctx.requiredKernelCapabilities.push_back("quant_kernel.none");
+        QuantizationProviderResult qres =
+            QuantizationCandidateProvider().enumerateAndSelect(qctx);
+        const ImplementationCandidate *selected = nullptr;
+        for (const auto &candidate : qres.candidates)
+          if (candidate.candidateId == qres.policy.selectedCandidateId)
+            selected = &candidate;
+        if (selected) {
+          set("quant.selected_candidate_id", selected->candidateId);
+          set("quant.scheme", selected->quantization.scheme);
+          set("quant.required_backend_capability", selected->quantization.requiredBackendCapability);
+          set("quant.required_kernel_capability", selected->quantization.requiredKernelCapability);
+          if (!selected->kernelId.empty()) set("quant.kernel_id", selected->kernelId);
+          setBool("quant.requires_calibration", selected->quantization.calibrationRequired);
+          setBool("quant.calibration_available", selected->quantization.calibrationAvailable);
+          if (selected->quantization.groupSize > 0)
+            op.setAttr("quant.group_size",
+                       IntegerAttr::get(IntegerType::get(ctx, 64),
+                                        selected->quantization.groupSize));
+        }
+        set("quant.policy_id", qres.policy.policyId);
+        set("quant.selection_reason", qres.policy.selectionReason);
+        set("quant.considered_status", qres.policy.selectedCandidateId.empty() ? "unsupported" : "selected");
+        op.setAttr("quant.considered_candidate_ids", makeStringArr(ctx, qres.policy.consideredCandidateIds));
+        std::vector<std::string> rejectedIds;
+        std::vector<std::string> rejectedReasons;
+        for (const auto &rej : qres.policy.rejectedCandidates) {
+          rejectedIds.push_back(rej.candidateId);
+          rejectedReasons.push_back(rej.reason);
+        }
+        op.setAttr("quant.rejected_candidate_ids", makeStringArr(ctx, rejectedIds));
+        op.setAttr("quant.rejected_candidate_reasons", makeStringArr(ctx, rejectedReasons));
+      }
     }
   }
 };
