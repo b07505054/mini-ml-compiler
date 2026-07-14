@@ -137,9 +137,46 @@ static llvm::json::Object serializeQuantizationDecision(const QuantizationDecisi
   obj["weight_dtype"]       = d.weight_dtype;
   obj["activation_dtype"]   = d.activation_dtype;
   obj["accumulation_dtype"] = d.accumulation_dtype;
+  if (!d.output_dtype.empty())
+    obj["output_dtype"] = d.output_dtype;
   obj["granularity"]        = d.granularity;
+  if (d.group_size > 0)
+    obj["group_size"] = d.group_size;
+  obj["requires_calibration"] = d.requires_calibration;
+  obj["calibration_available"] = d.calibration_available;
   obj["accuracy_risk"]      = d.accuracy_risk;
   obj["algorithm"]          = d.algorithm;
+  if (!d.selected_candidate_id.empty())
+    obj["selected_candidate_id"] = d.selected_candidate_id;
+  if (!d.scheme.empty())
+    obj["scheme"] = d.scheme;
+  if (!d.backend.empty())
+    obj["backend"] = d.backend;
+  if (!d.kernel_id.empty())
+    obj["kernel_id"] = d.kernel_id;
+  if (!d.required_backend_capability.empty())
+    obj["required_backend_capability"] = d.required_backend_capability;
+  if (!d.required_kernel_capability.empty())
+    obj["required_kernel_capability"] = d.required_kernel_capability;
+  if (!d.policy_id.empty())
+    obj["policy_id"] = d.policy_id;
+  if (!d.selection_reason.empty())
+    obj["selection_reason"] = d.selection_reason;
+  if (!d.considered_candidate_ids.empty()) {
+    llvm::json::Array arr;
+    for (const auto &v : d.considered_candidate_ids) arr.push_back(v);
+    obj["considered_candidate_ids"] = std::move(arr);
+  }
+  if (!d.rejected_candidate_ids.empty()) {
+    llvm::json::Array arr;
+    for (const auto &v : d.rejected_candidate_ids) arr.push_back(v);
+    obj["rejected_candidate_ids"] = std::move(arr);
+  }
+  if (!d.rejected_candidate_reasons.empty()) {
+    llvm::json::Array arr;
+    for (const auto &v : d.rejected_candidate_reasons) arr.push_back(v);
+    obj["rejected_candidate_reasons"] = std::move(arr);
+  }
   if (!d.op_type.empty())
     obj["op_type"] = d.op_type;
   if (!d.quantized_model_artifact_ref.empty())

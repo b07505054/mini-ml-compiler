@@ -117,6 +117,15 @@ struct BackendCapabilityProfile {
   std::vector<std::string> supported_dtypes;
   std::vector<std::string> accumulation_dtypes;
   std::vector<std::string> supported_quant_modes;
+  std::vector<std::string> supported_quantization_schemes;
+  std::vector<std::string> supported_activation_dtypes;
+  std::vector<std::string> supported_weight_dtypes;
+  std::vector<std::string> supported_accumulator_dtypes;
+  std::vector<std::string> supported_output_dtypes;
+  bool supports_per_channel_quantization = false;
+  std::vector<int64_t> supported_quantization_group_sizes;
+  std::vector<std::string> calibration_available_schemes;
+  std::vector<std::string> required_quantization_kernel_capabilities;
   std::vector<std::string> preferred_activation_layouts;
   std::vector<std::string> preferred_weight_layouts;
   std::vector<std::string> layout_agnostic_ops;
@@ -437,6 +446,15 @@ lowerToTargetConstraints(const TargetDeviceProfile &prof) {
     cap.supported_dtypes               = bp.supported_dtypes;
     cap.accumulation_dtypes            = bp.accumulation_dtypes;
     cap.supported_quant_modes          = bp.supported_quant_modes;
+    cap.supported_quantization_schemes = bp.supported_quantization_schemes;
+    cap.supported_activation_dtypes    = bp.supported_activation_dtypes;
+    cap.supported_weight_dtypes        = bp.supported_weight_dtypes;
+    cap.supported_accumulator_dtypes   = bp.supported_accumulator_dtypes;
+    cap.supported_output_dtypes        = bp.supported_output_dtypes;
+    cap.supports_per_channel_quantization = bp.supports_per_channel_quantization;
+    cap.supported_quantization_group_sizes = bp.supported_quantization_group_sizes;
+    cap.calibration_available_schemes  = bp.calibration_available_schemes;
+    cap.required_quantization_kernel_capabilities = bp.required_quantization_kernel_capabilities;
     cap.preferred_activation_layouts   = bp.preferred_activation_layouts;
     cap.preferred_weight_layouts       = bp.preferred_weight_layouts;
     cap.layout_agnostic_ops            = bp.layout_agnostic_ops;
@@ -714,6 +732,19 @@ parseDeviceProfile(llvm::StringRef path) {
       bp.supported_dtypes             = readStrings(co, "supportedDtypes");
       bp.accumulation_dtypes          = readStrings(co, "accumulationDtypes");
       bp.supported_quant_modes        = readStrings(co, "supportedQuantModes");
+      bp.supported_quantization_schemes = readStrings(co, "supportedQuantizationSchemes");
+      bp.supported_activation_dtypes  = readStrings(co, "supportedActivationDtypes");
+      bp.supported_weight_dtypes      = readStrings(co, "supportedWeightDtypes");
+      bp.supported_accumulator_dtypes = readStrings(co, "supportedAccumulatorDtypes");
+      bp.supported_output_dtypes      = readStrings(co, "supportedOutputDtypes");
+      if (auto v = co->getBoolean("supportsPerChannelQuantization"))
+        bp.supports_per_channel_quantization = *v;
+      if (auto *arr = co->getArray("supportedQuantizationGroupSizes"))
+        for (const auto &elem : *arr)
+          if (auto v = elem.getAsInteger())
+            bp.supported_quantization_group_sizes.push_back(static_cast<int64_t>(*v));
+      bp.calibration_available_schemes = readStrings(co, "calibrationAvailableSchemes");
+      bp.required_quantization_kernel_capabilities = readStrings(co, "requiredQuantizationKernelCapabilities");
       bp.preferred_activation_layouts = readStrings(co, "preferredActivationLayouts");
       bp.preferred_weight_layouts     = readStrings(co, "preferredWeightLayouts");
       bp.layout_agnostic_ops          = readStrings(co, "layoutAgnosticOps");

@@ -1366,8 +1366,37 @@ ExecutionPlanBuilder::attrToPerOpQuantDecision(mlir::Operation* op, int opIndex)
   d.weight_dtype       = strOp(op, "quant.weight_dtype");
   d.activation_dtype   = strOp(op, "quant.activation_dtype");
   d.accumulation_dtype = strOp(op, "quant.accumulation_dtype");
+  d.output_dtype       = strOp(op, "quant.output_dtype");
   d.granularity        = strOp(op, "quant.granularity");
   d.accuracy_risk      = strOp(op, "quant.accuracy_risk");
+  d.selected_candidate_id = strOp(op, "quant.selected_candidate_id");
+  d.scheme                = strOp(op, "quant.scheme");
+  d.backend               = strOp(op, "quant.backend");
+  d.kernel_id             = strOp(op, "quant.kernel_id");
+  d.required_backend_capability =
+      strOp(op, "quant.required_backend_capability");
+  d.required_kernel_capability =
+      strOp(op, "quant.required_kernel_capability");
+  d.policy_id = strOp(op, "quant.policy_id");
+  d.selection_reason = strOp(op, "quant.selection_reason");
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>("quant.group_size"))
+    d.group_size = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>("quant.requires_calibration"))
+    d.requires_calibration = a.getValue();
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>("quant.calibration_available"))
+    d.calibration_available = a.getValue();
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.considered_candidate_ids"))
+    for (mlir::Attribute elem : arr)
+      if (auto st = mlir::dyn_cast<mlir::StringAttr>(elem))
+        d.considered_candidate_ids.push_back(st.getValue().str());
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.rejected_candidate_ids"))
+    for (mlir::Attribute elem : arr)
+      if (auto st = mlir::dyn_cast<mlir::StringAttr>(elem))
+        d.rejected_candidate_ids.push_back(st.getValue().str());
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.rejected_candidate_reasons"))
+    for (mlir::Attribute elem : arr)
+      if (auto st = mlir::dyn_cast<mlir::StringAttr>(elem))
+        d.rejected_candidate_reasons.push_back(st.getValue().str());
 
   d.meta.reason = strOp(op, "quant.decision_reason");
 

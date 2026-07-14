@@ -47,6 +47,17 @@ struct BackendCapability {
   std::vector<std::string> supported_dtypes;           // e.g. ["fp16", "int8"]
   std::vector<std::string> accumulation_dtypes;        // e.g. ["fp32"]
   std::vector<std::string> supported_quant_modes;      // "static_int8" | "weight_only" | ...
+  // Slice 1 compiler-owned quantization candidate capability fields.
+  // Missing/empty means unsupported or unknown; no pass may infer support.
+  std::vector<std::string> supported_quantization_schemes;
+  std::vector<std::string> supported_activation_dtypes;
+  std::vector<std::string> supported_weight_dtypes;
+  std::vector<std::string> supported_accumulator_dtypes;
+  std::vector<std::string> supported_output_dtypes;
+  bool supports_per_channel_quantization = false;
+  std::vector<int64_t> supported_quantization_group_sizes;
+  std::vector<std::string> calibration_available_schemes;
+  std::vector<std::string> required_quantization_kernel_capabilities;
   std::vector<std::string> preferred_activation_layouts; // ["NHWC"] | ["abstracted_by_coreml"]
   std::vector<std::string> preferred_weight_layouts;     // ["HWIO"] | ["blocked_kc"]
   std::vector<std::string> layout_agnostic_ops;        // ops that propagate input layout unchanged

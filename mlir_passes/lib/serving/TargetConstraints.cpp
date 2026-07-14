@@ -26,6 +26,16 @@ readStringArray(mlir::Operation *op, llvm::StringRef attrName) {
   return result;
 }
 
+static std::vector<int64_t>
+readI64Array(mlir::Operation *op, llvm::StringRef attrName) {
+  std::vector<int64_t> result;
+  if (auto a = op->getAttrOfType<mlir::ArrayAttr>(attrName))
+    for (mlir::Attribute elem : a)
+      if (auto i = mlir::dyn_cast<mlir::IntegerAttr>(elem))
+        result.push_back(i.getInt());
+  return result;
+}
+
 TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
   TargetConstraints tc;
   mlir::Operation *op = module.getOperation();
@@ -173,6 +183,15 @@ TargetConstraints TargetConstraints::fromModule(mlir::ModuleOp module) {
       cap.supported_dtypes             = readStringArray(op, bcAttr(n, "supported_dtypes"));
       cap.accumulation_dtypes          = readStringArray(op, bcAttr(n, "accumulation_dtypes"));
       cap.supported_quant_modes        = readStringArray(op, bcAttr(n, "supported_quant_modes"));
+      cap.supported_quantization_schemes = readStringArray(op, bcAttr(n, "supported_quantization_schemes"));
+      cap.supported_activation_dtypes  = readStringArray(op, bcAttr(n, "supported_activation_dtypes"));
+      cap.supported_weight_dtypes      = readStringArray(op, bcAttr(n, "supported_weight_dtypes"));
+      cap.supported_accumulator_dtypes = readStringArray(op, bcAttr(n, "supported_accumulator_dtypes"));
+      cap.supported_output_dtypes      = readStringArray(op, bcAttr(n, "supported_output_dtypes"));
+      cap.supports_per_channel_quantization = readBool("supports_per_channel_quantization");
+      cap.supported_quantization_group_sizes = readI64Array(op, bcAttr(n, "supported_quantization_group_sizes"));
+      cap.calibration_available_schemes = readStringArray(op, bcAttr(n, "calibration_available_schemes"));
+      cap.required_quantization_kernel_capabilities = readStringArray(op, bcAttr(n, "required_quantization_kernel_capabilities"));
       cap.preferred_activation_layouts = readStringArray(op, bcAttr(n, "preferred_activation_layouts"));
       cap.preferred_weight_layouts     = readStringArray(op, bcAttr(n, "preferred_weight_layouts"));
       cap.layout_agnostic_ops          = readStringArray(op, bcAttr(n, "layout_agnostic_ops"));
@@ -523,6 +542,28 @@ void TargetConstraints::attachToModule(mlir::ModuleOp module,
       setArr("supported_dtypes",             cap.supported_dtypes);
       setArr("accumulation_dtypes",          cap.accumulation_dtypes);
       setArr("supported_quant_modes",        cap.supported_quant_modes);
+      if (!cap.supported_quantization_schemes.empty())
+        setArr("supported_quantization_schemes", cap.supported_quantization_schemes);
+      if (!cap.supported_activation_dtypes.empty())
+        setArr("supported_activation_dtypes", cap.supported_activation_dtypes);
+      if (!cap.supported_weight_dtypes.empty())
+        setArr("supported_weight_dtypes", cap.supported_weight_dtypes);
+      if (!cap.supported_accumulator_dtypes.empty())
+        setArr("supported_accumulator_dtypes", cap.supported_accumulator_dtypes);
+      if (!cap.supported_output_dtypes.empty())
+        setArr("supported_output_dtypes", cap.supported_output_dtypes);
+      setBool("supports_per_channel_quantization", cap.supports_per_channel_quantization);
+      if (!cap.supported_quantization_group_sizes.empty()) {
+        llvm::SmallVector<mlir::Attribute> groupAttrs;
+        for (int64_t value : cap.supported_quantization_group_sizes)
+          groupAttrs.push_back(mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64), value));
+        op->setAttr(bcAttr(cap.backend_name, "supported_quantization_group_sizes"),
+                    mlir::ArrayAttr::get(ctx, groupAttrs));
+      }
+      if (!cap.calibration_available_schemes.empty())
+        setArr("calibration_available_schemes", cap.calibration_available_schemes);
+      if (!cap.required_quantization_kernel_capabilities.empty())
+        setArr("required_quantization_kernel_capabilities", cap.required_quantization_kernel_capabilities);
       setArr("preferred_activation_layouts", cap.preferred_activation_layouts);
       setArr("preferred_weight_layouts",     cap.preferred_weight_layouts);
       setArr("layout_agnostic_ops",          cap.layout_agnostic_ops);
