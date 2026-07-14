@@ -1,98 +1,32 @@
 # Project Status 2026
 
-Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD before A6: 112ceeb0901e4a5e45a9fdc0e64b3a989edb54c0 (master, ahead 8 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout at 3f11a0422123e88eab7f90cff06d8ab7a7d48f24, ahead 1 / behind 2\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+Last verified: 2026-07-14.
 
-## Thesis Objective
+## Thesis
 
-Build an IR-centered, hardware-aware implementation-decision compiler for Edge AI backends. The compiler should choose legal complete implementations from IR semantics, capability constraints, and calibrated evidence, then export an exact runtime contract.
+Build an IR-centered, hardware-aware implementation-decision compiler for Edge AI backends. The compiler chooses legal complete implementations from IR semantics, capability constraints, and evidence. Runtime validates and executes the exact contract.
 
-## Repository Responsibilities
+## Current Canonical Narrative
 
-- `ml-graph-compiler-runtime`: compiler, GenericGraphIR, MLIR/HIR, analyses, legality, candidate providers, policy, Implementation IR materialization, ExecutionPlan generation.
-- `heterogeneous-inference-runtime`: ExecutionPlan parsing/validation, artifact resolution, exact backend/kernel/runtime dispatch, runtime provenance and telemetry, compiler-authorized fallback.
-- `ml-platform-capabilities`: intended canonical home for declared hardware/platform/backend/kernel/model/workload/deployment capability facts; not a benchmark-results database.
-- `Inference-Validation-Platform`: correctness, contract validation, latency/throughput/memory/accuracy evaluation, oracle/regret, regression, reports, evidence quality checks.
+Epoch 1 establishes one strong production/canonical path and one repaired same-stack comparison path.
 
-## Architecture Diagram
+The production/canonical path is Raspberry Pi portable CPU FP32 fused MatMul + Bias + ReLU. It uses complete portable candidates, feasibility, calibrated policy, selected-candidate materialization, ExecutionPlan, Runtime validation, and native kernel execution.
 
-```text
-Model / GenericGraphIR
-  -> Semantic IR
-  -> Program Analysis
-  -> Legality Analysis
-  -> Candidate Providers
-  -> Feasible Implementation Candidates
-  -> Evidence Attachment
-  -> Objective + Policy
-  -> Selected Implementation
-  -> Implementation IR Materialization
-  -> Execution Contract (ExecutionPlan today)
-  -> Runtime Exact Validation and Dispatch
-  -> Execution Evidence / Telemetry
-  -> Offline Calibration / Policy Update
-```
+The repaired comparison path is E3. It invokes the live Compiler to select among XNNPACK X1/X4 candidates, emits a compiler-owned comparison contract, and executes through the same ExecuTorch/XNNPACK runner and `.pte` as ExecuTorch default.
 
-## Supported Hardware / Environments
+## Current Metrics
 
-- GPU Linux: canonical compiler/runtime/capability repos and CUDA/Triton/AWQ/vLLM evidence paths.
-- Raspberry Pi 5 Cortex-A76: execution/evidence target for portable CPU kernel/tile/thread path; no canonical source repos.
-- Mac: local repositories, including divergent IVP source; use only when a repo is absent from GPU Linux.
+- P1D.1 accepted threshold: `262144` over `M*N*K`.
+- P1D.1 held-out exact match: `86.6667%`.
+- P1D.1 mean / P95 / max regret: `0.067392%` / `0.489076%` / `0.768578%`.
+- E2.1: `324` records, `0` correctness failures, implementation-stack comparison, project portable stack geomean speedup `0.380026x` versus ExecuTorch/XNNPACK default.
+- E3 discovery: `162` records, `18` workloads, candidate verdict `XNNPACK_ONE_STATIC_WINNER`, selected policy `static_X1`, X1 max regret `0.415903%`.
+- E3 formal: `60` records, `2` project-policy wins, `8` ties, `0` default wins, geomean default/project ratio `1.031686x`.
 
-## Compiler Capabilities
+## Interpretation
 
-Real: GenericGraphIR/MLIR/HIR paths, fusion legality, HIR lowering, target constraint attrs, ExecutionPlan export, kernel selection, tile planning, thread schedule planning, quantization planning, limited boundary materialization.
+E3 is not a complex shape-aware policy victory. It found one static XNNPACK winner for the target/workload scope. The Compiler value is that it exposes XNNPACK configurations as candidates, validates feasibility/provenance, calibrates the candidate space, selects the low-regret static option, emits a contract, and executes through the exact same XNNPACK stack.
 
-Parallel/unintegrated: Triton measured selector, AWQ/vLLM deployment, multiple candidate schemas.
+## What Not To Claim
 
-A1 provides a narrow compiler-internal `ImplementationCandidate` core for the active op-candidate generation/evaluation/selection path. A2 routes the P1D.1 Raspberry Pi thread-schedule decision through serial/parallel implementation candidates before exporting the unchanged ExecutionPlan contract. A3 makes those two live Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel ID, tile identity, dtype, and thread schedule without changing policy or Runtime behavior. A4 extracts their enumeration into `PortableCPUProvider`. A5 separates provider enumeration, target/workload feasibility evaluation, policy input, and selected-candidate materialization for that fixed portable CPU path. A6 adds a strict shadow-only Triton artifact candidate adapter; it is not canonical ExecutionPlan or Runtime dispatch. Not yet mature: project-wide candidate/provider unification, unified policy engine, DMA/memory-space/synchronization/NPU Implementation IR.
-
-## Runtime Capabilities
-
-Real: ExecutionPlan parsing/validation, strict portable CPU adapter, native CPU fused kernel dispatch, vLLM config materialization, runtime/evidence artifacts.
-
-Caution: generic fallback dispatch exists and must be treated as explicit runtime failure/fallback policy, not compiler implementation selection.
-
-## Capability DB Status
-
-`ml-platform-capabilities` exists and is partially consumed. It is the intended canonical direction, but compiler-local profiles are currently richer/newer. Measured performance belongs in evidence/runtime/evaluation artifacts, not capability profiles.
-
-## Evaluation Status
-
-IVP validates runtime artifacts, compiler/runtime consistency, and generated reports. Some control-plane flows are simulated. Standalone comparison paths exist for ExecuTorch, TVM TensorIR, TensorRT, ONNX Runtime, and PyTorch, but they are not all compiler-selected production candidates.
-
-## Real Execution Evidence
-
-- Raspberry Pi P1B/P1C/P1D portable CPU execution evidence.
-- Triton/CUDA fused MatMul + Bias + ReLU measurement/calibration reports, now shadow-adapted by A6 into candidate-shaped records with evidence references and unresolved/derived/direct IR mapping status.
-- AWQ/vLLM materialization and serving evidence, without complete accuracy/perplexity validation.
-- Runtime artifact validation reports in IVP.
-
-## Completed Milestone History
-
-P1A target profile -> P1B exact CPU dispatch -> P1C eight tile candidates -> P1C.1 low-regret tile default -> P1D thread schedule planning/runtime execution -> P1D.1 offline-calibrated IR-derived thread-schedule policy -> A1 minimal compiler-internal `ImplementationCandidate` foundation -> A2 P1D.1 candidate migration -> A3 complete portable CPU candidate identity for the active fixed kernel/tile/dtype/thread path -> A4 dedicated in-process `PortableCPUProvider` extraction -> A5 provider contract hardening with explicit feasibility and materialization boundaries -> A6 strict shadow Triton provider adapter over existing measured artifacts.
-
-## Current Research Conclusions
-
-- The primary weakness is fragmentation and integration debt, not absence of meaningful implementation.
-- Measurement is valuable only after legality.
-- Edge backend credibility requires memory hierarchy and data movement to become compiler IR concepts.
-- P1D.1 ships the first narrow offline-calibrated policy edge: Raspberry Pi fused MatMul + Bias + ReLU selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold.
-- A1 reduces duplicated candidate parsing in the active compiler-internal candidate path without changing Runtime behavior or claiming Triton/AWQ/thread/tile unification.
-- A2 proves one real calibrated implementation decision can use the candidate core without changing the threshold, policy metric, Runtime code, or ExecutionPlan semantics.
-- A3 proves the active portable CPU path can select between complete opaque implementation candidates that include kernel, tile, dtype, and thread identity, while still leaving inactive tile alternatives and external provider paths outside the candidate core.
-- A4 proves candidate enumeration can be separated from policy for the active portable CPU path without adding a global registry, changing Runtime behavior, or changing plan semantics.
-- A5 proves the provider does not need to own feasibility, policy, or materialization: provider output is enumeration, `PortableCPUFeasibilityEvaluator` owns target/workload satisfaction, policy remains the only selector, and selected-candidate materialization derives the Execution Contract fields without changing plan hashes.
-- A6 proves a materially different provider can share the candidate architecture in shadow mode, while preserving the truth boundary that existing Triton artifacts do not yet carry enough IR provenance for production binding.
-
-## Remaining Research Questions
-
-- What is the canonical candidate/provider/policy abstraction?
-- How should Triton/AWQ/CPU/NPU candidates share feasibility and evidence?
-- What stable provenance should future Triton artifacts carry to bind provider-private `op_id` to compiler IR roots?
-- What is the first complete Implementation IR path for memory spaces, DMA, and synchronization?
-- What narrow ExecuTorch comparison fairly tests compiler decision quality?
-- What accuracy evidence is required for quantization policy?
-
-## Truth Boundary Summary
-
-Declared capability is not measurement. Static estimate is not runtime latency. Measurement ranks legal candidates but does not define legality. ExecutionPlan is compiler intent and runtime contract, not semantic IR. Runtime telemetry is evidence, not compiler policy by itself.
+Do not claim general superiority over ExecuTorch, XNNPACK, vLLM, TVM, ONNX Runtime, TensorRT, or any device family. Do not claim Triton production integration. Do not claim quantization co-design is complete. Do not claim Capability DB is already the sole source of truth.

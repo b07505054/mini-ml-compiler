@@ -1,22 +1,17 @@
 # Known Gaps
 
-Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD before A6: 112ceeb0901e4a5e45a9fdc0e64b3a989edb54c0 (master, ahead 8 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout at 3f11a0422123e88eab7f90cff06d8ab7a7d48f24, ahead 1 / behind 2\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+Last verified: 2026-07-14.
 
-| Gap | Classification | Current status | Why it matters |
-|---|---|---|---|
-| No project-wide `ImplementationCandidate`/provider system | partially implemented | A1 adds a compiler-internal op-scoped type and shared codec for CandidateGenerationPass, ServingCostModelPass, and PlanSelectionPass. A2 migrates the P1D.1 ThreadSchedule decision into serial/parallel candidates. A3 makes the active Raspberry Pi portable CPU candidates complete for kernel, tile, dtype, and thread identity. A4 extracts those candidates into `PortableCPUProvider`. A5 separates provider enumeration, portable CPU feasibility evaluation, policy input, and selected-candidate materialization for that path. A6 adds a strict shadow-only Triton provider adapter. AWQ/vLLM, inactive tile alternatives, generic TilePlan, deployment, and serving candidates remain outside it. | Prevents unified candidate/provider/policy architecture beyond the active internal paths. |
-| Separate candidate systems outside A4 core | implemented but unintegrated | CandidateGenerationPass/ServingCostModelPass/PlanSelectionPass and the active P1D.1 portable CPU provider path now use the internal candidate core, but Triton, CPU descriptor enumeration beyond the active path, AWQ deployment, generic TilePlan, QuantizationDecision, and BackendDecision still differ. | Causes parallel decision systems outside the A4 scope. |
-| Private Triton schema | implemented but shadow-adapted | Real measured Triton path exists. A6 adapts existing artifacts into shadow-only candidate-shaped records with evidence refs, but not canonical ExecutionPlan dispatch. | Real capability is now visible to the candidate architecture, but not production-integrated. |
-| Triton artifact to IR identity bridge | implemented but unresolved for committed artifacts | A6 can verify explicit or single-region derived mappings, but committed Triton artifacts do not carry source graph node, dispatch group, function/model identity, or ONNX/source provenance. Ambiguous mappings remain deferred. | Production Triton selection cannot safely bind provider-private `op_id` to compiler IR without stable provenance. |
-| P1D evidence-to-policy edge | implemented for one path | P1D.1 integrates an offline-calibrated threshold policy for Raspberry Pi fused MatMul + Bias + ReLU with fixed kernel `bm32_bn128_bk32`. | Still not a unified policy engine and not generic ARM scheduling. |
-| Capability DB duplication | implemented but unintegrated | Compiler-local profiles are richer/newer than `ml-platform-capabilities`. | Canonical capability ownership is not yet real. |
-| Runtime schema drift | implemented but unintegrated | Runtime Python schema is not perfect one-to-one mirror of C++ ExecutionPlan schema. | Contract validation can lose fields or semantics. |
-| Limited IR materialization | implemented but incomplete | `hir.cast` materialization exists; many decisions remain attrs/contracts. | Compiler backend identity depends on implementation decisions becoming IR when needed. |
-| Missing dequant/layout IR | missing | Dequant deferred due missing scale/zero-point metadata; layout transform op absent. | Quant/layout decisions cannot fully lower. |
-| Missing memory-space/DMA/synchronization IR | missing | Tile planning has memory hierarchy facts; no mature DMA/sync IR. | Edge/NPU backend cannot be compiler-complete without data movement IR. |
-| Missing AWQ accuracy evidence | blocked by evidence | AWQ artifact and serving path exist; complete accuracy/perplexity validation absent. | Quantization policy cannot be trusted beyond execution/perf boundary. |
-| No unified objective model | missing | Ranking policies are local/private. | Multi-objective compiler decisions cannot be compared consistently. |
-| No generic provider registry or cross-provider feasibility model | intentionally deferred | A5 deliberately keeps `PortableCPUProvider` local and in-process, with a narrow portable CPU feasibility evaluator. | Avoids premature framework design, but future providers still need a shared boundary. |
-| Incomplete Edge/NPU path | planning_only | NPU profiles/plans exist at concept level. | Edge AI target requires heterogeneous CPU/GPU/NPU partitioning. |
-| Incomplete ExecuTorch head-to-head contract | experimental | Standalone paths exist. | Project goal is fair narrow comparison, not universal superiority. |
-| Stale/superseded documentation risk | intentionally deferred | Historical docs/reports preserve phase evidence. | New engineers need canonical status docs before reading history. |
+| Gap | Status | Publication wording |
+|---|---|---|
+| Universal policy engine | missing | P1D.1 and E3 are evidence-driven loops; many other decisions remain declared-profile, rule-based, shadow, or experimental. |
+| Triton production integration | missing | Triton is shadow/provider-shaped with real artifacts, but not production Runtime dispatch. |
+| Quantization co-design | early partial | Real AWQ artifact and vLLM path exist; no accuracy/perplexity calibration or unified FP16/INT8/INT4 policy. |
+| AWQ plan consistency | known inconsistency | The positive AWQ plan has global AWQ/int4 intent while per-op entries contain fp16 fallback strategy text and int4 dtype fields. Do not claim complete INT4 support. |
+| Capability DB canonicality | partial | Capability profiles are intended ownership, but compiler-local profiles remain richer and synchronization is incomplete. |
+| Memory hierarchy / DMA / transfer model | missing | No mature memory-space/DMA/synchronization IR or bandwidth/transfer model. |
+| NPU execution | missing | NPU profiles/plans are planning-only. |
+| E2 correctness | invalid | Preserve invalid verdict. |
+| E2.1 compiler-only interpretation | incorrect | Reclassify as implementation-stack comparison. |
+| Fake `5.7 ms` ExecuTorch number | placeholder only | Must not appear as measured evidence. |
+| General superiority claims | forbidden | No “beats ExecuTorch” or universal project/runtime superiority claim. |

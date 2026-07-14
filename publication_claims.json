@@ -1,0 +1,37 @@
+{
+  "schema": "s1_publication_claim_index",
+  "claims": [
+    {
+      "claim_id": "p1d1_portable_policy",
+      "statement": "The Pi portable CPU FP32 fused MatMul+Bias+ReLU path uses a calibrated M*N*K threshold of 262144 to select serial below threshold and 4-thread split-M at/above threshold.",
+      "status": "production_canonical_calibrated_measured",
+      "scope": "Raspberry Pi 5, portable_fused_matmul_bias_relu_bm32_bn128_bk32, fp32 fused MatMul+Bias+ReLU",
+      "evidence_paths": ["configs/thread_schedule_policies/raspberry_pi5_cortex_a76_p1d1_thread_policy.json", "heterogeneous-inference-runtime:results/p1d_raspberry_pi_thread_decomposition/p1d_raw_measurements.json"],
+      "forbidden_wording": ["general ARM policy", "online benchmarked", "all compiler decisions are measured-profile-driven"]
+    },
+    {
+      "claim_id": "e21_stack_comparison",
+      "statement": "E2.1 is a valid implementation-stack comparison, not a live-Compiler or compiler-only comparison.",
+      "status": "historical_measured_reclassified",
+      "scope": "Pi 5 FP32 fused MatMul+Bias+ReLU frozen suite",
+      "evidence_paths": ["heterogeneous-inference-runtime:results/executorch_e2_1/e21_analysis.json", "heterogeneous-inference-runtime:evaluation/executorch_e2_1/e21_tools.py"],
+      "forbidden_wording": ["compiler-only E2.1", "live Compiler E2.1", "beats ExecuTorch"]
+    },
+    {
+      "claim_id": "e3_same_xnnpack",
+      "statement": "E3 invokes the live Compiler and compares a compiler-selected XNNPACK configuration with ExecuTorch default using the same XNNPACK stack.",
+      "status": "evaluation_canonical_measured",
+      "scope": "Pi 5 FP32 fused MatMul+Bias+ReLU, ExecuTorch v1.3.1, XNNPACK 1adaa7c709d4839d29e1f219cb962b01c9e6a905",
+      "evidence_paths": ["tools/e3_xnnpack_contract.py", "heterogeneous-inference-runtime:evaluation/executorch_e3", "heterogeneous-inference-runtime:results/executorch_e3"],
+      "forbidden_wording": ["general project superiority", "complex learned policy", "beats ExecuTorch"]
+    },
+    {
+      "claim_id": "awq_partial",
+      "statement": "A real AWQ artifact and vLLM materialization path exist, but quantization co-design is not complete and accuracy/perplexity calibration is missing.",
+      "status": "early_partial_measured_serving_no_accuracy",
+      "scope": "Qwen2.5-0.5B AWQ/vLLM path",
+      "evidence_paths": ["artifacts/qwen_awq/provenance.json", "artifacts/qwen_awq_plan/execution_plan.json", "heterogeneous-inference-runtime:results/qwen_quant"],
+      "forbidden_wording": ["quantization complete", "accuracy validated", "INT4 fully supported"]
+    }
+  ]
+}

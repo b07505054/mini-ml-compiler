@@ -1,81 +1,63 @@
 # Current State
 
-Last verified: 2026-07-13\nSource host: GPU Linux /home/allen/Desktop/Project/ml-graph-compiler-runtime\nVerified compiler HEAD before A6: 112ceeb0901e4a5e45a9fdc0e64b3a989edb54c0 (master, ahead 8 of origin/master)\nVerified runtime HEAD: a6e2ae8648ee27d8e73396218266e98a0ea0cbc6 (main, ahead 3 of origin/main)\nVerified capabilities HEAD: aac593da0bdde7a95c38c03920fc4d00b73011db (main, ahead 1 of origin/main)\nIVP source: Mac-only divergent checkout; not modified in A1\nRaspberry Pi: execution/evidence target only; no canonical source repositories verified there\n
+Last verified: 2026-07-14.
+
+| Repository | Branch/head | State | Ownership |
+|---|---|---|---|
+| `ml-graph-compiler-runtime` | `master` `ba388a93eeccd11045f8c1f2eb950ede2601bc88` | clean, ahead 10 / behind 0 | compiler, IR, candidates, feasibility, policy, contracts |
+| `heterogeneous-inference-runtime` | `main` `53c80e2c11101ec7b8db2e73f978e220c054d9a1` | clean, ahead 7 / behind 0 | runtime validation/dispatch and evidence |
+| `ml-platform-capabilities` | `main` `aac593da0bdde7a95c38c03920fc4d00b73011db` | clean, ahead 1 / behind 0 | declared capability profiles, partial today |
+| `Inference-Validation-Platform` | `main` `c80beede31338b5f66831595f56d4dbb8f57335d` | divergent, ahead 2 / behind 2 | validation/control-plane project, unchanged in S1 |
+| Raspberry Pi 5 | `edgeaiplatform` | evidence target | real aarch64 execution only |
 
 ## Five-Minute Summary
 
-The system is an IR-centered, hardware-aware implementation-decision compiler for Edge AI backends. The compiler owns semantic IR, analysis, legality, candidate generation, policy, implementation selection, implementation IR materialization, and ExecutionPlan generation. Runtime validates and executes exact compiler contracts. Evidence and calibration inform ranking after legality.
+The strongest current path is the Raspberry Pi fused MatMul + Bias + ReLU path: Semantic IR drives complete implementation candidates, feasibility, calibrated policy, `PolicyResult`, ExecutionPlan/contract materialization, Runtime validation, and real Pi execution.
 
-## Repository and Host Map
+The second strongest current result is E3: a live-Compiler same-XNNPACK comparison against ExecuTorch default using the same `.pte`, runner, XNNPACK source, input bytes, timing boundary, process lifetime, and oracle.
 
-| Repository | Host/path | Branch/head | Status | Ownership |
-|---|---|---|---|---|
-| `ml-graph-compiler-runtime` | GPU Linux `/home/allen/Desktop/Project/ml-graph-compiler-runtime` | `master` `e30c54cc477aab771525661d4dfc3c53419cd8a9` | canonical source, ahead 1 | compiler, IR, legality, candidates, policy, ExecutionPlan |
-| `heterogeneous-inference-runtime` | GPU Linux `/home/allen/Desktop/Project/heterogeneous-inference-runtime` | `main` `f4cc98bc93e1e8e5ecea32ffb0779b0a5c801097` | canonical source, ahead 1 | runtime contract validation and exact dispatch |
-| `ml-platform-capabilities` | GPU Linux `/home/allen/Desktop/Project/ml-platform-capabilities` | `main` `84cf1d229788390f3b95254416636672fabe8d20` | canonicalization target, origin-aligned | declared capability profiles |
-| `Inference-Validation-Platform` | Mac `/Users/allen/Documents/Codex/project/systems-portfolio/Inference-Validation-Platform` | `main` `3f11a0422123e88eab7f90cff06d8ab7a7d48f24` | divergent, ahead 1 / behind 2 | validation/evaluation/reporting |
-| Raspberry Pi | `allen@100.110.37.6` | no source repos | evidence-only target | deployment bundles and execution evidence |
+## Phase Timeline
 
-## Current Phase
+P1A: Pi hardware profile.
+P1B: compiler-selected portable CPU kernel execution.
+P1C: portable tile candidate discovery.
+P1C.1: low-regret static tile default.
+P1D: thread decomposition candidate discovery.
+P1D.1: offline-calibrated IR-shape-aware thread policy.
+A1: unified `ImplementationCandidate` foundation.
+A2: P1D.1 migration into candidate architecture.
+A3: complete portable CPU candidate identity.
+A4: `PortableCPUProvider` extraction.
+A5: provider/feasibility/policy/materialization separation.
+A6: Triton shadow provider with unresolved IR bridge.
+R1: ExecuTorch Compiler reverse engineering.
+E0: ExecuTorch comparison audit.
+E1: ExecuTorch Pi baseline bring-up.
+E2: invalid correctness experiment.
+E2.1: corrected implementation-stack comparison.
+E2.1A: dispatch-path audit proving live Compiler bypass.
+E3: live-Compiler same-XNNPACK comparison repair and result.
+S0: Principal Engineer truth audit.
+S1: publication canonicalization.
 
-P1D, P1D.1, A1, A2, A3, A4, A5, and A6 are complete locally. A1 added a minimal compiler-internal `ImplementationCandidate` foundation for the existing CandidateGeneration -> ServingCostModel -> PlanSelection path. A2 migrated the P1D.1 Raspberry Pi thread-schedule decision into that candidate core. A3 makes the two active Raspberry Pi portable CPU candidates complete for backend, opaque Runtime contract, kernel, tile, dtype, and thread-schedule identity without changing policy or Runtime behavior. A4 extracts construction of those two complete candidates into a dedicated in-process `PortableCPUProvider`. A5 hardens that provider boundary so enumeration, typed feasibility evaluation, policy, and selected-candidate materialization are explicit and separate while preserving candidate IDs and ExecutionPlan semantics. A6 adds a strict shadow-only Triton candidate provider adapter over existing measured artifacts; it does not affect production selection, ExecutionPlan, or Runtime dispatch. No AWQ integration, NPU, DMA, NEON, ExecuTorch comparison, global provider registry, canonical Triton dispatch, or new production policy phase has started.
+## Verified Results
 
-Phase D0 is documentation-only canonicalization. No compiler passes, runtime behavior, schemas, target profiles, tests, evidence JSON, or generated artifacts are changed by this phase.
+P1D.1 portable policy over 30 held-out workload/session rows: exact match 86.6667%, mean regret 0.067392%, median regret 0%, P95 regret 0.489076%, max regret 0.768578%, average speedup over serial 3.327722x, worst slowdown versus serial 1.000x.
 
-## Completed Milestones
+E2 remains invalid because its correctness predicate required independent absolute and relative gates.
 
-- P1A: evidence-based Raspberry Pi 5 Cortex-A76 CPU target profile.
-- P1B: HardwareProfile -> compiler-selected CPU kernel -> ExecutionPlan -> heterogeneous runtime -> native portable C++ ARM execution -> real Raspberry Pi correctness/timing evidence.
-- P1C: portable fused MatMul + Bias + ReLU expanded to eight tile candidates.
-- P1C.1: `portable_fused_matmul_bias_relu_bm32_bn128_bk32` adopted as calibration-only low-regret Raspberry Pi static default.
-- P1D: backend-neutral ThreadSchedule planning and runtime execution for serial, 2/4-thread split-M, and 2/4-thread split-N schedules.
-- P1D.1: compiler-side offline-calibrated Raspberry Pi policy selects serial below `M*N*K=262144` and 4-thread split-M at/above the threshold for the fixed fused MatMul + Bias + ReLU portable CPU kernel.
-- A1: compiler-internal op-scoped `ImplementationCandidate` type, shared encode/decode helpers, minimal feasibility summary, and `PolicyResult` separation are implemented for the active compiler candidate/evaluation/selection path.
-- A2: P1D.1 now enumerates serial and 4-thread split-M thread-schedule `ImplementationCandidate`s, evaluates typed feasibility, applies the unchanged policy, and materializes the selected candidate into the existing `thread_schedule` ExecutionPlan contract.
-- A3: the active Raspberry Pi portable CPU candidates now include complete executable identity for the fixed fused MatMul + Bias + ReLU path: CPU backend, opaque portable native kernel contract, kernel ID `portable_fused_matmul_bias_relu_bm32_bn128_bk32`, tile `BM=32, BN=128, BK=32`, compiler-normalized dtype `fp32`, and serial/4-thread split-M schedule variants.
-- A4: `PortableCPUProvider` now owns enumeration/construction of those active complete portable CPU candidates. `KernelSelectionPass` still owns descriptor matching, feasibility/policy orchestration, and ExecutionPlan materialization.
-- A5: `PortableCPUProvider` output is now an explicit enumeration boundary with unknown feasibility; `PortableCPUFeasibilityEvaluator` evaluates target/workload feasibility; policy consumes feasible candidates; and materialization derives kernel, tile, dtype, provider, candidate, and thread-schedule attributes from the selected candidate.
-- A6: `run_triton_shadow_candidate_provider.py` adapts existing Triton fused-config artifacts into shadow-only candidate-shaped records with evidence references, explicit IR-mapping status, feasibility, and a non-authoritative shadow policy result. Existing Triton artifacts lack enough IR provenance for production binding, so ambiguous mappings remain deferred.
+E2.1 has 324 records and zero correctness failures, but it is an implementation-stack comparison. Project portable scalar/native execution was geometrically about 2.631x slower than ExecuTorch/XNNPACK on the frozen scope.
 
-## What Is Real and Executable
+E3 has 162 discovery records and 60 formal held-out records. Candidate-space verdict: `XNNPACK_ONE_STATIC_WINNER`; policy: `static_X1`; formal result: 2 wins, 8 ties, 0 losses; geomean default/project ratio 1.031686x.
 
-- MLIR/HIR fusion and lowering for fused MatMul + Bias + ReLU and fused RMSNorm paths.
-- ExecutionPlan generation from compiler pipeline.
-- Runtime ExecutionPlan parsing/validation.
-- Portable CPU fused MatMul + Bias + ReLU native execution on Raspberry Pi.
-- Runtime validation of exact CPU kernel ID and thread schedule.
-- AWQ Qwen artifact and compiler-plan-to-vLLM materialization path that can invoke `vLLM --quantization awq`.
-- Triton/CUDA measured fused MatMul + Bias + ReLU decision pipeline as a parallel measured path.
+## Current Truth Boundary
 
-## What Is Measured
+Production/canonical: Pi portable CPU path and P1D.1 policy for the fixed fused-op/kernel/dtype/profile; E3 evaluation contract path for same-XNNPACK comparison.
 
-- Raspberry Pi P1B/P1C/P1D correctness and timing evidence.
-- P1D evidence: always-serial mean regret is approximately 231%; offline calibration-derived size-threshold mean regret is approximately 0.14%.
-- Triton/CUDA fused MatMul + Bias + ReLU candidate measurements and selection reports.
-- Some AWQ/vLLM serving measurements exist, but complete accuracy/perplexity validation does not.
+Measured: Pi portable evidence, E1/E2/E2.1/E3 ExecuTorch evidence, AWQ/vLLM serving traces, selected Triton artifacts.
 
-## What Is Simulated or Planning-Only
+Shadow: Triton provider, because committed Triton artifacts lack sufficient source provenance for production IR-root mapping.
 
-- Some IVP control-plane metrics and mock-worker results are simulations.
-- Some runtime distributed serving, scheduling, and trace artifacts are simulation or artifact validation rather than live cluster execution.
-- NPU path is planning-only.
-- Many capability profiles are declared facts, not measured support.
+Experimental/partial: AWQ quantization planning/materialization, CV/YOLO paths, Apple/Metal demos, LLM serving planning artifacts.
 
-## Parallel / Unintegrated Paths
-
-- Triton/CUDA measured selector uses a private schema and is not yet canonical ExecutionPlan/Runtime dispatch.
-- A6 exposes the Triton measured selector through a shadow provider adapter only; it remains non-authoritative and does not compete with Portable CPU candidates.
-- AWQ/vLLM is executable but not integrated into the A1/A2/A3 compiler-internal candidate core or one unified candidate/policy architecture.
-- CandidateGenerationPass, ServingCostModelPass, PlanSelectionPass, KernelSelection, TilePlanning, ThreadSchedule, Triton selection, and AWQ deployment use separate candidate/decision representations.
-- Compiler-local target profiles are richer than `ml-platform-capabilities`.
-
-## Not Implemented
-
-- Project-wide `ImplementationCandidate` unification across inactive tile alternatives, generic TilePlan, unrelated KernelSelection paths, Triton, AWQ/vLLM, deployment candidates, serving candidates, and external providers.
-- Generic provider registry, external provider API, and cross-backend feasibility architecture.
-- Canonical Triton ExecutionPlan/Runtime dispatch and stable Triton artifact to IR identity bridge.
-- Unified policy engine across CPU, Triton, AWQ, vLLM, and future NPU paths.
-- Complete dequant/layout-transform IR materialization.
-- Mature memory-space/DMA/synchronization/NPU Implementation IR.
-- Complete AWQ accuracy/perplexity validation.
-- Complete narrow fair ExecuTorch head-to-head compiler-decision comparison.
+Missing: NPU execution, DMA/local-memory IR, transfer model, unified quantization candidate policy, quantization accuracy/perplexity calibration, universal cross-backend ranking.
