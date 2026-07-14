@@ -98,9 +98,23 @@ struct QuantizationDecision {
   std::string weight_dtype;          // "int4" | "int8" | "fp16" | "bf16"
   std::string activation_dtype;      // "int8" | "fp16" | "bf16"
   std::string accumulation_dtype;    // "fp16" | "fp32"
+  std::string output_dtype;          // selected output dtype
   // granularity: "per_channel" | "per_tensor" | "per_group"
   std::string granularity;
+  int64_t     group_size = 0;
   bool        requires_calibration  = false;
+  bool        calibration_available = false;
+  std::string selected_candidate_id;
+  std::string scheme;
+  std::string backend;
+  std::string kernel_id;
+  std::string required_backend_capability;
+  std::string required_kernel_capability;
+  std::string policy_id;
+  std::string selection_reason;
+  std::vector<std::string> considered_candidate_ids;
+  std::vector<std::string> rejected_candidate_ids;
+  std::vector<std::string> rejected_candidate_reasons;
   bool        skip_norm_layers      = false;
   bool        skip_embedding_layers = false;
   std::string op_type;               // populated only when scope == PerOp
