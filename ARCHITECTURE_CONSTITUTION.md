@@ -2,9 +2,9 @@
 
 Last verified: 2026-07-14.
 
-Canonical compiler HEAD: `ba388a93eeccd11045f8c1f2eb950ede2601bc88`.
-Canonical runtime HEAD: `53c80e2c11101ec7b8db2e73f978e220c054d9a1`.
-Canonical capabilities HEAD: `aac593da0bdde7a95c38c03920fc4d00b73011db`.
+Canonical compiler source/evidence HEAD before documentation refresh: `57154de50d220b97f60edecce0ead27c4da543af`.
+Canonical runtime source/evidence HEAD before documentation refresh: `6767bd74276c4c9427827a4ceeb2f77210e5c6b9`.
+Canonical capabilities source/evidence HEAD before documentation refresh: `795e95309392b32310f9b90cd4049f1f42ebb660`.
 
 ## Identity
 

@@ -4,9 +4,9 @@ Last verified: 2026-07-14.
 
 | Repository | Branch/head | State | Ownership |
 |---|---|---|---|
-| `ml-graph-compiler-runtime` | `master` `ba388a93eeccd11045f8c1f2eb950ede2601bc88` | clean, ahead 10 / behind 0 | compiler, IR, candidates, feasibility, policy, contracts |
-| `heterogeneous-inference-runtime` | `main` `53c80e2c11101ec7b8db2e73f978e220c054d9a1` | clean, ahead 7 / behind 0 | runtime validation/dispatch and evidence |
-| `ml-platform-capabilities` | `main` `aac593da0bdde7a95c38c03920fc4d00b73011db` | clean, ahead 1 / behind 0 | declared capability profiles, partial today |
+| `ml-graph-compiler-runtime` | `master` `57154de50d220b97f60edecce0ead27c4da543af` | clean, synced with origin/master before documentation refresh | compiler, IR, candidates, feasibility, policy, contracts |
+| `heterogeneous-inference-runtime` | `main` `6767bd74276c4c9427827a4ceeb2f77210e5c6b9` | clean, synced with origin/main before documentation refresh | runtime validation/dispatch and evidence |
+| `ml-platform-capabilities` | `main` `795e95309392b32310f9b90cd4049f1f42ebb660` | clean, synced with origin/main before documentation refresh | declared capability profiles, partial today |
 | `Inference-Validation-Platform` | `main` `c80beede31338b5f66831595f56d4dbb8f57335d` | divergent, ahead 2 / behind 2 | validation/control-plane project, unchanged in S1 |
 | Raspberry Pi 5 | `edgeaiplatform` | evidence target | real aarch64 execution only |
 
