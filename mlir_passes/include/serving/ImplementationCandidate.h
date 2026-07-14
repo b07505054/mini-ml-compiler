@@ -64,10 +64,17 @@ struct ImplementationCandidate {
   std::string semanticTargetRef;
   std::string functionRef;
   std::string backend;
+  std::string library;
   std::string implementationKind;
   std::string runtimeContractKind;
   std::string kernelId;
   std::string dtype;
+  std::string pteArtifactRef;
+  std::string pteSha256;
+  std::string runnerSha256;
+  std::string executorchTag;
+  std::string executorchCommit;
+  std::string xnnpackCommit;
   TileCandidateSpec tile;
   ThreadScheduleCandidateSpec threadSchedule;
   std::string candidateReason;
@@ -217,6 +224,10 @@ inline std::string makeFallbackCandidateId(
     id += ":backend=";
     id += candidate.backend;
   }
+  if (!candidate.library.empty()) {
+    id += ":library=";
+    id += candidate.library;
+  }
   id += ":";
   if (!candidate.implementationKind.empty())
     id += candidate.implementationKind;
@@ -241,6 +252,10 @@ inline std::string makeFallbackCandidateId(
   if (!candidate.dtype.empty()) {
     id += ":dtype=";
     id += candidate.dtype;
+  }
+  if (!candidate.pteSha256.empty()) {
+    id += ":pte=";
+    id += candidate.pteSha256.substr(0, 12);
   }
   if (candidate.threadSchedule.present) {
     id += ":threads=";
@@ -346,6 +361,7 @@ inline ImplementationCandidate decodeImplementationCandidate(
     candidate.semanticTargetRef = getCandidateString(dict, "source_op");
   candidate.functionRef = getCandidateString(dict, "function_ref");
   candidate.backend = getCandidateString(dict, "backend");
+  candidate.library = getCandidateString(dict, "library");
   candidate.implementationKind = getCandidateString(dict, "implementation_kind");
   if (candidate.implementationKind.empty())
     candidate.implementationKind = getCandidateString(dict, "candidate_type");
@@ -353,6 +369,12 @@ inline ImplementationCandidate decodeImplementationCandidate(
       getCandidateString(dict, "runtime_contract_kind");
   candidate.kernelId = getCandidateString(dict, "kernel_id");
   candidate.dtype = getCandidateString(dict, "dtype");
+  candidate.pteArtifactRef = getCandidateString(dict, "artifact.pte_ref");
+  candidate.pteSha256 = getCandidateString(dict, "artifact.pte_sha256");
+  candidate.runnerSha256 = getCandidateString(dict, "artifact.runner_sha256");
+  candidate.executorchTag = getCandidateString(dict, "provenance.executorch_tag");
+  candidate.executorchCommit = getCandidateString(dict, "provenance.executorch_commit");
+  candidate.xnnpackCommit = getCandidateString(dict, "provenance.xnnpack_commit");
   if (hasCandidateI64(dict, "tile.block_m") &&
       hasCandidateI64(dict, "tile.block_n") &&
       hasCandidateI64(dict, "tile.block_k")) {
@@ -430,6 +452,9 @@ inline DictionaryAttr encodeImplementationCandidate(
   if (!candidate.backend.empty())
     upsertCandidateAttr(attrs, ctx, "backend",
                         stringAttr(candidate.backend));
+  if (!candidate.library.empty())
+    upsertCandidateAttr(attrs, ctx, "library",
+                        stringAttr(candidate.library));
   upsertCandidateAttr(attrs, ctx, "implementation_kind",
                       stringAttr(candidate.implementationKind));
   upsertCandidateAttr(attrs, ctx, "candidate_type",
@@ -445,6 +470,24 @@ inline DictionaryAttr encodeImplementationCandidate(
   if (!candidate.dtype.empty())
     upsertCandidateAttr(attrs, ctx, "dtype",
                         stringAttr(candidate.dtype));
+  if (!candidate.pteArtifactRef.empty())
+    upsertCandidateAttr(attrs, ctx, "artifact.pte_ref",
+                        stringAttr(candidate.pteArtifactRef));
+  if (!candidate.pteSha256.empty())
+    upsertCandidateAttr(attrs, ctx, "artifact.pte_sha256",
+                        stringAttr(candidate.pteSha256));
+  if (!candidate.runnerSha256.empty())
+    upsertCandidateAttr(attrs, ctx, "artifact.runner_sha256",
+                        stringAttr(candidate.runnerSha256));
+  if (!candidate.executorchTag.empty())
+    upsertCandidateAttr(attrs, ctx, "provenance.executorch_tag",
+                        stringAttr(candidate.executorchTag));
+  if (!candidate.executorchCommit.empty())
+    upsertCandidateAttr(attrs, ctx, "provenance.executorch_commit",
+                        stringAttr(candidate.executorchCommit));
+  if (!candidate.xnnpackCommit.empty())
+    upsertCandidateAttr(attrs, ctx, "provenance.xnnpack_commit",
+                        stringAttr(candidate.xnnpackCommit));
   if (candidate.tile.present) {
     upsertCandidateAttr(attrs, ctx, "tile.block_m",
                         IntegerAttr::get(IntegerType::get(ctx, 64),

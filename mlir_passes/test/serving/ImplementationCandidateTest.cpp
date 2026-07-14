@@ -1,5 +1,6 @@
 #include "serving/ImplementationCandidate.h"
 #include "serving/PortableCPUProvider.h"
+#include "serving/XNNPACKCandidateProvider.h"
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -366,6 +367,98 @@ int main() {
   assert(!tileMismatchResult.diagnostics.empty());
   assert(tileMismatchResult.diagnostics[0].reason ==
          "kernel_tile_identity_mismatch");
+
+
+  XNNPACKCandidateProvider xnnProvider;
+  assert(xnnProvider.providerId() ==
+         "executorch_xnnpack_candidate_provider");
+  assert(xnnProvider.providerVersion() == "e3a.v1");
+
+  XNNPACKProviderContext xctx;
+  xctx.semanticTargetRef = "fused_matmul_bias_relu";
+  xctx.scopeKind = CandidateScopeKind::FusedRegion;
+  xctx.hasStaticShape = true;
+  xctx.targetProfileId = "raspberry-pi5-cortex-a76-cpu";
+  xctx.backend = "cpu";
+  xctx.dtype = "fp32";
+  xctx.pteArtifactRef = "fused_matmul_bias_relu_64x64x64_xnnpack.pte";
+  xctx.pteSha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  xctx.runnerSha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  xctx.executorchTag = "v1.3.1";
+  xctx.executorchCommit = "e2f18eb23c45bd22ca332b0b8b49a81de304b472";
+  xctx.xnnpackCommit = "1adaa7c709d4839d29e1f219cb962b01c9e6a905";
+  xctx.xnnpackDelegationProven = true;
+  xctx.inputBindingCompatible = true;
+  xctx.truthBoundary = "test_xnnpack_provider_enumerates_only";
+
+  XNNPACKProviderResult xres = xnnProvider.enumerateCandidates(xctx);
+  assert(xres.diagnostics.empty());
+  assert(xres.candidates.size() == 2);
+  assert(xres.candidates[0].requestedThreadCount == 1);
+  assert(xres.candidates[1].requestedThreadCount == 4);
+  assert(xres.candidates[0].candidate.candidateId !=
+         xres.candidates[1].candidate.candidateId);
+  assert(xres.candidates[0].candidate.library == "xnnpack");
+  assert(xres.candidates[0].candidate.runtimeContractKind ==
+         "executorch_xnnpack_runner_contract");
+  assert(xres.candidates[0].candidate.kernelId.empty());
+  assert(xres.candidates[0].candidate.threadSchedule.partitionAxis ==
+         "runtime_threadpool");
+
+  DictionaryAttr encodedXnn =
+      encodeImplementationCandidate(&ctx, xres.candidates[1].candidate);
+  ImplementationCandidate decodedXnn =
+      decodeImplementationCandidate(encodedXnn, "test_provider");
+  assert(decodedXnn.library == "xnnpack");
+  assert(decodedXnn.pteSha256 == xctx.pteSha256);
+  assert(decodedXnn.runnerSha256 == xctx.runnerSha256);
+  assert(decodedXnn.executorchCommit == xctx.executorchCommit);
+  assert(decodedXnn.xnnpackCommit == xctx.xnnpackCommit);
+  assert(decodedXnn.threadSchedule.threadCount == 4);
+
+  XNNPACKFeasibilityContext xfctx;
+  xfctx.semanticTargetRef = xctx.semanticTargetRef;
+  xfctx.scopeKind = xctx.scopeKind;
+  xfctx.hasStaticShape = true;
+  xfctx.targetProfileId = xctx.targetProfileId;
+  xfctx.backend = xctx.backend;
+  xfctx.dtype = xctx.dtype;
+  xfctx.expectedPteSha256 = xctx.pteSha256;
+  xfctx.expectedRunnerSha256 = xctx.runnerSha256;
+  xfctx.expectedExecutorchCommit = xctx.executorchCommit;
+  xfctx.expectedXNNPACKCommit = xctx.xnnpackCommit;
+  xfctx.xnnpackDelegationProven = true;
+  xfctx.inputBindingCompatible = true;
+  xfctx.physicalComputeUnits = 4;
+  XNNPACKFeasibilityEvaluator xevaluator;
+  CandidateFeasibilitySummary x1 =
+      xevaluator.evaluate(xres.candidates[0].candidate, xfctx);
+  CandidateFeasibilitySummary x4 =
+      xevaluator.evaluate(xres.candidates[1].candidate, xfctx);
+  assert(x1.status == CandidateFeasibilityStatus::Feasible);
+  assert(x4.status == CandidateFeasibilityStatus::Feasible);
+
+  XNNPACKFeasibilityContext wrongPte = xfctx;
+  wrongPte.expectedPteSha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+  CandidateFeasibilitySummary wrongPteSummary =
+      xevaluator.evaluate(xres.candidates[0].candidate, wrongPte);
+  assert(wrongPteSummary.status == CandidateFeasibilityStatus::Rejected);
+  assert(wrongPteSummary.reason == "pte_hash_mismatch");
+
+  XNNPACKProviderContext wrongXnnOp = xctx;
+  wrongXnnOp.semanticTargetRef = "rmsnorm";
+  XNNPACKProviderResult wrongXnnOpResult =
+      xnnProvider.enumerateCandidates(wrongXnnOp);
+  assert(wrongXnnOpResult.candidates.empty());
+  assert(wrongXnnOpResult.diagnostics[0].reason ==
+         "unsupported_semantic_scope");
+
+  XNNPACKProviderContext wrongXnnDtype = xctx;
+  wrongXnnDtype.dtype = "fp16";
+  XNNPACKProviderResult wrongXnnDtypeResult =
+      xnnProvider.enumerateCandidates(wrongXnnDtype);
+  assert(wrongXnnDtypeResult.candidates.empty());
+  assert(wrongXnnDtypeResult.diagnostics[0].reason == "wrong_dtype");
 
   std::puts("ImplementationCandidateTest passed");
   return 0;
