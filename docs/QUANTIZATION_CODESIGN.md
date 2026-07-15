@@ -68,6 +68,13 @@ precision label. Relevant dimensions are:
 - runner, program, calibration, packed-weight, and measurement artifacts;
 - correctness and measured latency evidence.
 
+Candidate values are generated from explicit dimension catalogs. Structural
+dependency pruning (backend/runtime, precision/quantization, kernel/layout,
+packing/layout, and artifact/runtime compatibility) occurs during generation;
+target, ISA, runtime-package, thread-budget, and artifact legality is evaluated
+independently afterward. The candidate graph preserves accepted and rejected
+combinations with stable reasons. No predictive cost model is implemented.
+
 For the canonical workload, the legal set includes portable CPU FP32,
 portable packed Cortex-A76 INT8 1T, ExecuTorch/XNNPACK FP32 1T,
 ExecuTorch/XNNPACK INT8 1T, and ExecuTorch/XNNPACK INT8 4T. Selection minimizes

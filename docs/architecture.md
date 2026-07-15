@@ -537,6 +537,37 @@ fixed thread count, target requirements, artifact identities, and measured
 evidence. Portable CPU and ExecuTorch/XNNPACK variants enter the same legality
 and constrained latency comparison; there is no external-backend side selector.
 
+The complete-candidate path discovers dimension catalogs and forms their
+Cartesian product rather than constructing each candidate manually:
+
+```text
+Dimension discovery
+  backend, runtime, delegate, kernel, precision, quantization,
+  layout, packing, tile, thread, memory, ISA, artifact,
+  execution strategy, measurement-evidence kind
+        |
+        v
+Generate Candidates (Cartesian product + dependency pruning)
+        |
+        v
+Independent Legality (target/runtime/artifact facts)
+        |
+        v
+Candidate Pool / Candidate Graph
+        |
+        v
+Cost Model (future; not implemented by the generator)
+        |
+        v
+Selection (existing measured policy, outside generation)
+```
+
+Every dimension has a stable catalog identity, legality constraint names, and
+dependency-rule names. The graph records every combination, structural
+rejection reasons, provenance, accepted identity, and dimension values in a
+visualization-friendly form. Generation does not read latency and exposes no
+ranking or selection method.
+
 ### CandidateEvaluationPass
 
 - **Question**: What is the static relative penalty score for each candidate?
