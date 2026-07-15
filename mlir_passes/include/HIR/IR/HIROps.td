@@ -240,4 +240,39 @@ def HIR_CPUAttentionOp : HIR_Op<"cpu_attention", [Pure]> {
   }];
 }
 
+def HIR_KVCacheCreateOp : HIR_Op<"kv_cache_create"> {
+  let summary = "Create a runtime-owned contiguous KV cache handle";
+  let arguments = (ins);
+  let results = (outs I64:$handle);
+  let hasVerifier = 1;
+}
+
+def HIR_KVCachePrefillWriteOp : HIR_Op<"kv_cache_prefill_write"> {
+  let summary = "Write prompt K/V tensors into an empty contiguous cache";
+  let arguments = (ins I64:$handle, AnyTensor:$key, AnyTensor:$value);
+  let results = (outs);
+  let hasVerifier = 1;
+}
+
+def HIR_KVCacheAppendOp : HIR_Op<"kv_cache_append"> {
+  let summary = "Append one token of K/V to a contiguous cache";
+  let arguments = (ins I64:$handle, AnyTensor:$key, AnyTensor:$value);
+  let results = (outs);
+  let hasVerifier = 1;
+}
+
+def HIR_KVCacheViewOp : HIR_Op<"kv_cache_view", [Pure]> {
+  let summary = "Bind the valid contiguous K/V cache range for attention";
+  let arguments = (ins I64:$handle);
+  let results = (outs AnyTensor:$key, AnyTensor:$value);
+  let hasVerifier = 1;
+}
+
+def HIR_KVCacheResetOp : HIR_Op<"kv_cache_reset"> {
+  let summary = "Reset logical validity of a contiguous KV cache";
+  let arguments = (ins I64:$handle);
+  let results = (outs);
+  let hasVerifier = 1;
+}
+
 #endif // HIR_OPS

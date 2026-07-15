@@ -1266,6 +1266,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
     bool layoutCreatesBundle = layout && layout->requires_layout_transform;
 
     std::optional<AttentionExecutionContract> attentionExecution;
+    std::optional<KVCacheExecutionContract> kvCacheExecution;
     if (op.getName().getStringRef() == "hir.cpu_attention") {
       AttentionExecutionContract a;
       a.execution_unit = strOp(&op, "runtime_execution_unit");
@@ -1288,12 +1289,40 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       a.causal = op.getAttrOfType<BoolAttr>("causal").getValue();
       a.runtime_no_redecision = op.getAttrOfType<BoolAttr>("runtime_no_redecision").getValue();
       attentionExecution = std::move(a);
+      KVCacheExecutionContract kv;
+      kv.execution_unit = "portable_cpu_contiguous_kv";
+      kv.candidate_id = strOp(&op, "kv_candidate_id");
+      kv.cache_id = strOp(&op, "kv_cache_id");
+      kv.artifact_ref = strOp(&op, "kv_artifact_ref");
+      kv.artifact_sha256 = strOp(&op, "kv_artifact_sha256");
+      kv.artifact_version = strOp(&op, "kv_artifact_version");
+      kv.dtype = strOp(&op, "kv_dtype"); kv.layout = strOp(&op, "kv_layout");
+      kv.create_entry_point = strOp(&op, "kv_create_entry_point");
+      kv.prefill_write_entry_point = strOp(&op, "kv_prefill_write_entry_point");
+      kv.decode_append_entry_point = strOp(&op, "kv_decode_append_entry_point");
+      kv.view_binding = strOp(&op, "kv_view_binding");
+      kv.reset_entry_point = strOp(&op, "kv_reset_entry_point");
+      kv.compatible_prefill_kernel_id = strOp(&op, "compatible_prefill_kernel_id");
+      kv.compatible_decode_kernel_id = strOp(&op, "compatible_decode_kernel_id");
+      kv.fallback_identity = strOp(&op, "fallback_identity");
+      kv.operation_order = strOp(&op, "kv_operation_order");
+      kv.truth_boundary = strOp(&op, "truth_boundary");
+      auto i = [&](StringRef n) { return op.getAttrOfType<IntegerAttr>(n).getInt(); };
+      kv.batch=i("batch"); kv.num_kv_heads=i("num_kv_heads"); kv.head_dim=i("head_dim");
+      kv.capacity_tokens=i("capacity_tokens"); kv.initial_valid_tokens=i("initial_valid_tokens");
+      kv.bytes_per_token=i("bytes_per_token"); kv.k_cache_bytes=i("k_cache_bytes");
+      kv.v_cache_bytes=i("v_cache_bytes"); kv.total_cache_bytes=i("total_cache_bytes");
+      kv.alignment_bytes=i("alignment_bytes");
+      for (int64_t x : op.getAttrOfType<DenseI64ArrayAttr>("k_strides").asArrayRef()) kv.k_strides.push_back(x);
+      for (int64_t x : op.getAttrOfType<DenseI64ArrayAttr>("v_strides").asArrayRef()) kv.v_strides.push_back(x);
+      kv.runtime_no_layout_redecision = op.getAttrOfType<BoolAttr>("runtime_no_layout_redecision").getValue();
+      kvCacheExecution = std::move(kv);
     }
 
     if (quant || kernel || fallback || !materialized.empty() ||
         !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle ||
         kernelSelection || quantCoDesign || threadSchedule ||
-        memoryPlacement || attentionExecution) {
+        memoryPlacement || attentionExecution || kvCacheExecution) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
@@ -1310,6 +1339,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       bundle.thread_schedule = std::move(threadSchedule);
       bundle.memory_placement = std::move(memoryPlacement);
       bundle.attention_execution = std::move(attentionExecution);
+      bundle.kv_cache_execution = std::move(kvCacheExecution);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;

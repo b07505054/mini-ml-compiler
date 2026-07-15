@@ -702,9 +702,13 @@ static LogicalResult verifyAttentionContract(Operation *op, Value q, Value k,
       op->getAttrOfType<StringAttr>("input_layout").getValue() != "bhsd_contiguous" ||
       op->getAttrOfType<StringAttr>("output_layout").getValue() != "bhsd_contiguous")
     return op->emitOpError("requires fp32 bhsd_contiguous layout");
+  bool runtimeOwnedDecode = !lowered && phase == "decode" &&
+      op->getAttrOfType<BoolAttr>("kv_runtime_owned") &&
+      op->getAttrOfType<BoolAttr>("kv_runtime_owned").getValue();
   if (qt.getDimSize(0) != *integerAttrValue(op, "batch") ||
       qt.getDimSize(1) != *qh || qt.getDimSize(2) != *ql ||
-      qt.getDimSize(3) != *hd || kt.getDimSize(2) != *cl ||
+      qt.getDimSize(3) != *hd ||
+      kt.getDimSize(2) != (runtimeOwnedDecode ? 1 : *cl) ||
       vt.getShape() != kt.getShape() || ot.getShape() != qt.getShape())
     return op->emitOpError("tensor types do not match declared attention dimensions");
   if (lowered) {
@@ -728,6 +732,35 @@ LogicalResult CPUAttentionOp::verify() {
   return verifyAttentionContract(getOperation(), getQuery(), getKey(), getValue(),
                                  getOutput(), true);
 }
+
+static LogicalResult verifyKVAttrs(Operation *op) {
+  for (StringRef name : {"kv_candidate_id", "kv_dtype", "kv_layout",
+                         "kv_artifact_version", "kv_cache_id"})
+    if (failed(requireStringAttr(op, name))) return failure();
+  for (StringRef name : {"batch", "num_kv_heads", "head_dim",
+                         "capacity_tokens", "alignment_bytes"}) {
+    if (failed(requireIntegerAttr(op, name))) return failure();
+    auto v = integerAttrValue(op, name);
+    if (!v || *v <= 0) return op->emitOpError("requires positive static KV dimensions");
+  }
+  if (op->getAttrOfType<StringAttr>("kv_dtype").getValue() != "fp32" ||
+      op->getAttrOfType<StringAttr>("kv_layout").getValue() != "bhcd_contiguous")
+    return op->emitOpError("supports only FP32 bhcd_contiguous KV storage");
+  return success();
+}
+
+LogicalResult KVCacheCreateOp::verify() { return verifyKVAttrs(getOperation()); }
+LogicalResult KVCachePrefillWriteOp::verify() { return verifyKVAttrs(getOperation()); }
+LogicalResult KVCacheAppendOp::verify() {
+  if (failed(verifyKVAttrs(getOperation()))) return failure();
+  auto kt = dyn_cast<RankedTensorType>(getKey().getType());
+  auto vt = dyn_cast<RankedTensorType>(getValue().getType());
+  if (!kt || kt.getRank() != 4 || kt != vt || kt.getDimSize(2) != 1)
+    return emitOpError("requires one-token equal K/V tensors");
+  return success();
+}
+LogicalResult KVCacheViewOp::verify() { return verifyKVAttrs(getOperation()); }
+LogicalResult KVCacheResetOp::verify() { return verifyKVAttrs(getOperation()); }
 
 #define GET_OP_CLASSES
 #include "HIR/IR/HIROps.cpp.inc"

@@ -125,6 +125,21 @@ struct AttentionExecutionContract {
   bool causal = false, runtime_no_redecision = false;
 };
 
+struct KVCacheExecutionContract {
+  std::string execution_unit, candidate_id, artifact_ref, artifact_sha256;
+  std::string artifact_version, dtype, layout, cache_id;
+  std::string create_entry_point, prefill_write_entry_point;
+  std::string decode_append_entry_point, view_binding, reset_entry_point;
+  std::string compatible_prefill_kernel_id, compatible_decode_kernel_id;
+  std::string fallback_identity, operation_order, truth_boundary;
+  int64_t batch = 0, num_kv_heads = 0, head_dim = 0, capacity_tokens = 0;
+  int64_t initial_valid_tokens = 0, bytes_per_token = 0;
+  int64_t k_cache_bytes = 0, v_cache_bytes = 0, total_cache_bytes = 0;
+  int64_t alignment_bytes = 0;
+  std::vector<int64_t> k_strides, v_strides;
+  bool runtime_no_layout_redecision = false;
+};
+
 struct PerOpDecisionBundle {
   std::string op_name;
   std::string op_type;
@@ -166,6 +181,7 @@ struct PerOpDecisionBundle {
   // exactly; absence means no compiler-owned memory plan was produced.
   std::optional<MemoryPlacementPlan> memory_placement;
   std::optional<AttentionExecutionContract> attention_execution;
+  std::optional<KVCacheExecutionContract> kv_cache_execution;
 };
 
 // ---------------------------------------------------------------------------

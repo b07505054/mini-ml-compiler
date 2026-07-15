@@ -416,6 +416,29 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     x["runtime_no_redecision"] = a.runtime_no_redecision; x["truth_boundary"] = a.truth_boundary;
     obj["attention_execution"] = std::move(x);
   }
+  if (b.kv_cache_execution) {
+    const auto &k = *b.kv_cache_execution; llvm::json::Object x;
+    x["kv_execution_unit"]=k.execution_unit; x["kv_candidate_id"]=k.candidate_id;
+    x["kv_cache_id"]=k.cache_id; x["kv_artifact_ref"]=k.artifact_ref;
+    x["kv_artifact_sha256"]=k.artifact_sha256; x["kv_artifact_version"]=k.artifact_version;
+    x["kv_dtype"]=k.dtype; x["kv_layout"]=k.layout; x["batch"]=k.batch;
+    x["num_kv_heads"]=k.num_kv_heads; x["head_dim"]=k.head_dim;
+    x["capacity_tokens"]=k.capacity_tokens; x["initial_valid_tokens"]=k.initial_valid_tokens;
+    x["bytes_per_token"]=k.bytes_per_token; x["k_cache_bytes"]=k.k_cache_bytes;
+    x["v_cache_bytes"]=k.v_cache_bytes; x["total_cache_bytes"]=k.total_cache_bytes;
+    x["alignment_bytes"]=k.alignment_bytes;
+    llvm::json::Array ks, vs; for(auto v:k.k_strides) ks.push_back(v); for(auto v:k.v_strides) vs.push_back(v);
+    x["k_strides"]=std::move(ks); x["v_strides"]=std::move(vs);
+    x["create_entry_point"]=k.create_entry_point;
+    x["prefill_write_entry_point"]=k.prefill_write_entry_point;
+    x["decode_append_entry_point"]=k.decode_append_entry_point;
+    x["view_binding"]=k.view_binding; x["reset_entry_point"]=k.reset_entry_point;
+    x["compatible_prefill_kernel_id"]=k.compatible_prefill_kernel_id;
+    x["compatible_decode_kernel_id"]=k.compatible_decode_kernel_id;
+    x["fallback_identity"]=k.fallback_identity; x["operation_order"]=k.operation_order;
+    x["runtime_no_layout_redecision"]=k.runtime_no_layout_redecision;
+    x["truth_boundary"]=k.truth_boundary; obj["kv_cache_execution"]=std::move(x);
+  }
   // Boundary materialization record: emitted only when
   // BoundaryMaterializationPass recorded it, so plans from planning-only
   // pipelines are unchanged. materialized = inserted into IR;

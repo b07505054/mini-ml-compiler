@@ -50,8 +50,15 @@ handwritten_kernel_source_in_repo_dispatch_validated_not_benchmarked` (the
 dispatch path is CTest-validated when the MLIR pipeline has produced the
 required trace; no throughput/latency is claimed).
 
+The narrow static FP32 causal MHA contract now materializes registered
+`hir.kv_cache_create`, `hir.kv_cache_prefill_write`, `hir.kv_cache_append`,
+and `hir.kv_cache_view` operations. They fix a contiguous
+`[batch, heads, capacity, head_dim]` representation, while runtime owns one
+allocation and the live valid-token count. This is not paged storage, eviction,
+prefix sharing, GQA/MQA, or multi-request scheduling.
+
 Everything else — general matmul, MLP, embeddings, all CV ops, and attention
-outside the narrow static FP32 causal MHA contract — is
+outside that operator-level contract — is
 **rejected** (`rejected_no_kernel_for_op`, `rejected_dtype_unsupported`, …)
 or **deferred** (`deferred_no_kernel_library_declared`,
 `deferred_dynamic_shape`, `deferred_missing_tile_plan`, …). Note that even

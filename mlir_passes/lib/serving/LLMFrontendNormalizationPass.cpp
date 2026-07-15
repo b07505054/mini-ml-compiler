@@ -132,6 +132,8 @@ static void rewriteOccurrence(func::FuncOp funcOp, const PatternOps &p,
   llvm::StringRef servingPhase  = p.isPrefill ? "prefill"  : "decode";
   auto qt = cast<RankedTensorType>(p.qProj->getResult(0).getType());
   auto kt = cast<RankedTensorType>(p.kProj->getResult(0).getType());
+  auto historyType = dyn_cast<RankedTensorType>(p.scores->getOperand(1).getType());
+  int64_t contextLength = p.isPrefill ? kt.getDimSize(2) : historyType.getDimSize(2);
   int64_t promptTokens = p.isPrefill ? qt.getDimSize(2) : 0;
   int64_t outputTokens = p.isPrefill ? 0 : 1;
 
@@ -150,7 +152,7 @@ static void rewriteOccurrence(func::FuncOp funcOp, const PatternOps &p,
   state.addAttribute("phase", StringAttr::get(ctx, servingPhase));
   state.addAttribute("batch", IntegerAttr::get(i64, qt.getDimSize(0)));
   state.addAttribute("query_length", IntegerAttr::get(i64, qt.getDimSize(2)));
-  state.addAttribute("context_length", IntegerAttr::get(i64, kt.getDimSize(2)));
+  state.addAttribute("context_length", IntegerAttr::get(i64, contextLength));
   state.addAttribute("num_query_heads", IntegerAttr::get(i64, qt.getDimSize(1)));
   state.addAttribute("num_kv_heads", IntegerAttr::get(i64, kt.getDimSize(1)));
   state.addAttribute("head_dim", IntegerAttr::get(i64, qt.getDimSize(3)));
@@ -158,8 +160,11 @@ static void rewriteOccurrence(func::FuncOp funcOp, const PatternOps &p,
   state.addAttribute("causal", BoolAttr::get(ctx, true));
   state.addAttribute("input_layout", StringAttr::get(ctx, "bhsd_contiguous"));
   state.addAttribute("output_layout", StringAttr::get(ctx, "bhsd_contiguous"));
-  state.addAttribute("workspace_bytes", IntegerAttr::get(i64, kt.getDimSize(2) * 4));
+  state.addAttribute("workspace_bytes", IntegerAttr::get(i64, contextLength * 4));
   state.addAttribute("alignment_bytes", IntegerAttr::get(i64, alignof(float)));
+  if (Operation *module = funcOp->getParentOp();
+      module && module->hasAttr("attention.cpu.kv_capacity_tokens"))
+    state.addAttribute("kv_runtime_owned", BoolAttr::get(ctx, true));
   state.addAttribute("frontend.source",
                      StringAttr::get(ctx, "llm_graph_pattern"));
   state.addAttribute("frontend.truth_boundary",
