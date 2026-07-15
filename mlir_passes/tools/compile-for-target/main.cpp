@@ -1103,6 +1103,14 @@ int main(int argc, char **argv) {
   //    ExecutionPlanBuilder collects the annotated module).
   mlir::PassManager pm(&ctx);
   pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createLLMFrontendNormalizationPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createAttentionCandidateGenerationPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createAttentionLegalityPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createAttentionSelectionLoweringPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createServingPhaseAnalysisPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createKVLayoutPlanningPass());

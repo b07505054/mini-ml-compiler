@@ -661,5 +661,73 @@ LogicalResult PortableCPUINT8FusedMatMulBiasReluOp::verify() {
   return success();
 }
 
+static LogicalResult verifyAttentionContract(Operation *op, Value q, Value k,
+                                             Value v, Value out,
+                                             bool lowered) {
+  auto qt = dyn_cast<RankedTensorType>(q.getType());
+  auto kt = dyn_cast<RankedTensorType>(k.getType());
+  auto vt = dyn_cast<RankedTensorType>(v.getType());
+  auto ot = dyn_cast<RankedTensorType>(out.getType());
+  if (!qt || !kt || !vt || !ot || qt.getRank() != 4 || kt.getRank() != 4 ||
+      vt.getRank() != 4 || ot.getRank() != 4)
+    return op->emitOpError("expects rank-4 contiguous [B,H,S,D] tensors");
+  for (Type t : {qt.getElementType(), kt.getElementType(), vt.getElementType(),
+                 ot.getElementType()})
+    if (!t.isF32()) return op->emitOpError("supports FP32 tensors only");
+  for (StringRef name : {"phase", "dtype", "input_layout", "output_layout",
+                         "truth_boundary"})
+    if (failed(requireStringAttr(op, name))) return failure();
+  for (StringRef name : {"batch", "query_length", "context_length",
+                         "num_query_heads", "num_kv_heads", "head_dim",
+                         "workspace_bytes", "alignment_bytes"})
+    if (failed(requireIntegerAttr(op, name))) return failure();
+  auto phase = op->getAttrOfType<StringAttr>("phase").getValue();
+  auto ql = integerAttrValue(op, "query_length");
+  auto cl = integerAttrValue(op, "context_length");
+  auto qh = integerAttrValue(op, "num_query_heads");
+  auto kh = integerAttrValue(op, "num_kv_heads");
+  auto hd = integerAttrValue(op, "head_dim");
+  auto alignment = integerAttrValue(op, "alignment_bytes");
+  auto causal = op->getAttrOfType<BoolAttr>("causal");
+  if ((phase != "prefill" && phase != "decode") || !causal || !causal.getValue())
+    return op->emitOpError("requires phase prefill/decode and causal=true");
+  if (!ql || !cl || !qh || !kh || !hd || !alignment || *ql <= 0 || *cl <= 0 ||
+      *qh <= 0 || *kh <= 0 || *hd <= 0 || *alignment != alignof(float) ||
+      *qh != *kh)
+    return op->emitOpError("requires positive static dimensions and equal Q/KV heads");
+  if ((phase == "prefill" && (*ql <= 1 || *ql != *cl)) ||
+      (phase == "decode" && *ql != 1))
+    return op->emitOpError("query/context dimensions violate phase contract");
+  if (op->getAttrOfType<StringAttr>("dtype").getValue() != "fp32" ||
+      op->getAttrOfType<StringAttr>("input_layout").getValue() != "bhsd_contiguous" ||
+      op->getAttrOfType<StringAttr>("output_layout").getValue() != "bhsd_contiguous")
+    return op->emitOpError("requires fp32 bhsd_contiguous layout");
+  if (qt.getDimSize(0) != *integerAttrValue(op, "batch") ||
+      qt.getDimSize(1) != *qh || qt.getDimSize(2) != *ql ||
+      qt.getDimSize(3) != *hd || kt.getDimSize(2) != *cl ||
+      vt.getShape() != kt.getShape() || ot.getShape() != qt.getShape())
+    return op->emitOpError("tensor types do not match declared attention dimensions");
+  if (lowered) {
+    for (StringRef name : {"candidate_id", "kernel_id", "entry_point",
+                           "artifact_ref", "artifact_sha256", "artifact_version",
+                           "fallback_identity", "runtime_execution_unit"})
+      if (failed(requireStringAttr(op, name))) return failure();
+    auto noRedecision = op->getAttrOfType<BoolAttr>("runtime_no_redecision");
+    if (!noRedecision || !noRedecision.getValue())
+      return op->emitOpError("requires runtime_no_redecision=true");
+  }
+  return success();
+}
+
+LogicalResult AttentionOp::verify() {
+  return verifyAttentionContract(getOperation(), getQuery(), getKey(), getValue(),
+                                 getOutput(), false);
+}
+
+LogicalResult CPUAttentionOp::verify() {
+  return verifyAttentionContract(getOperation(), getQuery(), getKey(), getValue(),
+                                 getOutput(), true);
+}
+
 #define GET_OP_CLASSES
 #include "HIR/IR/HIROps.cpp.inc"

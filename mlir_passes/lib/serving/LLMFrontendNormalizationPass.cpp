@@ -1,4 +1,5 @@
 #include "FusionPasses.h"
+#include "HIR/IR/HIROps.h"
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,10 +28,6 @@ static constexpr llvm::StringLiteral kSoftmax = "llm.softmax";
 static constexpr llvm::StringLiteral kAttnOut = "llm.attention_output";
 static constexpr llvm::StringLiteral kKVWrite = "llm.kv_cache_write";
 static constexpr llvm::StringLiteral kKVRead  = "llm.kv_cache_read";
-
-// Canonical output op names — identical to qwen-to-serving-mlir output.
-static constexpr llvm::StringLiteral kPrefillOp = "llm.attention_prefill";
-static constexpr llvm::StringLiteral kDecodeOp  = "llm.attention_decode";
 
 // One occurrence of the raw attention pattern, found within a single
 // "occurrence group" (see runOnOperation). A function normalized from a
@@ -69,6 +66,45 @@ static PatternOps findPatternOps(llvm::ArrayRef<Operation *> ops) {
   return p;
 }
 
+static bool isSupportedPattern(const PatternOps &p) {
+  if (!p.isComplete() || !p.softmax || p.scores->getNumOperands() != 2 ||
+      p.attnOut->getNumOperands() != 2 || p.qProj->getNumResults() != 1 ||
+      p.kProj->getNumResults() != 1 || p.vProj->getNumResults() != 1)
+    return false;
+  Value expectedK = p.kProj->getResult(0), expectedV = p.vProj->getResult(0);
+  if (!p.isPrefill) {
+    if (p.kvOp->getNumOperands() != 2 || p.kvOp->getNumResults() != 2 ||
+        p.kvOp->getOperand(0) != expectedK || p.kvOp->getOperand(1) != expectedV)
+      return false;
+    expectedK = p.kvOp->getResult(0); expectedV = p.kvOp->getResult(1);
+  }
+  if (p.scores->getOperand(0) != p.qProj->getResult(0) ||
+      p.scores->getOperand(1) != expectedK ||
+      p.attnOut->getOperand(0) != p.softmax->getResult(0) ||
+      p.attnOut->getOperand(1) != expectedV)
+    return false;
+  auto causal = p.scores->getAttrOfType<BoolAttr>("attention.causal");
+  auto scale = p.scores->getAttrOfType<FloatAttr>("attention.scale");
+  auto transposed = p.scores->getAttrOfType<BoolAttr>("attention.key_transposed");
+  auto axis = p.softmax->getAttrOfType<IntegerAttr>("attention.softmax_axis");
+  if (!causal || !causal.getValue() || !scale || scale.getValueAsDouble() <= 0.0 ||
+      !transposed || !transposed.getValue() || !axis || axis.getInt() != -1)
+    return false;
+  auto qt = dyn_cast<RankedTensorType>(p.qProj->getResult(0).getType());
+  auto kt = dyn_cast<RankedTensorType>(p.kProj->getResult(0).getType());
+  auto vt = dyn_cast<RankedTensorType>(p.vProj->getResult(0).getType());
+  if (!qt || !kt || !vt || qt.getRank() != 4 || kt.getRank() != 4 ||
+      vt.getRank() != 4 || !qt.hasStaticShape() || !kt.hasStaticShape() ||
+      !vt.hasStaticShape() || !qt.getElementType().isF32() ||
+      kt.getElementType() != qt.getElementType() || vt.getElementType() != qt.getElementType())
+    return false;
+  if (qt.getDimSize(0) != kt.getDimSize(0) || qt.getDimSize(1) != kt.getDimSize(1) ||
+      qt.getDimSize(3) != kt.getDimSize(3) || kt.getShape() != vt.getShape())
+    return false;
+  int64_t qlen = qt.getDimSize(2), context = kt.getDimSize(2);
+  return p.isPrefill ? (qlen > 1 && qlen == context) : (qlen == 1 && context > 0);
+}
+
 // Replace one local occurrence of the raw attention pattern with a single
 // canonical llm.attention_prefill/decode op, wired to the REAL q/k/v
 // producer values found in this occurrence (not a dummy placeholder), and
@@ -92,13 +128,14 @@ static void rewriteOccurrence(func::FuncOp funcOp, const PatternOps &p,
   Location loc = p.attnOut->getLoc();
   Type resultType = p.attnOut->getResult(0).getType();
 
-  llvm::StringRef canonicalName = p.isPrefill ? kPrefillOp : kDecodeOp;
   llvm::StringRef kvRole        = p.isPrefill ? "producer" : "consumer";
   llvm::StringRef servingPhase  = p.isPrefill ? "prefill"  : "decode";
-  int64_t promptTokens          = p.isPrefill ? 512 : 0;
-  int64_t outputTokens          = p.isPrefill ? 0   : 1;
+  auto qt = cast<RankedTensorType>(p.qProj->getResult(0).getType());
+  auto kt = cast<RankedTensorType>(p.kProj->getResult(0).getType());
+  int64_t promptTokens = p.isPrefill ? qt.getDimSize(2) : 0;
+  int64_t outputTokens = p.isPrefill ? 0 : 1;
 
-  OperationState state(loc, canonicalName);
+  OperationState state(loc, AttentionOp::getOperationName());
   state.addOperands({p.qProj->getResult(0), p.kProj->getResult(0),
                       p.vProj->getResult(0)});
   state.addTypes({resultType});
@@ -110,11 +147,26 @@ static void rewriteOccurrence(func::FuncOp funcOp, const PatternOps &p,
                      IntegerAttr::get(i64, promptTokens));
   state.addAttribute("serving.output_tokens",
                      IntegerAttr::get(i64, outputTokens));
+  state.addAttribute("phase", StringAttr::get(ctx, servingPhase));
+  state.addAttribute("batch", IntegerAttr::get(i64, qt.getDimSize(0)));
+  state.addAttribute("query_length", IntegerAttr::get(i64, qt.getDimSize(2)));
+  state.addAttribute("context_length", IntegerAttr::get(i64, kt.getDimSize(2)));
+  state.addAttribute("num_query_heads", IntegerAttr::get(i64, qt.getDimSize(1)));
+  state.addAttribute("num_kv_heads", IntegerAttr::get(i64, kt.getDimSize(1)));
+  state.addAttribute("head_dim", IntegerAttr::get(i64, qt.getDimSize(3)));
+  state.addAttribute("dtype", StringAttr::get(ctx, "fp32"));
+  state.addAttribute("causal", BoolAttr::get(ctx, true));
+  state.addAttribute("input_layout", StringAttr::get(ctx, "bhsd_contiguous"));
+  state.addAttribute("output_layout", StringAttr::get(ctx, "bhsd_contiguous"));
+  state.addAttribute("workspace_bytes", IntegerAttr::get(i64, kt.getDimSize(2) * 4));
+  state.addAttribute("alignment_bytes", IntegerAttr::get(i64, alignof(float)));
   state.addAttribute("frontend.source",
                      StringAttr::get(ctx, "llm_graph_pattern"));
   state.addAttribute("frontend.truth_boundary",
                      StringAttr::get(ctx,
-                       "attention_pattern_simplified_not_full_transformer_lowering"));
+                       "operator_level_simplified_attention_pattern_not_general_transformer_import"));
+  state.addAttribute("truth_boundary", StringAttr::get(ctx,
+                     "operator_level_simplified_attention_pattern_not_general_transformer_import"));
   state.addAttribute("frontend.normalized_from",
                      StringAttr::get(ctx, "simplified_llm_attention_graph"));
   if (layerIndex) {
@@ -174,7 +226,7 @@ struct LLMFrontendNormalizationPass
     bool rewroteAny = false;
     for (auto &entry : groups) {
       PatternOps p = findPatternOps(entry.second);
-      if (!p.isComplete())
+      if (!isSupportedPattern(p))
         continue;
       std::optional<int64_t> layerIndex;
       if (entry.first != kUngrouped)
@@ -191,7 +243,7 @@ struct LLMFrontendNormalizationPass
                     StringAttr::get(ctx, "llm_graph_pattern"));
     funcOp->setAttr("frontend.truth_boundary",
                     StringAttr::get(ctx,
-                      "attention_pattern_simplified_not_full_transformer_lowering"));
+                      "operator_level_simplified_attention_pattern_not_general_transformer_import"));
   }
 };
 

@@ -400,6 +400,22 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     obj["kernel"] = serializeKernelDecision(*b.kernel);
   if (b.fallback)
     obj["fallback"] = serializeFallbackDecision(*b.fallback);
+  if (b.attention_execution) {
+    const auto &a = *b.attention_execution; llvm::json::Object x;
+    x["execution_unit"] = a.execution_unit; x["backend"] = a.backend;
+    x["phase"] = a.phase; x["candidate_id"] = a.candidate_id;
+    x["kernel_id"] = a.kernel_id; x["entry_point"] = a.entry_point;
+    x["artifact_ref"] = a.artifact_ref; x["artifact_sha256"] = a.artifact_sha256;
+    x["artifact_version"] = a.artifact_version; x["dtype"] = a.dtype;
+    x["input_layout"] = a.input_layout; x["output_layout"] = a.output_layout;
+    x["batch"] = a.batch; x["query_length"] = a.query_length; x["context_length"] = a.context_length;
+    x["num_query_heads"] = a.num_query_heads; x["num_kv_heads"] = a.num_kv_heads;
+    x["head_dim"] = a.head_dim; x["causal"] = a.causal; x["workspace_bytes"] = a.workspace_bytes;
+    x["alignment_bytes"] = a.alignment_bytes;
+    x["required_isa"] = a.required_isa; x["fallback_identity"] = a.fallback_identity;
+    x["runtime_no_redecision"] = a.runtime_no_redecision; x["truth_boundary"] = a.truth_boundary;
+    obj["attention_execution"] = std::move(x);
+  }
   // Boundary materialization record: emitted only when
   // BoundaryMaterializationPass recorded it, so plans from planning-only
   // pipelines are unchanged. materialized = inserted into IR;

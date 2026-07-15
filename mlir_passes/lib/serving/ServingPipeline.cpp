@@ -147,6 +147,9 @@ void registerServingOptimizationPipeline() {
       "serving-optimization-pipeline",
       "HIR serving pipeline: phase/cost, KV layout, replay eligibility, execution provider, representation, layout, boundary, weight classification, quant strategy, kernel availability, lowering decision, quantized boundary refinement, alternative lowering, candidate generation, candidate evaluation, plan selection",
       [](OpPassManager &pm) {
+        pm.addNestedPass<func::FuncOp>(createAttentionCandidateGenerationPass());
+        pm.addNestedPass<func::FuncOp>(createAttentionLegalityPass());
+        pm.addNestedPass<func::FuncOp>(createAttentionSelectionLoweringPass());
         pm.addNestedPass<func::FuncOp>(createServingPhaseAnalysisPass());
         pm.addNestedPass<func::FuncOp>(createKVLayoutPlanningPass());
         pm.addNestedPass<func::FuncOp>(createReplayEligibilityPass());

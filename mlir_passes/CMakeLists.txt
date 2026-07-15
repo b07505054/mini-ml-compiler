@@ -79,6 +79,7 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/ServingCostModelPass.cpp
   lib/serving/PlanSelectionPass.cpp
   lib/serving/LLMFrontendNormalizationPass.cpp
+  lib/serving/AttentionImplementationPasses.cpp
   lib/serving/CVFrontendNormalizationPass.cpp
   lib/serving/CVShapeInferencePass.cpp
   lib/serving/CVMemoryPlanningPass.cpp
@@ -481,6 +482,8 @@ add_executable(compile-for-target
   lib/HIR/IR/HIROps.cpp
   lib/QuantizationCompilerPasses.cpp
   lib/ServingPhaseAnalysisPass.cpp
+  lib/serving/LLMFrontendNormalizationPass.cpp
+  lib/serving/AttentionImplementationPasses.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
   lib/serving/ExecutionProviderPlanningPass.cpp
@@ -547,6 +550,22 @@ add_test(NAME CompileForTargetTest
     -DOUT=${_CFT_CANONICAL}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunCompileForTargetTest.cmake
 )
+add_test(NAME AttentionCPUContractTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DINPUT=${REPO_ROOT}/mlir/attention_cpu_supported.mlir
+    -DOUT=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_execution_plan.json
+    -DDUMP=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_lowered.mlir
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunAttentionCPUContractTest.cmake)
+add_test(NAME AttentionCPUFailClosedTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DINPUT=${REPO_ROOT}/mlir/attention_cpu_unsupported.mlir
+    -DOUT=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_unsupported_plan.json
+    -DDUMP=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_unsupported_lowered.mlir
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunAttentionCPUFailClosedTest.cmake)
 set_tests_properties(CompileForTargetTest PROPERTIES
   DEPENDS compile-for-target
 )

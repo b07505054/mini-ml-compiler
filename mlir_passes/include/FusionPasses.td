@@ -1223,6 +1223,27 @@ def LLMFrontendNormalization
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def AttentionCandidateGeneration
+    : Pass<"attention-candidate-generation", "mlir::func::FuncOp"> {
+  let summary = "Generate phase-specific FP32 CPU attention candidates";
+  let constructor = "mlir::hir::createAttentionCandidateGenerationPass()";
+  let dependentDialects = ["mlir::hir::HIRDialect"];
+}
+
+def AttentionLegality
+    : Pass<"attention-legality", "mlir::func::FuncOp"> {
+  let summary = "Validate generated attention candidates independently";
+  let constructor = "mlir::hir::createAttentionLegalityPass()";
+  let dependentDialects = ["mlir::hir::HIRDialect"];
+}
+
+def AttentionSelectionLowering
+    : Pass<"attention-selection-lowering", "mlir::func::FuncOp"> {
+  let summary = "Select the legal phase implementation and lower to a CPU runtime call";
+  let constructor = "mlir::hir::createAttentionSelectionLoweringPass()";
+  let dependentDialects = ["mlir::hir::HIRDialect"];
+}
+
 def CVFrontendNormalization
     : Pass<"cv-frontend-normalization", "mlir::func::FuncOp"> {
   let summary = "Detect and annotate pseudo-CV YOLOSeg-like graph patterns";

@@ -50,7 +50,8 @@ handwritten_kernel_source_in_repo_dispatch_validated_not_benchmarked` (the
 dispatch path is CTest-validated when the MLIR pipeline has produced the
 required trace; no throughput/latency is claimed).
 
-Everything else — matmul, attention, MLP, embeddings, all CV ops — is
+Everything else — general matmul, MLP, embeddings, all CV ops, and attention
+outside the narrow static FP32 causal MHA contract — is
 **rejected** (`rejected_no_kernel_for_op`, `rejected_dtype_unsupported`, …)
 or **deferred** (`deferred_no_kernel_library_declared`,
 `deferred_dynamic_shape`, `deferred_missing_tile_plan`, …). Note that even

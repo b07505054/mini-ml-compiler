@@ -114,6 +114,17 @@ struct MemoryPlacementPlan {
   std::string truth_boundary;
 };
 
+struct AttentionExecutionContract {
+  std::string execution_unit, backend, phase, candidate_id, kernel_id, entry_point;
+  std::string artifact_ref, artifact_sha256, artifact_version;
+  std::string dtype, input_layout, output_layout, required_isa;
+  std::string fallback_identity, truth_boundary;
+  int64_t batch = 0, query_length = 0, context_length = 0;
+  int64_t num_query_heads = 0, num_kv_heads = 0, head_dim = 0;
+  int64_t workspace_bytes = 0, alignment_bytes = 0;
+  bool causal = false, runtime_no_redecision = false;
+};
+
 struct PerOpDecisionBundle {
   std::string op_name;
   std::string op_type;
@@ -154,6 +165,7 @@ struct PerOpDecisionBundle {
   // Slice 2 memory placement and transfer contract. Runtime consumes this
   // exactly; absence means no compiler-owned memory plan was produced.
   std::optional<MemoryPlacementPlan> memory_placement;
+  std::optional<AttentionExecutionContract> attention_execution;
 };
 
 // ---------------------------------------------------------------------------

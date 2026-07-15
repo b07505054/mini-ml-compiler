@@ -1265,10 +1265,35 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
     }
     bool layoutCreatesBundle = layout && layout->requires_layout_transform;
 
+    std::optional<AttentionExecutionContract> attentionExecution;
+    if (op.getName().getStringRef() == "hir.cpu_attention") {
+      AttentionExecutionContract a;
+      a.execution_unit = strOp(&op, "runtime_execution_unit");
+      a.backend = "portable_cpu"; a.phase = strOp(&op, "phase");
+      a.candidate_id = strOp(&op, "candidate_id");
+      a.kernel_id = strOp(&op, "kernel_id"); a.entry_point = strOp(&op, "entry_point");
+      a.artifact_ref = strOp(&op, "artifact_ref"); a.artifact_sha256 = strOp(&op, "artifact_sha256");
+      a.artifact_version = strOp(&op, "artifact_version"); a.dtype = strOp(&op, "dtype");
+      a.input_layout = strOp(&op, "input_layout"); a.output_layout = strOp(&op, "output_layout");
+      a.required_isa = strOp(&op, "required_isa"); a.fallback_identity = strOp(&op, "fallback_identity");
+      a.truth_boundary = strOp(&op, "truth_boundary");
+      a.batch = op.getAttrOfType<IntegerAttr>("batch").getInt();
+      a.query_length = op.getAttrOfType<IntegerAttr>("query_length").getInt();
+      a.context_length = op.getAttrOfType<IntegerAttr>("context_length").getInt();
+      a.num_query_heads = op.getAttrOfType<IntegerAttr>("num_query_heads").getInt();
+      a.num_kv_heads = op.getAttrOfType<IntegerAttr>("num_kv_heads").getInt();
+      a.head_dim = op.getAttrOfType<IntegerAttr>("head_dim").getInt();
+      a.workspace_bytes = op.getAttrOfType<IntegerAttr>("workspace_bytes").getInt();
+      a.alignment_bytes = op.getAttrOfType<IntegerAttr>("alignment_bytes").getInt();
+      a.causal = op.getAttrOfType<BoolAttr>("causal").getValue();
+      a.runtime_no_redecision = op.getAttrOfType<BoolAttr>("runtime_no_redecision").getValue();
+      attentionExecution = std::move(a);
+    }
+
     if (quant || kernel || fallback || !materialized.empty() ||
         !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle ||
         kernelSelection || quantCoDesign || threadSchedule ||
-        memoryPlacement) {
+        memoryPlacement || attentionExecution) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
@@ -1284,6 +1309,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       bundle.quantization_codesign = std::move(quantCoDesign);
       bundle.thread_schedule = std::move(threadSchedule);
       bundle.memory_placement = std::move(memoryPlacement);
+      bundle.attention_execution = std::move(attentionExecution);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;

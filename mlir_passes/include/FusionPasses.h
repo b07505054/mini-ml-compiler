@@ -41,6 +41,9 @@ inline std::unique_ptr<::mlir::Pass> createCandidateEvaluationPass() {
 
 std::unique_ptr<::mlir::Pass> createPlanSelectionPass();
 std::unique_ptr<::mlir::Pass> createLLMFrontendNormalizationPass();
+std::unique_ptr<::mlir::Pass> createAttentionCandidateGenerationPass();
+std::unique_ptr<::mlir::Pass> createAttentionLegalityPass();
+std::unique_ptr<::mlir::Pass> createAttentionSelectionLoweringPass();
 std::unique_ptr<::mlir::Pass> createQuantizationPlanningPass();
 std::unique_ptr<::mlir::Pass> createHIRQuantCanonicalizationPass();
 std::unique_ptr<::mlir::Pass> createHIRQuantPropagationPass();

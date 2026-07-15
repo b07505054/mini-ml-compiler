@@ -125,7 +125,8 @@ struct ServingPhaseAnalysisPass
     funcOp.walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
       if (opName != "llm.attention_prefill" &&
-          opName != "llm.attention_decode")
+          opName != "llm.attention_decode" &&
+          opName != "hir.attention" && opName != "hir.cpu_attention")
         return;
       hasServingOp = true;
       if (auto pt = op->getAttrOfType<IntegerAttr>("serving.prompt_tokens"))

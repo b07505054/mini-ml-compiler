@@ -209,4 +209,35 @@ def HIR_PortableCPUINT8FusedMatMulBiasReluOp
   }];
 }
 
+def HIR_AttentionOp : HIR_Op<"attention", [Pure]> {
+  let summary = "Semantic operator-level causal multi-head attention";
+  let description = [{
+    A deliberately narrow semantic contract retaining real Q/K/V SSA values.
+    Required attributes describe phase, static B/H/Q/C/D dimensions, FP32
+    contiguous layout, and causal masking.  This is not a general transformer
+    importer and does not imply a KV-cache lifetime implementation.
+  }];
+  let arguments = (ins AnyTensor:$query, AnyTensor:$key, AnyTensor:$value);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    $query `,` $key `,` $value attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def HIR_CPUAttentionOp : HIR_Op<"cpu_attention", [Pure]> {
+  let summary = "Concrete callable FP32 CPU attention kernel contract";
+  let description = [{
+    Final operator-level lowering for an already selected prefill or decode
+    implementation.  Runtime must validate and call the exact artifact and
+    entry point recorded in the attributes; it may not reselect.
+  }];
+  let arguments = (ins AnyTensor:$query, AnyTensor:$key, AnyTensor:$value);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    $query `,` $key `,` $value attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // HIR_OPS
