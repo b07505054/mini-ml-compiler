@@ -530,6 +530,13 @@ Status below) is the only IR-transforming stage.
 - **truth_boundary**: `candidate_generation_static_constraints_not_cost_evaluated`
 - **Modifies IR**: no
 
+For the Slice 3 fused operator, candidate generation is additionally a
+complete-implementation search. An `ImplementationCandidate` includes backend,
+runtime, delegate, kernel, precision, quantization scheme, layout/packing,
+fixed thread count, target requirements, artifact identities, and measured
+evidence. Portable CPU and ExecuTorch/XNNPACK variants enter the same legality
+and constrained latency comparison; there is no external-backend side selector.
+
 ### CandidateEvaluationPass
 
 - **Question**: What is the static relative penalty score for each candidate?
@@ -675,46 +682,36 @@ never executes, dispatches, or benchmarks kernels (`truth_boundary =
 kernel_selection_static_descriptor_match_not_runtime_execution`). The
 add-a-kernel checklist lives in `docs/RUNTIME_KERNEL_CONTRACT.md`.
 
-## Quantization Co-Design (quantization_codesign_contract_v1)
+## Quantization Co-Design
 
-`QuantizationCoDesignPass` (run by `compile-for-target` after kernel
-selection; standalone `quant-codesign-pipeline`; **inert unless**
-`quant.codesign.policy` is set via the optional profile field
-`quantizationCoDesignPolicy` — no existing profile sets it, so all existing
-artifacts are byte-identical) evaluates matmul-like constant-weight ops and
-emits `quant_codesign.*` attrs, exported per op as `quantization_codesign`.
+For the validated fused Pi operator, quantization is compiler-materialized and
+runtime-executed. The compiler generates and filters complete candidates,
+owns calibration and packed-weight artifacts, selects using validated measured
+evidence, and emits explicit integer IR and an ordered ExecutionPlan. The
+effective custom scheme is per-tensor static symmetric INT8 with zero points
+of zero and packed transposed weights. XNNPACK's PT2E scheme is recorded
+separately as affine per-tensor activations and symmetric per-channel weights.
 
-It keeps four concepts separate — quantization **algorithm** (none is
-implemented in this repository; forced-AWQ only *declares* an external
-artifact), numeric **representation** (weight-only INT8 modeled; INT4 where
-a profile declares it), **backend/kernel execution support** (declared
-library capability is never treated as a dispatchable kernel; only
-`target.runtime_kernels` descriptors count), and **accuracy evidence**
-(`no_accuracy_evidence` or `algorithm_declared_not_calibrated` — nothing
-calibrated or measured exists). Explicit policies (`planning_only`,
-`systems_cost_only`, `require_dispatchable_kernel`,
-`require_accuracy_evidence`) control selection, and every decision records
-its policy. Unknown granularity/group-size/axis/symmetric/scale/zero-point
-metadata is omitted, never defaulted.
+```text
+FP32
+  -> hir.quantize
+  -> hir.load_quantized_weight
+  -> hir.qmatmul
+  -> hir.dequantize
+  -> portable_cpu_int8 kernel lowering
+```
 
-The static systems-cost comparison (terms, sources, units, and inclusion
-boundaries tabulated in `docs/QUANTIZATION_CODESIGN.md`) surfaces the
-central co-design fact honestly: without a runtime kernel that consumes
-quantized weights, the materialized float dequant intermediate makes
-weight-only quantization move more bytes than fp16 and it loses; with such
-a kernel the materialized intermediate disappears (inline conversion cost
-is explicitly listed as *not modeled*, never treated as free).
-`quant_codesign.est.*` is evidence only — a ranking-invariance test proves
-`evaluation.*`/`selected_plan.*` signals are byte-identical with the pass
-enabled vs disabled. `quant.strategy` semantics are unchanged. Honest
-`hir.dequantize` materialization is deliberately a separate future change
-(needs a real quantized-typed operand plus explicit scale/zero-point
-metadata, neither of which the serving path has).
+Older `quantization_codesign_contract_v1` attributes remain relevant to the
+generic serving-planning path, but they no longer describe the maximum
+implemented quantization capability. See `docs/QUANTIZATION_CODESIGN.md` for
+the executable scope and remaining full-model limitations.
 
 ## Materialization Status
 
-**Planning is implemented. Cast-boundary materialization is implemented.
-All other IR materialization is intentionally deferred.**
+The generic serving pipeline still materializes only its documented cast
+subset. Separately, the validated Slice 3 fused-operator pipeline materializes
+Q/DQ, quantized weight loading, integer matmul, dequantization, and integer
+kernel lowering. These truth boundaries must not be conflated.
 
 Planning (implemented by the 16-pass pipeline):
 - Annotate `selected_plan.*` per op
@@ -747,9 +744,9 @@ IR materialization intentionally deferred (recorded per-op in
 - Replacing `gelu` with primitive ops per an algebraic decomposition plan
 - Rewriting IR graph structure based on selected plan
 
-The 16 planning passes remain annotation-only; `BoundaryMaterializationPass`
-is the only pass that modifies IR structure, and only for the cast subset
-above.
+Within the generic 16-pass serving path, `BoundaryMaterializationPass` retains
+the cast-only behavior above. The Slice 3 quantized lowering is a distinct,
+tested materialization path and is not annotation-only.
 
 ## Apple/CoreML Quantization Demo
 

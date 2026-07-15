@@ -16,6 +16,7 @@
 // This file never touches llvm::json types directly.
 
 #include "FusionPasses.h"
+#include "HIR/IR/HIRDialect.h"
 #include "serving/ExecutionPlan.h"
 #include "serving/ExecutionPlanBuilder.h"
 #include "serving/ExecutionPlanExporter.h"
@@ -1051,7 +1052,8 @@ int main(int argc, char **argv) {
   // 3. Parse MLIR module.
   mlir::MLIRContext ctx;
   ctx.allowUnregisteredDialects(true);
-  ctx.loadDialect<mlir::func::FuncDialect, mlir::tensor::TensorDialect,
+  ctx.loadDialect<mlir::func::FuncDialect, mlir::hir::HIRDialect,
+                  mlir::tensor::TensorDialect,
                   mlir::linalg::LinalgDialect, mlir::arith::ArithDialect,
                   mlir::math::MathDialect>();
 
@@ -1142,6 +1144,15 @@ int main(int argc, char **argv) {
   // so tile constraints are visible.
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createKernelSelectionPass());
+  // Slice 3D: materialize an already-selected packed INT8 fused
+  // MatMul+Bias+ReLU decision into explicit HIR Q/DQ and lower that
+  // implementation IR to the selected portable CPU INT8 runtime-call
+  // contract. These passes consume prior decisions; they do not reselect
+  // precision or kernels.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createQuantizationMaterializationPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::hir::createQuantizedKernelLoweringPass());
   // Quantization co-design evidence (quantization_codesign_contract_v1):
   // inert unless the profile/module opts in via quant.codesign.policy, so
   // existing plans are byte-identical by default.

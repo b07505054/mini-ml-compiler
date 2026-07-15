@@ -1,23 +1,33 @@
 // Tests for QuantizationStrategyPlanningPass.
 // Each module below is separated by a split-input-file marker.
 
-// Test 1: Constant-weight matmul on backend with int8 support.
-// coreml backend: supported_quant_modes=["static_int8","weight_only"], weights_are_constant=true.
-// Rule 1 (prefer weight-only) => strategy=weight_only_int8, weight_dtype=int8, activation=fp16.
+// Test 1: Constant-weight matmul on backend with explicit Slice 1 quantization
+// capability. INT8 static is generated but rejected because calibration is not
+// available; FP16 is the highest-priority legal candidate.
 //
 // CHECK-LABEL: @constant_weight_int8_backend
 // CHECK: "compute.matmul"
 // CHECK-SAME: quant.activation_dtype = "fp16"
-// CHECK-SAME: quant.strategy = "weight_only_int8"
+// CHECK-SAME: quant.rejected_candidate_reasons = ["requires_unavailable_calibration"
+// CHECK-SAME: quant.scheme = "fp16"
+// CHECK-SAME: quant.selected_candidate_id
+// CHECK-SAME: quant.strategy = "fp16"
 // CHECK-SAME: quant.truth_boundary = "quantization_strategy_static_not_accuracy_calibrated"
-// CHECK-SAME: quant.weight_dtype = "int8"
+// CHECK-SAME: quant.weight_dtype = "fp16"
 
 module attributes {
   target.backend_capability_names = ["coreml"],
   target.backend_capabilities.coreml.supported_quant_modes = ["static_int8", "weight_only"],
   target.backend_capabilities.coreml.supported_dtypes = ["fp16", "int8"],
   target.backend_capabilities.coreml.accumulation_dtypes = ["fp32"],
-  target.backend_capabilities.coreml.allowed_quant_granularity = ["per_channel"],
+  target.backend_capabilities.coreml.supported_quantization_schemes = ["fp16", "int8_static"],
+  target.backend_capabilities.coreml.supported_activation_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.supported_weight_dtypes = ["fp16", "int8"],
+  target.backend_capabilities.coreml.supported_accumulator_dtypes = ["fp32", "int32"],
+  target.backend_capabilities.coreml.supported_output_dtypes = ["fp16", "fp32"],
+  target.backend_capabilities.coreml.required_quantization_kernel_capabilities = ["quant_kernel.none", "quant_kernel.fp16", "quant_kernel.int8_static"],
+  target.backend_capabilities.coreml.allowed_quant_granularity = ["per_channel", "per_tensor"],
+  target.backend_capabilities.coreml.supports_per_channel_quantization = true,
   target.backend_capabilities.coreml.supports_dequant_boundary = true
 } {
   func.func @constant_weight_int8_backend(%arg0: tensor<1x768xf16>) -> tensor<1x768xf16>
@@ -34,15 +44,15 @@ module attributes {
 
 // -----
 
-// Test 2: Backend lacking activation int8 — fp16 activation, reason explains backend_lacks_activation_int8.
-// gpu backend: no int8 in supported_quant_modes or supported_dtypes.
-// => strategy=fp16_fallback, activation_dtype=fp16, fallback_reason=backend_lacks_activation_int8.
+// Test 2: Backend with no Slice 1 quantization capability declaration falls
+// back to the FP32 baseline rather than inferring quant support.
 //
 // CHECK-LABEL: @no_int8_backend
 // CHECK: "compute.matmul"
-// CHECK-SAME: quant.activation_dtype = "fp16"
-// CHECK-SAME: quant.fallback_reason = "backend_lacks_activation_int8"
-// CHECK-SAME: quant.strategy = "fp16_fallback"
+// CHECK-SAME: quant.activation_dtype = "fp32"
+// CHECK-SAME: quant.fallback_reason = "fallback_fp32_selected"
+// CHECK-SAME: quant.scheme = "fp32_baseline"
+// CHECK-SAME: quant.strategy = "fp32_baseline"
 
 module attributes {
   target.backend_capability_names = ["gpu"],
@@ -130,8 +140,9 @@ module attributes {
 //
 // CHECK-LABEL: @per_op_constant_satisfied_true
 // CHECK: quant.activation_dtype = "fp16"
-// CHECK: quant.strategy = "weight_only_int8"
-// CHECK: quant.weight_dtype = "int8"
+// CHECK: quant.scheme = "fp16"
+// CHECK: quant.strategy = "fp16"
+// CHECK: quant.weight_dtype = "fp16"
 
 module attributes {
   target.backend_capability_names = ["coreml"],

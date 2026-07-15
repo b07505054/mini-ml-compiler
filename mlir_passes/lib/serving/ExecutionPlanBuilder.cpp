@@ -82,6 +82,40 @@ static bool boolOp(mlir::Operation *op, llvm::StringRef key) {
   return false;
 }
 
+static std::vector<std::string> stringArrayAttr(mlir::ArrayAttr arr) {
+  std::vector<std::string> out;
+  if (!arr)
+    return out;
+  for (mlir::Attribute elem : arr)
+    if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+      out.push_back(s.getValue().str());
+  return out;
+}
+
+static std::string dictStr(mlir::DictionaryAttr dict, llvm::StringRef key) {
+  if (!dict)
+    return {};
+  if (auto a = mlir::dyn_cast_if_present<mlir::StringAttr>(dict.get(key)))
+    return a.getValue().str();
+  return {};
+}
+
+static double dictFloat(mlir::DictionaryAttr dict, llvm::StringRef key) {
+  if (!dict)
+    return 0.0;
+  if (auto a = mlir::dyn_cast_if_present<mlir::FloatAttr>(dict.get(key)))
+    return a.getValueAsDouble();
+  return 0.0;
+}
+
+static int64_t dictInt(mlir::DictionaryAttr dict, llvm::StringRef key) {
+  if (!dict)
+    return 0;
+  if (auto a = mlir::dyn_cast_if_present<mlir::IntegerAttr>(dict.get(key)))
+    return a.getInt();
+  return 0;
+}
+
 static std::string dtypeOf(mlir::Type type) {
   auto shaped = mlir::dyn_cast<mlir::ShapedType>(type);
   if (!shaped)
@@ -142,6 +176,32 @@ static std::vector<int64_t> shapeOf(mlir::Type type) {
   for (int64_t dim : shaped.getShape())
     shape.push_back(dim);
   return shape;
+}
+
+static int64_t i64InDict(mlir::DictionaryAttr dict, llvm::StringRef key,
+                         int64_t fallback = 0) {
+  if (auto attr = dict.get(key))
+    if (auto i = mlir::dyn_cast<mlir::IntegerAttr>(attr))
+      return i.getInt();
+  return fallback;
+}
+
+static std::string stringInDict(mlir::DictionaryAttr dict, llvm::StringRef key) {
+  if (auto attr = dict.get(key))
+    if (auto s = mlir::dyn_cast<mlir::StringAttr>(attr))
+      return s.getValue().str();
+  return {};
+}
+
+static std::vector<std::string> stringArrayInDict(mlir::DictionaryAttr dict,
+                                                  llvm::StringRef key) {
+  std::vector<std::string> values;
+  if (auto attr = dict.get(key))
+    if (auto arr = mlir::dyn_cast<mlir::ArrayAttr>(attr))
+      for (mlir::Attribute elem : arr)
+        if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+          values.push_back(s.getValue().str());
+  return values;
 }
 
 } // namespace
@@ -982,6 +1042,85 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       tilePlan = std::move(tp);
     }
 
+    // Slice 2: compiler-owned memory placement and transfer contract. The
+    // Runtime must consume this block exactly; it is not diagnostic-only.
+    std::optional<MemoryPlacementPlan> memoryPlacement;
+    if (auto st =
+            op.getAttrOfType<mlir::StringAttr>("memory_placement.status")) {
+      MemoryPlacementPlan mp;
+      mp.status = st.getValue().str();
+      auto rI64 = [&](llvm::StringRef key) -> int64_t {
+        if (auto a = op.getAttrOfType<mlir::IntegerAttr>(
+                ("memory_placement." + key).str()))
+          return a.getInt();
+        return 0;
+      };
+      mp.compute_unit = strOp(&op, "memory_placement.compute_unit");
+      mp.selected_memory_space =
+          strOp(&op, "memory_placement.selected_memory_space");
+      mp.input_tile_bytes = rI64("input_tile_bytes");
+      mp.weight_tile_bytes = rI64("weight_tile_bytes");
+      mp.output_tile_bytes = rI64("output_tile_bytes");
+      mp.scratch_bytes = rI64("scratch_bytes");
+      mp.padding_bytes = rI64("padding_bytes");
+      mp.single_buffer_bytes = rI64("single_buffer_bytes");
+      mp.additional_double_buffer_bytes =
+          rI64("additional_double_buffer_bytes");
+      mp.total_required_local_memory_bytes =
+          rI64("total_required_local_memory_bytes");
+      mp.rejection_reason =
+          strOp(&op, "memory_placement.rejection_reason");
+      mp.truth_boundary =
+          strOp(&op, "memory_placement.truth_boundary");
+
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "memory_placement.buffer_placements")) {
+        for (mlir::Attribute elem : arr) {
+          auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+          if (!dict)
+            continue;
+          BufferPlacement bp;
+          bp.buffer_id = stringInDict(dict, "buffer_id");
+          bp.role = stringInDict(dict, "role");
+          bp.memory_space = stringInDict(dict, "memory_space");
+          bp.byte_count = i64InDict(dict, "byte_count");
+          bp.alignment = i64InDict(dict, "alignment", 1);
+          mp.buffer_placements.push_back(std::move(bp));
+        }
+      }
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "memory_placement.transfer_operations")) {
+        for (mlir::Attribute elem : arr) {
+          auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+          if (!dict)
+            continue;
+          TransferOperation transfer;
+          transfer.transfer_id = stringInDict(dict, "transfer_id");
+          transfer.source_buffer = stringInDict(dict, "source_buffer");
+          transfer.destination_buffer =
+              stringInDict(dict, "destination_buffer");
+          transfer.source_memory_space =
+              stringInDict(dict, "source_memory_space");
+          transfer.destination_memory_space =
+              stringInDict(dict, "destination_memory_space");
+          transfer.byte_count = i64InDict(dict, "byte_count");
+          transfer.alignment = i64InDict(dict, "alignment", 1);
+          transfer.mode = stringInDict(dict, "mode");
+          transfer.dependency_ids =
+              stringArrayInDict(dict, "dependency_ids");
+          transfer.completion_token =
+              stringInDict(dict, "completion_token");
+          mp.transfer_operations.push_back(std::move(transfer));
+        }
+      }
+      if (auto arr = op.getAttrOfType<mlir::ArrayAttr>(
+              "memory_placement.compute_dependency_ids"))
+        for (mlir::Attribute elem : arr)
+          if (auto s = mlir::dyn_cast<mlir::StringAttr>(elem))
+            mp.compute_dependency_ids.push_back(s.getValue().str());
+      memoryPlacement = std::move(mp);
+    }
+
     // Concrete runtime-kernel contract selection from KernelSelectionPass
     // (kernel_selection_contract_v1). Present on every op when the pass
     // ran — including explicit deferrals when no registry was declared.
@@ -1128,7 +1267,8 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
 
     if (quant || kernel || fallback || !materialized.empty() ||
         !deferred.empty() || shapeCost || tilePlan || layoutCreatesBundle ||
-        kernelSelection || quantCoDesign || threadSchedule) {
+        kernelSelection || quantCoDesign || threadSchedule ||
+        memoryPlacement) {
       PerOpDecisionBundle bundle;
       bundle.op_name      = "op_" + std::to_string(opIndex);
       bundle.op_type      = op.getName().getStringRef().str();
@@ -1143,6 +1283,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       bundle.kernel_selection = std::move(kernelSelection);
       bundle.quantization_codesign = std::move(quantCoDesign);
       bundle.thread_schedule = std::move(threadSchedule);
+      bundle.memory_placement = std::move(memoryPlacement);
       bundles.push_back(std::move(bundle));
     }
     ++opIndex;
@@ -1377,6 +1518,40 @@ ExecutionPlanBuilder::attrToPerOpQuantDecision(mlir::Operation* op, int opIndex)
       strOp(op, "quant.required_backend_capability");
   d.required_kernel_capability =
       strOp(op, "quant.required_kernel_capability");
+  d.calibration_artifact_ref = strOp(op, "quant.calibration_artifact_ref");
+  d.calibration_artifact_id = strOp(op, "quant.calibration_artifact_id");
+  d.calibration_artifact_sha256 = strOp(op, "quant.calibration_artifact_sha256");
+  d.packed_weight_artifact_ref = strOp(op, "quant.packed_weight_artifact_ref");
+  d.packed_weight_artifact_id = strOp(op, "quant.packed_weight_artifact_id");
+  d.packed_weight_sha256 = strOp(op, "quant.packed_weight_sha256");
+  d.source_weight_sha256 = strOp(op, "quant.source_weight_sha256");
+  d.packed_layout = strOp(op, "quant.packed_layout");
+  d.packing_scheme = strOp(op, "quant.packing_scheme");
+  if (auto a = op->getAttrOfType<mlir::BoolAttr>("quant.kernel_requires_packed_weight"))
+    d.kernel_requires_packed_weight = a.getValue();
+  d.selected_complete_candidate_id =
+      strOp(op, "quant.selected_complete_candidate_id");
+  d.codegen_target_id = strOp(op, "quant.codegen_target_id");
+  d.target_architecture = strOp(op, "quant.target_architecture");
+  d.target_microarchitecture = strOp(op, "quant.target_microarchitecture");
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.required_isa_features"))
+    d.required_isa_features = stringArrayAttr(arr);
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.compiler_flags"))
+    d.compiler_flags = stringArrayAttr(arr);
+  d.binary_sha256 = strOp(op, "quant.binary_sha256");
+  d.measurement_artifact_ref = strOp(op, "quant.measurement_artifact_ref");
+  d.build_manifest_ref = strOp(op, "quant.build_manifest_ref");
+  d.workload_id = strOp(op, "quant.workload_id");
+  d.activation_granularity = strOp(op, "quant.activation_granularity");
+  d.weight_granularity = strOp(op, "quant.weight_granularity");
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>("quant.activation_scale"))
+    d.activation_scale = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::FloatAttr>("quant.weight_scale"))
+    d.weight_scale = a.getValueAsDouble();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>("quant.activation_zero_point"))
+    d.activation_zero_point = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>("quant.weight_zero_point"))
+    d.weight_zero_point = a.getInt();
   d.policy_id = strOp(op, "quant.policy_id");
   d.selection_reason = strOp(op, "quant.selection_reason");
   if (auto a = op->getAttrOfType<mlir::IntegerAttr>("quant.group_size"))
@@ -1397,6 +1572,35 @@ ExecutionPlanBuilder::attrToPerOpQuantDecision(mlir::Operation* op, int opIndex)
     for (mlir::Attribute elem : arr)
       if (auto st = mlir::dyn_cast<mlir::StringAttr>(elem))
         d.rejected_candidate_reasons.push_back(st.getValue().str());
+  if (auto arr = op->getAttrOfType<mlir::ArrayAttr>("quant.execution_stages")) {
+    for (mlir::Attribute elem : arr) {
+      auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+      if (!dict)
+        continue;
+      QuantizedExecutionStage stage;
+      stage.stage_id = dictStr(dict, "stage_id");
+      stage.op = dictStr(dict, "op");
+      if (auto deps =
+              mlir::dyn_cast_if_present<mlir::ArrayAttr>(dict.get("dependency_ids")))
+        stage.dependency_ids = stringArrayAttr(deps);
+      stage.produces = dictStr(dict, "produces");
+      stage.kernel_id = dictStr(dict, "kernel_id");
+      stage.artifact_ref = dictStr(dict, "artifact_ref");
+      stage.artifact_sha256 = dictStr(dict, "artifact_sha256");
+      stage.packed_layout = dictStr(dict, "packed_layout");
+      stage.fused_postprocess = dictStr(dict, "fused_postprocess");
+      stage.scale = dictFloat(dict, "scale");
+      stage.zero_point = dictInt(dict, "zero_point");
+      stage.clamp_min = dictInt(dict, "clamp_min");
+      stage.clamp_max = dictInt(dict, "clamp_max");
+      stage.rounding_mode = dictStr(dict, "rounding_mode");
+      stage.source_dtype = dictStr(dict, "source_dtype");
+      stage.destination_dtype = dictStr(dict, "destination_dtype");
+      stage.binary_sha256 = dictStr(dict, "binary_sha256");
+      if (!stage.stage_id.empty())
+        d.execution_stages.push_back(std::move(stage));
+    }
+  }
 
   d.meta.reason = strOp(op, "quant.decision_reason");
 

@@ -158,6 +158,62 @@ static llvm::json::Object serializeQuantizationDecision(const QuantizationDecisi
     obj["required_backend_capability"] = d.required_backend_capability;
   if (!d.required_kernel_capability.empty())
     obj["required_kernel_capability"] = d.required_kernel_capability;
+  if (!d.calibration_artifact_ref.empty())
+    obj["calibration_artifact_ref"] = d.calibration_artifact_ref;
+  if (!d.calibration_artifact_id.empty())
+    obj["calibration_artifact_id"] = d.calibration_artifact_id;
+  if (!d.calibration_artifact_sha256.empty())
+    obj["calibration_artifact_sha256"] = d.calibration_artifact_sha256;
+  if (!d.packed_weight_artifact_ref.empty())
+    obj["packed_weight_artifact_ref"] = d.packed_weight_artifact_ref;
+  if (!d.packed_weight_artifact_id.empty())
+    obj["packed_weight_artifact_id"] = d.packed_weight_artifact_id;
+  if (!d.packed_weight_sha256.empty())
+    obj["packed_weight_sha256"] = d.packed_weight_sha256;
+  if (!d.source_weight_sha256.empty())
+    obj["source_weight_sha256"] = d.source_weight_sha256;
+  if (!d.packed_layout.empty())
+    obj["packed_layout"] = d.packed_layout;
+  if (!d.packing_scheme.empty())
+    obj["packing_scheme"] = d.packing_scheme;
+  if (d.kernel_requires_packed_weight)
+    obj["kernel_requires_packed_weight"] = d.kernel_requires_packed_weight;
+  if (!d.selected_complete_candidate_id.empty())
+    obj["selected_complete_candidate_id"] = d.selected_complete_candidate_id;
+  if (!d.codegen_target_id.empty())
+    obj["codegen_target_id"] = d.codegen_target_id;
+  if (!d.target_architecture.empty())
+    obj["target_architecture"] = d.target_architecture;
+  if (!d.target_microarchitecture.empty())
+    obj["target_microarchitecture"] = d.target_microarchitecture;
+  if (!d.required_isa_features.empty()) {
+    llvm::json::Array arr;
+    for (const auto &v : d.required_isa_features) arr.push_back(v);
+    obj["required_isa_features"] = std::move(arr);
+  }
+  if (!d.compiler_flags.empty()) {
+    llvm::json::Array arr;
+    for (const auto &v : d.compiler_flags) arr.push_back(v);
+    obj["compiler_flags"] = std::move(arr);
+  }
+  if (!d.binary_sha256.empty())
+    obj["binary_sha256"] = d.binary_sha256;
+  if (!d.measurement_artifact_ref.empty())
+    obj["measurement_artifact_ref"] = d.measurement_artifact_ref;
+  if (!d.build_manifest_ref.empty())
+    obj["build_manifest_ref"] = d.build_manifest_ref;
+  if (!d.workload_id.empty())
+    obj["workload_id"] = d.workload_id;
+  if (!d.activation_granularity.empty())
+    obj["activation_granularity"] = d.activation_granularity;
+  if (!d.weight_granularity.empty())
+    obj["weight_granularity"] = d.weight_granularity;
+  if (d.activation_scale > 0.0)
+    obj["activation_scale"] = d.activation_scale;
+  if (d.weight_scale > 0.0)
+    obj["weight_scale"] = d.weight_scale;
+  obj["activation_zero_point"] = d.activation_zero_point;
+  obj["weight_zero_point"] = d.weight_zero_point;
   if (!d.policy_id.empty())
     obj["policy_id"] = d.policy_id;
   if (!d.selection_reason.empty())
@@ -181,6 +237,47 @@ static llvm::json::Object serializeQuantizationDecision(const QuantizationDecisi
     obj["op_type"] = d.op_type;
   if (!d.quantized_model_artifact_ref.empty())
     obj["quantized_model_artifact_ref"] = d.quantized_model_artifact_ref;
+  if (!d.execution_stages.empty()) {
+    llvm::json::Array stages;
+    for (const auto &stage : d.execution_stages) {
+      llvm::json::Object s;
+      s["stage_id"] = stage.stage_id;
+      s["op"] = stage.op;
+      llvm::json::Array deps;
+      for (const auto &dep : stage.dependency_ids)
+        deps.push_back(dep);
+      s["dependency_ids"] = std::move(deps);
+      if (!stage.produces.empty())
+        s["produces"] = stage.produces;
+      if (!stage.kernel_id.empty())
+        s["kernel_id"] = stage.kernel_id;
+      if (!stage.artifact_ref.empty())
+        s["artifact_ref"] = stage.artifact_ref;
+      if (!stage.artifact_sha256.empty())
+        s["artifact_sha256"] = stage.artifact_sha256;
+      if (!stage.packed_layout.empty())
+        s["packed_layout"] = stage.packed_layout;
+      if (!stage.fused_postprocess.empty())
+        s["fused_postprocess"] = stage.fused_postprocess;
+      if (stage.scale > 0.0)
+        s["scale"] = stage.scale;
+      s["zero_point"] = stage.zero_point;
+      if (stage.clamp_min || stage.clamp_max) {
+        s["clamp_min"] = stage.clamp_min;
+        s["clamp_max"] = stage.clamp_max;
+      }
+      if (!stage.rounding_mode.empty())
+        s["rounding_mode"] = stage.rounding_mode;
+      if (!stage.source_dtype.empty())
+        s["source_dtype"] = stage.source_dtype;
+      if (!stage.destination_dtype.empty())
+        s["destination_dtype"] = stage.destination_dtype;
+      if (!stage.binary_sha256.empty())
+        s["binary_sha256"] = stage.binary_sha256;
+      stages.push_back(std::move(s));
+    }
+    obj["execution_stages"] = std::move(stages);
+  }
   return obj;
 }
 
@@ -229,6 +326,65 @@ static llvm::json::Object serializeFallbackDecision(const FallbackDecision &d) {
   for (const auto &p : d.tried_paths)
     tried.push_back(p);
   obj["tried_paths"] = std::move(tried);
+  return obj;
+}
+
+static llvm::json::Object
+serializeMemoryPlacementPlan(const MemoryPlacementPlan &mp) {
+  llvm::json::Object obj;
+  obj["status"] = mp.status;
+  obj["compute_unit"] = mp.compute_unit;
+  obj["selected_memory_space"] = mp.selected_memory_space;
+  obj["input_tile_bytes"] = mp.input_tile_bytes;
+  obj["weight_tile_bytes"] = mp.weight_tile_bytes;
+  obj["output_tile_bytes"] = mp.output_tile_bytes;
+  obj["scratch_bytes"] = mp.scratch_bytes;
+  obj["padding_bytes"] = mp.padding_bytes;
+  obj["single_buffer_bytes"] = mp.single_buffer_bytes;
+  obj["additional_double_buffer_bytes"] =
+      mp.additional_double_buffer_bytes;
+  obj["total_required_local_memory_bytes"] =
+      mp.total_required_local_memory_bytes;
+  if (!mp.rejection_reason.empty())
+    obj["rejection_reason"] = mp.rejection_reason;
+  obj["truth_boundary"] = mp.truth_boundary;
+
+  llvm::json::Array placements;
+  for (const auto &bp : mp.buffer_placements) {
+    llvm::json::Object b;
+    b["buffer_id"] = bp.buffer_id;
+    b["role"] = bp.role;
+    b["memory_space"] = bp.memory_space;
+    b["byte_count"] = bp.byte_count;
+    b["alignment"] = bp.alignment;
+    placements.push_back(std::move(b));
+  }
+  obj["buffer_placements"] = std::move(placements);
+
+  llvm::json::Array transfers;
+  for (const auto &transfer : mp.transfer_operations) {
+    llvm::json::Object t;
+    t["transfer_id"] = transfer.transfer_id;
+    t["source_buffer"] = transfer.source_buffer;
+    t["destination_buffer"] = transfer.destination_buffer;
+    t["source_memory_space"] = transfer.source_memory_space;
+    t["destination_memory_space"] = transfer.destination_memory_space;
+    t["byte_count"] = transfer.byte_count;
+    t["alignment"] = transfer.alignment;
+    t["mode"] = transfer.mode;
+    llvm::json::Array deps;
+    for (const auto &dep : transfer.dependency_ids)
+      deps.push_back(dep);
+    t["dependency_ids"] = std::move(deps);
+    t["completion_token"] = transfer.completion_token;
+    transfers.push_back(std::move(t));
+  }
+  obj["transfer_operations"] = std::move(transfers);
+
+  llvm::json::Array computeDeps;
+  for (const auto &dep : mp.compute_dependency_ids)
+    computeDeps.push_back(dep);
+  obj["compute_dependency_ids"] = std::move(computeDeps);
   return obj;
 }
 
@@ -315,6 +471,12 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     tpObj["truth_boundary"] = tp.truth_boundary;
     obj["tile_plan"] = std::move(tpObj);
   }
+  // Slice 2 memory placement and transfer contract. This block is a
+  // runtime-consumable contract: consumers validate it instead of inventing
+  // buffer placement or transfer ordering.
+  if (b.memory_placement)
+    obj["memory_placement"] =
+        serializeMemoryPlacementPlan(*b.memory_placement);
   // Concrete runtime-kernel contract selection
   // (kernel_selection_contract_v1). A selected kernel is a contract handed
   // to the runtime — not a claim of runtime execution or measured

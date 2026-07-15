@@ -79,6 +79,10 @@ public:
                                 "fp16", "per_tensor", 0, false,
                                 "quantization.scheme.fp16",
                                 "quant_kernel.fp16"));
+    out.push_back(makeCandidate(ctx, "int8_static_symmetric", "int8", "int8",
+                                "int32", "fp32", "per_tensor", 0, true,
+                                "quantization.scheme.int8_static_symmetric",
+                                "quant_kernel.int8_static_symmetric"));
     out.push_back(makeCandidate(ctx, "int8_static", "int8", "int8",
                                 "int32", "fp32", "per_channel", 0, true,
                                 "quantization.scheme.int8_static",
@@ -210,8 +214,8 @@ private:
         policy.rejectedCandidates.push_back({candidate.candidateId,
                                              candidate.feasibility.reason});
     }
-    static const char *priority[] = {"int4_weight_only", "int8_static",
-                                     "fp16", "fp32_baseline"};
+    static const char *priority[] = {"int4_weight_only", "int8_static_symmetric",
+                                     "int8_static", "fp16", "fp32_baseline"};
     for (const char *scheme : priority) {
       for (const auto &candidate : candidates) {
         if (candidate.quantization.present && candidate.quantization.scheme == scheme &&

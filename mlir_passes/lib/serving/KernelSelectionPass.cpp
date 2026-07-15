@@ -129,6 +129,22 @@ static bool inList(const std::vector<std::string>& list,
   return false;
 }
 
+static std::string canonicalDtype(const std::string &dtype) {
+  if (dtype == "f32") return "fp32";
+  if (dtype == "f16") return "fp16";
+  if (dtype == "i8") return "int8";
+  if (dtype == "i4") return "int4";
+  return dtype;
+}
+
+static bool dtypeInList(const std::vector<std::string>& list,
+                        const std::string& val) {
+  std::string canonical = canonicalDtype(val);
+  for (const auto& e : list)
+    if (canonicalDtype(e) == canonical) return true;
+  return false;
+}
+
 // Planned context of one op, gathered from existing planning attrs.
 struct OpContext {
   std::string op_name;   // short name, e.g. "rmsnorm"
@@ -159,7 +175,7 @@ static MatchResult matchDescriptor(const DescriptorView& d,
     r.reason = "backend_mismatch";
     return r;
   }
-  if (!d.supported_dtypes.empty() && !inList(d.supported_dtypes, op.dtype)) {
+  if (!d.supported_dtypes.empty() && !dtypeInList(d.supported_dtypes, op.dtype)) {
     r.reason = "dtype_unsupported";
     return r;
   }
@@ -750,6 +766,7 @@ struct KernelSelectionPass : impl::KernelSelectionBase<KernelSelectionPass> {
         StringRef strat = a.getValue();
         if (strat == "weight_only_int8")     opCtx.quant_mode = "weight_only";
         else if (strat == "static_int8")     opCtx.quant_mode = "static_int8";
+        else if (strat == "fp32_baseline")   opCtx.quant_mode = "none";
       }
       if (auto a = op.getAttrOfType<StringAttr>("layout.effective_layout"))
         opCtx.layout = a.getValue().str();

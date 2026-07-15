@@ -73,6 +73,47 @@ struct GlobalDecisions {
 };
 
 // All decisions applicable to one op instance within a function.
+
+struct BufferPlacement {
+  std::string buffer_id;
+  std::string role;
+  std::string memory_space;
+  int64_t byte_count = 0;
+  int64_t alignment = 1;
+};
+
+struct TransferOperation {
+  std::string transfer_id;
+  std::string source_buffer;
+  std::string destination_buffer;
+  std::string source_memory_space;
+  std::string destination_memory_space;
+  int64_t byte_count = 0;
+  int64_t alignment = 1;
+  std::string mode;
+  std::vector<std::string> dependency_ids;
+  std::string completion_token;
+};
+
+struct MemoryPlacementPlan {
+  std::string status;
+  std::string compute_unit;
+  std::string selected_memory_space;
+  int64_t input_tile_bytes = 0;
+  int64_t weight_tile_bytes = 0;
+  int64_t output_tile_bytes = 0;
+  int64_t scratch_bytes = 0;
+  int64_t padding_bytes = 0;
+  int64_t single_buffer_bytes = 0;
+  int64_t additional_double_buffer_bytes = 0;
+  int64_t total_required_local_memory_bytes = 0;
+  std::vector<BufferPlacement> buffer_placements;
+  std::vector<TransferOperation> transfer_operations;
+  std::vector<std::string> compute_dependency_ids;
+  std::string rejection_reason;
+  std::string truth_boundary;
+};
+
 struct PerOpDecisionBundle {
   std::string op_name;
   std::string op_type;
@@ -110,6 +151,9 @@ struct PerOpDecisionBundle {
   // declares no supported_thread_schedules — existing P1B/P1C plans (no
   // thread schedules declared anywhere) stay byte-identical by default.
   std::optional<ThreadSchedule> thread_schedule;
+  // Slice 2 memory placement and transfer contract. Runtime consumes this
+  // exactly; absence means no compiler-owned memory plan was produced.
+  std::optional<MemoryPlacementPlan> memory_placement;
 };
 
 // ---------------------------------------------------------------------------

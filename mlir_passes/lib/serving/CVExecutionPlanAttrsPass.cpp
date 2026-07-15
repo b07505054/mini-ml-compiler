@@ -365,17 +365,22 @@ struct CVExecutionPlanAttrsPass
       setString(&op, "layout.truth_boundary",
                 "static_layout_from_ranked_tensor_contract_no_transform");
 
-      setString(&op, "quant.strategy", "none");
-      setString(&op, "quant.weight_dtype", dtype);
-      setString(&op, "quant.activation_dtype", dtype);
-      setString(&op, "quant.accumulation_dtype",
-                dtype == "f32" ? "f32" : "");
-      setString(&op, "quant.granularity", "not_applicable");
-      setString(&op, "quant.accuracy_risk", "none");
-      setString(&op, "quant.decision_reason",
-                "cv_phase24_no_quantization_configured");
-      setString(&op, "quant.truth_boundary",
-                "quantization_decision_none_no_calibration_no_quantized_execution");
+      // Slice 1: preserve a compiler-owned quantization candidate decision
+      // emitted earlier in the pipeline. This CV helper pass may fill legacy
+      // no-quant attrs only when no selected candidate exists.
+      if (!op.getAttrOfType<mlir::StringAttr>("quant.selected_candidate_id")) {
+        setString(&op, "quant.strategy", "none");
+        setString(&op, "quant.weight_dtype", dtype);
+        setString(&op, "quant.activation_dtype", dtype);
+        setString(&op, "quant.accumulation_dtype",
+                  dtype == "f32" ? "f32" : "");
+        setString(&op, "quant.granularity", "not_applicable");
+        setString(&op, "quant.accuracy_risk", "none");
+        setString(&op, "quant.decision_reason",
+                  "cv_phase24_no_quantization_configured");
+        setString(&op, "quant.truth_boundary",
+                  "quantization_decision_none_no_calibration_no_quantized_execution");
+      }
 
       setString(&op, "kernel.backend", backend);
       setString(&op, "kernel.decision_reason",

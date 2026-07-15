@@ -10,6 +10,42 @@
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
   },
+  "executorchRuntimeCapabilities": {
+    "schemaVersion": "slice3g.executorch_runtime_capabilities.v1",
+    "supportsExecuTorchRuntime": true,
+    "supportsXNNPACKDelegate": true,
+    "availableRuntimeArtifacts": ["executorch_xnnpack_runner"],
+    "maximumRuntimeThreads": 4,
+    "supportedExecuTorchCandidateVariants": [
+      "slice3g:executorch_xnnpack:fp32:none:t1:aarch64",
+      "slice3g:executorch_xnnpack:int8:pt2e_per_tensor_affine_per_channel_symmetric_axis0:t1:aarch64",
+      "slice3g:executorch_xnnpack:int8:pt2e_per_tensor_affine_per_channel_symmetric_axis0:t4:aarch64"
+    ],
+    "truthBoundary": "packaged ExecuTorch v1.3.1 XNNPACK runner and 1T/4T candidate variants validated on Raspberry Pi 5 in Slice 3F"
+  },
+  "cpuCodegenCapabilities": {
+    "schemaVersion": "slice3c.cpu_codegen_capabilities.v1",
+    "architecture": "aarch64",
+    "microarchitecture": "cortex-a76",
+    "isaFeatures": [
+      "asimd",
+      "asimddp"
+    ],
+    "vectorWidthBits": 128,
+    "supportsInt8DotProduct": true,
+    "supportedCompilerTargetFlags": [
+      "-O2",
+      "-O3",
+      "-mcpu=cortex-a76"
+    ],
+    "supportedKernelCapabilities": [
+      "quant_kernel.none",
+      "quant_kernel.int8_static_symmetric",
+      "quant_kernel.int8_static_symmetric.packed_b_transposed"
+      ,"runtime.executorch.xnnpack"
+    ],
+    "truthBoundary": "observed_on_raspberry_pi_5_via_lscpu_proc_cpuinfo_gcc_build_and_objdump_sdot_presence_slice3b1"
+  },
   "threadSchedulePolicy": {
     "path": "../thread_schedule_policies/raspberry_pi5_cortex_a76_p1d1_thread_policy.json",
     "expectedPolicyId": "raspberry_pi5_fused_matmul_bias_relu_thread_schedule_p1d1",

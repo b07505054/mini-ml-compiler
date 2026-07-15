@@ -25,6 +25,7 @@
 
 #include "serving/OpShapeFacts.h"
 #include "serving/ShapeCostModel.h"
+#include "serving/MemoryPlanning.h"
 #include "FusionPasses.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -40,6 +41,88 @@ namespace {
 
 #define GEN_PASS_DEF_TILEPLANNING
 #include "FusionPasses.h.inc"
+
+static DictionaryAttr dictAttr(MLIRContext *ctx,
+                               ArrayRef<NamedAttribute> fields) {
+  return DictionaryAttr::get(ctx, fields);
+}
+
+static void emitMemoryPlacementPlan(Operation &op, MLIRContext *ctx,
+                                    StringRef status,
+                                    StringRef computeUnit,
+                                    StringRef memorySpace,
+                                    const TileMemoryFootprint &fp,
+                                    bool acceleratorTransfers) {
+  auto S = [&](StringRef s) { return StringAttr::get(ctx, s); };
+  auto I = [&](int64_t v) { return IntegerAttr::get(IntegerType::get(ctx, 64), v); };
+  op.setAttr("memory_placement.status", S(status));
+  op.setAttr("memory_placement.compute_unit", S(computeUnit));
+  op.setAttr("memory_placement.selected_memory_space", S(memorySpace));
+  op.setAttr("memory_placement.input_tile_bytes", I(fp.inputTileBytes));
+  op.setAttr("memory_placement.weight_tile_bytes", I(fp.weightTileBytes));
+  op.setAttr("memory_placement.output_tile_bytes", I(fp.outputTileBytes));
+  op.setAttr("memory_placement.scratch_bytes", I(fp.scratchBytes));
+  op.setAttr("memory_placement.padding_bytes", I(fp.paddingBytes));
+  op.setAttr("memory_placement.single_buffer_bytes", I(fp.singleBufferBytes));
+  op.setAttr("memory_placement.additional_double_buffer_bytes",
+             I(fp.additionalDoubleBufferBytes));
+  op.setAttr("memory_placement.total_required_local_memory_bytes",
+             I(fp.totalRequiredLocalMemoryBytes));
+  op.setAttr("memory_placement.truth_boundary",
+             S("memory_placement_static_compiler_contract_not_runtime_allocation"));
+
+  SmallVector<Attribute> placements;
+  auto placement = [&](StringRef id, StringRef role, int64_t bytes) {
+    SmallVector<NamedAttribute> fields;
+    fields.emplace_back(S("alignment"), I(64));
+    fields.emplace_back(S("buffer_id"), S(id));
+    fields.emplace_back(S("byte_count"), I(bytes));
+    fields.emplace_back(S("memory_space"), S(memorySpace));
+    fields.emplace_back(S("role"), S(role));
+    placements.push_back(dictAttr(ctx, fields));
+  };
+  placement("input_tile", "input", fp.inputTileBytes);
+  placement("weight_tile", "weight", fp.weightTileBytes);
+  placement("output_tile", "output", fp.outputTileBytes);
+  placement("scratch", "scratch", fp.scratchBytes);
+  op.setAttr("memory_placement.buffer_placements",
+             ArrayAttr::get(ctx, placements));
+
+  SmallVector<Attribute> transfers;
+  SmallVector<Attribute> computeDeps;
+  if (acceleratorTransfers) {
+    auto transfer = [&](StringRef id, StringRef srcBuf, StringRef dstBuf,
+                        StringRef srcSpace, StringRef dstSpace, int64_t bytes,
+                        ArrayRef<StringRef> deps, StringRef token) {
+      SmallVector<Attribute> depAttrs;
+      for (StringRef dep : deps) depAttrs.push_back(S(dep));
+      SmallVector<NamedAttribute> fields;
+      fields.emplace_back(S("alignment"), I(64));
+      fields.emplace_back(S("byte_count"), I(bytes));
+      fields.emplace_back(S("completion_token"), S(token));
+      fields.emplace_back(S("dependency_ids"), ArrayAttr::get(ctx, depAttrs));
+      fields.emplace_back(S("destination_buffer"), S(dstBuf));
+      fields.emplace_back(S("destination_memory_space"), S(dstSpace));
+      fields.emplace_back(S("mode"), S("synchronous"));
+      fields.emplace_back(S("source_buffer"), S(srcBuf));
+      fields.emplace_back(S("source_memory_space"), S(srcSpace));
+      fields.emplace_back(S("transfer_id"), S(id));
+      transfers.push_back(dictAttr(ctx, fields));
+    };
+    transfer("transfer_input_to_local", "input", "input_tile", "host", memorySpace,
+             fp.inputTileBytes, {}, "input_ready");
+    transfer("transfer_weight_to_local", "weight", "weight_tile", "host", memorySpace,
+             fp.weightTileBytes, {}, "weight_ready");
+    transfer("transfer_output_to_host", "output_tile", "output", memorySpace, "host",
+             fp.outputTileBytes, {"compute_complete"}, "output_ready");
+    computeDeps.push_back(S("input_ready"));
+    computeDeps.push_back(S("weight_ready"));
+  }
+  op.setAttr("memory_placement.transfer_operations",
+             ArrayAttr::get(ctx, transfers));
+  op.setAttr("memory_placement.compute_dependency_ids",
+             ArrayAttr::get(ctx, computeDeps));
+}
 
 struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
   void runOnOperation() override {
@@ -78,6 +161,29 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
         op.setAttr("tile.plan.status", S("deferred_missing_memory_hierarchy"));
         op.setAttr("tile.plan.deferred_reason",
                    S("local_memory_bytes_not_declared_in_target_profile"));
+        ShapeFacts facts = computeShapeFacts(op);
+        int64_t actBits = dtypeBits(resolveOpActivationDtype(op, effectiveDtype));
+        int64_t weightBits = actBits;
+        if (auto a = op.getAttrOfType<StringAttr>("quant.weight_dtype"))
+          if (dtypeBits(a.getValue().str()) > 0) weightBits = dtypeBits(a.getValue().str());
+        int64_t outBits = actBits;
+        if (auto a = op.getAttrOfType<StringAttr>("quant.output_dtype"))
+          if (dtypeBits(a.getValue().str()) > 0) outBits = dtypeBits(a.getValue().str());
+        if (facts.usable() && actBits > 0 && weightBits > 0 && outBits > 0) {
+          TileMemoryRequest req;
+          req.tileM = facts.m;
+          req.tileN = facts.n;
+          req.tileK = facts.k;
+          req.activationDtype = actBits == 32 ? "fp32" : (actBits == 16 ? "fp16" : "int8");
+          req.weightDtype = weightBits == 32 ? "fp32" : (weightBits == 16 ? "fp16" : "int8");
+          req.outputDtype = outBits == 32 ? "fp32" : (outBits == 16 ? "fp16" : "int8");
+          req.alignment = 64;
+          TileMemoryFootprint fp = calculateTileMemoryFootprint(req);
+          if (fp.ok)
+            emitMemoryPlacementPlan(op, ctx, "selected", "cpu",
+                                    "cpu_visible_host_memory", fp,
+                                    false);
+        }
         continue;
       }
 
@@ -131,6 +237,20 @@ struct TilePlanningPass : impl::TilePlanningBase<TilePlanningPass> {
       op.setAttr("tile.plan.double_buffer_fits",
                  BoolAttr::get(ctx, plan.double_buffer_fits));
       op.setAttr("tile.plan.staging_capability", S(mh.stagingCapability()));
+      TileMemoryRequest req;
+      req.tileM = plan.tile_m;
+      req.tileN = plan.tile_n;
+      req.tileK = plan.tile_k;
+      req.activationDtype = actBits == 32 ? "fp32" : (actBits == 16 ? "fp16" : "int8");
+      req.weightDtype = weightBits == 32 ? "fp32" : (weightBits == 16 ? "fp16" : "int8");
+      req.outputDtype = req.activationDtype;
+      req.alignment = 64;
+      req.doubleBufferInputAndWeight = plan.double_buffer_fits &&
+          (mh.supports_async_copy || mh.supports_dma);
+      TileMemoryFootprint fp = calculateTileMemoryFootprint(req);
+      if (fp.ok)
+        emitMemoryPlacementPlan(op, ctx, "selected", "synthetic_accelerator",
+                                "local_sram", fp, true);
     }
   }
 };

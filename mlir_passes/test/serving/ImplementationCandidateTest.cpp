@@ -1,5 +1,7 @@
 #include "serving/ImplementationCandidate.h"
+#include "serving/MemoryPlanning.h"
 #include "serving/PortableCPUProvider.h"
+#include "serving/QuantizationCandidateProvider.h"
 #include "serving/XNNPACKCandidateProvider.h"
 
 #include "mlir/IR/MLIRContext.h"
@@ -7,6 +9,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -459,6 +462,222 @@ int main() {
       xnnProvider.enumerateCandidates(wrongXnnDtype);
   assert(wrongXnnDtypeResult.candidates.empty());
   assert(wrongXnnDtypeResult.diagnostics[0].reason == "wrong_dtype");
+
+
+
+  QuantizationCandidateProvider qprovider;
+  assert(qprovider.providerId() == "quantization_candidate_provider");
+  QuantizationCapabilityContext qctx;
+  qctx.semanticTargetRef = "matmul";
+  qctx.scopeKind = CandidateScopeKind::Operator;
+  qctx.targetProfileId = "synthetic-quant-slice1";
+  qctx.backend = "synthetic_cpu";
+  qctx.kernelId = "synthetic_matmul_fp32";
+  qctx.supportedQuantizationSchemes = {"fp16", "int8_static", "int4_weight_only"};
+  qctx.supportedActivationDtypes = {"fp32", "fp16", "int8"};
+  qctx.supportedWeightDtypes = {"fp32", "fp16", "int8", "int4"};
+  qctx.supportedAccumulatorDtypes = {"fp32", "int32"};
+  qctx.supportedOutputDtypes = {"fp32", "fp16"};
+  qctx.supportedGranularities = {"per_tensor", "per_channel", "per_group"};
+  qctx.supportsPerChannel = true;
+  qctx.supportedGroupSizes = {64};
+  qctx.requiredKernelCapabilities = {"quant_kernel.none", "quant_kernel.fp16", "quant_kernel.int8_static"};
+  qctx.runtimeKernelQuantModes = {"none"};
+  qctx.runtimeKernelDtypes = {"f32"};
+
+  QuantizationProviderResult qres = qprovider.enumerateAndSelect(qctx);
+  assert(qres.candidates.size() == 4);
+  bool sawFp32 = false, sawFp16 = false, sawInt8RejectCalibration = false;
+  bool sawInt4RejectGroup = false;
+  for (const auto &qcand : qres.candidates) {
+    if (qcand.quantization.scheme == "fp32_baseline") {
+      sawFp32 = true;
+      assert(qcand.feasibility.status == CandidateFeasibilityStatus::Feasible);
+    }
+    if (qcand.quantization.scheme == "fp16") {
+      sawFp16 = true;
+      assert(qcand.feasibility.status == CandidateFeasibilityStatus::Feasible);
+    }
+    if (qcand.quantization.scheme == "int8_static") {
+      assert(qcand.quantization.calibrationRequired);
+      sawInt8RejectCalibration =
+          qcand.feasibility.reason == "requires_unavailable_calibration";
+    }
+    if (qcand.quantization.scheme == "int4_weight_only")
+      sawInt4RejectGroup = qcand.feasibility.reason == "invalid_group_size";
+  }
+  assert(sawFp32 && sawFp16 && sawInt8RejectCalibration && sawInt4RejectGroup);
+  assert(!qres.policy.selectedCandidateId.empty());
+  const ImplementationCandidate *qselected = nullptr;
+  for (const auto &qcand : qres.candidates)
+    if (qcand.candidateId == qres.policy.selectedCandidateId)
+      qselected = &qcand;
+  assert(qselected && qselected->quantization.scheme == "fp16");
+  assert(qres.policy.rejectedCandidates.size() == 2);
+
+  QuantizationCapabilityContext qctxCalibrated = qctx;
+  qctxCalibrated.calibrationAvailableSchemes = {"int8_static"};
+  QuantizationProviderResult qresCalibrated =
+      qprovider.enumerateAndSelect(qctxCalibrated);
+  const ImplementationCandidate *qselectedCalibrated = nullptr;
+  for (const auto &qcand : qresCalibrated.candidates)
+    if (qcand.candidateId == qresCalibrated.policy.selectedCandidateId)
+      qselectedCalibrated = &qcand;
+  assert(qselectedCalibrated &&
+         qselectedCalibrated->quantization.scheme == "int8_static");
+
+  QuantizationCapabilityContext qctxInt4 = qctxCalibrated;
+  qctxInt4.supportedGroupSizes = {128};
+  qctxInt4.requiredKernelCapabilities.push_back("quant_kernel.int4_weight_only");
+  qctxInt4.calibrationAvailableSchemes.push_back("int4_weight_only");
+  QuantizationProviderResult qresInt4 = qprovider.enumerateAndSelect(qctxInt4);
+  const ImplementationCandidate *qselectedInt4 = nullptr;
+  for (const auto &qcand : qresInt4.candidates)
+    if (qcand.candidateId == qresInt4.policy.selectedCandidateId)
+      qselectedInt4 = &qcand;
+  assert(qselectedInt4 &&
+         qselectedInt4->quantization.scheme == "int4_weight_only");
+
+  DictionaryAttr encodedQuant =
+      encodeImplementationCandidate(&ctx, *qselectedInt4);
+  ImplementationCandidate decodedQuant =
+      decodeImplementationCandidate(encodedQuant, "test_provider");
+  assert(decodedQuant.quantization.present);
+  assert(decodedQuant.quantization.scheme == "int4_weight_only");
+  assert(decodedQuant.quantization.groupSize == 128);
+  assert(decodedQuant.quantization.requiredKernelCapability ==
+         "quant_kernel.int4_weight_only");
+
+  assert(dtypeByteWidth("fp32") == 4);
+  assert(dtypeByteWidth("f32") == 4);
+  assert(dtypeByteWidth("fp16") == 2);
+  assert(dtypeByteWidth("bf16") == 2);
+  assert(dtypeByteWidth("int8") == 1);
+  assert(dtypeByteWidth("int4") == 1);
+  assert(dtypeByteWidth("unknown_dtype") == 0);
+
+  TileMemoryRequest memReq;
+  memReq.tileM = 32;
+  memReq.tileN = 64;
+  memReq.tileK = 16;
+  memReq.activationDtype = "fp32";
+  memReq.weightDtype = "fp32";
+  memReq.outputDtype = "fp32";
+  memReq.alignment = 64;
+  TileMemoryFootprint fp = calculateTileMemoryFootprint(memReq);
+  assert(fp.ok);
+  assert(fp.inputTileBytes == 32 * 16 * 4);
+  assert(fp.weightTileBytes == 16 * 64 * 4);
+  assert(fp.outputTileBytes == 32 * 64 * 4);
+  assert(fp.scratchBytes == 0);
+  assert(fp.paddingBytes == 0);
+  assert(fp.singleBufferBytes ==
+         fp.inputTileBytes + fp.weightTileBytes + fp.outputTileBytes);
+  assert(fp.additionalDoubleBufferBytes == 0);
+  assert(fp.totalRequiredLocalMemoryBytes == fp.singleBufferBytes);
+
+  TileMemoryRequest paddedReq;
+  paddedReq.tileM = 3;
+  paddedReq.tileN = 5;
+  paddedReq.tileK = 7;
+  paddedReq.activationDtype = "fp16";
+  paddedReq.weightDtype = "int8";
+  paddedReq.outputDtype = "fp32";
+  paddedReq.scratchBytes = 13;
+  paddedReq.alignment = 16;
+  paddedReq.doubleBufferInputAndWeight = true;
+  TileMemoryFootprint padded = calculateTileMemoryFootprint(paddedReq);
+  assert(padded.ok);
+  assert(padded.inputTileBytes == 3 * 7 * 2);
+  assert(padded.weightTileBytes == 7 * 5);
+  assert(padded.outputTileBytes == 3 * 5 * 4);
+  assert(padded.scratchBytes == 13);
+  assert(padded.singleBufferBytes == 48 + 48 + 64 + 16);
+  assert(padded.additionalDoubleBufferBytes == 48 + 48);
+  assert(padded.totalRequiredLocalMemoryBytes == 272);
+
+  TileMemoryRequest overflowReq = memReq;
+  overflowReq.tileM = std::numeric_limits<int64_t>::max();
+  overflowReq.tileN = std::numeric_limits<int64_t>::max();
+  overflowReq.tileK = std::numeric_limits<int64_t>::max();
+  TileMemoryFootprint overflowFp =
+      calculateTileMemoryFootprint(overflowReq);
+  assert(!overflowFp.ok);
+  assert(overflowFp.reason == "byte_size_overflow");
+
+  MemoryFeasibilityContext memCtx;
+  memCtx.computeUnit.identifier = "synthetic_accelerator";
+  memCtx.computeUnit.kind = "accelerator";
+  memCtx.computeUnit.accessibleMemorySpaces = {"local_sram"};
+  memCtx.requiredMemorySpace.identifier = "local_sram";
+  memCtx.requiredMemorySpace.kind = "local_sram";
+  memCtx.requiredMemorySpace.accessibleComputeUnits =
+      {"synthetic_accelerator"};
+  memCtx.requiredMemorySpace.requiredAlignment = 1;
+  memCtx.requiredMemorySpace.capacityKnown = true;
+  memCtx.requiredMemorySpace.compilerManagedCapacity = true;
+
+  MemoryFeasibilityContext smallMemCtx = memCtx;
+  smallMemCtx.requiredMemorySpace.capacityBytes =
+      fp.totalRequiredLocalMemoryBytes - 1;
+  CandidateFeasibilitySummary smallMem =
+      evaluateMemoryFeasibility(fp, smallMemCtx);
+  assert(smallMem.status == CandidateFeasibilityStatus::Rejected);
+  assert(smallMem.reason == "insufficient_memory_capacity");
+
+  MemoryFeasibilityContext exactMemCtx = memCtx;
+  exactMemCtx.requiredMemorySpace.capacityBytes =
+      fp.totalRequiredLocalMemoryBytes;
+  CandidateFeasibilitySummary exactMem =
+      evaluateMemoryFeasibility(fp, exactMemCtx);
+  assert(exactMem.status == CandidateFeasibilityStatus::Feasible);
+
+  MemoryFeasibilityContext largeMemCtx = memCtx;
+  largeMemCtx.requiredMemorySpace.capacityBytes =
+      fp.totalRequiredLocalMemoryBytes + 1;
+  CandidateFeasibilitySummary largeMem =
+      evaluateMemoryFeasibility(fp, largeMemCtx);
+  assert(largeMem.status == CandidateFeasibilityStatus::Feasible);
+
+  MemoryFeasibilityContext missingSpaceCtx = memCtx;
+  missingSpaceCtx.requiredMemorySpace.identifier.clear();
+  CandidateFeasibilitySummary missingSpace =
+      evaluateMemoryFeasibility(fp, missingSpaceCtx);
+  assert(missingSpace.status == CandidateFeasibilityStatus::Rejected);
+  assert(missingSpace.reason == "missing_memory_space");
+
+  MemoryFeasibilityContext inaccessibleCtx = memCtx;
+  inaccessibleCtx.computeUnit.accessibleMemorySpaces = {"host"};
+  CandidateFeasibilitySummary inaccessible =
+      evaluateMemoryFeasibility(fp, inaccessibleCtx);
+  assert(inaccessible.status == CandidateFeasibilityStatus::Rejected);
+  assert(inaccessible.reason == "inaccessible_memory_space");
+
+  MemoryFeasibilityContext invalidMultipleCtx = largeMemCtx;
+  invalidMultipleCtx.requiredTileMultipleM = 64;
+  CandidateFeasibilitySummary invalidMultiple =
+      evaluateMemoryFeasibility(fp, invalidMultipleCtx);
+  assert(invalidMultiple.status == CandidateFeasibilityStatus::Rejected);
+  assert(invalidMultiple.reason == "invalid_tile_dimension_multiple");
+
+  MemoryFeasibilityContext missingTransferCtx = largeMemCtx;
+  missingTransferCtx.requiresHostToLocalTransfers = true;
+  missingTransferCtx.hostMemorySpace = "host";
+  CandidateFeasibilitySummary missingTransfer =
+      evaluateMemoryFeasibility(fp, missingTransferCtx);
+  assert(missingTransfer.status == CandidateFeasibilityStatus::Rejected);
+  assert(missingTransfer.reason == "missing_transfer_path");
+
+  MemoryFeasibilityContext transferCtx = missingTransferCtx;
+  transferCtx.transferPaths = {
+      {"synthetic_h2l", "host", "local_sram", "synthetic_copy", 64,
+       true, false, false, 1},
+      {"synthetic_l2h", "local_sram", "host", "synthetic_copy", 64,
+       true, false, false, 1},
+  };
+  CandidateFeasibilitySummary transferOk =
+      evaluateMemoryFeasibility(fp, transferCtx);
+  assert(transferOk.status == CandidateFeasibilityStatus::Feasible);
 
   std::puts("ImplementationCandidateTest passed");
   return 0;

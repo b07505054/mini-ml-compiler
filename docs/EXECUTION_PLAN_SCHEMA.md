@@ -29,6 +29,38 @@ Key invariants:
   quantization × declared hardware profile). Ops with unknown kinds or
   dynamic shapes have no `shape_cost` — they honestly fall back to the V1
   fixed model.
+
+## Executable Slice 3 paths
+
+For the validated fused Linear/MatMul + Bias + ReLU workload, ExecutionPlan is
+an exact executable contract rather than quantization metadata alone.
+
+The custom portable CPU path orders:
+
+```text
+quantize_activation
+load_packed_weight
+execute_int8_kernel
+return_fp32_output
+```
+
+It fixes calibration and packed-weight identities, scale/zero point, packed
+layout, kernel, target, ISA requirements, binary hash, and selection evidence.
+
+An ExecuTorch/XNNPACK candidate instead orders:
+
+```text
+load_executorch_program
+bind_input
+execute_xnnpack_delegate
+return_output
+```
+
+It fixes runtime/delegate, precision, quantization scheme, thread count,
+runner and `.pte` hashes, workload manifest, delegation proof, and measurement
+artifact. The runtime validates and routes these fields without backend or
+precision re-selection, repacking, recalibration, or silent fallback.
+
 - Per-op bundles may carry a `tile_plan` object (tile_planning_v1,
   `TilePlanningPass`): **memory-hierarchy-aware static planning** for
   matmul-like ops against the declared local memory capacity
@@ -84,8 +116,10 @@ Key invariants:
   Named distinctly from the existing per-op `quantization` object (the
   `QuantizationStrategyPlanningPass` output), which is unchanged. Unknown
   metadata (granularity, group size, axis, symmetric/asymmetric, scale,
-  zero point) is omitted, never defaulted. No calibration, measured
-  accuracy, or quantized execution is claimed.
+  zero point) is omitted, never defaulted. This statement applies to that
+  optional generic serving-planning object. Slice 3 executable plans instead
+  carry explicit calibration, scale/zero point, packed artifacts, measured
+  correctness, and quantized execution identities as described above.
 - Plans may carry an optional `cv_extension` object when the input module was
   annotated by the real upstream-MLIR CV path. This extension is absent for
   Qwen/LLM plans. It records model family, function name, target profile id,

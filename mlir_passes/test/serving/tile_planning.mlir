@@ -34,6 +34,17 @@
 // CHECK-SAME: tile.plan.staging_capability = "async_copy_declared"
 // CHECK-SAME: tile.plan.status = "planned"
 // CHECK-SAME: tile.plan.truth_boundary = "tile_planning_static_local_memory_model_not_measured_not_codegen"
+// CHECK-SAME: memory_placement.compute_unit = "synthetic_accelerator"
+// CHECK-SAME: memory_placement.selected_memory_space = "local_sram"
+// CHECK-SAME: memory_placement.status = "selected"
+// CHECK-SAME: memory_placement.single_buffer_bytes = 49152
+// CHECK-SAME: memory_placement.additional_double_buffer_bytes = 16384
+// CHECK-SAME: memory_placement.total_required_local_memory_bytes = 65536
+// CHECK-SAME: memory_placement.transfer_operations
+// CHECK-SAME: transfer_input_to_local
+// CHECK-SAME: transfer_weight_to_local
+// CHECK-SAME: transfer_output_to_host
+// CHECK-SAME: compute_complete
 // CHECK: "compute.relu"
 // CHECK-NOT: tile.plan
 
@@ -100,13 +111,15 @@ module attributes {
 // so the exported plan stays valid and explains itself. The elementwise op
 // still gets no attrs (op-kind gate precedes the memory gate).
 //
-// The single CHECK-SAME below matches the op's full attr dict contiguously,
-// proving exactly these three tile.plan attrs exist — no invented shape,
-// footprint, or staging fields.
-//
 // CHECK-LABEL: func.func @missing_memory_hierarchy_defers
 // CHECK: "compute.matmul"
-// CHECK-SAME: {tile.plan.deferred_reason = "local_memory_bytes_not_declared_in_target_profile", tile.plan.status = "deferred_missing_memory_hierarchy", tile.plan.truth_boundary = "tile_planning_static_local_memory_model_not_measured_not_codegen"}
+// CHECK-SAME: tile.plan.deferred_reason = "local_memory_bytes_not_declared_in_target_profile"
+// CHECK-SAME: tile.plan.status = "deferred_missing_memory_hierarchy"
+// CHECK-SAME: tile.plan.truth_boundary = "tile_planning_static_local_memory_model_not_measured_not_codegen"
+// CHECK-SAME: memory_placement.compute_unit = "cpu"
+// CHECK-SAME: memory_placement.selected_memory_space = "cpu_visible_host_memory"
+// CHECK-SAME: memory_placement.status = "selected"
+// CHECK-SAME: memory_placement.transfer_operations = []
 // CHECK: "compute.relu"
 // CHECK-NOT: tile.plan
 

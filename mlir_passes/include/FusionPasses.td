@@ -1151,6 +1151,35 @@ def HIRINT8OperatorSelection
   let constructor = "mlir::hir::createHIRINT8OperatorSelectionPass()";
 }
 
+def QuantizationMaterialization
+    : Pass<"quantization-materialization", "mlir::func::FuncOp"> {
+  let summary = "Materialize selected INT8 fused MatMul+Bias+ReLU decisions into explicit HIR Q/DQ";
+  let description = [{
+    Consumes an already-selected int8_static_symmetric packed-B decision on
+    hir.fused_matmul_bias_relu and rewrites the float op into explicit
+    hir.quantize, hir.load_quantized_weight, hir.qmatmul, hir.dequantize, and
+    hir.fused_qmatmul_bias_relu implementation IR. This pass does not choose
+    precision; missing selected artifacts are compilation errors for the
+    selected INT8 path.
+  }];
+  let constructor = "mlir::hir::createQuantizationMaterializationPass()";
+  let dependentDialects = ["mlir::hir::HIRDialect"];
+}
+
+def QuantizedKernelLowering
+    : Pass<"quantized-kernel-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower explicit quantized HIR to the selected portable CPU INT8 kernel contract";
+  let description = [{
+    Converts materialized hir.fused_qmatmul_bias_relu implementation IR into
+    hir.portable_cpu_int8_fused_matmul_bias_relu, preserving the selected
+    candidate, packed artifact, calibration artifact, codegen target, binary
+    identity, and explicit execution-stage dependency contract. This pass
+    consumes existing compiler decisions and never selects a kernel.
+  }];
+  let constructor = "mlir::hir::createQuantizedKernelLoweringPass()";
+  let dependentDialects = ["mlir::hir::HIRDialect"];
+}
+
 def LLMFrontendNormalization
     : Pass<"llm-frontend-normalization", "mlir::func::FuncOp"> {
   let summary = "Normalize simplified LLM attention graph patterns to canonical serving-aware IR";

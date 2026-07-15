@@ -86,6 +86,26 @@ struct DecisionMetadata {
   DecisionEvidence evidence;      // capability refs, rejected alternatives, and cost
 };
 
+struct QuantizedExecutionStage {
+  std::string stage_id;
+  std::string op;
+  std::vector<std::string> dependency_ids;
+  std::string produces;
+  std::string kernel_id;
+  std::string artifact_ref;
+  std::string artifact_sha256;
+  std::string packed_layout;
+  std::string fused_postprocess;
+  double scale = 0.0;
+  int64_t zero_point = 0;
+  int64_t clamp_min = 0;
+  int64_t clamp_max = 0;
+  std::string rounding_mode;
+  std::string source_dtype;
+  std::string destination_dtype;
+  std::string binary_sha256;
+};
+
 // Quantization strategy for the model (Global) or one op (PerOp).
 struct QuantizationDecision {
   DecisionMetadata meta;
@@ -110,6 +130,32 @@ struct QuantizationDecision {
   std::string kernel_id;
   std::string required_backend_capability;
   std::string required_kernel_capability;
+  std::string calibration_artifact_ref;
+  std::string calibration_artifact_id;
+  std::string calibration_artifact_sha256;
+  std::string packed_weight_artifact_ref;
+  std::string packed_weight_artifact_id;
+  std::string packed_weight_sha256;
+  std::string source_weight_sha256;
+  std::string packed_layout;
+  std::string packing_scheme;
+  bool kernel_requires_packed_weight = false;
+  std::string selected_complete_candidate_id;
+  std::string codegen_target_id;
+  std::string target_architecture;
+  std::string target_microarchitecture;
+  std::vector<std::string> required_isa_features;
+  std::vector<std::string> compiler_flags;
+  std::string binary_sha256;
+  std::string measurement_artifact_ref;
+  std::string build_manifest_ref;
+  std::string workload_id;
+  std::string activation_granularity;
+  std::string weight_granularity;
+  double activation_scale = 0.0;
+  double weight_scale = 0.0;
+  int64_t activation_zero_point = 0;
+  int64_t weight_zero_point = 0;
   std::string policy_id;
   std::string selection_reason;
   std::vector<std::string> considered_candidate_ids;
@@ -126,6 +172,7 @@ struct QuantizationDecision {
   // The compiler never loads or inspects this artifact's weights; it only
   // carries the reference through to the runtime materializer.
   std::string quantized_model_artifact_ref;
+  std::vector<QuantizedExecutionStage> execution_stages;
 };
 
 // Backend selection for a function (Function) or op (PerOp).

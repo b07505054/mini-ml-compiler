@@ -162,14 +162,15 @@ hir.fused_rmsnorm::verify checks op invariants
 hir-verify-fused-ops provides a pipeline-level verification stage
 ```
 
-The HIR dialect also includes an INT8 quantization path for mobile accelerator
-compiler work:
+The HIR dialect includes an executable INT8 path for the validated fused
+Raspberry Pi operator, as well as broader mobile-accelerator compiler work:
 
 ```text
 hir.quantize
+hir.load_quantized_weight
 hir.qmatmul
-hir.fused_qmatmul_bias_relu
 hir.dequantize
+hir.portable_cpu_int8_fused_matmul_bias_relu
 ```
 
 The quantization compiler pipeline now has three small graph-level passes:
@@ -185,7 +186,7 @@ quantization-planning
 
 Implemented behavior:
 
-- `hir-quant-propagate` forms metadata-only INT8-capable islands through
+- `hir-quant-propagate` forms INT8-capable islands through
   conservative ops: INT8-candidate `linalg.matmul`, ReLU-shaped `linalg.map`,
   and tensor reshape/cast ops.
 - Unsupported ops are left unannotated and break INT8 island continuity.
@@ -197,13 +198,16 @@ Implemented behavior:
 - Illegal layout or unsupported backend records a fallback selection reason
   instead of pretending INT8 dispatch is available.
 
-Not implemented:
+Implemented for the fused Slice 3 path:
 
-- Calibration-derived scale/zero-point generation.
-- A full layout optimizer or NCHW/NHWC rewrite pass.
-- Runtime execution of the selected INT8 operator metadata through the custom
-  C++ graph runtime.
-- General quantization propagation through arbitrary arithmetic.
+- deterministic calibration-derived activation and weight scales;
+- compiler-owned packed INT8 weights;
+- explicit Q/DQ and integer tensor rewrite;
+- canonical ExecutionPlan execution through the selected Cortex-A76 kernel;
+- identity and correctness validation on Raspberry Pi.
+
+Not implemented generally: full-model calibration, graph-wide mixed precision,
+a complete layout optimizer, or propagation through arbitrary arithmetic.
 
 The quantized ops verify INT8 dtype metadata, scale, zero point, per-channel
 activation quantization metadata, and mobile accelerator layout constraints:

@@ -46,10 +46,16 @@ assert_contains("${OUT}" "\"schema_version\": \"2.0.0\"")
 # per_op_decisions array present (V2 name for per-op decision bundles).
 assert_contains("${OUT}" "\"per_op_decisions\"")
 
-# weight_only_int8 strategy from hir.matmul.
-assert_contains("${OUT}" "\"strategy\": \"weight_only_int8\"")
-assert_contains("${OUT}" "\"weight_dtype\": \"int8\"")
-assert_contains("${OUT}" "\"activation_dtype\": \"fp16\"")
+# Slice 1 candidate-owned quantization decision from hir.matmul. The Apple
+# profile intentionally lacks the new explicit quantization capability fields,
+# so the compiler preserves the FP32 fallback rather than inferring INT8 support.
+assert_contains("${OUT}" "\"strategy\": \"fp32_baseline\"")
+assert_contains("${OUT}" "\"scheme\": \"fp32_baseline\"")
+assert_contains("${OUT}" "\"selected_candidate_id\"")
+assert_contains("${OUT}" "\"considered_candidate_ids\"")
+assert_contains("${OUT}" "\"rejected_candidate_reasons\"")
+assert_contains("${OUT}" "\"weight_dtype\": \"fp32\"")
+assert_contains("${OUT}" "\"activation_dtype\": \"fp32\"")
 
 # fp16_fallback strategy from hir.softmax (accuracy-sensitive).
 assert_contains("${OUT}" "\"strategy\": \"fp16_fallback\"")

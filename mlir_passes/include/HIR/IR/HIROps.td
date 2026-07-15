@@ -44,6 +44,46 @@ def HIR_FusedRMSNormOp
   }];
 }
 
+def HIR_MatMulOp
+    : HIR_Op<"matmul", [Pure]> {
+  let summary = "Metadata-only HIR matmul compatibility op";
+  let arguments = (ins AnyTensor:$lhs, AnyTensor:$rhs);
+  let results = (outs AnyTensor:$output);
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def HIR_SoftmaxOp
+    : HIR_Op<"softmax", [Pure]> {
+  let summary = "Metadata-only HIR softmax compatibility op";
+  let arguments = (ins AnyTensor:$input);
+  let results = (outs AnyTensor:$output);
+  let assemblyFormat = [{
+    $input attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def HIR_Conv2dOp
+    : HIR_Op<"conv2d", [Pure]> {
+  let summary = "Metadata-only HIR conv2d compatibility op";
+  let arguments = (ins AnyTensor:$input, AnyTensor:$filter);
+  let results = (outs AnyTensor:$output);
+  let assemblyFormat = [{
+    $input `,` $filter attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def HIR_GeluOp
+    : HIR_Op<"gelu", [Pure]> {
+  let summary = "Metadata-only HIR gelu compatibility op";
+  let arguments = (ins AnyTensor:$input);
+  let results = (outs AnyTensor:$output);
+  let assemblyFormat = [{
+    $input attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def HIR_CastOp
     : HIR_Op<"cast", [Pure]> {
   let summary = "Compiler-materialized float precision cast boundary";
@@ -111,6 +151,24 @@ def HIR_QMatMulOp
   }];
 }
 
+def HIR_LoadQuantizedWeightOp
+    : HIR_Op<"load_quantized_weight", [Pure]> {
+  let summary = "Compiler-owned quantized weight artifact reference";
+  let description = [{
+    Represents an offline-produced packed INT8 weight artifact. The runtime
+    may load and validate the referenced artifact, but must not quantize,
+    transpose, repack, or choose a substitute artifact.
+  }];
+
+  let arguments = (ins);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    attr-dict `:` type($output)
+  }];
+}
+
 def HIR_FusedQMatMulBiasReluOp
     : HIR_Op<"fused_qmatmul_bias_relu", [Pure]> {
   let summary = "Fused INT8 matmul, bias add, and ReLU";
@@ -126,6 +184,28 @@ def HIR_FusedQMatMulBiasReluOp
 
   let assemblyFormat = [{
     $lhs `,` $rhs `,` $bias attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def HIR_PortableCPUINT8FusedMatMulBiasReluOp
+    : HIR_Op<"portable_cpu_int8_fused_matmul_bias_relu", [Pure]> {
+  let summary = "Explicit portable CPU INT8 fused MatMul+Bias+ReLU runtime-call contract";
+  let description = [{
+    Final Slice 3D lowered representation for the selected portable CPU
+    int8_static_symmetric packed-B Cortex-A76 implementation. It consumes
+    the explicit INT8 activation produced by hir.quantize, the compiler-owned
+    packed INT8 weight artifact value, and FP32 bias, and returns FP32 output.
+    Quantization scales, zero points, packed artifact identity, selected
+    kernel, codegen target, and binary identity are attributes owned by the
+    compiler plan.
+  }];
+
+  let arguments = (ins AnyTensor:$input, AnyTensor:$packed_weight, AnyTensor:$bias);
+  let results = (outs AnyTensor:$output);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $input `,` $packed_weight `,` $bias attr-dict `:` functional-type(operands, results)
   }];
 }
 

@@ -477,6 +477,9 @@ set_tests_properties(CVExecutionPlanArtifactToolTest PROPERTIES
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 add_executable(compile-for-target
+  lib/HIR/IR/HIRDialect.cpp
+  lib/HIR/IR/HIROps.cpp
+  lib/QuantizationCompilerPasses.cpp
   lib/ServingPhaseAnalysisPass.cpp
   lib/serving/KVLayoutPlanningPass.cpp
   lib/serving/ReplayEligibilityPass.cpp
@@ -504,7 +507,7 @@ add_executable(compile-for-target
   tools/compile-for-target/main.cpp
 )
 llvm_update_compile_flags(compile-for-target)
-add_dependencies(compile-for-target HIRFusionPassIncGen)
+add_dependencies(compile-for-target HIRDialectIncGen HIRFusionPassIncGen)
 target_include_directories(compile-for-target
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -567,6 +570,31 @@ add_test(NAME RaspberryPiFusedMatMulBiasReluKernelSelectionTest
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunRaspberryPiFusedMatMulBiasReluKernelSelectionTest.cmake
 )
 set_tests_properties(RaspberryPiFusedMatMulBiasReluKernelSelectionTest PROPERTIES
+  DEPENDS compile-for-target
+)
+
+# ---------------------------------------------------------------------------
+# CTest: Slice3DQuantizedIRLoweringTest
+# Proves a selected packed INT8 fused MatMul+Bias+ReLU decision is
+# materialized into explicit HIR Q/DQ + packed weight IR, lowered to the
+# selected portable CPU INT8 runtime-call contract, and exported with ordered
+# runtime execution stages. Also checks selected INT8 fails when the packed
+# artifact contract is incomplete.
+# ---------------------------------------------------------------------------
+set(_S3D_JSON "${CMAKE_CURRENT_BINARY_DIR}/slice3d_quantized_ir_plan.json")
+set(_S3D_MLIR "${CMAKE_CURRENT_BINARY_DIR}/slice3d_quantized_ir_lowered.mlir")
+
+add_test(NAME Slice3DQuantizedIRLoweringTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/raspberry_pi5_cortex_a76_cpu.json
+    -DMLIR=${CMAKE_CURRENT_SOURCE_DIR}/test/serving/slice3d_int8_materialization.mlir
+    -DBAD_MLIR=${CMAKE_CURRENT_SOURCE_DIR}/test/serving/slice3d_int8_missing_packed_artifact.mlir
+    -DOUT=${_S3D_JSON}
+    -DDUMP_MLIR=${_S3D_MLIR}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunSlice3DQuantizedIRLoweringTest.cmake
+)
+set_tests_properties(Slice3DQuantizedIRLoweringTest PROPERTIES
   DEPENDS compile-for-target
 )
 

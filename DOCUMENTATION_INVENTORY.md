@@ -15,6 +15,10 @@ Last verified: 2026-07-14.
 - `PROJECT_MATURITY.md`
 - `WHY_THIS_PROJECT.md`
 - `publication_claims.json`
+- `docs/QUANTIZATION_CODESIGN.md`
+- `docs/EXECUTION_PLAN_SCHEMA.md`
+- `docs/architecture.md`
+- `mlir_passes/README.md`
 
 ## Current Supporting
 
@@ -24,7 +28,7 @@ Last verified: 2026-07-14.
 - `DOC/result/P1D_RASPBERRY_PI_THREAD_DECOMPOSITION_REPORT.md`
 - `DOC/result/P1D1_OFFLINE_CALIBRATED_THREAD_POLICY_REPORT.md`
 - `DOC/result/A1_MINIMAL_UNIFIED_IMPLEMENTATION_CANDIDATE_FOUNDATION.md` through `DOC/result/A6_IR_ROOTED_TRITON_PROVIDER_SHADOW_INTEGRATION.md`
-- `docs/QUANTIZATION_CODESIGN.md` and `docs/VLLM_SERVING_CODESIGN.md` as supporting/historical quantization material, bounded by S1 canonical docs.
+- `docs/VLLM_SERVING_CODESIGN.md` as supporting serving material, bounded by the canonical truth boundary.
 
 ## Runtime-Owned Evidence Documents
 
@@ -33,7 +37,12 @@ Last verified: 2026-07-14.
 - `heterogeneous-inference-runtime/docs/E2_EXECUTORCH_CONTROLLED_HEAD_TO_HEAD.md`
 - `heterogeneous-inference-runtime/docs/E2_1_EXECUTORCH_CORRECTNESS_REPAIRED_COMPARISON.md`
 - `heterogeneous-inference-runtime/docs/E3_LIVE_COMPILER_XNNPACK_COMPARISON.md`
+- `heterogeneous-inference-runtime/docs/MEASURED_BASELINES.md`
+- `heterogeneous-inference-runtime/docs/QUANTIZATION_ANALYSIS.md`
 - `heterogeneous-inference-runtime/results/executorch_e*/**`
+- External Slice 3E-3G workspaces supplied to the import tooling through
+  explicit command-line paths; these local binary/raw-evidence workspaces are
+  not repository content.
 
 ## Historical / Superseded
 
@@ -51,3 +60,5 @@ Older docs under `docs/`, `trace/`, `reports/`, `integration_bundle/`, and phase
 | Capability DB overclaim risk | compiler/capabilities/portfolio docs | clarified partial ownership and synchronization gap |
 | Placeholder `ExecuTorch C++ ~= 5.7 ms` risk | S0 finding | forbidden as measured evidence; no current canonical use |
 | Runtime-boundary ambiguity | compiler/runtime docs | restated: Runtime validates/executes, does not choose |
+| Slice 3 quantization described as planning/metadata only | quantization, architecture, MLIR, and runtime docs | corrected for the fused-operator scope: calibration, packed weights, Q/DQ integer IR, kernel lowering, ExecutionPlan validation, and Pi execution are implemented |
+| Historical ExecuTorch `1.49 ms` row mixed with unrelated workloads | runtime README | removed; controlled shape-specific Slice 3F/3G values now live in the existing ExecuTorch and measured-baseline sections |

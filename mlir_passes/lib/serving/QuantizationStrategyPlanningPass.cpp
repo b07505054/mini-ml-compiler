@@ -399,6 +399,21 @@ struct QuantizationStrategyPlanningPass
       auto setBool = [&](llvm::StringRef k, bool v) {
         op.setAttr(k, BoolAttr::get(ctx, v));
       };
+      auto copyModuleString = [&](llvm::StringRef src, llvm::StringRef dst) {
+        if (module)
+          if (auto a = module->getAttrOfType<StringAttr>(src))
+            op.setAttr(dst, a);
+      };
+      auto copyModuleFloat = [&](llvm::StringRef src, llvm::StringRef dst) {
+        if (module)
+          if (auto a = module->getAttrOfType<FloatAttr>(src))
+            op.setAttr(dst, a);
+      };
+      auto copyModuleInt = [&](llvm::StringRef src, llvm::StringRef dst) {
+        if (module)
+          if (auto a = module->getAttrOfType<IntegerAttr>(src))
+            op.setAttr(dst, a);
+      };
 
       set("quant.strategy",              strategy);
       set("quant.weight_dtype",          weightDtype);
@@ -481,6 +496,18 @@ struct QuantizationStrategyPlanningPass
           set("quant.required_backend_capability", selected->quantization.requiredBackendCapability);
           set("quant.required_kernel_capability", selected->quantization.requiredKernelCapability);
           if (!selected->kernelId.empty()) set("quant.kernel_id", selected->kernelId);
+          if (selected->quantization.scheme == "int8_static_symmetric") {
+            set("quant.activation_granularity", "per_tensor");
+            set("quant.weight_granularity", "per_tensor");
+            copyModuleString("quant.slice3a.calibration_artifact_ref", "quant.calibration_artifact_ref");
+            copyModuleString("quant.slice3a.calibration_artifact_id", "quant.calibration_artifact_id");
+            copyModuleString("quant.slice3a.calibration_artifact_sha256", "quant.calibration_artifact_sha256");
+            copyModuleString("quant.slice3a.workload_id", "quant.workload_id");
+            copyModuleFloat("quant.slice3a.activation_scale", "quant.activation_scale");
+            copyModuleFloat("quant.slice3a.weight_scale", "quant.weight_scale");
+            copyModuleInt("quant.slice3a.activation_zero_point", "quant.activation_zero_point");
+            copyModuleInt("quant.slice3a.weight_zero_point", "quant.weight_zero_point");
+          }
           setBool("quant.requires_calibration", selected->quantization.calibrationRequired);
           setBool("quant.calibration_available", selected->quantization.calibrationAvailable);
           if (selected->quantization.groupSize > 0)

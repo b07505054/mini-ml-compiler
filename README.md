@@ -35,6 +35,8 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 - Current portable kernel: `portable_fused_matmul_bias_relu_bm32_bn128_bk32`.
 - Current portable policy: `M*N*K < 262144` selects serial; `M*N*K >= 262144` selects 4-thread split-M.
 - XNNPACK evaluation path with live Compiler invocation, X1/X4 candidates, typed feasibility, compiler-generated comparison contract, and same-runner/same-PTE execution.
+- Static symmetric INT8 fused Linear/MatMul + Bias + ReLU path: compiler-owned calibration and packed-weight artifacts, explicit Q/DQ integer IR, Cortex-A76 dot-product kernel lowering, canonical ExecutionPlan execution, and Raspberry Pi validation.
+- Complete candidate search for the validated fused operator spans portable FP32, portable packed INT8, and ExecuTorch/XNNPACK FP32/INT8 implementations. Backend, runtime, delegate, quantization scheme, layout, fixed thread count, target capabilities, artifacts, and measured evidence are part of candidate identity.
 - Triton shadow provider over real measured/predicted artifacts, with unresolved IR bridge, no production ExecutionPlan effect.
 - AWQ artifact and vLLM materialization path, with measured serving traces but no accuracy/perplexity calibration.
 
@@ -50,6 +52,7 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 | E2.1 stack comparison | project portable scalar/native stack vs ExecuTorch/XNNPACK | project geomean speedup 0.380026x, about 2.631x slower | same |
 | E3 candidate-space verdict | same XNNPACK stack | `XNNPACK_ONE_STATIC_WINNER`, static X1 | runtime `results/executorch_e3/discovery/e3_analysis.json` |
 | E3 formal comparison | live Compiler XNNPACK contract vs ExecuTorch default | 2 wins, 8 ties, 0 losses; geomean default/project ratio 1.031686x | runtime `results/executorch_e3/formal/e3_formal_analysis.json` |
+| Slice 3G complete-candidate agreement | fused Linear + Bias + ReLU, four Pi shapes | 4/4 selections agree with the constrained measured oracle; normalized regret 0.0 | external Slice 3G `selection_summary.json` |
 
 These are narrow, target-scoped results. They are not cross-model, cross-device, energy, NPU, or universal superiority claims.
 
@@ -69,7 +72,7 @@ E3 found a static XNNPACK winner for this narrow target/workload scope. The Comp
 |---|---|---|
 | Hardware Abstraction | `ADVANCED_PARTIAL` | Pi 5 profile, compute units, thread capability, kernel/runtime descriptors, and XNNPACK software/artifact requirements exist; memory hierarchy, DMA, NPU, bandwidth, and transfer models remain incomplete. |
 | Decision-making Compiler | `STRONGEST_PILLAR / ADVANCED_PARTIAL` | Semantic IR, complete candidates, providers, feasibility, policy, `PolicyResult`, materialization, P1D.1 and E3 calibrated loops. Not all decisions share one universal policy engine. |
-| Quantization Co-design | `EARLY_PARTIAL` | Real AWQ artifact and vLLM materialization exist. Missing accuracy/perplexity calibration, unified FP16/INT8/INT4 candidates, canonical feasibility/policy, and NPU quantization. |
+| Quantization Co-design | `ADVANCED_PARTIAL` | The fused Pi operator has compiler-owned static INT8 calibration, packed weights, Q/DQ integer IR, integer lowering, complete-candidate selection, and runtime validation. Full-model quantization, graph-wide mixed precision, INT4/AWQ/GPTQ integration, and NPU quantization remain incomplete. |
 | Hardware-Compiler Co-design | `EARLY_PARTIAL` | Pi measurements influence portable policy; Pi/XNNPACK measurements influence X1. No hardware parameter sweep, SRAM/bandwidth/DMA/NPU design feedback yet. |
 
 ## Repository Map
@@ -83,7 +86,7 @@ E3 found a static XNNPACK winner for this narrow target/workload scope. The Comp
 ## Current Limitations
 
 - Triton is shadow-only and not production-integrated.
-- Quantization co-design is not complete; no accuracy/perplexity calibration exists.
+- Quantization co-design is complete only for the validated fused operator; there is no full-model accuracy/perplexity evaluation or graph-wide quantization policy.
 - Many decisions remain declared-profile, rule-based, shadow, or experimental rather than measured-profile-driven.
 - Capability profiles are not yet fully synchronized across repositories.
 - Implementation IR is incomplete for memory spaces, DMA, synchronization, heterogeneous partitioning, and NPU command regions.

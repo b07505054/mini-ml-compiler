@@ -45,6 +45,8 @@ std::unique_ptr<::mlir::Pass> createQuantizationPlanningPass();
 std::unique_ptr<::mlir::Pass> createHIRQuantCanonicalizationPass();
 std::unique_ptr<::mlir::Pass> createHIRQuantPropagationPass();
 std::unique_ptr<::mlir::Pass> createHIRINT8OperatorSelectionPass();
+std::unique_ptr<::mlir::Pass> createQuantizationMaterializationPass();
+std::unique_ptr<::mlir::Pass> createQuantizedKernelLoweringPass();
 std::unique_ptr<::mlir::Pass> createCVFrontendNormalizationPass();
 std::unique_ptr<::mlir::Pass> createCVShapeInferencePass();
 std::unique_ptr<::mlir::Pass> createCVMemoryPlanningPass();
