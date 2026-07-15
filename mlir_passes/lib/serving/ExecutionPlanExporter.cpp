@@ -413,12 +413,17 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     x["head_dim"] = a.head_dim; x["causal"] = a.causal; x["workspace_bytes"] = a.workspace_bytes;
     x["alignment_bytes"] = a.alignment_bytes;
     x["required_isa"] = a.required_isa; x["fallback_identity"] = a.fallback_identity;
+    x["implementation_strategy"] = a.implementation_strategy;
     x["runtime_no_redecision"] = a.runtime_no_redecision; x["truth_boundary"] = a.truth_boundary;
     obj["attention_execution"] = std::move(x);
   }
   if (b.kv_cache_execution) {
     const auto &k = *b.kv_cache_execution; llvm::json::Object x;
     x["kv_execution_unit"]=k.execution_unit; x["kv_candidate_id"]=k.candidate_id;
+    if (!k.layout_kind.empty()) {
+      x["pool_create_entry_point"]=k.pool_create_entry_point;x["prefill_write_entry_point"]=k.paged_prefill_write_entry_point;x["append_entry_point"]=k.paged_append_entry_point;x["view_binding"]=k.paged_view_binding;x["reset_entry_point"]=k.paged_reset_entry_point;x["release_entry_point"]=k.paged_release_entry_point;
+      x["kv_layout_kind"]=k.layout_kind;x["pool_artifact_ref"]=k.artifact_ref;x["pool_artifact_sha256"]=k.artifact_sha256;x["pool_artifact_version"]=k.artifact_version;x["dtype"]=k.dtype;x["batch"]=k.batch;x["num_kv_heads"]=k.num_kv_heads;x["head_dim"]=k.head_dim;x["page_tokens"]=k.page_tokens;x["num_physical_pages"]=k.num_physical_pages;x["maximum_logical_tokens"]=k.maximum_logical_tokens;x["maximum_logical_blocks"]=k.maximum_logical_blocks;x["block_table_length"]=k.block_table_length;x["block_table_element_type"]=k.block_table_element_type;x["invalid_page_sentinel"]=k.invalid_page_sentinel;x["bytes_per_token"]=k.bytes_per_token;x["bytes_per_k_page"]=k.bytes_per_k_page;x["bytes_per_v_page"]=k.bytes_per_v_page;x["bytes_per_combined_page"]=k.bytes_per_combined_page;x["total_pool_bytes"]=k.total_pool_bytes;x["alignment_bytes"]=k.alignment_bytes;llvm::json::Array pk,pv;for(auto v:k.k_page_strides)pk.push_back(v);for(auto v:k.v_page_strides)pv.push_back(v);x["k_page_strides"]=std::move(pk);x["v_page_strides"]=std::move(pv);x["paged_attention_kernel_id"]=k.paged_attention_kernel_id;x["paged_attention_entry_point"]=k.paged_attention_entry_point;x["implementation_strategy"]=k.implementation_strategy;x["measurement_provenance"]=k.measurement_provenance;x["contiguous_fallback_identity"]=k.contiguous_fallback_identity;x["runtime_no_layout_redecision"]=k.runtime_no_layout_redecision;x["runtime_no_kernel_redecision"]=k.runtime_no_kernel_redecision;x["operation_order"]=k.operation_order;x["truth_boundary"]=k.truth_boundary;obj["paged_kv_execution"]=std::move(x);return obj;
+    }
     x["kv_cache_id"]=k.cache_id; x["kv_artifact_ref"]=k.artifact_ref;
     x["kv_artifact_sha256"]=k.artifact_sha256; x["kv_artifact_version"]=k.artifact_version;
     x["kv_dtype"]=k.dtype; x["kv_layout"]=k.layout; x["batch"]=k.batch;
@@ -435,6 +440,9 @@ static llvm::json::Object serializePerOpBundle(const PerOpDecisionBundle &b) {
     x["view_binding"]=k.view_binding; x["reset_entry_point"]=k.reset_entry_point;
     x["compatible_prefill_kernel_id"]=k.compatible_prefill_kernel_id;
     x["compatible_decode_kernel_id"]=k.compatible_decode_kernel_id;
+    x["attention_entry_point"]=k.attention_entry_point;
+    x["implementation_strategy"]=k.implementation_strategy;
+    x["measurement_provenance"]=k.measurement_provenance;
     x["fallback_identity"]=k.fallback_identity; x["operation_order"]=k.operation_order;
     x["runtime_no_layout_redecision"]=k.runtime_no_layout_redecision;
     x["truth_boundary"]=k.truth_boundary; obj["kv_cache_execution"]=std::move(x);

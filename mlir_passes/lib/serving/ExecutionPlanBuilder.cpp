@@ -1277,6 +1277,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       a.artifact_version = strOp(&op, "artifact_version"); a.dtype = strOp(&op, "dtype");
       a.input_layout = strOp(&op, "input_layout"); a.output_layout = strOp(&op, "output_layout");
       a.required_isa = strOp(&op, "required_isa"); a.fallback_identity = strOp(&op, "fallback_identity");
+      a.implementation_strategy = strOp(&op, "attention_implementation_strategy");
       a.truth_boundary = strOp(&op, "truth_boundary");
       a.batch = op.getAttrOfType<IntegerAttr>("batch").getInt();
       a.query_length = op.getAttrOfType<IntegerAttr>("query_length").getInt();
@@ -1290,6 +1291,10 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       a.runtime_no_redecision = op.getAttrOfType<BoolAttr>("runtime_no_redecision").getValue();
       attentionExecution = std::move(a);
       KVCacheExecutionContract kv;
+      if (op.hasAttr("kv_layout_kind")) {
+        kv.pool_create_entry_point=strOp(&op,"pool_create_entry_point");kv.paged_prefill_write_entry_point=strOp(&op,"prefill_write_entry_point");kv.paged_append_entry_point=strOp(&op,"append_entry_point");kv.paged_view_binding=strOp(&op,"view_binding");kv.paged_reset_entry_point=strOp(&op,"reset_entry_point");kv.paged_release_entry_point=strOp(&op,"release_entry_point");
+        kv.execution_unit="portable_cpu_paged_kv";kv.candidate_id=strOp(&op,"kv_candidate_id");kv.layout_kind=strOp(&op,"kv_layout_kind");kv.dtype=strOp(&op,"kv_dtype");kv.artifact_ref=strOp(&op,"pool_artifact_ref");kv.artifact_sha256=strOp(&op,"pool_artifact_sha256");kv.artifact_version=strOp(&op,"pool_artifact_version");kv.block_table_element_type=strOp(&op,"block_table_element_type");kv.paged_attention_kernel_id=strOp(&op,"paged_attention_kernel_id");kv.paged_attention_entry_point=strOp(&op,"paged_attention_entry_point");kv.implementation_strategy=strOp(&op,"implementation_strategy");kv.measurement_provenance=strOp(&op,"measurement_provenance");kv.contiguous_fallback_identity=strOp(&op,"contiguous_fallback_identity");kv.truth_boundary=strOp(&op,"truth_boundary");kv.operation_order=strOp(&op,"paged_operation_order");auto i=[&](StringRef n){return op.getAttrOfType<IntegerAttr>(n).getInt();};kv.batch=i("batch");kv.num_kv_heads=i("num_kv_heads");kv.head_dim=i("head_dim");kv.page_tokens=i("page_tokens");kv.num_physical_pages=i("num_physical_pages");kv.maximum_logical_tokens=i("maximum_logical_tokens");kv.maximum_logical_blocks=i("maximum_logical_blocks");kv.block_table_length=i("block_table_length");kv.invalid_page_sentinel=i("invalid_page_sentinel");kv.bytes_per_token=i("bytes_per_token");kv.bytes_per_k_page=i("bytes_per_k_page");kv.bytes_per_v_page=i("bytes_per_v_page");kv.bytes_per_combined_page=i("bytes_per_combined_page");kv.total_pool_bytes=i("total_pool_bytes");kv.alignment_bytes=i("alignment_bytes");for(int64_t x:op.getAttrOfType<DenseI64ArrayAttr>("k_page_strides").asArrayRef())kv.k_page_strides.push_back(x);for(int64_t x:op.getAttrOfType<DenseI64ArrayAttr>("v_page_strides").asArrayRef())kv.v_page_strides.push_back(x);kv.runtime_no_layout_redecision=op.getAttrOfType<BoolAttr>("runtime_no_layout_redecision").getValue();kv.runtime_no_kernel_redecision=op.getAttrOfType<BoolAttr>("runtime_no_kernel_redecision").getValue();kvCacheExecution=std::move(kv);
+      } else {
       kv.execution_unit = "portable_cpu_contiguous_kv";
       kv.candidate_id = strOp(&op, "kv_candidate_id");
       kv.cache_id = strOp(&op, "kv_cache_id");
@@ -1304,6 +1309,9 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       kv.reset_entry_point = strOp(&op, "kv_reset_entry_point");
       kv.compatible_prefill_kernel_id = strOp(&op, "compatible_prefill_kernel_id");
       kv.compatible_decode_kernel_id = strOp(&op, "compatible_decode_kernel_id");
+      kv.attention_entry_point = strOp(&op, "attention_entry_point");
+      kv.implementation_strategy = strOp(&op, "implementation_strategy");
+      kv.measurement_provenance = strOp(&op, "measurement_provenance");
       kv.fallback_identity = strOp(&op, "fallback_identity");
       kv.operation_order = strOp(&op, "kv_operation_order");
       kv.truth_boundary = strOp(&op, "truth_boundary");
@@ -1317,6 +1325,7 @@ ExecutionPlanBuilder::collectPerOpDecisionBundles(mlir::func::FuncOp funcOp) {
       for (int64_t x : op.getAttrOfType<DenseI64ArrayAttr>("v_strides").asArrayRef()) kv.v_strides.push_back(x);
       kv.runtime_no_layout_redecision = op.getAttrOfType<BoolAttr>("runtime_no_layout_redecision").getValue();
       kvCacheExecution = std::move(kv);
+      }
     }
 
     if (quant || kernel || fallback || !materialized.empty() ||

@@ -73,7 +73,7 @@ E3 found a static XNNPACK winner for this narrow target/workload scope. The Comp
 | Hardware Abstraction | `ADVANCED_PARTIAL` | Pi 5 profile, compute units, thread capability, kernel/runtime descriptors, and XNNPACK software/artifact requirements exist; memory hierarchy, DMA, NPU, bandwidth, and transfer models remain incomplete. |
 | Decision-making Compiler | `STRONGEST_PILLAR / ADVANCED_PARTIAL` | Semantic IR, complete candidates, providers, feasibility, policy, `PolicyResult`, materialization, P1D.1 and E3 calibrated loops. Not all decisions share one universal policy engine. |
 | Quantization Co-design | `ADVANCED_PARTIAL` | The fused Pi operator has compiler-owned static INT8 calibration, packed weights, Q/DQ integer IR, integer lowering, complete-candidate selection, and runtime validation. Full-model quantization, graph-wide mixed precision, INT4/AWQ/GPTQ integration, and NPU quantization remain incomplete. |
-| CPU Attention | `OPERATOR_LEVEL_EXECUTABLE` | A strict simplified FP32 causal MHA pattern lowers to distinct `cpu_attention_prefill_fp32` and `cpu_attention_decode_fp32` runtime contracts. This is native operator execution, not full-model serving or KV-cache lifetime management. |
+| CPU Attention / KV | `OPERATOR_LEVEL_EXECUTABLE` | A strict FP32 causal MHA pattern lowers to distinct prefill/decode contracts plus compiler-selected contiguous or paged KV implementations. Runtime owns KV lifetime; this is not full-model serving. |
 | Hardware-Compiler Co-design | `EARLY_PARTIAL` | Pi measurements influence portable policy; Pi/XNNPACK measurements influence X1. No hardware parameter sweep, SRAM/bandwidth/DMA/NPU design feedback yet. |
 
 ## Repository Map
@@ -88,7 +88,26 @@ E3 found a static XNNPACK winner for this narrow target/workload scope. The Comp
 
 - Triton is shadow-only and not production-integrated.
 - Quantization co-design is complete only for the validated fused operator; there is no full-model accuracy/perplexity evaluation or graph-wide quantization policy.
-- CPU attention is limited to static FP32 contiguous causal MHA with equal Q/KV heads. Full-model execution, paged/owned KV cache, continuous batching, FlashAttention, RoPE/QKV fusion, GQA/MQA, GPU attention, and distributed attention remain unsupported.
+- CPU attention is limited to static FP32 causal MHA with equal Q/KV heads and real runtime-owned contiguous or single-request paged KV. Full-model execution, general Transformer import, production serving, continuous batching, multi-request scheduling, shared-prefix/COW/eviction/swapping, FlashAttention, RoPE/QKV fusion, GQA/MQA, KV quantization, GPU/CUDA attention, distributed KV, explicit SIMD/NEON/AVX2, and predictive cost modelling remain unsupported.
+
+### CPU attention implementation status
+
+| Candidate or symbol | Status |
+|---|---|
+| `cpu_contiguous_kv_fp32_reordered_v1` — `token_major_contiguous_v_accumulation` | **PRODUCTION** |
+| `cpu_paged_kv_fp32_page_major_v1` — `page_major_cached_page_base` | **PRODUCTION** |
+| `cpu_contiguous_kv_fp32_v1` — `dimension_major_strided_v_accumulation` | **HISTORICAL_EXECUTABLE_BASELINE** |
+| `cpu_paged_kv_fp32_v1` (artifact identity `cpu_paged_kv_fp32_token_major_v1`) — `token_major_block_translation` | **HISTORICAL_EXECUTABLE_BASELINE** |
+| Runtime alias `hir_cpu_attention_decode_contiguous_kv_reordered_control_fp32` | **BENCHMARK_COMPATIBILITY_ONLY**; never compiler-selected |
+
+Historical baselines remain executable for comparison, correctness regression,
+performance ablation, selection validation, and artifact reproducibility.
+Compiler owns candidate generation, legality, implementation identity,
+layout/ABI contracts, exact measured-profile selection, and ExecutionPlan
+export. Runtime owns allocation/lifetime, live KV/page state, fail-closed
+validation, and exact selected-entry-point execution. The proven contract is
+selected candidate equals executed candidate, with zero kernel/layout
+reselection and zero temporary full-history materialization.
 - Many decisions remain declared-profile, rule-based, shadow, or experimental rather than measured-profile-driven.
 - Capability profiles are not yet fully synchronized across repositories.
 - Implementation IR is incomplete for memory spaces, DMA, synchronization, heterogeneous partitioning, and NPU command regions.

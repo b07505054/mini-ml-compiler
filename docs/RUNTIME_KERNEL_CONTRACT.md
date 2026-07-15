@@ -21,10 +21,11 @@ wishful thinking.
 - A selection is a **contract handed to the runtime**, not an execution
   claim. `truth_boundary =
   kernel_selection_static_descriptor_match_not_runtime_execution`.
-- The compiler never executes, dispatches, or benchmarks kernels.
-- Measured performance may only enter a descriptor as
-  `source: "measured_runtime"` after a real benchmark exists (see the
-  checklist below); nothing in this repo claims that today.
+- The compiler never executes or dispatches kernels. Exact host/Pi Runtime
+  measurements may be consumed for exact target/workload implementation
+  selection; this is measured-profile lookup, not a predictive cost model.
+- Execution evidence, artifact validation, and no-redecision counters live in
+  the Runtime repository's canonical artifacts.
 
 ## Two layers, deliberately distinct
 
@@ -36,9 +37,10 @@ wishful thinking.
 A library claiming matmul coverage does **not** create a runtime kernel
 contract; only a descriptor does.
 
-## Kernels actually declared today
+## Profile-declared kernels today
 
-Exactly **one**:
+Exactly **one** uses the generic `runtimeKernels` profile descriptor mechanism;
+the CPU attention/KV path below uses its dedicated executable contract:
 
 | kernel_id | op | backend | dtype | source | implementation |
 |---|---|---|---|---|---|
@@ -50,12 +52,41 @@ handwritten_kernel_source_in_repo_dispatch_validated_not_benchmarked` (the
 dispatch path is CTest-validated when the MLIR pipeline has produced the
 required trace; no throughput/latency is claimed).
 
-The narrow static FP32 causal MHA contract now materializes registered
+The narrow static FP32 causal MHA contract materializes registered
 `hir.kv_cache_create`, `hir.kv_cache_prefill_write`, `hir.kv_cache_append`,
 and `hir.kv_cache_view` operations. They fix a contiguous
 `[batch, heads, capacity, head_dim]` representation, while runtime owns one
-allocation and the live valid-token count. This is not paged storage, eviction,
-prefix sharing, GQA/MQA, or multi-request scheduling.
+allocation and the live valid-token count. An explicitly requested, legal
+single-request alternative materializes `hir.paged_kv_pool_create`, block
+binding, cross-page prefill write, append, and view operations. Its contract
+fixes separate FP32 `[physical_page, head, token_in_page, head_dim]` pools and
+an int32 logical-block-to-physical-page table; the native decode kernel follows
+that table directly.
+
+| Candidate or symbol | Status |
+|---|---|
+| `cpu_contiguous_kv_fp32_reordered_v1` / `token_major_contiguous_v_accumulation` | **PRODUCTION** |
+| `cpu_paged_kv_fp32_page_major_v1` / `page_major_cached_page_base` | **PRODUCTION** |
+| `cpu_contiguous_kv_fp32_v1` / `dimension_major_strided_v_accumulation` | **HISTORICAL_EXECUTABLE_BASELINE** |
+| `cpu_paged_kv_fp32_v1` (artifact identity `cpu_paged_kv_fp32_token_major_v1`) / `token_major_block_translation` | **HISTORICAL_EXECUTABLE_BASELINE** |
+| Runtime alias `hir_cpu_attention_decode_contiguous_kv_reordered_control_fp32` | **BENCHMARK_COMPATIBILITY_ONLY**; never emitted in a Compiler plan |
+
+Historical baselines remain executable for comparison, correctness regression,
+performance ablation, selection validation, and artifact reproducibility.
+Compiler owns generation, legality, implementation and layout/ABI identity,
+exact measured-profile selection, lowering, and ExecutionPlan export. Runtime
+owns allocation/lifetime, live valid-token/page state, fail-closed validation,
+and exact selected-entry-point execution. Proven executions require selected
+candidate equals executed candidate, zero kernel/layout reselection, and zero
+temporary full-history materialization.
+
+This is not full-model inference, general Transformer import, production
+serving, vLLM/production PagedAttention, continuous batching, multi-request
+scheduling, shared-prefix pages, copy-on-write, eviction, swapping, GQA/MQA,
+KV quantization, distributed KV, GPU/CUDA/FlashAttention, explicit SIMD/NEON/
+AVX2, or a predictive cost model. Configuration adapters,
+scheduler/prefix-cache/distributed simulators, and formula admission analysis
+are not native execution.
 
 Everything else — general matmul, MLP, embeddings, all CV ops, and attention
 outside that operator-level contract — is

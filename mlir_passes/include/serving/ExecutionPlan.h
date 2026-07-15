@@ -118,6 +118,7 @@ struct AttentionExecutionContract {
   std::string execution_unit, backend, phase, candidate_id, kernel_id, entry_point;
   std::string artifact_ref, artifact_sha256, artifact_version;
   std::string dtype, input_layout, output_layout, required_isa;
+  std::string implementation_strategy;
   std::string fallback_identity, truth_boundary;
   int64_t batch = 0, query_length = 0, context_length = 0;
   int64_t num_query_heads = 0, num_kv_heads = 0, head_dim = 0;
@@ -131,6 +132,7 @@ struct KVCacheExecutionContract {
   std::string create_entry_point, prefill_write_entry_point;
   std::string decode_append_entry_point, view_binding, reset_entry_point;
   std::string compatible_prefill_kernel_id, compatible_decode_kernel_id;
+  std::string attention_entry_point;
   std::string fallback_identity, operation_order, truth_boundary;
   int64_t batch = 0, num_kv_heads = 0, head_dim = 0, capacity_tokens = 0;
   int64_t initial_valid_tokens = 0, bytes_per_token = 0;
@@ -138,6 +140,18 @@ struct KVCacheExecutionContract {
   int64_t alignment_bytes = 0;
   std::vector<int64_t> k_strides, v_strides;
   bool runtime_no_layout_redecision = false;
+  std::string layout_kind, block_table_element_type, paged_attention_kernel_id;
+  std::string paged_attention_entry_point, implementation_strategy;
+  std::string measurement_provenance;
+  std::string contiguous_fallback_identity, selection_reason;
+  std::string pool_create_entry_point, paged_prefill_write_entry_point;
+  std::string paged_append_entry_point, paged_view_binding;
+  std::string paged_reset_entry_point, paged_release_entry_point;
+  int64_t page_tokens=0, num_physical_pages=0, maximum_logical_tokens=0;
+  int64_t maximum_logical_blocks=0, block_table_length=0, invalid_page_sentinel=-1;
+  int64_t bytes_per_k_page=0, bytes_per_v_page=0, bytes_per_combined_page=0, total_pool_bytes=0;
+  std::vector<int64_t> k_page_strides, v_page_strides;
+  bool runtime_no_kernel_redecision=false;
 };
 
 struct PerOpDecisionBundle {

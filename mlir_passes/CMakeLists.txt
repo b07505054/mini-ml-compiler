@@ -573,6 +573,14 @@ add_test(NAME ContiguousKVLegalityTest
     -DINPUT=${REPO_ROOT}/mlir/attention_cpu_supported.mlir
     -DOUT_DIR=${CMAKE_CURRENT_BINARY_DIR}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunContiguousKVLegalityTest.cmake)
+add_test(NAME PagedKVContractTest
+  COMMAND ${CMAKE_COMMAND}
+    -DTOOL=$<TARGET_FILE:compile-for-target>
+    -DPROFILE=${REPO_ROOT}/configs/target_profiles/apple_a17pro_mobile.json
+    -DINPUT=${REPO_ROOT}/mlir/attention_cpu_paged.mlir
+    -DOUT=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_paged_plan.json
+    -DDUMP=${CMAKE_CURRENT_BINARY_DIR}/attention_cpu_paged_lowered.mlir
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunPagedKVContractTest.cmake)
 set_tests_properties(CompileForTargetTest PROPERTIES
   DEPENDS compile-for-target
 )

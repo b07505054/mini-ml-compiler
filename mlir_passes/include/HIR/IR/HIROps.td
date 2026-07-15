@@ -275,4 +275,29 @@ def HIR_KVCacheResetOp : HIR_Op<"kv_cache_reset"> {
   let hasVerifier = 1;
 }
 
+def HIR_PagedKVPoolCreateOp : HIR_Op<"paged_kv_pool_create"> {
+  let summary = "Create runtime-owned physical KV pages and block table";
+  let arguments = (ins); let results = (outs I64:$pool); let hasVerifier = 1;
+}
+def HIR_PagedKVBindBlockOp : HIR_Op<"paged_kv_bind_block"> {
+  let summary = "Declare live logical-block to physical-page binding";
+  let arguments = (ins I64:$pool); let results = (outs); let hasVerifier = 1;
+}
+def HIR_PagedKVPrefillWriteOp : HIR_Op<"paged_kv_prefill_write"> {
+  let summary = "Write prompt K/V across mapped physical pages";
+  let arguments = (ins I64:$pool, AnyTensor:$key, AnyTensor:$value); let results = (outs); let hasVerifier = 1;
+}
+def HIR_PagedKVAppendOp : HIR_Op<"paged_kv_append"> {
+  let summary = "Append one K/V token through the block table";
+  let arguments = (ins I64:$pool, AnyTensor:$key, AnyTensor:$value); let results = (outs); let hasVerifier = 1;
+}
+def HIR_PagedKVViewOp : HIR_Op<"paged_kv_view", [Pure]> {
+  let summary = "Bind paged KV storage and block table to paged attention";
+  let arguments = (ins I64:$pool); let results = (outs AnyTensor:$key, AnyTensor:$value); let hasVerifier = 1;
+}
+def HIR_PagedKVResetOp : HIR_Op<"paged_kv_reset"> {
+  let summary = "Release request pages and reset block table";
+  let arguments = (ins I64:$pool); let results = (outs); let hasVerifier = 1;
+}
+
 #endif // HIR_OPS

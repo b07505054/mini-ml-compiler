@@ -761,6 +761,20 @@ LogicalResult KVCacheAppendOp::verify() {
 }
 LogicalResult KVCacheViewOp::verify() { return verifyKVAttrs(getOperation()); }
 LogicalResult KVCacheResetOp::verify() { return verifyKVAttrs(getOperation()); }
+static LogicalResult verifyPagedKV(Operation *op) {
+  for(StringRef n:{"kv_candidate_id","kv_layout_kind","kv_dtype","block_table_element_type"})
+    if(failed(requireStringAttr(op,n)))return failure();
+  for(StringRef n:{"page_tokens","num_physical_pages","maximum_logical_tokens","block_table_length","num_kv_heads","head_dim"}){
+    if(failed(requireIntegerAttr(op,n)))return failure();auto v=integerAttrValue(op,n);if(!v||*v<=0)return op->emitOpError("requires positive static paged KV dimensions");}
+  if(op->getAttrOfType<StringAttr>("kv_layout_kind").getValue()!="paged_phd_contiguous"||op->getAttrOfType<StringAttr>("kv_dtype").getValue()!="fp32"||op->getAttrOfType<StringAttr>("block_table_element_type").getValue()!="int32")return op->emitOpError("unsupported paged KV layout/dtype/table type");
+  return success();
+}
+LogicalResult PagedKVPoolCreateOp::verify(){return verifyPagedKV(getOperation());}
+LogicalResult PagedKVBindBlockOp::verify(){return verifyPagedKV(getOperation());}
+LogicalResult PagedKVPrefillWriteOp::verify(){return verifyPagedKV(getOperation());}
+LogicalResult PagedKVAppendOp::verify(){return verifyPagedKV(getOperation());}
+LogicalResult PagedKVViewOp::verify(){return verifyPagedKV(getOperation());}
+LogicalResult PagedKVResetOp::verify(){return verifyPagedKV(getOperation());}
 
 #define GET_OP_CLASSES
 #include "HIR/IR/HIROps.cpp.inc"
