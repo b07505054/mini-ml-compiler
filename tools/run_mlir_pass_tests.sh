@@ -694,4 +694,75 @@ run_filecheck \
   "generic stride-2 transposed convolution existing-dialect prototype" \
   "$REPO_ROOT/mlir/generic_conv_transpose2d_stride2_prototype.mlir"
 
+# ---------------------------------------------------------------------------
+# Host-side static checks for the AArch64 native-codegen backend slice
+# (compile_hir_matmul_bias_relu_aarch64.sh). These require no network access
+# and no Raspberry Pi -- they only exercise mlir-opt, mlir-translate, llc,
+# and llvm-objdump on the dev host, cross-generating (never executing)
+# AArch64 code. Real hardware execution is a separate, explicitly-labeled
+# integration test: tools/run_backend_codegen_pi_integration.sh.
+# ---------------------------------------------------------------------------
+run_backend_codegen_static_checks() {
+  local shape="$1"
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_${shape}.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_${shape}"
+
+  echo "[MLIR test] backend codegen static checks ($shape)"
+
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+    "$input" "$out_dir" "$name"
+
+  # 1. HIR -> LLVM dialect: real llvm.func with the expected ciface wrapper.
+  if ! grep -q "llvm.func @${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+  if ! grep -q "llvm.func @_mlir_ciface_${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @_mlir_ciface_${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+
+  # 2. LLVM dialect -> textual LLVM IR.
+  if ! grep -q "^define .*@${name}(" "$out_dir/${name}.ll"; then
+    echo "error: expected 'define ... @${name}(' not found in ${name}.ll" >&2
+    exit 1
+  fi
+
+  # 3. AArch64 assembly generation: non-empty, targets the expected symbol.
+  if ! grep -q "^${name}:" "$out_dir/${name}.s"; then
+    echo "error: expected label '${name}:' not found in ${name}.s" >&2
+    exit 1
+  fi
+
+  # 4. AArch64 object generation: valid little-endian AArch64 ELF.
+  local machine
+  machine="$(llvm-readobj -h "$out_dir/${name}.o" | grep -o 'EM_AARCH64' || true)"
+  if [[ "$machine" != "EM_AARCH64" ]]; then
+    echo "error: ${name}.o is not an EM_AARCH64 object" >&2
+    exit 1
+  fi
+
+  # 5. Expected exported symbols exist (both the raw kernel and the ciface
+  #    wrapper the harness actually calls).
+  local symbols
+  symbols="$(llvm-objdump -t "$out_dir/${name}.o")"
+  if ! grep -q " ${name}\$" <<<"$symbols"; then
+    echo "error: symbol ${name} not found in ${name}.o" >&2
+    exit 1
+  fi
+  if ! grep -q " _mlir_ciface_${name}\$" <<<"$symbols"; then
+    echo "error: symbol _mlir_ciface_${name} not found in ${name}.o" >&2
+    exit 1
+  fi
+
+  rm -rf "$out_dir"
+}
+
+for shape in 8x8x8 16x16x16 32x32x32; do
+  run_backend_codegen_static_checks "$shape"
+done
+
 echo "[MLIR test] all passed"

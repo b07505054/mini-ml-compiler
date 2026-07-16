@@ -1,0 +1,26 @@
+{
+  "shapes": [
+    {
+      "shape": "8x8x8",
+      "correct": true,
+      "max_abs_error": 3e-08,
+      "reference_checksum": "0x614f12071904f1cc",
+      "generated_checksum": "0x5b40f37d505b46cd"
+    },
+    {
+      "shape": "16x16x16",
+      "correct": true,
+      "max_abs_error": 1.2e-07,
+      "reference_checksum": "0x3936efc009a8d543",
+      "generated_checksum": "0x4a97d9375d98368e"
+    },
+    {
+      "shape": "32x32x32",
+      "correct": true,
+      "max_abs_error": 1.8e-07,
+      "reference_checksum": "0xb980c09c7f02db6d",
+      "generated_checksum": "0x4c8b71bbdae8c4c3"
+    }
+  ],
+  "all_correct": true
+}

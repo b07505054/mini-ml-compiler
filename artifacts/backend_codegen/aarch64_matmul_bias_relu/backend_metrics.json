@@ -1,0 +1,96 @@
+{
+  "methodology": {
+    "llvm_ir_instructions": "lines in the define{} body containing ' = ' or starting with store/br/ret/call void",
+    "aarch64_instructions": "llvm-objdump -d --no-show-raw-insn, address-prefixed lines, split per <symbol>: header",
+    "object_size_bytes": "stat size of the .o file"
+  },
+  "shapes": {
+    "8x8x8": {
+      "llvm_ir_instructions": {
+        "raw_kernel": 149,
+        "ciface_wrapper": 27,
+        "total": 176
+      },
+      "aarch64_instructions": {
+        "raw_kernel": {
+          "total": 104,
+          "loads": 17,
+          "stores": 10,
+          "branches": 16,
+          "fp_arithmetic": 4
+        },
+        "ciface_wrapper": {
+          "total": 30,
+          "loads": 12,
+          "stores": 10,
+          "branches": 2,
+          "fp_arithmetic": 0
+        },
+        "total": 134,
+        "loads_total": 29,
+        "stores_total": 20,
+        "branches_total": 18,
+        "fp_arithmetic_total": 4
+      },
+      "object_size_bytes": 1704
+    },
+    "16x16x16": {
+      "llvm_ir_instructions": {
+        "raw_kernel": 149,
+        "ciface_wrapper": 27,
+        "total": 176
+      },
+      "aarch64_instructions": {
+        "raw_kernel": {
+          "total": 104,
+          "loads": 17,
+          "stores": 10,
+          "branches": 16,
+          "fp_arithmetic": 4
+        },
+        "ciface_wrapper": {
+          "total": 30,
+          "loads": 12,
+          "stores": 10,
+          "branches": 2,
+          "fp_arithmetic": 0
+        },
+        "total": 134,
+        "loads_total": 29,
+        "stores_total": 20,
+        "branches_total": 18,
+        "fp_arithmetic_total": 4
+      },
+      "object_size_bytes": 1704
+    },
+    "32x32x32": {
+      "llvm_ir_instructions": {
+        "raw_kernel": 149,
+        "ciface_wrapper": 27,
+        "total": 176
+      },
+      "aarch64_instructions": {
+        "raw_kernel": {
+          "total": 104,
+          "loads": 17,
+          "stores": 10,
+          "branches": 16,
+          "fp_arithmetic": 4
+        },
+        "ciface_wrapper": {
+          "total": 30,
+          "loads": 12,
+          "stores": 10,
+          "branches": 2,
+          "fp_arithmetic": 0
+        },
+        "total": 134,
+        "loads_total": 29,
+        "stores_total": 20,
+        "branches_total": 18,
+        "fp_arithmetic_total": 4
+      },
+      "object_size_bytes": 1704
+    }
+  }
+}

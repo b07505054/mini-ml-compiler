@@ -1,0 +1,142 @@
+
+/tmp/backend_codegen_canonical/matmul_bias_relu_32x32x32.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_32x32x32>:
+       0: d10203ff     	sub	sp, sp, #0x80
+       4: a9027bfd     	stp	x29, x30, [sp, #0x20]
+       8: a9036ffc     	stp	x28, x27, [sp, #0x30]
+       c: a90467fa     	stp	x26, x25, [sp, #0x40]
+      10: a9055ff8     	stp	x24, x23, [sp, #0x50]
+      14: a90657f6     	stp	x22, x21, [sp, #0x60]
+      18: a9074ff4     	stp	x20, x19, [sp, #0x70]
+      1c: aa0603f4     	mov	x20, x6
+      20: aa0503f5     	mov	x21, x5
+      24: aa0203f6     	mov	x22, x2
+      28: aa0103f7     	mov	x23, x1
+      2c: a94de3f9     	ldp	x25, x24, [sp, #0xd8]
+      30: a94ba7e8     	ldp	x8, x9, [sp, #0xb8]
+      34: a900a7e8     	stp	x8, x9, [sp, #0x8]
+      38: a94a77fb     	ldp	x27, x29, [sp, #0xa0]
+      3c: a94873f3     	ldp	x19, x28, [sp, #0x80]
+      40: 52820800     	mov	w0, #0x1040             // =4160
+      44: 94000000     	bl	0x44 <matmul_bias_relu_32x32x32+0x44>
+      48: aa1f03e8     	mov	x8, xzr
+      4c: f9000fe0     	str	x0, [sp, #0x18]
+      50: 9100fc09     	add	x9, x0, #0x3f
+      54: 927ae53a     	and	x26, x9, #0xffffffffffffffc0
+      58: 8b160ae9     	add	x9, x23, x22, lsl #2
+      5c: 8b1c0a6a     	add	x10, x19, x28, lsl #2
+      60: 14000002     	b	0x68 <matmul_bias_relu_32x32x32+0x68>
+      64: 91000508     	add	x8, x8, #0x1
+      68: f1007d1f     	cmp	x8, #0x1f
+      6c: 5400034c     	b.gt	0xd4 <matmul_bias_relu_32x32x32+0xd4>
+      70: aa1f03eb     	mov	x11, xzr
+      74: 14000004     	b	0x84 <matmul_bias_relu_32x32x32+0x84>
+      78: d503201f     	nop
+      7c: d503201f     	nop
+      80: 9100056b     	add	x11, x11, #0x1
+      84: f1007d7f     	cmp	x11, #0x1f
+      88: 54fffeec     	b.gt	0x64 <matmul_bias_relu_32x32x32+0x64>
+      8c: aa1f03ec     	mov	x12, xzr
+      90: 9b1d7d6d     	mul	x13, x11, x29
+      94: 8b08156e     	add	x14, x11, x8, lsl #5
+      98: f1007d9f     	cmp	x12, #0x1f
+      9c: 54ffff2c     	b.gt	0x80 <matmul_bias_relu_32x32x32+0x80>
+      a0: 9b147d8f     	mul	x15, x12, x20
+      a4: 9b153d0f     	madd	x15, x8, x21, x15
+      a8: bc6f7920     	ldr	s0, [x9, x15, lsl #2]
+      ac: 9b1b358f     	madd	x15, x12, x27, x13
+      b0: bc6f7941     	ldr	s1, [x10, x15, lsl #2]
+      b4: bc6e7b42     	ldr	s2, [x26, x14, lsl #2]
+      b8: 1e210800     	fmul	s0, s0, s1
+      bc: 1e202840     	fadd	s0, s2, s0
+      c0: bc2e7b40     	str	s0, [x26, x14, lsl #2]
+      c4: 9100058c     	add	x12, x12, #0x1
+      c8: f1007d9f     	cmp	x12, #0x1f
+      cc: 54fffead     	b.le	0xa0 <matmul_bias_relu_32x32x32+0xa0>
+      d0: 17ffffec     	b	0x80 <matmul_bias_relu_32x32x32+0x80>
+      d4: 52820800     	mov	w0, #0x1040             // =4160
+      d8: 94000000     	bl	0xd8 <matmul_bias_relu_32x32x32+0xd8>
+      dc: aa0003f4     	mov	x20, x0
+      e0: aa1f03e8     	mov	x8, xzr
+      e4: aa1f03e9     	mov	x9, xzr
+      e8: 9100fc0a     	add	x10, x0, #0x3f
+      ec: 927ae555     	and	x21, x10, #0xffffffffffffffc0
+      f0: a940abeb     	ldp	x11, x10, [sp, #0x8]
+      f4: 8b0a096a     	add	x10, x11, x10, lsl #2
+      f8: 2f00e400     	movi	d0, #0000000000000000
+      fc: 14000003     	b	0x108 <matmul_bias_relu_32x32x32+0x108>
+     100: 91000529     	add	x9, x9, #0x1
+     104: 91020108     	add	x8, x8, #0x80
+     108: f1007d3f     	cmp	x9, #0x1f
+     10c: 5400024c     	b.gt	0x154 <matmul_bias_relu_32x32x32+0x154>
+     110: aa1f03eb     	mov	x11, xzr
+     114: f1007d7f     	cmp	x11, #0x1f
+     118: 54ffff4c     	b.gt	0x100 <matmul_bias_relu_32x32x32+0x100>
+     11c: d503201f     	nop
+     120: 8b08034c     	add	x12, x26, x8
+     124: bc6b7981     	ldr	s1, [x12, x11, lsl #2]
+     128: 9b187d6c     	mul	x12, x11, x24
+     12c: 9b19312c     	madd	x12, x9, x25, x12
+     130: bc6c7942     	ldr	s2, [x10, x12, lsl #2]
+     134: 1e222821     	fadd	s1, s1, s2
+     138: 1e204821     	fmax	s1, s1, s0
+     13c: 8b0802ac     	add	x12, x21, x8
+     140: bc2b7981     	str	s1, [x12, x11, lsl #2]
+     144: 9100056b     	add	x11, x11, #0x1
+     148: f1007d7f     	cmp	x11, #0x1f
+     14c: 54fffead     	b.le	0x120 <matmul_bias_relu_32x32x32+0x120>
+     150: 17ffffec     	b	0x100 <matmul_bias_relu_32x32x32+0x100>
+     154: f9400fe0     	ldr	x0, [sp, #0x18]
+     158: 94000000     	bl	0x158 <matmul_bias_relu_32x32x32+0x158>
+     15c: aa1403e0     	mov	x0, x20
+     160: aa1503e1     	mov	x1, x21
+     164: aa1f03e2     	mov	x2, xzr
+     168: 52800403     	mov	w3, #0x20               // =32
+     16c: 52800404     	mov	w4, #0x20               // =32
+     170: 52800405     	mov	w5, #0x20               // =32
+     174: 52800026     	mov	w6, #0x1                // =1
+     178: a9474ff4     	ldp	x20, x19, [sp, #0x70]
+     17c: a94657f6     	ldp	x22, x21, [sp, #0x60]
+     180: a9455ff8     	ldp	x24, x23, [sp, #0x50]
+     184: a94467fa     	ldp	x26, x25, [sp, #0x40]
+     188: a9436ffc     	ldp	x28, x27, [sp, #0x30]
+     18c: a9427bfd     	ldp	x29, x30, [sp, #0x20]
+     190: 910203ff     	add	sp, sp, #0x80
+     194: d65f03c0     	ret
+     198: d503201f     	nop
+     19c: d503201f     	nop
+
+00000000000001a0 <_mlir_ciface_matmul_bias_relu_32x32x32>:
+     1a0: d10203ff     	sub	sp, sp, #0x80
+     1a4: a9074ffe     	stp	x30, x19, [sp, #0x70]
+     1a8: aa0003f3     	mov	x19, x0
+     1ac: a9429825     	ldp	x5, x6, [x1, #0x28]
+     1b0: a9419028     	ldp	x8, x4, [x1, #0x18]
+     1b4: a940a42a     	ldp	x10, x9, [x1, #0x8]
+     1b8: f9400020     	ldr	x0, [x1]
+     1bc: f9400047     	ldr	x7, [x2]
+     1c0: 3cc08040     	ldur	q0, [x2, #0x8]
+     1c4: 3cc18041     	ldur	q1, [x2, #0x18]
+     1c8: a942b04b     	ldp	x11, x12, [x2, #0x28]
+     1cc: ad400c62     	ldp	q2, q3, [x3]
+     1d0: 3dc00864     	ldr	q4, [x3, #0x20]
+     1d4: f940186d     	ldr	x13, [x3, #0x30]
+     1d8: ad0213e3     	stp	q3, q4, [sp, #0x40]
+     1dc: 3d800fe2     	str	q2, [sp, #0x30]
+     1e0: ad0007e0     	stp	q0, q1, [sp]
+     1e4: f90033ed     	str	x13, [sp, #0x60]
+     1e8: a90233eb     	stp	x11, x12, [sp, #0x20]
+     1ec: aa0a03e1     	mov	x1, x10
+     1f0: aa0903e2     	mov	x2, x9
+     1f4: aa0803e3     	mov	x3, x8
+     1f8: 94000000     	bl	0x1f8 <_mlir_ciface_matmul_bias_relu_32x32x32+0x58>
+     1fc: a9000660     	stp	x0, x1, [x19]
+     200: a9010e62     	stp	x2, x3, [x19, #0x10]
+     204: a9021664     	stp	x4, x5, [x19, #0x20]
+     208: f9001a66     	str	x6, [x19, #0x30]
+     20c: a9474ffe     	ldp	x30, x19, [sp, #0x70]
+     210: 910203ff     	add	sp, sp, #0x80
+     214: d65f03c0     	ret

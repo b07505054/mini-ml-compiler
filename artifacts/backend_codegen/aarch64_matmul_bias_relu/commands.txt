@@ -1,0 +1,78 @@
+Commands used to produce every file in this directory. All paths are
+relative to the ml-graph-compiler-runtime repo root.
+
+Note on paths: MLIR_BIN below is shown at the exact path used on the
+development host these artifacts were generated on. It is a plain
+environment-variable override (see mlir_passes/tools/
+compile_hir_matmul_bias_relu_aarch64.sh), not a hardcoded requirement --
+point it at any MLIR 21 mlir-opt/mlir-translate install to reproduce
+elsewhere.
+
+Note on generated_<shape>.o: these three object files are not committed
+(see README.md); object_hashes.txt records their SHA-256 and size so a
+freshly regenerated object can be verified byte-identical.
+
+1. Rebuild AArch64 objects for all three shapes (run once per shape):
+
+   MLIR_BIN=/home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin
+   bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_<shape>.mlir \
+     <output_dir> \
+     matmul_bias_relu_<shape>
+
+   This produces, per shape:
+     <output_dir>/matmul_bias_relu_<shape>_llvm.mlir   (-> lowered_llvm_dialect_<shape>.mlir here)
+     <output_dir>/matmul_bias_relu_<shape>.ll           (-> generated_<shape>.ll here)
+     <output_dir>/matmul_bias_relu_<shape>.s            (-> generated_<shape>.s here)
+     <output_dir>/matmul_bias_relu_<shape>.o            (-> generated_<shape>.o here)
+
+   Internally this script runs, in order:
+     mlir-opt <input.mlir> \
+       --load-dialect-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --load-pass-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},buffer-deallocation-pipeline,convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)' \
+       -o <name>_llvm.mlir
+
+     mlir-translate --mlir-to-llvmir <name>_llvm.mlir -o <name>.ll
+
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -filetype=asm <name>.ll -o <name>.s
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -filetype=obj <name>.ll -o <name>.o
+
+2. Disassembly (objdump_<shape>.txt):
+
+   llvm-objdump -d <output_dir>/matmul_bias_relu_<shape>.o
+
+3. Full pipeline, correctness, benchmark, and static metrics (all of the
+   above plus Raspberry Pi execution), driven end-to-end by:
+
+   PI_HOST=allen@100.110.37.6 \
+   bash tools/run_backend_codegen_pi_integration.sh <output_dir>
+
+   which additionally:
+     - transfers the three .o files and mlir_passes/tools/aarch64_matmul_bias_relu_harness.cpp
+       to the Raspberry Pi via scp
+     - builds on the Pi with:
+         g++ -O2 -c aarch64_matmul_bias_relu_harness.cpp -o harness.o
+         g++ -O2 harness.o matmul_bias_relu_8x8x8.o matmul_bias_relu_16x16x16.o \
+             matmul_bias_relu_32x32x32.o -o generated_kernel_benchmark
+     - runs each shape as its own process on the Pi:
+         ./generated_kernel_benchmark 2000 200 <shape>
+       (three separate invocations; see the harness header comment for why
+       shapes are run as separate processes rather than all three in one)
+     - merges the three per-shape JSON outputs into benchmark_results.json
+       and correctness_results.json via tools/merge_backend_codegen_shape_results.py
+     - computes backend_metrics.json via tools/collect_backend_codegen_static_metrics.py
+       (cross-disassembles the AArch64 objects with llvm-objdump on the x86_64
+       dev host -- LLVM's disassembler supports this without running the
+       target binary)
+     - records pi_device_state.txt via:
+         ssh allen@100.110.37.6 "hostname; uname -a; lscpu; gcc --version | head -1"
+
+Toolchain versions used (dev host, recorded at generation time):
+   Ubuntu LLVM/clang 21.1.8 (llc, mlir-opt, mlir-translate, llvm-objdump all from this version)
+   mlir-opt / mlir-translate from the project-local build at
+     /home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin
+
+Raspberry Pi target (pi_device_state.txt has the live capture):
+   hostname edgeaiplatform, Cortex-A76 (Raspberry Pi 5 SoC), aarch64,
+   Debian 13 (trixie), gcc 14.2.0

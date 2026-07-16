@@ -1,0 +1,17 @@
+SHA-256 and size of the generated AArch64 objects at artifact-generation time
+(2026-07-15). These objects are not committed -- this repo's .gitignore
+excludes *.o repo-wide and no binary object is committed anywhere else in
+this repository's history. Regenerate with the commands in commands.txt and
+compare against these hashes to verify a byte-for-byte identical rebuild.
+
+generated_8x8x8.o
+  sha256: d610be506fa2e8b489d0f28176fc57ef977747e61e54c518a3dfb5a1ec3e0492
+  size:   1704 bytes
+
+generated_16x16x16.o
+  sha256: de0bb8787784ad0ea5a585ccef822057aeb2016510f4743362c4a43f64f1e0c9
+  size:   1704 bytes
+
+generated_32x32x32.o
+  sha256: 33aba8357307ca928da42b7e07cadbcdc0b51f12686432c706935cdd570da469
+  size:   1704 bytes
