@@ -1,0 +1,24 @@
+{
+  "shape": "32x32x32",
+  "M": 32, "N": 32, "K": 32,
+  "iterations": 2000,
+  "correctness": {
+    "reference_checksum": "0xb980c09c7f02db6d",
+    "generic": {"correct": true, "max_abs_error": 0.00000018, "checksum": "0x4c8b71bbdae8c4c3"},
+    "fully_unrolled_vectorized": {"available": true, "correct": true, "max_abs_error": 0.00000048, "checksum": "0x94cc9c6d2087bfdf"},
+    "tiled_vectorized": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0xb980c09c7f02db6d"},
+    "handwritten": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0xb980c09c7f02db6d"},
+    "all_correct": true
+  },
+  "benchmark_ms": {
+    "scalar":                  {"median": 0.029333, "p95": 0.029352},
+    "generic":                 {"median": 0.127925, "p95": 0.127945},
+    "fully_unrolled_vectorized": {"median": 0.004611, "p95": 0.004630},
+    "tiled_vectorized":        {"median": 0.002908, "p95": 0.002926},
+    "handwritten":             {"median": 0.026611, "p95": 0.026630}
+  },
+  "tiled_over_generic_median_speedup": 43.990715,
+  "tiled_over_fully_unrolled_median_ratio": 0.630666,
+  "tiled_over_scalar_median_ratio": 0.099137,
+  "tiled_over_handwritten_median_ratio": 0.109278
+}

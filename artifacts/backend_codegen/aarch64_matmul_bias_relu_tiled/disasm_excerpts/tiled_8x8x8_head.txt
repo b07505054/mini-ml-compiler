@@ -1,0 +1,61 @@
+
+/tmp/backend_codegen_tiled_canonical/matmul_bias_relu_tiled_8x8x8.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_tiled_8x8x8>:
+       0: a9be57fe     	stp	x30, x21, [sp, #-0x20]!
+       4: a9014ff4     	stp	x20, x19, [sp, #0x10]
+       8: aa0103f3     	mov	x19, x1
+       c: f9402ff4     	ldr	x20, [sp, #0x58]
+      10: f94013f5     	ldr	x21, [sp, #0x20]
+      14: 52802800     	mov	w0, #0x140              // =320
+      18: 94000000     	bl	0x18 <matmul_bias_relu_tiled_8x8x8+0x18>
+      1c: aa1f03e8     	mov	x8, xzr
+      20: 9100fc09     	add	x9, x0, #0x3f
+      24: 927ae521     	and	x1, x9, #0xffffffffffffffc0
+      28: 6f00e400     	movi	v0.2d, #0000000000000000
+      2c: f1001d1f     	cmp	x8, #0x7
+      30: 54000d0c     	b.gt	0x1d0 <matmul_bias_relu_tiled_8x8x8+0x1d0>
+      34: d503201f     	nop
+      38: d503201f     	nop
+      3c: d503201f     	nop
+      40: d37be909     	lsl	x9, x8, #5
+      44: 8b09028a     	add	x10, x20, x9
+      48: ad404950     	ldp	q16, q18, [x10]
+      4c: ad411945     	ldp	q5, q6, [x10, #0x20]
+      50: ad421143     	ldp	q3, q4, [x10, #0x40]
+      54: ad430941     	ldp	q1, q2, [x10, #0x60]
+      58: 8b09026a     	add	x10, x19, x9
+      5c: ad4056b4     	ldp	q20, q21, [x21]
+      60: ad404d56     	ldp	q22, q19, [x10]
+      64: 4f9612b2     	fmla	v18.4s, v21.4s, v22.s[0]
+      68: 4f961290     	fmla	v16.4s, v20.4s, v22.s[0]
+      6c: ad414557     	ldp	q23, q17, [x10, #0x20]
+      70: 4f9712a6     	fmla	v6.4s, v21.4s, v23.s[0]
+      74: 4f971285     	fmla	v5.4s, v20.4s, v23.s[0]
+      78: ad421d58     	ldp	q24, q7, [x10, #0x40]
+      7c: 4f9812a4     	fmla	v4.4s, v21.4s, v24.s[0]
+      80: 4f981283     	fmla	v3.4s, v20.4s, v24.s[0]
+      84: 3dc01959     	ldr	q25, [x10, #0x60]
+      88: 4f9912a2     	fmla	v2.4s, v21.4s, v25.s[0]
+      8c: 4f991281     	fmla	v1.4s, v20.4s, v25.s[0]
+      90: ad4152b5     	ldp	q21, q20, [x21, #0x20]
+      94: 4fb612b0     	fmla	v16.4s, v21.4s, v22.s[1]
+      98: 4fb61292     	fmla	v18.4s, v20.4s, v22.s[1]
+      9c: 4fb712a5     	fmla	v5.4s, v21.4s, v23.s[1]
+      a0: 4fb71286     	fmla	v6.4s, v20.4s, v23.s[1]
+      a4: 4fb812a3     	fmla	v3.4s, v21.4s, v24.s[1]
+      a8: 4fb81284     	fmla	v4.4s, v20.4s, v24.s[1]
+      ac: 4fb912a1     	fmla	v1.4s, v21.4s, v25.s[1]
+      b0: 4fb91282     	fmla	v2.4s, v20.4s, v25.s[1]
+      b4: ad4256b4     	ldp	q20, q21, [x21, #0x40]
+      b8: 4f961ab2     	fmla	v18.4s, v21.4s, v22.s[2]
+      bc: 4f961a90     	fmla	v16.4s, v20.4s, v22.s[2]
+      c0: 4f971aa6     	fmla	v6.4s, v21.4s, v23.s[2]
+      c4: 4f971a85     	fmla	v5.4s, v20.4s, v23.s[2]
+      c8: 4f981aa4     	fmla	v4.4s, v21.4s, v24.s[2]
+      cc: 4f981a83     	fmla	v3.4s, v20.4s, v24.s[2]
+      d0: 4f991aa2     	fmla	v2.4s, v21.4s, v25.s[2]
+      d4: 4f991a81     	fmla	v1.4s, v20.4s, v25.s[2]
+  ... (162 total lines, truncated -- full disassembly reproducible via commands.txt) ...

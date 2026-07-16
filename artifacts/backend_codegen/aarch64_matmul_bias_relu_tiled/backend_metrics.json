@@ -1,0 +1,51 @@
+{
+  "methodology": {
+    "llvm_ir_instructions": "lines in generated_<shape>.ll containing ' = ' or starting with store/br/ret/call, whole file",
+    "aarch64_instructions": "llvm-objdump -d --no-show-raw-insn on the whole .o, address-prefixed lines, mnemonic field only",
+    "static_fmla": "count of disassembled lines whose mnemonic is exactly 'fmla' -- the number of FMLA instructions PRESENT IN THE OBJECT TEXT, independent of how many times a loop executes them",
+    "dynamic_fmla_per_invocation": "static_fmla for fully-unrolled variants (no loop, so static==dynamic); for tiled, computed as (M/4)*(N/8)*(K/8)*64 -- the K-loop's 64-FMLA body executed once per (M-tile, N-tile, K-tile) triple. Always equals M*N*K/4 for both variants, since both perform the same total arithmetic -- this is the static/dynamic distinction the tiled slice exists to demonstrate: identical dynamic work, drastically different static code size.",
+    "loads_stores_branches": "mnemonic-exact match on {ldr,ldp,ldur,ld1} / {str,stp,stur,st1} / {b,bl,b.<cond>,cbz,cbnz}",
+    "object_size_bytes": "stat size of the .o file",
+    "text_bytes": "llvm-objdump -h .text section size field",
+    "largest_vector_width": "max N in '<N x float>' LLVM IR vector types appearing in generated_<shape>.ll; 0 if none",
+    "outer_loop_labels": "count of '.LBBn_m:' basic-block labels in the .s file -- a rough structural proxy for loop presence (generic's scalar loop-from-convert-linalg-to-loops also produces multiple labels; fully-unrolled has zero because vectorize_children_and_apply_patterns with no tiling produces straight-line code)"
+  },
+  "shapes": {
+    "8x8x8": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,   "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768,   "text_bytes": 600,    "largest_vector_width": 0,    "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"llvm_ir_instructions": 465, "aarch64_instructions": 274, "static_fmla": 128, "dynamic_fmla_per_invocation": 128, "loads": 66, "stores": 40, "branches": 2, "object_size_bytes": 2192, "text_bytes": 1096, "largest_vector_width": 64, "outer_loop_labels": 0},
+      "tiled_vectorized": {"llvm_ir_instructions": 317, "aarch64_instructions": 154, "static_fmla": 64,  "dynamic_fmla_per_invocation": 128,   "loads": 33, "stores": 16, "branches": 4,  "object_size_bytes": 1696,   "text_bytes": 616,    "largest_vector_width": 8,    "outer_loop_labels": 2}
+    },
+    "16x16x16": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,    "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768,   "text_bytes": 600,    "largest_vector_width": 0,    "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"llvm_ir_instructions": 1305, "aarch64_instructions": 3002, "static_fmla": 1024, "dynamic_fmla_per_invocation": 1024, "loads": 943, "stores": 725, "branches": 2, "object_size_bytes": 13120, "text_bytes": 12008, "largest_vector_width": 256, "outer_loop_labels": 0},
+      "tiled_vectorized": {"llvm_ir_instructions": 484, "aarch64_instructions": 234, "static_fmla": 64,   "dynamic_fmla_per_invocation": 1024,  "loads": 47, "stores": 30, "branches": 11, "object_size_bytes": 2128,   "text_bytes": 936,    "largest_vector_width": 8,    "outer_loop_labels": 6}
+    },
+    "32x32x32": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,    "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768,    "text_bytes": 600,    "largest_vector_width": 0,    "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"llvm_ir_instructions": 4521, "aarch64_instructions": 28026, "static_fmla": 8192, "dynamic_fmla_per_invocation": 8192, "loads": 10668, "stores": 7808, "branches": 2, "object_size_bytes": 113216, "text_bytes": 112104, "largest_vector_width": 1024, "outer_loop_labels": 0},
+      "tiled_vectorized": {"llvm_ir_instructions": 484, "aarch64_instructions": 234, "static_fmla": 64,   "dynamic_fmla_per_invocation": 8192,  "loads": 47, "stores": 30, "branches": 11, "object_size_bytes": 2128,    "text_bytes": 936,    "largest_vector_width": 8,    "outer_loop_labels": 6}
+    },
+    "64x64x64": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,  "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768, "text_bytes": 600, "largest_vector_width": 0, "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"available": false, "note": "not generated -- projected object size ~900KB based on M*N*K scaling; impractical, see README.md"},
+      "tiled_vectorized": {"llvm_ir_instructions": 484, "aarch64_instructions": 234, "static_fmla": 64, "dynamic_fmla_per_invocation": 65536, "loads": 47, "stores": 26, "branches": 11, "object_size_bytes": 2104, "text_bytes": 936, "largest_vector_width": 8, "outer_loop_labels": 6}
+    },
+    "32x64x32": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,  "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768, "text_bytes": 600, "largest_vector_width": 0, "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"available": false, "note": "not generated for non-square shapes in this slice"},
+      "tiled_vectorized": {"llvm_ir_instructions": 484, "aarch64_instructions": 230, "static_fmla": 64, "dynamic_fmla_per_invocation": 16384, "loads": 47, "stores": 26, "branches": 11, "object_size_bytes": 2088, "text_bytes": 920, "largest_vector_width": 8, "outer_loop_labels": 6}
+    },
+    "64x32x64": {
+      "generic":  {"llvm_ir_instructions": 204, "aarch64_instructions": 150, "static_fmla": 0,  "dynamic_fmla_per_invocation": 0,     "loads": 29, "stores": 21, "branches": 21, "object_size_bytes": 1768, "text_bytes": 600, "largest_vector_width": 0, "outer_loop_labels": 14},
+      "fully_unrolled_vectorized": {"available": false, "note": "not generated for non-square shapes in this slice"},
+      "tiled_vectorized": {"llvm_ir_instructions": 484, "aarch64_instructions": 234, "static_fmla": 64, "dynamic_fmla_per_invocation": 32768, "loads": 47, "stores": 30, "branches": 11, "object_size_bytes": 2128, "text_bytes": 936, "largest_vector_width": 8, "outer_loop_labels": 6}
+    }
+  },
+  "code_size_reduction_vs_fully_unrolled": {
+    "8x8x8": "2192 -> 1696 bytes (1.29x smaller)",
+    "16x16x16": "13120 -> 2128 bytes (6.17x smaller)",
+    "32x32x32": "113216 -> 2128 bytes (53.20x smaller)",
+    "64x64x64": "~900000 (projected, not built) -> 2104 bytes (~428x smaller, projected)"
+  }
+}

@@ -842,4 +842,133 @@ for shape in 8x8x8 16x16x16 32x32x32; do
   run_backend_codegen_vectorized_static_checks "$shape"
 done
 
+# ---------------------------------------------------------------------------
+# Host-side static checks for the tiled-vectorized AArch64 backend variant
+# (compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-vectorized).
+# Requires no network access and no Raspberry Pi. Verifies, in order:
+# (1) the project-owned tiling+vectorization Transform-dialect script
+#     actually produces real scf.for loops (not a single unrolled
+#     vector.contract) plus vector transfer/fma ops before LLVM lowering,
+# (2) no vector type wider than 64 FP32 lanes appears anywhere in that
+#     pre-bufferization intermediate -- the direct structural evidence that
+#     this is NOT whole-shape vectorization,
+# (3) the final LLVM IR still contains a real (narrow) LLVM vector type,
+# (4) the AArch64 assembly contains real NEON FMLA AND real loop branches
+#     (not just the ~2 branches of the fully-unrolled variant),
+# (5) the 32x32x32 object stays under the 20,000-byte code-size gate this
+#     slice exists to satisfy (artifacts/backend_codegen/
+#     aarch64_matmul_bias_relu_tiled/README.md has the full before/after).
+# Real hardware execution (repeated-call and mixed-shape correctness) is a
+# separate, explicitly labeled integration test:
+# tools/run_backend_codegen_tiled_pi_integration.sh.
+# ---------------------------------------------------------------------------
+run_backend_codegen_tiled_static_checks() {
+  local shape="$1"
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_${shape}.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_tiled_${shape}"
+  local transform_script="$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir"
+
+  echo "[MLIR test] backend codegen tiled-vectorized static checks ($shape)"
+
+  # 1. Tiled vector IR structural test: HIR -> Linalg -> tile+fuse+vectorize,
+  #    stopping BEFORE bufferization/LLVM lowering, must contain real
+  #    scf.for loops (the outer M/N/K tiling) plus vector transfer/fma ops
+  #    (the microkernel body).
+  "$MLIR_OPT" "$input" \
+    --load-dialect-plugin="$PLUGIN" \
+    --load-pass-plugin="$PLUGIN" \
+    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
+    -o "$out_dir/${name}_vector.mlir"
+  if ! grep -q "scf.for" "$out_dir/${name}_vector.mlir"; then
+    echo "error: expected scf.for (outer tiling loops) in ${name}_vector.mlir -- tiling did not produce real loops" >&2
+    exit 1
+  fi
+  if ! grep -qE "vector\.(contract|fma|transfer_read|transfer_write|broadcast|splat)" "$out_dir/${name}_vector.mlir"; then
+    echo "error: expected at least one vector.{contract,fma,transfer_read,transfer_write,broadcast,splat} in ${name}_vector.mlir" >&2
+    exit 1
+  fi
+
+  # 2. Bounded vector-width test: no vector type in this intermediate may
+  #    exceed 64 FP32 lanes (the direct opposite of whole-shape
+  #    vectorization, where e.g. 32x32x32 produces vector<32x32xf32> ==
+  #    1024 lanes). Checks both 1-D (vector<Nxf32>) and 2-D
+  #    (vector<AxBxf32>) forms.
+  local bad_vec
+  bad_vec="$(grep -oE 'vector<[0-9]+(x[0-9]+)*xf32>' "$out_dir/${name}_vector.mlir" | sort -u | while read -r v; do
+    dims="$(echo "$v" | grep -oE '[0-9]+' | head -n -1)"
+    [[ -z "$dims" ]] && dims="$(echo "$v" | grep -oE '[0-9]+')"
+    lanes=1
+    for d in $dims; do lanes=$((lanes * d)); done
+    if [[ "$lanes" -gt 64 ]]; then echo "$v (lanes=$lanes)"; fi
+  done)"
+  if [[ -n "$bad_vec" ]]; then
+    echo "error: found vector type(s) exceeding 64 FP32 lanes in ${name}_vector.mlir (whole-shape vectorization regression):" >&2
+    echo "$bad_vec" >&2
+    exit 1
+  fi
+
+  # 3. Full pipeline (reuses the exact reproducible script).
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+    --variant tiled-vectorized "$input" "$out_dir" "$name"
+
+  # 4. LLVM vector IR structural test: real (narrow) LLVM vector type.
+  if ! grep -qE "<[0-9]+ x float>" "$out_dir/${name}.ll"; then
+    echo "error: expected an LLVM vector type (e.g. '<N x float>') in ${name}.ll -- tiled vectorization silently scalarized" >&2
+    exit 1
+  fi
+
+  # 5. NEON/FMLA assembly test.
+  if ! grep -qE '^\s+fmla\s+v[0-9]+\.4s' "$out_dir/${name}.s"; then
+    echo "error: expected 'fmla v*.4s' in ${name}.s -- tiled build did not select fused NEON FMLA" >&2
+    exit 1
+  fi
+
+  # 6. Real loop branches present: at least one conditional branch
+  #    (b.<cond>/cbz/cbnz), distinguishing this from the fully-unrolled
+  #    vectorized variant's ~2 total branches (function entry/exit only).
+  local cond_branches
+  cond_branches="$(grep -cE '^\s+(b\.[a-z]+|cbz|cbnz)\s' "$out_dir/${name}.s" || true)"
+  if [[ "$cond_branches" -lt 1 ]]; then
+    echo "error: expected at least one conditional branch (loop) in ${name}.s, found $cond_branches" >&2
+    exit 1
+  fi
+
+  # 7. ABI/exported-symbol checks, same convention as the other variants.
+  if ! grep -q "llvm.func @${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+  if ! grep -q "llvm.func @_mlir_ciface_${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @_mlir_ciface_${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+  local machine
+  machine="$(llvm-readobj -h "$out_dir/${name}.o" | grep -o 'EM_AARCH64' || true)"
+  if [[ "$machine" != "EM_AARCH64" ]]; then
+    echo "error: ${name}.o is not an EM_AARCH64 object" >&2
+    exit 1
+  fi
+
+  # 8. Code-size regression gate: this slice's whole reason for existing.
+  #    32x32x32 must stay well under the fully-unrolled variant's 113,216
+  #    bytes -- gated at 20,000 bytes (the primary achievement target).
+  if [[ "$shape" == "32x32x32" ]]; then
+    local obj_size
+    obj_size="$(stat -c%s "$out_dir/${name}.o")"
+    if [[ "$obj_size" -ge 20000 ]]; then
+      echo "error: ${name}.o is $obj_size bytes, expected < 20000 (code-size gate regression)" >&2
+      exit 1
+    fi
+  fi
+
+  rm -rf "$out_dir"
+}
+
+for shape in 8x8x8 16x16x16 32x32x32 64x64x64 32x64x32 64x32x64; do
+  run_backend_codegen_tiled_static_checks "$shape"
+done
+
 echo "[MLIR test] all passed"

@@ -1,0 +1,60 @@
+SHA-256 and size of all generated AArch64 objects at artifact-generation
+time (2026-07-16). None of these objects are committed -- this repo's
+.gitignore excludes *.o repo-wide and no binary object has ever been
+committed anywhere in this repository's history. Regenerate with the
+commands in commands.txt and compare against these hashes to verify a
+byte-for-byte identical rebuild.
+
+Fully-unrolled vectorized objects for 8x8x8/16x16x16/32x32x32 are
+byte-identical to (and already recorded in)
+artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/object_hashes.txt
+-- not repeated here. No fully-unrolled vectorized object was generated for
+64x64x64/32x64x32/64x32x64 in this slice (see README.md).
+
+generic/matmul_bias_relu_8x8x8.o
+  sha256: 8ab235fffc808d95d1f1361a73e2584e401a833074e2d35c930d585ef3b0e400
+  size:   1768 bytes
+
+generic/matmul_bias_relu_16x16x16.o
+  sha256: 443aa69fa910748400410c1901e9dd87aad3d2b2da0083d14e6838ce916a7c5e
+  size:   1768 bytes
+
+generic/matmul_bias_relu_32x32x32.o
+  sha256: 8f811c112eb73eeb70a1b9002e7b34751668fab927be52e47577634c5b79c638
+  size:   1768 bytes
+
+generic/matmul_bias_relu_64x64x64.o
+  sha256: ff40076dc258860c07fd77b752ccaf221505fd01eb43c9d67e3189725bd1e99a
+  size:   1768 bytes
+
+generic/matmul_bias_relu_32x64x32.o
+  sha256: 405f3b207c87463de5b6723a3a581d7a1fc41a375860399f57ec0624f8a7fc56
+  size:   1768 bytes
+
+generic/matmul_bias_relu_64x32x64.o
+  sha256: 314d0cd64871f1b0348d4c1a2e2241b5311dbd3e8ec279ca7439bf1a55d915c5
+  size:   1768 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_8x8x8.o
+  sha256: 86f68ef7523f5f7ea06efe9ef2c7a3fbf3a2dd36b12d82e839ae013eabc383ec
+  size:   1696 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_16x16x16.o
+  sha256: b13fe078a755f4dc642e26a2f84eec3b27f7b4e259293ddf3994f4467d5d530f
+  size:   2128 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_32x32x32.o  (the representative shape -- full artifacts committed for this one)
+  sha256: 2a33f4f3e5d90828aaf0c60d07ba70bd7475377cbcff1766d01dbfbd7ba9a74a
+  size:   2128 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_64x64x64.o
+  sha256: 95b80a9698648018efb3caac0dd0165f50c6a41574051de33b9670b5c186cc54
+  size:   2104 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_32x64x32.o
+  sha256: 005d84e2c7043ed48fb9e360896252fc1a57e4feecb490318977bab72e507869
+  size:   2088 bytes
+
+tiled_vectorized/matmul_bias_relu_tiled_64x32x64.o
+  sha256: 875fa26e219bddde0a73460a44a95ea77a17c56b1440509dcf2ab8aca46b79de
+  size:   2128 bytes

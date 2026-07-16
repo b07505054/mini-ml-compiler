@@ -1,0 +1,41 @@
+
+/tmp/backend_codegen_tiled_canonical/matmul_bias_relu_32x32x32.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_32x32x32>:
+       0: d10203ff     	sub	sp, sp, #0x80
+       4: a9027bfd     	stp	x29, x30, [sp, #0x20]
+       8: a9036ffc     	stp	x28, x27, [sp, #0x30]
+       c: a90467fa     	stp	x26, x25, [sp, #0x40]
+      10: a9055ff8     	stp	x24, x23, [sp, #0x50]
+      14: a90657f6     	stp	x22, x21, [sp, #0x60]
+      18: a9074ff4     	stp	x20, x19, [sp, #0x70]
+      1c: aa0603f4     	mov	x20, x6
+      20: aa0503f5     	mov	x21, x5
+      24: aa0203f6     	mov	x22, x2
+      28: aa0103f7     	mov	x23, x1
+      2c: a94de3f9     	ldp	x25, x24, [sp, #0xd8]
+      30: a94ba7e8     	ldp	x8, x9, [sp, #0xb8]
+      34: a900a7e8     	stp	x8, x9, [sp, #0x8]
+      38: a94a77fb     	ldp	x27, x29, [sp, #0xa0]
+      3c: a94873f3     	ldp	x19, x28, [sp, #0x80]
+      40: 52820800     	mov	w0, #0x1040             // =4160
+      44: 94000000     	bl	0x44 <matmul_bias_relu_32x32x32+0x44>
+      48: aa1f03e8     	mov	x8, xzr
+      4c: aa1f03e9     	mov	x9, xzr
+      50: f9000fe0     	str	x0, [sp, #0x18]
+      54: 9100fc0a     	add	x10, x0, #0x3f
+      58: 927ae55a     	and	x26, x10, #0xffffffffffffffc0
+      5c: 14000003     	b	0x68 <matmul_bias_relu_32x32x32+0x68>
+      60: 91000529     	add	x9, x9, #0x1
+      64: 91020108     	add	x8, x8, #0x80
+      68: f1007d3f     	cmp	x9, #0x1f
+      6c: 5400016c     	b.gt	0x98 <matmul_bias_relu_32x32x32+0x98>
+      70: aa1f03ea     	mov	x10, xzr
+      74: aa0803eb     	mov	x11, x8
+      78: f1007d5f     	cmp	x10, #0x1f
+      7c: 54ffff2c     	b.gt	0x60 <matmul_bias_relu_32x32x32+0x60>
+      80: b82b6b5f     	str	wzr, [x26, x11]
+      84: 9100054a     	add	x10, x10, #0x1
+  ... (full: artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/generic/objdump_32x32x32.txt) ...

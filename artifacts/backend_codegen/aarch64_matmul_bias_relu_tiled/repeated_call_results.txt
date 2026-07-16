@@ -1,0 +1,12 @@
+PASS: shape=8x8x8 variant=generic all 1000 calls correct, guards clean
+PASS: shape=8x8x8 variant=tiled-vectorized all 1000 calls correct, guards clean
+PASS: shape=16x16x16 variant=generic all 1000 calls correct, guards clean
+PASS: shape=16x16x16 variant=tiled-vectorized all 1000 calls correct, guards clean
+PASS: shape=32x32x32 variant=generic all 1000 calls correct, guards clean
+PASS: shape=32x32x32 variant=tiled-vectorized all 1000 calls correct, guards clean
+PASS: shape=64x64x64 variant=generic all 1000 calls correct, guards clean
+PASS: shape=64x64x64 variant=tiled-vectorized all 1000 calls correct, guards clean
+PASS: shape=32x64x32 variant=generic all 1000 calls correct, guards clean
+PASS: shape=32x64x32 variant=tiled-vectorized all 1000 calls correct, guards clean
+PASS: shape=64x32x64 variant=generic all 1000 calls correct, guards clean
+PASS: shape=64x32x64 variant=tiled-vectorized all 1000 calls correct, guards clean

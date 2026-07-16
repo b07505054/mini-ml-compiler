@@ -7,13 +7,17 @@
 // bug in the shared hir-matmul-bias-relu-to-linalg lowering (see that
 // file's header for the full explanation).
 //
-// Repeats at least 100 cycles of: 8x8x8, 16x16x16, 32x32x32, 32x32x32,
-// 16x16x16, 8x8x8 -- for both the generic and vectorized variants, called
-// from the SAME process without any per-call process isolation. This is a
-// correctness regression test, not a benchmark-isolation workaround: the
-// underlying accumulator bug is fixed at the lowering level, so this test
-// asserts real cross-call/cross-shape/cross-variant safety rather than
-// relying on process isolation to avoid triggering it.
+// Extended for the tiled-vectorized microkernel slice: cycles through all
+// six required shapes (8x8x8, 16x16x16, 32x32x32, 64x64x64, 32x64x32,
+// 64x32x64), calling generic and tiled-vectorized (not the whole-shape
+// fully-unrolled vectorized variant, which was never generated for the
+// non-square/64-sized shapes -- see
+// mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh) from the SAME
+// process without any per-call process isolation. This is a correctness
+// regression test, not a benchmark-isolation workaround: the underlying
+// accumulator bug is fixed at the lowering level, so this test asserts real
+// cross-call/cross-shape/cross-variant safety rather than relying on
+// process isolation to avoid triggering it.
 
 // Usage: ./aarch64_matmul_bias_relu_mixed_shape_test [cycles]
 
@@ -31,9 +35,15 @@ struct MemRef2D { float* allocated; float* aligned; int64_t offset; int64_t size
 void _mlir_ciface_matmul_bias_relu_8x8x8(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 void _mlir_ciface_matmul_bias_relu_16x16x16(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 void _mlir_ciface_matmul_bias_relu_32x32x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
-void _mlir_ciface_matmul_bias_relu_vectorized_8x8x8(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
-void _mlir_ciface_matmul_bias_relu_vectorized_16x16x16(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
-void _mlir_ciface_matmul_bias_relu_vectorized_32x32x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_64x64x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_32x64x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_64x32x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_8x8x8(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_16x16x16(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_32x32x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_64x64x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_32x64x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_64x32x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 }
 using GeneratedFn = void (*)(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 
@@ -58,11 +68,11 @@ struct ShapeCtx {
   int64_t M, N, K;
   std::vector<float> lhs, rhs, bias, ref;
   MemRef2D lhsDesc, rhsDesc, biasDesc;
-  GeneratedFn genericFn, vectorizedFn;
+  GeneratedFn genericFn, tiledFn;
 };
 
 ShapeCtx makeShape(const std::string& name, int64_t M, int64_t N, int64_t K,
-                    GeneratedFn genericFn, GeneratedFn vectorizedFn) {
+                    GeneratedFn genericFn, GeneratedFn tiledFn) {
   ShapeCtx c;
   c.name = name; c.M = M; c.N = N; c.K = K;
   c.lhs.resize(M * K); c.rhs.resize(K * N); c.bias.resize(M * N); c.ref.resize(M * N);
@@ -73,28 +83,38 @@ ShapeCtx makeShape(const std::string& name, int64_t M, int64_t N, int64_t K,
   c.lhsDesc = MemRef2D{c.lhs.data(), c.lhs.data(), 0, {M, K}, {K, 1}};
   c.rhsDesc = MemRef2D{c.rhs.data(), c.rhs.data(), 0, {K, N}, {N, 1}};
   c.biasDesc = MemRef2D{c.bias.data(), c.bias.data(), 0, {M, N}, {N, 1}};
-  c.genericFn = genericFn; c.vectorizedFn = vectorizedFn;
+  c.genericFn = genericFn; c.tiledFn = tiledFn;
   return c;
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-  int64_t cycles = argc > 1 ? std::atoll(argv[1]) : 100;
+  int64_t cycles = argc > 1 ? std::atoll(argv[1]) : 500;
 
   std::vector<ShapeCtx> shapes;
   shapes.push_back(makeShape("8x8x8", 8, 8, 8,
                               _mlir_ciface_matmul_bias_relu_8x8x8,
-                              _mlir_ciface_matmul_bias_relu_vectorized_8x8x8));
+                              _mlir_ciface_matmul_bias_relu_tiled_8x8x8));
   shapes.push_back(makeShape("16x16x16", 16, 16, 16,
                               _mlir_ciface_matmul_bias_relu_16x16x16,
-                              _mlir_ciface_matmul_bias_relu_vectorized_16x16x16));
+                              _mlir_ciface_matmul_bias_relu_tiled_16x16x16));
   shapes.push_back(makeShape("32x32x32", 32, 32, 32,
                               _mlir_ciface_matmul_bias_relu_32x32x32,
-                              _mlir_ciface_matmul_bias_relu_vectorized_32x32x32));
+                              _mlir_ciface_matmul_bias_relu_tiled_32x32x32));
+  shapes.push_back(makeShape("64x64x64", 64, 64, 64,
+                              _mlir_ciface_matmul_bias_relu_64x64x64,
+                              _mlir_ciface_matmul_bias_relu_tiled_64x64x64));
+  shapes.push_back(makeShape("32x64x32", 32, 64, 32,
+                              _mlir_ciface_matmul_bias_relu_32x64x32,
+                              _mlir_ciface_matmul_bias_relu_tiled_32x64x32));
+  shapes.push_back(makeShape("64x32x64", 64, 32, 64,
+                              _mlir_ciface_matmul_bias_relu_64x32x64,
+                              _mlir_ciface_matmul_bias_relu_tiled_64x32x64));
 
-  // Cycle order: 0(8),1(16),2(32),2(32),1(16),0(8)
-  int order[] = {0, 1, 2, 2, 1, 0};
+  // Cycle order over all 6 required shapes: 8x8x8, 16x16x16, 32x32x32,
+  // 64x64x64, 32x64x32, 64x32x64 (index order == push_back order above).
+  int order[] = {0, 1, 2, 3, 4, 5};
 
   int64_t totalCalls = 0;
   int64_t firstFailCycle = -1, firstFailStep = -1;
@@ -110,7 +130,7 @@ int main(int argc, char** argv) {
       std::vector<char> churn(noise, static_cast<char>(cycle + step));
 
       for (int variant = 0; variant < 2; ++variant) {
-        GeneratedFn fn = variant == 0 ? c.genericFn : c.vectorizedFn;
+        GeneratedFn fn = variant == 0 ? c.genericFn : c.tiledFn;
         MemRef2D out{};
         fn(&out, &c.lhsDesc, &c.rhsDesc, &c.biasDesc);
         double maxErr = 0.0;
@@ -123,7 +143,7 @@ int main(int argc, char** argv) {
           firstFailCycle = cycle;
           firstFailStep = step;
           firstFailShape = c.name;
-          firstFailVariant = variant == 0 ? "generic" : "vectorized";
+          firstFailVariant = variant == 0 ? "generic" : "tiled-vectorized";
           firstFailErr = maxErr;
         }
         std::free(out.allocated);
@@ -137,8 +157,8 @@ int main(int argc, char** argv) {
                 (long long)cycles, (long long)totalCalls);
     return 0;
   } else {
-    std::printf("FAIL: first failure at cycle=%lld step=%d shape=%s variant=%s maxErr=%.6f (call #%lld)\n",
-                (long long)firstFailCycle, firstFailStep, firstFailShape.c_str(),
+    std::printf("FAIL: first failure at cycle=%lld step=%lld shape=%s variant=%s maxErr=%.6f (call #%lld)\n",
+                (long long)firstFailCycle, (long long)firstFailStep, firstFailShape.c_str(),
                 firstFailVariant.c_str(), firstFailErr, (long long)totalCalls);
     return 1;
   }

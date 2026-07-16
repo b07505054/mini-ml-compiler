@@ -1,0 +1,61 @@
+
+/tmp/backend_codegen_tiled_canonical/matmul_bias_relu_tiled_32x64x32.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_tiled_32x64x32>:
+       0: a9bc67fe     	stp	x30, x25, [sp, #-0x40]!
+       4: a9015ff8     	stp	x24, x23, [sp, #0x10]
+       8: a90257f6     	stp	x22, x21, [sp, #0x20]
+       c: a9034ff4     	stp	x20, x19, [sp, #0x30]
+      10: aa0103f3     	mov	x19, x1
+      14: f9403ff7     	ldr	x23, [sp, #0x78]
+      18: f94023f8     	ldr	x24, [sp, #0x40]
+      1c: 52840800     	mov	w0, #0x2040             // =8256
+      20: 94000000     	bl	0x20 <matmul_bias_relu_tiled_32x64x32+0x20>
+      24: aa0003f4     	mov	x20, x0
+      28: 9100fc08     	add	x8, x0, #0x3f
+      2c: 927ae519     	and	x25, x8, #0xffffffffffffffc0
+      30: 52840800     	mov	w0, #0x2040             // =8256
+      34: 94000000     	bl	0x34 <matmul_bias_relu_tiled_32x64x32+0x34>
+      38: aa0003f5     	mov	x21, x0
+      3c: aa1f03e8     	mov	x8, xzr
+      40: 9100fc09     	add	x9, x0, #0x3f
+      44: 927ae536     	and	x22, x9, #0xffffffffffffffc0
+      48: 52803009     	mov	w9, #0x180              // =384
+      4c: 6f00e400     	movi	v0.2d, #0000000000000000
+      50: 14000006     	b	0x68 <matmul_bias_relu_tiled_32x64x32+0x68>
+      54: d503201f     	nop
+      58: d503201f     	nop
+      5c: d503201f     	nop
+      60: 91001108     	add	x8, x8, #0x4
+      64: 91080129     	add	x9, x9, #0x200
+      68: f1007d1f     	cmp	x8, #0x1f
+      6c: 540013ec     	b.gt	0x2e8 <matmul_bias_relu_tiled_32x64x32+0x2e8>
+      70: aa1f03ea     	mov	x10, xzr
+      74: aa1f03eb     	mov	x11, xzr
+      78: 1400002e     	b	0x130 <matmul_bias_relu_tiled_32x64x32+0x130>
+      7c: d503201f     	nop
+      80: 8b0c0aed     	add	x13, x23, x12, lsl #2
+      84: d37ef58e     	lsl	x14, x12, #2
+      88: 910401cf     	add	x15, x14, #0x100
+      8c: 910801d0     	add	x16, x14, #0x200
+      90: ad4009a1     	ldp	q1, q2, [x13]
+      94: 8b0f02ed     	add	x13, x23, x15
+      98: ad400da4     	ldp	q4, q3, [x13]
+      9c: 8b1002ed     	add	x13, x23, x16
+      a0: ad4015a6     	ldp	q6, q5, [x13]
+      a4: 8b0c0b2d     	add	x13, x25, x12, lsl #2
+      a8: ad4041a7     	ldp	q7, q16, [x13]
+      ac: 4e22d602     	fadd	v2.4s, v16.4s, v2.4s
+      b0: 4e21d4e1     	fadd	v1.4s, v7.4s, v1.4s
+      b4: ad481db0     	ldp	q16, q7, [x13, #0x100]
+      b8: 4e24d604     	fadd	v4.4s, v16.4s, v4.4s
+      bc: 4e23d4e3     	fadd	v3.4s, v7.4s, v3.4s
+      c0: ad501db0     	ldp	q16, q7, [x13, #0x200]
+      c4: 4e26d606     	fadd	v6.4s, v16.4s, v6.4s
+      c8: 910c01ce     	add	x14, x14, #0x300
+      cc: ad5841b1     	ldp	q17, q16, [x13, #0x300]
+      d0: 8b0e02ed     	add	x13, x23, x14
+      d4: 4e25d4e5     	fadd	v5.4s, v7.4s, v5.4s
+  ... (238 total lines, truncated -- full disassembly reproducible via commands.txt) ...

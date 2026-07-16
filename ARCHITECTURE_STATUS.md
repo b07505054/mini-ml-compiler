@@ -16,7 +16,8 @@ This table is a maturity assessment, not a roadmap promise and not a percentage 
 | Implementation IR | partial | HIR and limited boundary materialization | memory spaces, DMA, synchronization, NPU command regions incomplete |
 | Runtime boundary | strong for canonical paths | strict adapter validation and E3 contract validation | older simulations/evaluation paths must stay scoped |
 | AArch64 native codegen: generic baseline (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware | `artifacts/backend_codegen/aarch64_matmul_bias_relu/` (superseded object hashes; see vectorized artifact for current), `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/generic/` (current); `mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant generic` | one op (`hir.fused_matmul_bias_relu`), three fixed shapes (8x8x8/16x16x16/32x32x32), no project-owned target-specific instruction selection/scheduling/register allocation, generated code slower than an `-O2` scalar C++ reference on the same device; not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
-| AArch64 native codegen: MLIR vectorization slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/` (both variants' generated `.mlir`/`.ll`/`.s`/`.o`, objdump, vector-dialect intermediate, repeated-call and mixed-shape correctness logs, benchmark/metrics JSON, Pi device state); `mlir_passes/transforms/vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_vectorized_pi_integration.sh` | project-owned contribution is invoking upstream MLIR's `vectorize_children_and_apply_patterns` Transform op at this point in the project's own pipeline, not a project-authored instruction selector; all NEON `fmla` selection, register allocation, and scheduling remain LLVM's `llc`, unmodified; one op, three fixed static shapes, fully unrolled (object size/instruction count scale with M*N*K, not tiled); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
+| AArch64 native codegen: MLIR vectorization slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/` (both variants' generated `.mlir`/`.ll`/`.s`/`.o`, objdump, vector-dialect intermediate, repeated-call and mixed-shape correctness logs, benchmark/metrics JSON, Pi device state); `mlir_passes/transforms/vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_vectorized_pi_integration.sh` | project-owned contribution is invoking upstream MLIR's `vectorize_children_and_apply_patterns` Transform op at this point in the project's own pipeline, not a project-authored instruction selector; all NEON `fmla` selection, register allocation, and scheduling remain LLVM's `llc`, unmodified; one op, three fixed static shapes, fully unrolled (object size/instruction count scale with M*N*K -- SUPERSEDED for larger shapes by the tiled slice below, kept for the three original shapes as a comparison baseline); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
+| AArch64 native codegen: tiled vector microkernel slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed, bounded code size confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/` (full artifacts for the 32x32x32 representative shape, metrics/correctness/benchmark JSON for all 6 shapes, disassembly excerpts, register-pressure precheck); `mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_tiled_pi_integration.sh` | project-owned contribution is composing stock upstream MLIR Transform ops (tile_using_for + fuse_into_containing_op + vectorize_children_and_apply_patterns) into a fixed 4x8x8 tile, not a project-authored tiling algorithm or instruction selector; fixed tile size (no cost model, no per-shape tuning); requires exact tile divisibility (no tail handling -- non-divisible shapes rejected, not silently miscompiled); six shapes validated (8/16/32/64 square + 32x64x32/64x32x64); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
 
 See `PROJECT_MATURITY.md` for the four-pillar assessment.
 
@@ -115,9 +116,57 @@ from the presence of real NEON `fmla` instructions):
 - MIR-level passes
 - Tiling: these fixed static shapes are fully unrolled by the Transform op
   used, so object size and instruction count scale with M*N*K (e.g.
-  32x32x32's vectorized object is ~64x the instruction count of 8x8x8's);
-  this specific approach would not scale to large or dynamic shapes without
-  adding explicit tiling first
+  32x32x32's vectorized object is ~64x the instruction count of 8x8x8's).
+  **Addressed for larger/practical shapes by the tiled slice below** (this
+  variant is retained only as a comparison baseline for the three original
+  shapes, not because the scaling problem is unsolved).
 - Generated-code runtime loading (same gap as the generic path above)
 - General operator coverage (same gap as the generic path above)
+
+## AArch64 tiled vector microkernel codegen detail (2026-07-16)
+
+Replaces whole-shape vectorization's unbounded code-size scaling (above)
+with a fixed 4(M)x8(N)x8(K) register-tile microkernel, reused via real
+`scf.for` loops rather than fully unrolled. Full truth-boundary
+explanation, register-pressure analysis, and evidence in
+`artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md`; only
+the summary is repeated here.
+
+**Newly implemented:** a project-owned Transform-dialect script
+(`mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir`) that tiles
+the bias+relu consumer, fuses the matmul and zero-init producers into that
+tile, tiles the fused matmul's K (reduction) dimension separately, then
+vectorizes only the small resulting ops -- composing four stock upstream
+MLIR Transform ops, none project-authored as algorithms. Reduces the
+32x32x32 generated object from 113,216 bytes (fully-unrolled) to 2,128
+bytes (53.2x smaller), and enables 64x64x64 (2,104 bytes) and two
+non-square shapes (32x64x32, 64x32x64) that were never practical to
+fully-unroll. Measured on the real Raspberry Pi, the tiled kernel is
+FASTER than the fully-unrolled kernel it replaces at every shape where both
+exist (median latency ratio 0.63-0.90), likely because the fully-unrolled
+kernel's larger code does not fit Cortex-A76's L1 instruction cache.
+Repeated-call (1000 calls/shape/variant, 12 pairs) and mixed-shape/
+mixed-variant (500 cycles, 6,000 calls, all 6 shapes, with allocator noise)
+correctness verified with zero tolerance for failure on real hardware.
+
+**Still not implemented** (unchanged by this slice):
+- Any project-owned/custom LLVM SelectionDAG or GlobalISel instruction-
+  selection pattern (the `fmla` selection is entirely LLVM's own)
+- INT8 / SDOT / UDOT dot-product lowering
+- Instruction scheduling / software pipelining beyond LLVM's own `llc`
+  (LLVM's scheduler is observed to interleave two K-sub-steps for ILP,
+  using all 32 vector registers with zero spills -- this is LLVM's choice,
+  not a project-owned scheduling pass)
+- Register allocation ownership (still entirely LLVM's `llc`); no full
+  register-pressure/spill-cost analysis was performed, only a design-time
+  precheck (see the artifact's `register_pressure_32x32x32.txt`)
+- MIR-level passes
+- General arbitrary-shape tail handling: shapes not divisible by 4/8/8 are
+  rejected outright by `compile_hir_matmul_bias_relu_aarch64.sh
+  --variant tiled-vectorized`, not silently miscompiled
+- Cost-model-driven tile selection (one fixed tile, not tuned per shape)
+- Prefetching
+- Generated-code runtime loading (same gap as the other AArch64 slices)
+- General operator coverage (only `hir.fused_matmul_bias_relu`)
+- GPU code generation of any kind
 - GPU code generation of any kind

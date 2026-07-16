@@ -1,0 +1,24 @@
+{
+  "shape": "8x8x8",
+  "M": 8, "N": 8, "K": 8,
+  "iterations": 2000,
+  "correctness": {
+    "reference_checksum": "0x614f12071904f1cc",
+    "generic": {"correct": true, "max_abs_error": 0.00000003, "checksum": "0x5b40f37d505b46cd"},
+    "fully_unrolled_vectorized": {"available": true, "correct": true, "max_abs_error": 0.00000006, "checksum": "0x0433add4561ce4d7"},
+    "tiled_vectorized": {"correct": true, "max_abs_error": 0.00000006, "checksum": "0x0433add4561ce4d7"},
+    "handwritten": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0x614f12071904f1cc"},
+    "all_correct": true
+  },
+  "benchmark_ms": {
+    "scalar":                  {"median": 0.000592, "p95": 0.000593},
+    "generic":                 {"median": 0.002277, "p95": 0.002278},
+    "fully_unrolled_vectorized": {"median": 0.000111, "p95": 0.000112},
+    "tiled_vectorized":        {"median": 0.000092, "p95": 0.000093},
+    "handwritten":             {"median": 0.000592, "p95": 0.000593}
+  },
+  "tiled_over_generic_median_speedup": 24.750000,
+  "tiled_over_fully_unrolled_median_ratio": 0.828829,
+  "tiled_over_scalar_median_ratio": 0.155405,
+  "tiled_over_handwritten_median_ratio": 0.155405
+}

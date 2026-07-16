@@ -1,0 +1,24 @@
+{
+  "shape": "32x64x32",
+  "M": 32, "N": 64, "K": 32,
+  "iterations": 500,
+  "correctness": {
+    "reference_checksum": "0x10c655e88c6bf278",
+    "generic": {"correct": true, "max_abs_error": 0.00000024, "checksum": "0xc911be134c1c6c24"},
+    "fully_unrolled_vectorized": {"available": false},
+    "tiled_vectorized": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0x10c655e88c6bf278"},
+    "handwritten": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0x10c655e88c6bf278"},
+    "all_correct": true
+  },
+  "benchmark_ms": {
+    "scalar":                  {"median": 0.058352, "p95": 0.058370},
+    "generic":                 {"median": 0.255721, "p95": 0.257222},
+    "fully_unrolled_vectorized": null,
+    "tiled_vectorized":        {"median": 0.005167, "p95": 0.005167},
+    "handwritten":             {"median": 0.053222, "p95": 0.053223}
+  },
+  "tiled_over_generic_median_speedup": 49.491194,
+  "tiled_over_fully_unrolled_median_ratio": null,
+  "tiled_over_scalar_median_ratio": 0.088549,
+  "tiled_over_handwritten_median_ratio": 0.097084
+}

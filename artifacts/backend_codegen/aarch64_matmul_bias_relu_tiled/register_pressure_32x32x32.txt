@@ -1,0 +1,43 @@
+Register-pressure precheck for the tiled 4(M)x8(N)x8(K) microkernel,
+32x32x32 shape (matmul_bias_relu_tiled_32x32x32.o / generated_32x32x32.s).
+This is a design-validation sanity check for the chosen tile, NOT a full
+register-allocation analysis (no MIR-level liveness/spill-cost modeling was
+performed -- see KNOWN_GAPS.md).
+
+Method: located the innermost K-reduction loop body (.LBB0_7, generated_32x32x32.s
+lines 131-225) -- the 64-FMLA microkernel body reused across all (M-tile,
+N-tile, K-tile) iterations -- and inspected it directly, plus checked the
+whole function for stack-relative vector loads/stores.
+
+Findings:
+- Distinct vector registers (v0-v31) referenced within the K-loop body: 32
+  (all architectural NEON vector registers are in use). LLVM's own
+  instruction scheduler software-pipelines two K-sub-steps together for
+  instruction-level parallelism -- this is more registers than this
+  slice's analytical estimate in this README (~12 typical, ~14 worst-case
+  for the raw 4x8x8 tile alone) anticipated, because that estimate did not
+  account for LLVM choosing to interleave two reduction steps. This is a
+  real, measured finding from the final scheduled assembly, not a
+  re-statement of the earlier analytical estimate.
+- Vector register stack spills/reloads (str/ldr q<N>, [sp...]) WITHIN the
+  K-loop body: 0. The loop fits entirely in registers.
+- One `str q2, [sp, #48]` appears elsewhere in the function (outside the
+  hot loop, in the argument-marshaling prologue where the many scalar
+  MemRef2D descriptor fields for lhs/rhs/bias are unpacked from the
+  caller's struct-by-pointer ABI) -- ordinary one-time ABI overhead, not a
+  loop-body spill.
+- Callee-saved vector registers (d8-d15) are saved/restored exactly once,
+  at function entry/exit (stp/ldp ..., 16-byte Folded Spill/Reload) -- this
+  is standard AAPCS64 behavior for any function using more than the 8
+  caller-saved SIMD registers, unrelated to the loop.
+- Stack frame size: 128 bytes total, entirely accounted for by the
+  callee-saved GPR/FPR spill area above -- no additional stack allocated
+  for the microkernel itself.
+
+Conclusion: the chosen 4x8x8 tile does NOT spill in the hot loop, but LLVM's
+own scheduling uses the full 32-register file with zero headroom once its
+own ILP interleaving is accounted for. This is evidence the tile is at (not
+below) a safe register-pressure boundary for Cortex-A76 -- if a future
+change increases live-range pressure further (e.g. deeper software
+pipelining, a larger tile, or added prefetch), it should be re-validated
+with this same check, and the tile reduced if spills appear.

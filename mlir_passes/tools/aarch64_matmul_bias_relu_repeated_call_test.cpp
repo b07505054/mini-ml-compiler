@@ -1,18 +1,26 @@
 // aarch64_matmul_bias_relu_repeated_call_test.cpp
 //
-// Repeated-call correctness regression test for the vectorized AArch64
-// backend variant. Added after a real bug was found and fixed: the shared
+// Repeated-call correctness regression test for the AArch64 backend
+// variants. Added after a real bug was found and fixed: the shared
 // hir-matmul-bias-relu-to-linalg lowering fed linalg.matmul an
 // un-zero-initialized tensor.empty() accumulator, so on heap-address reuse
 // across repeated calls, the matmul result silently accumulated across
 // calls instead of starting fresh (output on call N equaled (N+1) x the
 // correct value for affected elements). Fixed by explicit linalg.fill.
-// This test guards against that class of regression recurring, for both
-// the generic and vectorized variants -- see
+// This test guards against that class of regression recurring, for the
+// generic, whole-shape vectorized, and tiled-vectorized variants -- see
 // aarch64_matmul_bias_relu_mixed_shape_test.cpp for the same-process,
 // mixed-shape/mixed-variant companion stress test.
 //
-// Usage: ./aarch64_matmul_bias_relu_repeated_call_test <shape> <num_calls>
+// Extended for the tiled-vectorized microkernel slice: adds the
+// matmul_bias_relu_tiled_<shape> entry points and the non-square
+// 32x64x32 / 64x32x64 shapes plus 64x64x64, alongside the original three
+// square shapes. Non-square shapes are only exercised for generic and
+// tiled-vectorized (the whole-shape vectorized variant was only ever
+// generated for the three original square shapes -- see
+// mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh).
+//
+// Usage: ./aarch64_matmul_bias_relu_repeated_call_test <shape> <num_calls> [variant]
 //
 // Every caller-owned input buffer (lhs/rhs/bias) is allocated with a guard
 // prefix and suffix filled with a deterministic sentinel float pattern.
@@ -43,6 +51,15 @@ void _mlir_ciface_matmul_bias_relu_vectorized_32x32x32(MemRef2D*, MemRef2D*, Mem
 void _mlir_ciface_matmul_bias_relu_8x8x8(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 void _mlir_ciface_matmul_bias_relu_16x16x16(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 void _mlir_ciface_matmul_bias_relu_32x32x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_64x64x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_32x64x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_64x32x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_8x8x8(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_16x16x16(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_32x32x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_64x64x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_32x64x32(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+void _mlir_ciface_matmul_bias_relu_tiled_64x32x64(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 }
 
 using GeneratedFn = void (*)(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
@@ -149,9 +166,54 @@ MemRef2D makeDescriptor(float* payload, int64_t rows, int64_t cols) {
 
 }  // namespace
 
+namespace {
+
+// M/N/K parsed directly from the "MxNxK" shape string, plus a function
+// pointer table keyed by (shape, variant). Table-driven rather than a long
+// if/else chain now that there are 6 shapes x up to 3 variants.
+bool parseShape(const std::string& shape, int64_t& M, int64_t& N, int64_t& K) {
+  size_t p1 = shape.find('x');
+  size_t p2 = shape.find('x', p1 == std::string::npos ? p1 : p1 + 1);
+  if (p1 == std::string::npos || p2 == std::string::npos) return false;
+  M = std::atoll(shape.substr(0, p1).c_str());
+  N = std::atoll(shape.substr(p1 + 1, p2 - p1 - 1).c_str());
+  K = std::atoll(shape.substr(p2 + 1).c_str());
+  return M > 0 && N > 0 && K > 0;
+}
+
+GeneratedFn lookupFn(const std::string& shape, const std::string& variant) {
+  if (variant == "generic") {
+    if (shape == "8x8x8") return _mlir_ciface_matmul_bias_relu_8x8x8;
+    if (shape == "16x16x16") return _mlir_ciface_matmul_bias_relu_16x16x16;
+    if (shape == "32x32x32") return _mlir_ciface_matmul_bias_relu_32x32x32;
+    if (shape == "64x64x64") return _mlir_ciface_matmul_bias_relu_64x64x64;
+    if (shape == "32x64x32") return _mlir_ciface_matmul_bias_relu_32x64x32;
+    if (shape == "64x32x64") return _mlir_ciface_matmul_bias_relu_64x32x64;
+  } else if (variant == "vectorized") {
+    // Whole-shape (fully-unrolled) vectorized variant was only ever
+    // generated for the three original square shapes -- see
+    // mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh and
+    // artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md
+    // for why (impractical object size at larger shapes).
+    if (shape == "8x8x8") return _mlir_ciface_matmul_bias_relu_vectorized_8x8x8;
+    if (shape == "16x16x16") return _mlir_ciface_matmul_bias_relu_vectorized_16x16x16;
+    if (shape == "32x32x32") return _mlir_ciface_matmul_bias_relu_vectorized_32x32x32;
+  } else if (variant == "tiled-vectorized") {
+    if (shape == "8x8x8") return _mlir_ciface_matmul_bias_relu_tiled_8x8x8;
+    if (shape == "16x16x16") return _mlir_ciface_matmul_bias_relu_tiled_16x16x16;
+    if (shape == "32x32x32") return _mlir_ciface_matmul_bias_relu_tiled_32x32x32;
+    if (shape == "64x64x64") return _mlir_ciface_matmul_bias_relu_tiled_64x64x64;
+    if (shape == "32x64x32") return _mlir_ciface_matmul_bias_relu_tiled_32x64x32;
+    if (shape == "64x32x64") return _mlir_ciface_matmul_bias_relu_tiled_64x32x64;
+  }
+  return nullptr;
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
   if (argc < 3) {
-    std::fprintf(stderr, "usage: %s <shape> <num_calls> [variant: generic|vectorized]\n", argv[0]);
+    std::fprintf(stderr, "usage: %s <shape> <num_calls> [variant: generic|vectorized|tiled-vectorized]\n", argv[0]);
     return 2;
   }
   std::string shape = argv[1];
@@ -159,19 +221,13 @@ int main(int argc, char** argv) {
   std::string variant = argc > 3 ? argv[3] : "vectorized";
 
   int64_t M, N, K;
-  GeneratedFn fn = nullptr;
-  if (variant == "vectorized") {
-    if (shape == "8x8x8") { M = N = K = 8; fn = _mlir_ciface_matmul_bias_relu_vectorized_8x8x8; }
-    else if (shape == "16x16x16") { M = N = K = 16; fn = _mlir_ciface_matmul_bias_relu_vectorized_16x16x16; }
-    else if (shape == "32x32x32") { M = N = K = 32; fn = _mlir_ciface_matmul_bias_relu_vectorized_32x32x32; }
-    else { std::fprintf(stderr, "unknown shape %s\n", shape.c_str()); return 2; }
-  } else if (variant == "generic") {
-    if (shape == "8x8x8") { M = N = K = 8; fn = _mlir_ciface_matmul_bias_relu_8x8x8; }
-    else if (shape == "16x16x16") { M = N = K = 16; fn = _mlir_ciface_matmul_bias_relu_16x16x16; }
-    else if (shape == "32x32x32") { M = N = K = 32; fn = _mlir_ciface_matmul_bias_relu_32x32x32; }
-    else { std::fprintf(stderr, "unknown shape %s\n", shape.c_str()); return 2; }
-  } else {
-    std::fprintf(stderr, "unknown variant %s (expected generic|vectorized)\n", variant.c_str());
+  if (!parseShape(shape, M, N, K)) {
+    std::fprintf(stderr, "could not parse shape %s (expected MxNxK)\n", shape.c_str());
+    return 2;
+  }
+  GeneratedFn fn = lookupFn(shape, variant);
+  if (fn == nullptr) {
+    std::fprintf(stderr, "unknown (shape, variant) combination: %s, %s\n", shape.c_str(), variant.c_str());
     return 2;
   }
 

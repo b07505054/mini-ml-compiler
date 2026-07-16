@@ -1,0 +1,242 @@
+
+/tmp/backend_codegen_tiled_canonical/matmul_bias_relu_tiled_32x32x32.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_tiled_32x32x32>:
+       0: 6db83bef     	stp	d15, d14, [sp, #-0x80]!
+       4: 6d0133ed     	stp	d13, d12, [sp, #0x10]
+       8: 6d022beb     	stp	d11, d10, [sp, #0x20]
+       c: 6d0323e9     	stp	d9, d8, [sp, #0x30]
+      10: a90467fe     	stp	x30, x25, [sp, #0x40]
+      14: a9055ff8     	stp	x24, x23, [sp, #0x50]
+      18: a90657f6     	stp	x22, x21, [sp, #0x60]
+      1c: a9074ff4     	stp	x20, x19, [sp, #0x70]
+      20: aa0103f3     	mov	x19, x1
+      24: f9405ff7     	ldr	x23, [sp, #0xb8]
+      28: f94043f8     	ldr	x24, [sp, #0x80]
+      2c: 52820800     	mov	w0, #0x1040             // =4160
+      30: 94000000     	bl	0x30 <matmul_bias_relu_tiled_32x32x32+0x30>
+      34: aa0003f4     	mov	x20, x0
+      38: 9100fc08     	add	x8, x0, #0x3f
+      3c: 927ae519     	and	x25, x8, #0xffffffffffffffc0
+      40: 52820800     	mov	w0, #0x1040             // =4160
+      44: 94000000     	bl	0x44 <matmul_bias_relu_tiled_32x32x32+0x44>
+      48: aa0003f5     	mov	x21, x0
+      4c: aa1f03e8     	mov	x8, xzr
+      50: aa1f03e9     	mov	x9, xzr
+      54: 9100fc0a     	add	x10, x0, #0x3f
+      58: 927ae556     	and	x22, x10, #0xffffffffffffffc0
+      5c: 6f00e410     	movi	v16.2d, #0000000000000000
+      60: 14000003     	b	0x6c <matmul_bias_relu_tiled_32x32x32+0x6c>
+      64: 91001129     	add	x9, x9, #0x4
+      68: 91080108     	add	x8, x8, #0x200
+      6c: f1007d3f     	cmp	x9, #0x1f
+      70: 5400136c     	b.gt	0x2dc <matmul_bias_relu_tiled_32x32x32+0x2dc>
+      74: aa1f03ea     	mov	x10, xzr
+      78: aa1f03eb     	mov	x11, xzr
+      7c: 8b08026c     	add	x12, x19, x8
+      80: 1400002e     	b	0x138 <matmul_bias_relu_tiled_32x32x32+0x138>
+      84: 8b0d0aee     	add	x14, x23, x13, lsl #2
+      88: d37ef5af     	lsl	x15, x13, #2
+      8c: 910201f0     	add	x16, x15, #0x80
+      90: 910401f1     	add	x17, x15, #0x100
+      94: ad4005c0     	ldp	q0, q1, [x14]
+      98: 8b1002ee     	add	x14, x23, x16
+      9c: ad4009c3     	ldp	q3, q2, [x14]
+      a0: 8b1102ee     	add	x14, x23, x17
+      a4: ad4011c5     	ldp	q5, q4, [x14]
+      a8: 8b0d0b2e     	add	x14, x25, x13, lsl #2
+      ac: ad401dc6     	ldp	q6, q7, [x14]
+      b0: 4e21d4e1     	fadd	v1.4s, v7.4s, v1.4s
+      b4: 4e20d4c0     	fadd	v0.4s, v6.4s, v0.4s
+      b8: ad4419c7     	ldp	q7, q6, [x14, #0x80]
+      bc: 4e23d4e3     	fadd	v3.4s, v7.4s, v3.4s
+      c0: 4e22d4c2     	fadd	v2.4s, v6.4s, v2.4s
+      c4: ad4819c7     	ldp	q7, q6, [x14, #0x100]
+      c8: 4e25d4e5     	fadd	v5.4s, v7.4s, v5.4s
+      cc: 910601ef     	add	x15, x15, #0x180
+      d0: ad4c1dd0     	ldp	q16, q7, [x14, #0x180]
+      d4: 8b0f02ee     	add	x14, x23, x15
+      d8: 4e24d4c4     	fadd	v4.4s, v6.4s, v4.4s
+      dc: 3dc001c6     	ldr	q6, [x14]
+      e0: 4e26d606     	fadd	v6.4s, v16.4s, v6.4s
+      e4: 3dc005d0     	ldr	q16, [x14, #0x10]
+      e8: 4e30d4e7     	fadd	v7.4s, v7.4s, v16.4s
+      ec: 6f00e410     	movi	v16.2d, #0000000000000000
+      f0: 4e30f400     	fmax	v0.4s, v0.4s, v16.4s
+      f4: 4e30f421     	fmax	v1.4s, v1.4s, v16.4s
+      f8: 8b0d0acd     	add	x13, x22, x13, lsl #2
+      fc: 4e30f442     	fmax	v2.4s, v2.4s, v16.4s
+     100: ad0005a0     	stp	q0, q1, [x13]
+     104: 4e30f460     	fmax	v0.4s, v3.4s, v16.4s
+     108: 4e30f481     	fmax	v1.4s, v4.4s, v16.4s
+     10c: 8b1002cd     	add	x13, x22, x16
+     110: ad0009a0     	stp	q0, q2, [x13]
+     114: 4e30f4a0     	fmax	v0.4s, v5.4s, v16.4s
+     118: 4e30f4e2     	fmax	v2.4s, v7.4s, v16.4s
+     11c: 8b1102cd     	add	x13, x22, x17
+     120: ad0005a0     	stp	q0, q1, [x13]
+     124: 4e30f4c0     	fmax	v0.4s, v6.4s, v16.4s
+     128: 8b0f02cd     	add	x13, x22, x15
+     12c: ad0009a0     	stp	q0, q2, [x13]
+     130: 9100216b     	add	x11, x11, #0x8
+     134: 9100814a     	add	x10, x10, #0x20
+     138: f1007d7f     	cmp	x11, #0x1f
+     13c: 54fff94c     	b.gt	0x64 <matmul_bias_relu_tiled_32x32x32+0x64>
+     140: aa1f03ee     	mov	x14, xzr
+     144: aa1f03ef     	mov	x15, xzr
+     148: 8b09156d     	add	x13, x11, x9, lsl #5
+     14c: 8b0d0b31     	add	x17, x25, x13, lsl #2
+     150: ad004230     	stp	q16, q16, [x17]
+     154: ad044230     	stp	q16, q16, [x17, #0x80]
+     158: ad084230     	stp	q16, q16, [x17, #0x100]
+     15c: 8b0a0310     	add	x16, x24, x10
+     160: ad0c4230     	stp	q16, q16, [x17, #0x180]
+     164: f1007dff     	cmp	x15, #0x1f
+     168: 54fff8ec     	b.gt	0x84 <matmul_bias_relu_tiled_32x32x32+0x84>
+     16c: 8b0e0191     	add	x17, x12, x14
+     170: ad404a28     	ldp	q8, q18, [x17]
+     174: ad440e3f     	ldp	q31, q3, [x17, #0x80]
+     178: ad480a3e     	ldp	q30, q2, [x17, #0x100]
+     17c: ad4c063d     	ldp	q29, q1, [x17, #0x180]
+     180: 8b0e1611     	add	x17, x16, x14, lsl #5
+     184: ad40362e     	ldp	q14, q13, [x17]
+     188: ad44022f     	ldp	q15, q0, [x17, #0x80]
+     18c: ad482e2c     	ldp	q12, q11, [x17, #0x100]
+     190: ad4c2a29     	ldp	q9, q10, [x17, #0x180]
+     194: ad506e3c     	ldp	q28, q27, [x17, #0x200]
+     198: ad541e24     	ldp	q4, q7, [x17, #0x280]
+     19c: ad581630     	ldp	q16, q5, [x17, #0x300]
+     1a0: ad5c4626     	ldp	q6, q17, [x17, #0x380]
+     1a4: 8b0d0b31     	add	x17, x25, x13, lsl #2
+     1a8: ad404e34     	ldp	q20, q19, [x17]
+     1ac: 4f8811d4     	fmla	v20.4s, v14.4s, v8.s[0]
+     1b0: 4f8811b3     	fmla	v19.4s, v13.4s, v8.s[0]
+     1b4: ad445a39     	ldp	q25, q22, [x17, #0x80]
+     1b8: 4f9f11d9     	fmla	v25.4s, v14.4s, v31.s[0]
+     1bc: 4f9f11b6     	fmla	v22.4s, v13.4s, v31.s[0]
+     1c0: ad485e3a     	ldp	q26, q23, [x17, #0x100]
+     1c4: 4f9e11da     	fmla	v26.4s, v14.4s, v30.s[0]
+     1c8: 4f9e11b7     	fmla	v23.4s, v13.4s, v30.s[0]
+     1cc: ad4c5638     	ldp	q24, q21, [x17, #0x180]
+     1d0: 4f9d11d8     	fmla	v24.4s, v14.4s, v29.s[0]
+     1d4: 4f9d11b5     	fmla	v21.4s, v13.4s, v29.s[0]
+     1d8: 4fa81013     	fmla	v19.4s, v0.4s, v8.s[1]
+     1dc: 4fa811f4     	fmla	v20.4s, v15.4s, v8.s[1]
+     1e0: 4fbf1016     	fmla	v22.4s, v0.4s, v31.s[1]
+     1e4: 4fbf11f9     	fmla	v25.4s, v15.4s, v31.s[1]
+     1e8: 4fbe1017     	fmla	v23.4s, v0.4s, v30.s[1]
+     1ec: 4fbe11fa     	fmla	v26.4s, v15.4s, v30.s[1]
+     1f0: 4fbd1015     	fmla	v21.4s, v0.4s, v29.s[1]
+     1f4: 4fbd11f8     	fmla	v24.4s, v15.4s, v29.s[1]
+     1f8: 4f881994     	fmla	v20.4s, v12.4s, v8.s[2]
+     1fc: 4f881973     	fmla	v19.4s, v11.4s, v8.s[2]
+     200: 4f9f1999     	fmla	v25.4s, v12.4s, v31.s[2]
+     204: 4f9f1976     	fmla	v22.4s, v11.4s, v31.s[2]
+     208: 4f9e199a     	fmla	v26.4s, v12.4s, v30.s[2]
+     20c: 4f9e1977     	fmla	v23.4s, v11.4s, v30.s[2]
+     210: 4f9d1998     	fmla	v24.4s, v12.4s, v29.s[2]
+     214: 4f9d1975     	fmla	v21.4s, v11.4s, v29.s[2]
+     218: 4fa81953     	fmla	v19.4s, v10.4s, v8.s[3]
+     21c: 4fa81934     	fmla	v20.4s, v9.4s, v8.s[3]
+     220: 4fbf1956     	fmla	v22.4s, v10.4s, v31.s[3]
+     224: 4fbf1939     	fmla	v25.4s, v9.4s, v31.s[3]
+     228: 4fbe1957     	fmla	v23.4s, v10.4s, v30.s[3]
+     22c: 4fbe193a     	fmla	v26.4s, v9.4s, v30.s[3]
+     230: 4fbd1955     	fmla	v21.4s, v10.4s, v29.s[3]
+     234: 4fbd1938     	fmla	v24.4s, v9.4s, v29.s[3]
+     238: 4f921394     	fmla	v20.4s, v28.4s, v18.s[0]
+     23c: 4f921373     	fmla	v19.4s, v27.4s, v18.s[0]
+     240: 4f831399     	fmla	v25.4s, v28.4s, v3.s[0]
+     244: 4f831376     	fmla	v22.4s, v27.4s, v3.s[0]
+     248: 4f82139a     	fmla	v26.4s, v28.4s, v2.s[0]
+     24c: 4f821377     	fmla	v23.4s, v27.4s, v2.s[0]
+     250: 4f811398     	fmla	v24.4s, v28.4s, v1.s[0]
+     254: 4f811375     	fmla	v21.4s, v27.4s, v1.s[0]
+     258: 4fb210f3     	fmla	v19.4s, v7.4s, v18.s[1]
+     25c: 4fb21094     	fmla	v20.4s, v4.4s, v18.s[1]
+     260: 4fa310f6     	fmla	v22.4s, v7.4s, v3.s[1]
+     264: 4fa31099     	fmla	v25.4s, v4.4s, v3.s[1]
+     268: 4fa210f7     	fmla	v23.4s, v7.4s, v2.s[1]
+     26c: 4f921a14     	fmla	v20.4s, v16.4s, v18.s[2]
+     270: 4f9218b3     	fmla	v19.4s, v5.4s, v18.s[2]
+     274: 4fb21a33     	fmla	v19.4s, v17.4s, v18.s[3]
+     278: 4fb218d4     	fmla	v20.4s, v6.4s, v18.s[3]
+     27c: ad004e34     	stp	q20, q19, [x17]
+     280: 4fa2109a     	fmla	v26.4s, v4.4s, v2.s[1]
+     284: 4f831a19     	fmla	v25.4s, v16.4s, v3.s[2]
+     288: 4f8318b6     	fmla	v22.4s, v5.4s, v3.s[2]
+     28c: 4f821a1a     	fmla	v26.4s, v16.4s, v2.s[2]
+     290: 4fa31a36     	fmla	v22.4s, v17.4s, v3.s[3]
+     294: 4fa318d9     	fmla	v25.4s, v6.4s, v3.s[3]
+     298: ad045a39     	stp	q25, q22, [x17, #0x80]
+     29c: 4f8218b7     	fmla	v23.4s, v5.4s, v2.s[2]
+     2a0: 4fa21a37     	fmla	v23.4s, v17.4s, v2.s[3]
+     2a4: 4fa218da     	fmla	v26.4s, v6.4s, v2.s[3]
+     2a8: ad085e3a     	stp	q26, q23, [x17, #0x100]
+     2ac: 4fa110f5     	fmla	v21.4s, v7.4s, v1.s[1]
+     2b0: 4fa11098     	fmla	v24.4s, v4.4s, v1.s[1]
+     2b4: 4f811a18     	fmla	v24.4s, v16.4s, v1.s[2]
+     2b8: 4f8118b5     	fmla	v21.4s, v5.4s, v1.s[2]
+     2bc: 4fa11a35     	fmla	v21.4s, v17.4s, v1.s[3]
+     2c0: 4fa118d8     	fmla	v24.4s, v6.4s, v1.s[3]
+     2c4: ad0c5638     	stp	q24, q21, [x17, #0x180]
+     2c8: 910021ef     	add	x15, x15, #0x8
+     2cc: 910081ce     	add	x14, x14, #0x20
+     2d0: f1007dff     	cmp	x15, #0x1f
+     2d4: 54fff4cd     	b.le	0x16c <matmul_bias_relu_tiled_32x32x32+0x16c>
+     2d8: 17ffff6b     	b	0x84 <matmul_bias_relu_tiled_32x32x32+0x84>
+     2dc: aa1403e0     	mov	x0, x20
+     2e0: 94000000     	bl	0x2e0 <matmul_bias_relu_tiled_32x32x32+0x2e0>
+     2e4: aa1503e0     	mov	x0, x21
+     2e8: aa1603e1     	mov	x1, x22
+     2ec: aa1f03e2     	mov	x2, xzr
+     2f0: 52800403     	mov	w3, #0x20               // =32
+     2f4: 52800404     	mov	w4, #0x20               // =32
+     2f8: 52800405     	mov	w5, #0x20               // =32
+     2fc: 52800026     	mov	w6, #0x1                // =1
+     300: a9474ff4     	ldp	x20, x19, [sp, #0x70]
+     304: a94657f6     	ldp	x22, x21, [sp, #0x60]
+     308: a9455ff8     	ldp	x24, x23, [sp, #0x50]
+     30c: a94467fe     	ldp	x30, x25, [sp, #0x40]
+     310: 6d4323e9     	ldp	d9, d8, [sp, #0x30]
+     314: 6d422beb     	ldp	d11, d10, [sp, #0x20]
+     318: 6d4133ed     	ldp	d13, d12, [sp, #0x10]
+     31c: 6cc83bef     	ldp	d15, d14, [sp], #0x80
+     320: d65f03c0     	ret
+     324: d503201f     	nop
+     328: d503201f     	nop
+     32c: d503201f     	nop
+
+0000000000000330 <_mlir_ciface_matmul_bias_relu_tiled_32x32x32>:
+     330: d10203ff     	sub	sp, sp, #0x80
+     334: a9074ffe     	stp	x30, x19, [sp, #0x70]
+     338: aa0003f3     	mov	x19, x0
+     33c: a9429825     	ldp	x5, x6, [x1, #0x28]
+     340: a9419028     	ldp	x8, x4, [x1, #0x18]
+     344: a940a42a     	ldp	x10, x9, [x1, #0x8]
+     348: f9400020     	ldr	x0, [x1]
+     34c: f9400047     	ldr	x7, [x2]
+     350: 3cc08040     	ldur	q0, [x2, #0x8]
+     354: 3cc18041     	ldur	q1, [x2, #0x18]
+     358: a942b04b     	ldp	x11, x12, [x2, #0x28]
+     35c: ad400c62     	ldp	q2, q3, [x3]
+     360: 3dc00864     	ldr	q4, [x3, #0x20]
+     364: f940186d     	ldr	x13, [x3, #0x30]
+     368: ad0213e3     	stp	q3, q4, [sp, #0x40]
+     36c: 3d800fe2     	str	q2, [sp, #0x30]
+     370: ad0007e0     	stp	q0, q1, [sp]
+     374: f90033ed     	str	x13, [sp, #0x60]
+     378: a90233eb     	stp	x11, x12, [sp, #0x20]
+     37c: aa0a03e1     	mov	x1, x10
+     380: aa0903e2     	mov	x2, x9
+     384: aa0803e3     	mov	x3, x8
+     388: 94000000     	bl	0x388 <_mlir_ciface_matmul_bias_relu_tiled_32x32x32+0x58>
+     38c: a9000660     	stp	x0, x1, [x19]
+     390: a9010e62     	stp	x2, x3, [x19, #0x10]
+     394: a9021664     	stp	x4, x5, [x19, #0x20]
+     398: f9001a66     	str	x6, [x19, #0x30]
+     39c: a9474ffe     	ldp	x30, x19, [sp, #0x70]
+     3a0: 910203ff     	add	sp, sp, #0x80
+     3a4: d65f03c0     	ret

@@ -3,7 +3,7 @@
 # compile_hir_matmul_bias_relu_aarch64.sh
 #
 # Reproducible native-codegen pipeline for hir.fused_matmul_bias_relu, with
-# two independently reproducible variants:
+# three independently reproducible variants:
 #
 #   --variant generic (default)
 #     Input HIR MLIR
@@ -25,7 +25,11 @@
 #          (vector.transfer_read / vector.contract / vector.transfer_write,
 #          plus vectorized arith for the bias-add+ReLU stage). This is
 #          project-owned instruction-selection PREPARATION, not machine
-#          instruction selection.
+#          instruction selection. NO tiling: the whole static M/N/K shape
+#          becomes one vector.contract, which is why static code size (and
+#          static FMLA count) scales with M*N*K -- see
+#          artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md
+#          for why this does not scale to larger shapes.
 #       -> stock MLIR->LLVM dialect conversion (convert-vector-to-llvm with
 #          vector-contract-lowering=outerproduct, which is what causes LLVM's
 #          own AArch64 backend to select fused NEON FMLA instructions --
@@ -33,12 +37,59 @@
 #       -> LLVM dialect MLIR -> mlir-translate -> LLVM IR -> llc -> AArch64
 #          assembly/object containing real NEON vector instructions.
 #
-# Neither variant hand-writes NEON intrinsics anywhere in this script or in
-# the C++ harness that calls the resulting objects -- both are compiler
-# output, not handwritten kernels.
+#   --variant tiled-vectorized
+#     Input HIR MLIR
+#       -> mlir-opt (hir-matmul-bias-relu-to-linalg, UNCHANGED)
+#       -> mlir-opt (project-owned Transform-dialect script,
+#                    mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir)
+#          tiles the matmul/bias/relu chain into a fixed 4(M)x8(N)x8(K)
+#          register-tile microkernel using STOCK Transform-dialect ops
+#          (transform.structured.tile_using_for + fuse_into_containing_op),
+#          then vectorizes only the small tiled ops -- producing three nested
+#          scf.for loops (M, N, K) around a fixed-size vector.contract
+#          (vector<4x8xf32>, vector<8x8xf32> operands, vector<4x8xf32>
+#          accumulator; largest vector type after full lowering is <8 x
+#          float>, i.e. one native 128-bit NEON register). Outer loops
+#          remain in the generated code; only the microkernel body is
+#          vectorized. Same project-owned/LLVM-owned truth boundary as
+#          --variant vectorized -- see the transform script's header comment
+#          and artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md.
+#       -> stock MLIR->LLVM dialect conversion. This variant additionally
+#          requires convert-vector-to-scf{full-unroll target-rank=1} before
+#          convert-vector-to-llvm: the microkernel's accumulator tile
+#          bufferizes to a memref.subview of the shared output buffer (a
+#          real slice, not a fresh allocation -- one-shot-bufferize
+#          correctly avoids an extra copy here), and convert-vector-to-llvm
+#          only lowers 1-D vector transfers directly; convert-vector-to-scf
+#          statically unrolls the small (<=8-row) N-D transfers on that
+#          subview into a sequence of 1-D transfers instead. (The whole-shape
+#          `vectorized` variant does not need this: its transfers are on a
+#          fully contiguous, non-sliced memref, which
+#          test-vector-transfer-flatten-patterns can flatten directly.)
+#          Each stage that introduces `affine.apply` (tiling, and
+#          convert-vector-to-scf's index arithmetic) is followed by
+#          `lower-affine` before the next stage, since nothing later in the
+#          pipeline understands the affine dialect.
+#       -> LLVM dialect MLIR -> mlir-translate -> LLVM IR -> llc -> AArch64
+#          assembly/object: a compact, reusable microkernel body (real NEON
+#          `fmla`) invoked repeatedly by real loop branches, instead of one
+#          giant unrolled instruction stream.
+#
+#     Legality: tiled-vectorized requires M%4==0, N%8==0, K%8==0 (the fixed
+#     tile size chosen for this first implementation -- see
+#     artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md for
+#     the register-pressure analysis behind this choice). Shapes that do not
+#     divide evenly are REJECTED with a nonzero exit and an explicit error
+#     message (no tail handling in this first version) -- use --variant
+#     generic or vectorized for such shapes instead.
+#
+# No variant hand-writes NEON intrinsics anywhere in this script or in the
+# C++ harnesses that call the resulting objects -- all are compiler output,
+# not handwritten kernels.
 #
 # Usage:
-#   compile_hir_matmul_bias_relu_aarch64.sh [--variant generic|vectorized] \
+#   compile_hir_matmul_bias_relu_aarch64.sh \
+#     [--variant generic|vectorized|tiled-vectorized] \
 #     <input.mlir> <output_dir> [artifact_name]
 #
 # Environment overrides:
@@ -47,9 +98,12 @@
 #                  mlir_passes/ (see mlir_passes/README.md / build-mlir/CMakeCache.txt).
 #   PLUGIN         Path to libHIRMatMulBiasReluFusionPass.so.
 #                  Default: <repo>/build-mlir/libHIRMatMulBiasReluFusionPass.so
-#   TRANSFORM_SCRIPT  Path to the vectorization Transform-dialect script.
-#                  Default: <repo>/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir
+#   TRANSFORM_SCRIPT  Path to the whole-shape vectorization Transform-dialect
+#                  script. Default: <repo>/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir
 #                  (only read when --variant vectorized).
+#   TILED_TRANSFORM_SCRIPT  Path to the tiled-microkernel Transform-dialect
+#                  script. Default: <repo>/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir
+#                  (only read when --variant tiled-vectorized).
 #   LLC            llc binary. Default: llc on PATH (expected LLVM 21, matching MLIR_BIN).
 #   TARGET_TRIPLE  Default: aarch64-linux-gnu
 #   TARGET_CPU     Default: cortex-a76 (Raspberry Pi 5 CPU, confirmed via the
@@ -65,7 +119,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 [--variant generic|vectorized] <input.mlir> <output_dir> [artifact_name]" >&2
+  echo "usage: $0 [--variant generic|vectorized|tiled-vectorized] <input.mlir> <output_dir> [artifact_name]" >&2
   exit 1
 }
 
@@ -89,8 +143,8 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" ]] || {
-  echo "error: --variant must be 'generic' or 'vectorized' (got '$VARIANT')" >&2
+[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" ]] || {
+  echo "error: --variant must be 'generic', 'vectorized', or 'tiled-vectorized' (got '$VARIANT')" >&2
   exit 1
 }
 
@@ -106,9 +160,17 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MLIR_BIN="${MLIR_BIN:-/home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/libHIRMatMulBiasReluFusionPass.so}"
 TRANSFORM_SCRIPT="${TRANSFORM_SCRIPT:-$REPO_ROOT/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir}"
+TILED_TRANSFORM_SCRIPT="${TILED_TRANSFORM_SCRIPT:-$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir}"
 LLC="${LLC:-llc}"
 TARGET_TRIPLE="${TARGET_TRIPLE:-aarch64-linux-gnu}"
 TARGET_CPU="${TARGET_CPU:-cortex-a76}"
+
+# Fixed microkernel tile size for --variant tiled-vectorized. See
+# artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/README.md for the
+# register-pressure analysis behind this specific choice (M=4, N=8, K=8).
+TILE_M=4
+TILE_N=8
+TILE_K=8
 
 MLIR_OPT="$MLIR_BIN/mlir-opt"
 MLIR_TRANSLATE="$MLIR_BIN/mlir-translate"
@@ -120,6 +182,25 @@ MLIR_TRANSLATE="$MLIR_BIN/mlir-translate"
 command -v "$LLC" >/dev/null 2>&1 || { echo "error: llc not found on PATH" >&2; exit 1; }
 if [[ "$VARIANT" == "vectorized" ]]; then
   [[ -f "$TRANSFORM_SCRIPT" ]] || { echo "error: vectorization transform script not found at $TRANSFORM_SCRIPT" >&2; exit 1; }
+fi
+if [[ "$VARIANT" == "tiled-vectorized" ]]; then
+  [[ -f "$TILED_TRANSFORM_SCRIPT" ]] || { echo "error: tiled vectorization transform script not found at $TILED_TRANSFORM_SCRIPT" >&2; exit 1; }
+
+  # Legality check: reject shapes that do not divide evenly by the fixed
+  # tile size (no tail handling in this first version -- see the header
+  # comment). Parses M/K from the lhs arg's tensor<MxKxf32> and N from the
+  # rhs arg's tensor<KxNxf32>, in argument order, from the raw HIR text.
+  mapfile -t DIMS < <(grep -oE 'tensor<[0-9]+x[0-9]+xf32>' "$INPUT_MLIR" | head -2 | grep -oE '[0-9]+x[0-9]+')
+  [[ "${#DIMS[@]}" -eq 2 ]] || { echo "error: could not parse M/N/K from $INPUT_MLIR for the tiled-vectorized legality check" >&2; exit 1; }
+  SHAPE_M="${DIMS[0]%%x*}"
+  SHAPE_K="${DIMS[0]##*x}"
+  SHAPE_N="${DIMS[1]##*x}"
+  if (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 || SHAPE_K % TILE_K != 0 )); then
+    echo "error: --variant tiled-vectorized requires M%${TILE_M}==0, N%${TILE_N}==0, K%${TILE_K}==0" >&2
+    echo "       got M=$SHAPE_M N=$SHAPE_N K=$SHAPE_K (from $INPUT_MLIR) -- no tail handling in this version" >&2
+    echo "       use --variant generic or --variant vectorized for this shape instead" >&2
+    exit 1
+  fi
 fi
 
 mkdir -p "$OUTPUT_DIR"
@@ -177,10 +258,20 @@ GENERIC_PIPELINE='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferi
 #     that vector.transfer_read's padding operand introduces.
 VECTORIZED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 
+# Tiled-vectorized variant: mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir
+# tiles+fuses+vectorizes into a fixed TILE_M x TILE_N x TILE_K microkernel
+# (see that file's header and the variant's own header comment above for the
+# full pipeline explanation, including why lower-affine appears three times
+# and why convert-vector-to-scf{full-unroll} is required here but not for
+# the whole-shape vectorized variant).
+TILED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$TILED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+
 if [[ "$VARIANT" == "generic" ]]; then
   PASS_PIPELINE="$GENERIC_PIPELINE"
-else
+elif [[ "$VARIANT" == "vectorized" ]]; then
   PASS_PIPELINE="$VECTORIZED_PIPELINE"
+else
+  PASS_PIPELINE="$TILED_PIPELINE"
 fi
 
 echo "[1/4] mlir-opt: HIR -> LLVM dialect ($NAME, variant=$VARIANT)"
