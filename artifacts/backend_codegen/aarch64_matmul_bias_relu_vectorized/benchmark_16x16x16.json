@@ -1,0 +1,21 @@
+{
+  "shape": "16x16x16",
+  "M": 16, "N": 16, "K": 16,
+  "iterations": 2000,
+  "correctness": {
+    "reference_checksum": "0x3936efc009a8d543",
+    "generic": {"correct": true, "max_abs_error": 0.00000012, "checksum": "0x4a97d9375d98368e"},
+    "vectorized": {"correct": true, "max_abs_error": 0.00000012, "checksum": "0x04cbf3368dca4875"},
+    "handwritten": {"correct": true, "max_abs_error": 0.00000000, "checksum": "0x3936efc009a8d543"},
+    "all_correct": true
+  },
+  "benchmark_ms": {
+    "scalar":      {"median": 0.003982, "p95": 0.004000},
+    "generic":     {"median": 0.016686, "p95": 0.016704},
+    "vectorized":  {"median": 0.000556, "p95": 0.000574},
+    "handwritten": {"median": 0.003759, "p95": 0.003760}
+  },
+  "vectorized_over_generic_median_speedup": 30.010791,
+  "vectorized_over_scalar_median_ratio": 0.139628,
+  "vectorized_over_handwritten_median_ratio": 0.147912
+}

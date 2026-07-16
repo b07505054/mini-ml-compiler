@@ -2,25 +2,44 @@
 #
 # compile_hir_matmul_bias_relu_aarch64.sh
 #
-# Reproducible native-codegen pipeline for hir.fused_matmul_bias_relu:
+# Reproducible native-codegen pipeline for hir.fused_matmul_bias_relu, with
+# two independently reproducible variants:
 #
-#   Input HIR MLIR
-#     -> mlir-opt (hir-matmul-bias-relu-to-linalg + stock MLIR->LLVM dialect
-#                  conversion passes, the exact pipeline verified by
-#                  mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir)
-#     -> LLVM dialect MLIR
-#     -> mlir-translate --mlir-to-llvmir
-#     -> LLVM IR (.ll)
-#     -> llc (AArch64 assembly + object)
+#   --variant generic (default)
+#     Input HIR MLIR
+#       -> mlir-opt (hir-matmul-bias-relu-to-linalg + stock MLIR->LLVM dialect
+#                    conversion passes, the exact pipeline verified by
+#                    mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir)
+#       -> LLVM dialect MLIR -> mlir-translate -> LLVM IR -> llc -> AArch64
+#          assembly/object. No unrolling or vectorization; llc's default
+#          scalar codegen from unmodified Linalg-derived loops.
 #
-# This script only reuses the existing, FileCheck-verified
-# hir-matmul-bias-relu-to-linalg pass (mlir_passes/lib/MatMulBiasReluFusionPass.cpp)
-# and stock upstream MLIR conversion passes already present in the plugin.
-# It adds no project-owned target-specific instruction selection, scheduling,
-# or register allocation -- this is the generic LLVM AArch64 backend path.
+#   --variant vectorized
+#     Input HIR MLIR
+#       -> mlir-opt (hir-matmul-bias-relu-to-linalg, UNCHANGED, same pass as
+#                    the generic variant)
+#       -> mlir-opt (project-owned Transform-dialect script,
+#                    mlir_passes/transforms/vectorize_matmul_bias_relu.mlir,
+#                    applied via transform-preload-library + transform-interpreter)
+#          rewrites the tensor-level Linalg form into MLIR Vector-dialect ops
+#          (vector.transfer_read / vector.contract / vector.transfer_write,
+#          plus vectorized arith for the bias-add+ReLU stage). This is
+#          project-owned instruction-selection PREPARATION, not machine
+#          instruction selection.
+#       -> stock MLIR->LLVM dialect conversion (convert-vector-to-llvm with
+#          vector-contract-lowering=outerproduct, which is what causes LLVM's
+#          own AArch64 backend to select fused NEON FMLA instructions --
+#          that final selection step is LLVM-owned, not implemented here)
+#       -> LLVM dialect MLIR -> mlir-translate -> LLVM IR -> llc -> AArch64
+#          assembly/object containing real NEON vector instructions.
+#
+# Neither variant hand-writes NEON intrinsics anywhere in this script or in
+# the C++ harness that calls the resulting objects -- both are compiler
+# output, not handwritten kernels.
 #
 # Usage:
-#   compile_hir_matmul_bias_relu_aarch64.sh <input.mlir> <output_dir> [artifact_name]
+#   compile_hir_matmul_bias_relu_aarch64.sh [--variant generic|vectorized] \
+#     <input.mlir> <output_dir> [artifact_name]
 #
 # Environment overrides:
 #   MLIR_BIN       Directory containing mlir-opt / mlir-translate.
@@ -28,6 +47,9 @@
 #                  mlir_passes/ (see mlir_passes/README.md / build-mlir/CMakeCache.txt).
 #   PLUGIN         Path to libHIRMatMulBiasReluFusionPass.so.
 #                  Default: <repo>/build-mlir/libHIRMatMulBiasReluFusionPass.so
+#   TRANSFORM_SCRIPT  Path to the vectorization Transform-dialect script.
+#                  Default: <repo>/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir
+#                  (only read when --variant vectorized).
 #   LLC            llc binary. Default: llc on PATH (expected LLVM 21, matching MLIR_BIN).
 #   TARGET_TRIPLE  Default: aarch64-linux-gnu
 #   TARGET_CPU     Default: cortex-a76 (Raspberry Pi 5 CPU, confirmed via the
@@ -43,7 +65,32 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <input.mlir> <output_dir> [artifact_name]" >&2
+  echo "usage: $0 [--variant generic|vectorized] <input.mlir> <output_dir> [artifact_name]" >&2
+  exit 1
+}
+
+VARIANT="generic"
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --variant)
+      VARIANT="$2"
+      shift 2
+      ;;
+    --variant=*)
+      VARIANT="${1#--variant=}"
+      shift
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${POSITIONAL[@]}"
+
+[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" ]] || {
+  echo "error: --variant must be 'generic' or 'vectorized' (got '$VARIANT')" >&2
   exit 1
 }
 
@@ -58,6 +105,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 MLIR_BIN="${MLIR_BIN:-/home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin}"
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/libHIRMatMulBiasReluFusionPass.so}"
+TRANSFORM_SCRIPT="${TRANSFORM_SCRIPT:-$REPO_ROOT/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir}"
 LLC="${LLC:-llc}"
 TARGET_TRIPLE="${TARGET_TRIPLE:-aarch64-linux-gnu}"
 TARGET_CPU="${TARGET_CPU:-cortex-a76}"
@@ -70,6 +118,9 @@ MLIR_TRANSLATE="$MLIR_BIN/mlir-translate"
 [[ -x "$MLIR_TRANSLATE" ]] || { echo "error: mlir-translate not found/executable at $MLIR_TRANSLATE" >&2; exit 1; }
 [[ -f "$PLUGIN" ]] || { echo "error: pass plugin not found at $PLUGIN (build mlir_passes first)" >&2; exit 1; }
 command -v "$LLC" >/dev/null 2>&1 || { echo "error: llc not found on PATH" >&2; exit 1; }
+if [[ "$VARIANT" == "vectorized" ]]; then
+  [[ -f "$TRANSFORM_SCRIPT" ]] || { echo "error: vectorization transform script not found at $TRANSFORM_SCRIPT" >&2; exit 1; }
+fi
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -78,7 +129,7 @@ KERNEL_LL="$OUTPUT_DIR/${NAME}.ll"
 KERNEL_S="$OUTPUT_DIR/${NAME}.s"
 KERNEL_O="$OUTPUT_DIR/${NAME}.o"
 
-# Identical pass list to mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir,
+# Generic variant: identical pass list to mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir,
 # with two additions required specifically for standalone execution (that
 # FileCheck test only ever inspects static IR text -- it never runs the
 # result, so it never needed these):
@@ -86,22 +137,53 @@ KERNEL_O="$OUTPUT_DIR/${NAME}.o"
 #   1. `buffer-deallocation-pipeline`, inserted right after bufferization.
 #      Without it, the intermediate matmul-only buffer allocated inside the
 #      lowered function (before the bias-add+relu stage consumes it) is never
-#      freed -- a real per-call memory leak. This was found during this
-#      slice's own hardware validation: repeated invocation under
-#      Raspberry Pi correctness/benchmark testing produced incorrect output
-#      on larger shapes after enough calls, traced (via a from-scratch
-#      malloc/free-count check on the emitted LLVM IR) to this missing pass.
-#      The function's *returned* buffer is correctly left un-freed by this
-#      pass, since its ownership transfers to the caller.
+#      freed -- a real per-call memory leak, found and fixed during this
+#      slice's own hardware validation. The function's *returned* buffer is
+#      correctly left un-freed by this pass, since its ownership transfers
+#      to the caller.
 #
-#   2. The input function still carries `llvm.emit_c_interface`, so
+#   2. The input function carries `llvm.emit_c_interface`, so
 #      convert-func-to-llvm additionally emits a `_mlir_ciface_<fn>` wrapper.
 #      That wrapper is a stock MLIR mechanism, self-contained in the emitted
 #      IR -- it requires no external MLIR runtime library (e.g.
 #      mlir_c_runner_utils) to link or run.
-PASS_PIPELINE='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},buffer-deallocation-pipeline,convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
+GENERIC_PIPELINE='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},buffer-deallocation-pipeline,convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
 
-echo "[1/4] mlir-opt: HIR -> LLVM dialect ($NAME)"
+# Vectorized variant: same hir-matmul-bias-relu-to-linalg pass, then the
+# project-owned Transform-dialect vectorization script (see
+# mlir_passes/transforms/vectorize_matmul_bias_relu.mlir), then a
+# vector-aware lowering path instead of convert-linalg-to-loops:
+#
+#   - function-boundary-type-conversion=identity-layout-map on
+#     one-shot-bufferize: without this, argument memrefs get a fully dynamic
+#     stride layout (needed in general for ABI genericity), which blocks
+#     MLIR's vector-transfer lowering patterns from proving the innermost
+#     dimension is unit-stride, so they refuse to lower 2-D vector transfers
+#     into real vector loads. Forcing an identity (static, contiguous) layout
+#     at the boundary resolves this. Verified this does NOT change the
+#     _mlir_ciface_ ABI: the generated llvm.func / _mlir_ciface_ signatures
+#     are byte-identical in shape to the generic variant's, so the same
+#     harness code calls both variants unmodified.
+#   - test-vector-transfer-flatten-patterns + expand-strided-metadata:
+#     rewrite contiguous N-D vector.transfer ops into 1-D transfers (and
+#     lower the memref.collapse_shape this introduces) before
+#     convert-vector-to-llvm, which only handles 1-D vector transfers
+#     directly.
+#   - convert-vector-to-llvm{vector-contract-lowering=outerproduct}: lowers
+#     vector.contract via vector.outerproduct, which is what causes LLVM's
+#     AArch64 instruction selector to choose fused `fmla` (verified in
+#     disassembly) instead of separate fmul/fadd.
+#   - convert-ub-to-llvm: lowers the `ub.poison` padding-value placeholder
+#     that vector.transfer_read's padding operand introduces.
+VECTORIZED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+
+if [[ "$VARIANT" == "generic" ]]; then
+  PASS_PIPELINE="$GENERIC_PIPELINE"
+else
+  PASS_PIPELINE="$VECTORIZED_PIPELINE"
+fi
+
+echo "[1/4] mlir-opt: HIR -> LLVM dialect ($NAME, variant=$VARIANT)"
 "$MLIR_OPT" "$INPUT_MLIR" \
   --load-dialect-plugin="$PLUGIN" \
   --load-pass-plugin="$PLUGIN" \

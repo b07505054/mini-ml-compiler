@@ -765,4 +765,81 @@ for shape in 8x8x8 16x16x16 32x32x32; do
   run_backend_codegen_static_checks "$shape"
 done
 
+# ---------------------------------------------------------------------------
+# Host-side static checks for the vectorized AArch64 backend variant
+# (compile_hir_matmul_bias_relu_aarch64.sh --variant vectorized). Requires no
+# network access and no Raspberry Pi. Verifies, in order: (1) the
+# project-owned Transform-dialect script actually produces MLIR vector
+# ops before LLVM lowering, (2) the final LLVM dialect / LLVM IR still
+# contains real LLVM vector types (not silently scalarized), and (3) the
+# AArch64 assembly contains real NEON FMLA. Real hardware execution
+# (repeated-call and mixed-shape correctness) is a separate, explicitly
+# labeled integration test.
+# ---------------------------------------------------------------------------
+run_backend_codegen_vectorized_static_checks() {
+  local shape="$1"
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_vectorized_${shape}.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_vectorized_${shape}"
+  local transform_script="$REPO_ROOT/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir"
+
+  echo "[MLIR test] backend codegen vectorized static checks ($shape)"
+
+  # 1. Vector IR structural test: HIR -> Linalg -> Transform-dialect
+  #    vectorization, stopping BEFORE bufferization/LLVM lowering, must
+  #    contain at least one of vector.contract / vector.fma /
+  #    vector.transfer_read / vector.transfer_write.
+  "$MLIR_OPT" "$input" \
+    --load-dialect-plugin="$PLUGIN" \
+    --load-pass-plugin="$PLUGIN" \
+    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
+    -o "$out_dir/${name}_vector.mlir"
+  if ! grep -qE "vector\.(contract|fma|transfer_read|transfer_write)" "$out_dir/${name}_vector.mlir"; then
+    echo "error: expected at least one of vector.contract/vector.fma/vector.transfer_read/vector.transfer_write in ${name}_vector.mlir" >&2
+    exit 1
+  fi
+
+  # 2. Full pipeline (reuses the exact reproducible script).
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+    --variant vectorized "$input" "$out_dir" "$name"
+
+  # 3. LLVM vector IR structural test: the textual LLVM IR must contain a
+  #    real LLVM vector type (e.g. "<16 x float>"), not scalarized fallback.
+  if ! grep -qE "<[0-9]+ x float>" "$out_dir/${name}.ll"; then
+    echo "error: expected an LLVM vector type (e.g. '<N x float>') in ${name}.ll -- vectorization silently scalarized" >&2
+    exit 1
+  fi
+
+  # 4. NEON/FMLA assembly test: must contain real AArch64 NEON fmla on a
+  #    vector register (v*.4s form), not scalar-only fmul/fadd.
+  if ! grep -qE '^\s+fmla\s+v[0-9]+\.4s' "$out_dir/${name}.s"; then
+    echo "error: expected 'fmla v*.4s' in ${name}.s -- vectorized build did not select fused NEON FMLA" >&2
+    exit 1
+  fi
+
+  # 5. Same ABI/exported-symbol checks as the generic variant.
+  if ! grep -q "llvm.func @${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+  if ! grep -q "llvm.func @_mlir_ciface_${name}(" "$out_dir/${name}_llvm.mlir"; then
+    echo "error: expected llvm.func @_mlir_ciface_${name} not found in ${name}_llvm.mlir" >&2
+    exit 1
+  fi
+  local machine
+  machine="$(llvm-readobj -h "$out_dir/${name}.o" | grep -o 'EM_AARCH64' || true)"
+  if [[ "$machine" != "EM_AARCH64" ]]; then
+    echo "error: ${name}.o is not an EM_AARCH64 object" >&2
+    exit 1
+  fi
+
+  rm -rf "$out_dir"
+}
+
+for shape in 8x8x8 16x16x16 32x32x32; do
+  run_backend_codegen_vectorized_static_checks "$shape"
+done
+
 echo "[MLIR test] all passed"

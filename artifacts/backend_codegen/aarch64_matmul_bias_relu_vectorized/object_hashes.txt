@@ -1,0 +1,38 @@
+SHA-256 and size of the generated AArch64 objects at artifact-generation time
+(2026-07-15). These objects are not committed -- this repo's .gitignore
+excludes *.o repo-wide and no binary object has ever been committed anywhere
+in this repository's history. Regenerate with the commands in commands.txt
+and compare against these hashes to verify a byte-for-byte identical
+rebuild.
+
+generic/generated_8x8x8.o
+  sha256: 8ab235fffc808d95d1f1361a73e2584e401a833074e2d35c930d585ef3b0e400
+  size:   1768 bytes
+
+generic/generated_16x16x16.o
+  sha256: 443aa69fa910748400410c1901e9dd87aad3d2b2da0083d14e6838ce916a7c5e
+  size:   1768 bytes
+
+generic/generated_32x32x32.o
+  sha256: 8f811c112eb73eeb70a1b9002e7b34751668fab927be52e47577634c5b79c638
+  size:   1768 bytes
+
+vectorized/generated_8x8x8.o
+  sha256: 12ee3f9f1d032ac0a98d10510f0ddf8e375a152b01c9a2dd57b5bfb54c768ea5
+  size:   2192 bytes
+
+vectorized/generated_16x16x16.o
+  sha256: 9fb70d8923ef7ae850acbfc2f30b2f3a9d64033d8d0d5e4de453fc3fb177e47c
+  size:   13120 bytes
+
+vectorized/generated_32x32x32.o
+  sha256: 7aed212c8cce0f702bd8a6e9db119f7e1def22d78491ada69560199ccba12c45
+  size:   113216 bytes
+
+Note: generic/*.o sizes and hashes here reflect the corrected lowering
+(explicit linalg.fill zero-init of the matmul accumulator, see
+mlir_passes/lib/MatMulBiasReluFusionPass.cpp and the "Bug found and fixed"
+section of README.md). They therefore differ from
+artifacts/backend_codegen/aarch64_matmul_bias_relu/object_hashes.txt, which
+recorded the pre-fix generic objects committed in the Stage 1 slice
+(1704 bytes each, since superseded).

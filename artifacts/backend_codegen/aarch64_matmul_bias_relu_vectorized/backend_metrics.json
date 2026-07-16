@@ -1,0 +1,79 @@
+{
+  "methodology": {
+    "llvm_ir_instructions": "lines in generated_<shape>.ll containing ' = ' or starting with store/br/ret/call, whole file (both the raw kernel and the _mlir_ciface_ wrapper -- unlike the Stage 1 artifact, this count is NOT split by symbol, since llvm-objdump does not cleanly separate the fully-inlined vectorized loop body from the wrapper at the instruction-mnemonic level the way it did for the unvectorized generic kernel)",
+    "aarch64_instructions": "llvm-objdump -d --no-show-raw-insn on the whole .o, address-prefixed lines, mnemonic field only",
+    "vector_instructions": "count of disassembled lines referencing an AArch64 SIMD/vector register (v0-v31, any width suffix: .4s/.2d/.16b/etc.)",
+    "fmla": "count of disassembled lines whose mnemonic is exactly 'fmla' (fused multiply-accumulate, the NEON instruction LLVM selected for the vector.contract outerproduct lowering)",
+    "loads_stores_branches": "mnemonic-exact match on {ldr,ldp,ldur,ld1} / {str,stp,stur,st1} / {b,bl,b.<cond>,cbz,cbnz}",
+    "object_size_bytes": "stat size of the .o file"
+  },
+  "note": "generic/ counts here reflect the corrected lowering (linalg.fill zero-init) and are 150 AArch64 instructions / 1768 bytes at every shape (+16 instructions / +64 bytes vs. the pre-fix Stage 1 baseline of 134 instructions / 1704 bytes -- the honest cost of the fix, see README.md). generic/ has zero vector instructions and zero fmla at every shape: it is a scalar loop nest by construction (transform-preload-library was never applied to it), so instruction/object size does not grow with M*N*K. vectorized/ is fully unrolled by transform.structured.vectorize_children_and_apply_patterns for these fixed static shapes, so its instruction count and object size scale with M*N*K (8x8x8 -> 32x32x32 is a 64x increase in MACs and roughly a 64x increase in vectorized AArch64 instruction count: 274 -> 28026).",
+  "shapes": {
+    "8x8x8": {
+      "generic": {
+        "llvm_ir_instructions": 204,
+        "aarch64_instructions": 150,
+        "vector_instructions": 0,
+        "fmla": 0,
+        "loads": 29,
+        "stores": 21,
+        "branches": 21,
+        "object_size_bytes": 1768
+      },
+      "vectorized": {
+        "llvm_ir_instructions": 465,
+        "aarch64_instructions": 274,
+        "vector_instructions": 146,
+        "fmla": 128,
+        "loads": 66,
+        "stores": 40,
+        "branches": 2,
+        "object_size_bytes": 2192
+      }
+    },
+    "16x16x16": {
+      "generic": {
+        "llvm_ir_instructions": 204,
+        "aarch64_instructions": 150,
+        "vector_instructions": 0,
+        "fmla": 0,
+        "loads": 29,
+        "stores": 21,
+        "branches": 21,
+        "object_size_bytes": 1768
+      },
+      "vectorized": {
+        "llvm_ir_instructions": 1305,
+        "aarch64_instructions": 3002,
+        "vector_instructions": 1314,
+        "fmla": 1024,
+        "loads": 943,
+        "stores": 725,
+        "branches": 2,
+        "object_size_bytes": 13120
+      }
+    },
+    "32x32x32": {
+      "generic": {
+        "llvm_ir_instructions": 204,
+        "aarch64_instructions": 150,
+        "vector_instructions": 0,
+        "fmla": 0,
+        "loads": 29,
+        "stores": 21,
+        "branches": 21,
+        "object_size_bytes": 1768
+      },
+      "vectorized": {
+        "llvm_ir_instructions": 4521,
+        "aarch64_instructions": 28026,
+        "vector_instructions": 9526,
+        "fmla": 8192,
+        "loads": 10668,
+        "stores": 7808,
+        "branches": 2,
+        "object_size_bytes": 113216
+      }
+    }
+  }
+}

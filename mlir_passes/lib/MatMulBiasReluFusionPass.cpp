@@ -924,10 +924,24 @@ struct HIRMatMulBiasReluToLinalgPattern
         rewriter, loc, rewriter.getFloatAttr(elementType, 0.0));
     auto matmulEmpty = tensor::EmptyOp::create(
         rewriter, loc, matmulOutputType.getShape(), elementType);
+    // linalg.matmul accumulates into its "outs" operand (it has a reduction
+    // iterator over K), so that operand must start at zero. tensor.empty()
+    // does not guarantee zero-initialized content -- its result is
+    // documented as undefined, and in practice the backing buffer is only
+    // accidentally zero on a fresh, never-reused heap allocation. On repeat
+    // invocation (heap address reuse), the stale contents of a *previous*
+    // call's own output buffer get accumulated into, producing incorrect,
+    // growing results (found via a real/AArch64 repeated-invocation
+    // regression: bufferized output equals (call_count+1) x correct value
+    // for the affected elements). Explicit linalg.fill matches the existing,
+    // correct pattern already used for the RMSNorm row accumulator above.
+    auto matmulInit = linalg::FillOp::create(
+        rewriter, loc, ValueRange{zero.getResult()},
+        ValueRange{matmulEmpty.getResult()});
     auto matmul = linalg::MatmulOp::create(
         rewriter, loc, matmulOutputType,
         ValueRange{lhs, rhs},
-        ValueRange{matmulEmpty.getResult()});
+        ValueRange{matmulInit.getResult(0)});
 
     auto outputEmpty = tensor::EmptyOp::create(
         rewriter, loc, addReluOutputType.getShape(), elementType);

@@ -1,0 +1,111 @@
+Commands used to produce every file in this directory. All paths are
+relative to the ml-graph-compiler-runtime repo root.
+
+Note on paths: MLIR_BIN below is shown at the exact path used on the
+development host these artifacts were generated on. It is a plain
+environment-variable override (see mlir_passes/tools/
+compile_hir_matmul_bias_relu_aarch64.sh), not a hardcoded requirement --
+point it at any MLIR 21 mlir-opt/mlir-translate install to reproduce
+elsewhere.
+
+Note on generic/generated_<shape>.o and vectorized/generated_<shape>.o:
+these six object files are not committed (see README.md);
+object_hashes.txt records their SHA-256 and size so a freshly regenerated
+object can be verified byte-identical.
+
+1. Rebuild AArch64 objects for all three shapes, both variants:
+
+   MLIR_BIN=/home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin
+
+   bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+     --variant generic \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_<shape>.mlir \
+     <output_dir> \
+     matmul_bias_relu_<shape>
+
+   bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+     --variant vectorized \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_vectorized_<shape>.mlir \
+     <output_dir> \
+     matmul_bias_relu_vectorized_<shape>
+
+   Internally, --variant generic runs the same pipeline as Stage 1, now with
+   the fix (linalg.fill zero-init) present at the shared-pass level:
+
+     mlir-opt <input.mlir> \
+       --load-dialect-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --load-pass-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},buffer-deallocation-pipeline,convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)' \
+       -o <name>_llvm.mlir
+
+   --variant vectorized additionally preloads and invokes the Transform
+   dialect script mlir_passes/transforms/vectorize_matmul_bias_relu.mlir
+   BEFORE bufferization, then lowers vector ops (not loops) to LLVM:
+
+     mlir-opt <input.mlir> \
+       --load-dialect-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --load-pass-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+       --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=mlir_passes/transforms/vectorize_matmul_bias_relu.mlir},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)' \
+       -o <name>_llvm.mlir
+
+   Both variants then continue identically:
+     mlir-translate --mlir-to-llvmir <name>_llvm.mlir -o <name>.ll
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -filetype=asm <name>.ll -o <name>.s
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -filetype=obj <name>.ll -o <name>.o
+
+2. Pre-bufferization vector-dialect intermediate (vectorized/vector_dialect_<shape>.mlir
+   only -- shows vector.contract/vector.transfer_read/vector.transfer_write
+   before they are lowered to LLVM, i.e. the project-owned MLIR
+   vectorization stage in isolation):
+
+   mlir-opt <input.mlir> \
+     --load-dialect-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+     --load-pass-plugin=build-mlir/libHIRMatMulBiasReluFusionPass.so \
+     --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=mlir_passes/transforms/vectorize_matmul_bias_relu.mlir},transform-interpreter{entry-point=__transform_main})' \
+     -o vector_dialect_<shape>.mlir
+
+3. Disassembly (generic/objdump_<shape>.txt, vectorized/objdump_<shape>.txt):
+
+   llvm-objdump -d generic/generated_<shape>.o
+   llvm-objdump -d vectorized/generated_<shape>.o
+
+4. Repeated-call correctness (1000 calls/shape/variant) and mixed-shape
+   stress (500 cycles = 6000 calls, generic+vectorized interleaved with
+   allocator noise), plus the 4-way benchmark (scalar/generic/vectorized/
+   handwritten), all driven end-to-end on the real Raspberry Pi by:
+
+   PI_HOST=allen@100.110.37.6 \
+   REPEATED_CALLS=1000 MIXED_CYCLES=500 ITERATIONS=2000 WARMUP=200 \
+   bash tools/run_backend_codegen_vectorized_pi_integration.sh <output_dir>
+
+   which additionally:
+     - transfers all six .o files, the repeated-call test, mixed-shape test,
+       and 4-way harness sources, plus the handwritten-kernel dependency
+       sources (include/kernels/cpu_kernels.h, include/ir/{tensor,quant_tensor}.h,
+       include/runtime/thread_pool.h, src/kernels/cpu_kernels.cpp,
+       src/runtime/thread_pool.cpp) to the Pi via scp
+     - builds all three test binaries on the Pi with g++ -O2 -std=c++17
+     - runs ./repeated_call_test <shape> 1000 <variant> for all 3 shapes x
+       2 variants (repeated_call_results.txt)
+     - runs ./mixed_shape_test 500 (mixed_shape_results.txt)
+     - runs ./vectorized_benchmark 2000 200 <shape> for all 3 shapes
+       (benchmark_<shape>.json)
+     - records pi_device_state.txt via:
+         ssh allen@100.110.37.6 "hostname; uname -a; lscpu; gcc --version | head -1"
+
+5. Backend metrics (backend_metrics.json) were computed by disassembling
+   each .o with llvm-objdump -d --no-show-raw-insn on the x86_64 dev host
+   (LLVM's disassembler cross-disassembles AArch64 objects without running
+   them) and counting mnemonics; see backend_metrics.json's own
+   "methodology" field for the exact counting rules.
+
+Toolchain versions used (dev host, recorded at generation time):
+   Ubuntu LLVM/clang 21.1.8 (llc, mlir-opt, mlir-translate, llvm-objdump all
+   from this version)
+   mlir-opt / mlir-translate / mlir-opt (Transform dialect interpreter) from
+   the project-local build at
+   /home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin
+
+Raspberry Pi target (pi_device_state.txt has the live capture):
+   hostname edgeaiplatform, Cortex-A76 (Raspberry Pi 5 SoC), aarch64,
+   Debian (trixie), gcc 14.2.0
