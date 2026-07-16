@@ -1,0 +1,73 @@
+{
+  "schema_version": "aarch64_schedule_final_summary_v1",
+  "title": "AArch64 tiled matmul schedule-unroll: LLVM evidence, Raspberry Pi calibration, and opt-in compiler-side selection",
+  "stages_covered": "10-17",
+  "pipeline": {
+    "compilation": "hir.fused_matmul_bias_relu (HIR) -> hir-matmul-bias-relu-to-linalg -> project-owned Transform-dialect script (tile+fuse+K-unroll+vectorize, stock Transform-dialect combinators only) -> stock MLIR-to-LLVM-dialect lowering -> mlir-translate -> LLVM IR -> llc (unmodified LLVM 21.1.8 instruction selection, machine scheduler, greedy register allocator) -> AArch64 object",
+    "driver_script": "mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled",
+    "opt_in_selector": "tools/select_and_compile_aarch64_matmul_schedule.py (Stage 15) -- sits ABOVE the compile script, never replaces or duplicates its materialization mechanism"
+  },
+  "transformation": {
+    "name": "K-loop unroll (Option A from the Stage 8/9 design gate)",
+    "mechanism": "stock transform.loop.unroll applied to the K-reduction scf.for loop, factor = schedule-unroll-k, immediately after K-tiling and before vectorization",
+    "what_llvm_owns": "instruction selection, the pre-RA machine scheduler, register allocation (greedy), spill/reload insertion, prologue/epilogue generation -- entirely unmodified LLVM 21.1.8",
+    "what_this_project_owns": "the choice of WHERE to apply a stock Transform-dialect op and, as of Stage 15, an opt-in Python driver that ranks/selects the unroll factor before invoking the unmodified compile pipeline"
+  },
+  "supported_tiles": ["8x8x8", "8x8x4", "4x8x8"],
+  "supported_tiles_note": "Stage 11 structurally validated only these three tile configurations. No larger tile (in any dimension) has ever been structurally validated -- Stage 17 explicitly documented this as an untested dimension, not an oversight.",
+  "supported_unroll_factors": [1, 2, 4],
+  "unroll_factor_note": "factor must evenly divide the K-loop's pre-unroll trip count (shape_k / tile_k); factor=1 is a verified byte-identical no-op; factor equal to the trip count fully collapses the K-loop (verified structurally, not merely assumed).",
+  "measured_domains": [
+    {"label": "primary", "shape": "32x32x32", "tile": "8x8x8", "measured_winner": "uk4", "spills_at_winner": 11, "reloads_at_winner": 12, "stage_introduced": 12},
+    {"label": "cube64", "shape": "64x64x64", "tile": "8x8x8", "measured_winner": "uk4", "spills_at_winner": 0, "reloads_at_winner": 0, "stage_introduced": 16},
+    {"label": "altk", "shape": "32x32x32", "tile": "8x8x4", "measured_winner": "uk4", "spills_at_winner": 4, "reloads_at_winner": 4, "stage_introduced": 16},
+    {"label": "rect", "shape": "32x64x32", "tile": "8x8x8", "measured_winner": "uk4", "spills_at_winner": 18, "reloads_at_winner": 20, "stage_introduced": 16},
+    {"label": "smallA", "shape": "16x16x16", "tile": "8x8x4", "measured_winner": "uk4", "spills_at_winner": 10, "reloads_at_winner": 11, "stage_introduced": 17},
+    {"label": "highK", "shape": "32x32x128", "tile": "8x8x8", "measured_winner": "uk4", "spills_at_winner": 0, "reloads_at_winner": 0, "stage_introduced": 17}
+  ],
+  "measured_domains_note": "6 of 6 tested domains measured schedule-unroll-k=4 as the fastest candidate, each independently, on real Raspberry Pi 5 Cortex-A76 hardware. No counterexample (a domain where uk1 or uk2 wins) was found despite Stage 17 deliberately searching for one using domains chosen to stress uk4's known costs (spilling, small-problem fixed overhead, high K-trip-count live ranges). This is reported as-is and does NOT establish universal optimality -- see truth_boundary below.",
+  "correctness": {
+    "total_candidates_measured_on_pi": "30+ (across Stages 13, 16, 17)",
+    "bit_exact_failures": 0,
+    "repeated_call_failures": 0,
+    "guard_buffer_corruption_events": 0,
+    "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged throughout); every measured candidate was in fact bit-exact (max_abs_error = 0), not merely within tolerance"
+  },
+  "backend_evidence": {
+    "source": "unmodified LLVM 21.1.8 MIR at 5 pass boundaries (finalize-isel, machine-scheduler before/after, virtregrewriter, prologepilog), extracted and analyzed by project-owned Python tooling (tools/extract_aarch64_candidate_mir.py, tools/analyze_aarch64_candidate_mir.py, tools/analyze_aarch64_machine_schedule.py)",
+    "spill_range_observed": [0, 18],
+    "code_size_growth_range_observed_pct": [0, 62],
+    "static_model_top_choice_agreement": "2 of 6 domains (33%) -- exactly the 2 domains where the measured winner happens to be spill-free (cube64, highK)",
+    "static_model_conclusion": "No currently collected static metric reliably predicts the measured winner across the tested domain set; static evidence remains useful for cost/risk characterization (it never hid a single real spill) but is not a reliable standalone winner predictor."
+  },
+  "calibrated_evidence": {
+    "mechanism": "opt-in --schedule-candidate-mode=calibrated, requires an explicit --schedule-profile; ranks using RANKING_MODE_CALIBRATED_PI (tools/aarch64_schedule_candidate_model.py), falls back deterministically (exact match -> cross-shape bucket -> static -> conservative uk1) when compatible evidence is absent",
+    "exact_domain_selection_accuracy": "6 of 6 domains: calibrated mode selected the real measured winner in every domain with compatible evidence",
+    "cross_domain_leakage_events": 0,
+    "cross_domain_pairs_verified_rejected": 30,
+    "cross_domain_rejection_note": "every one of 30 cross-domain compatibility checks across the 6 domains (6 domains x 5 others) correctly rejected exact-match reuse; same-tile domains get a reduced-confidence cross-shape bucket (confidence 0.7), never an exact match; different-tile domains are fully incompatible"
+  },
+  "truth_boundary": {
+    "supported_claim": "For the tested Raspberry Pi 5 Cortex-A76 path, FP32, the tiled AArch64 matmul-bias-relu NEON microkernel, schedule-unroll-k=4 was the measured fastest candidate in all 6 independently tested shape/tile domains.",
+    "NOT_claimed": [
+      "universal uk4 optimality across untested shapes, tiles, targets, or kernel families",
+      "automatic production autotuning",
+      "a custom LLVM scheduler or scheduling pass",
+      "a custom register allocator",
+      "arbitrary loop scheduling or software pipelining",
+      "general loop interchange",
+      "default/automatic calibrated-mode or uk4 selection anywhere in the compiler"
+    ],
+    "default_compiler_behavior": "unchanged -- --schedule-candidate-mode defaults to manual everywhere; calibrated mode and any uk4 preference are opt-in only, in every driver invocation across Stages 15-17"
+  },
+  "limitations": [
+    "No tile larger than 8x8x8 in any dimension has ever been structurally validated (Stage 11 scope).",
+    "No target other than Raspberry Pi 5 Cortex-A76 has ever been measured.",
+    "No dtype other than f32 has ever been measured.",
+    "No kernel family other than the tiled fused matmul-bias-relu microkernel has ever been measured.",
+    "perf/hardware performance counters are unavailable on this Pi; no instruction-cache-miss or cycle-level counter evidence exists anywhere in this evidence chain -- code size and llvm-mca estimates are used as labeled static signals only.",
+    "Only 6 domains, each backed by a single measurement session (5 interleaved groups); no domain has been independently reproduced across separate days/reboots.",
+    "The register-pressure heuristic (approx_peak_live_vector_registers) is a linear scan with no loop-back-edge modeling, not a dataflow analysis -- documented and never used as a scoring signal by default.",
+    "Selection happens in a Python compiler driver, not a native C++ MLIR pass -- accurately described throughout as 'opt-in compiler-driver schedule candidate selection controlling a real MLIR schedule materialization pass.'"
+  ]
+}

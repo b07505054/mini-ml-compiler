@@ -1,0 +1,5 @@
+{
+  "_fixture_kind": "COMPATIBILITY_TEST_FIXTURE -- NOT a measured benchmark profile",
+  "_provenance": "Deliberately missing required fields (no schema_version, no pi_environment) to exercise the malformed-provenance rejection path.",
+  "some_unrelated_field": "this is not a valid Stage 13 or Stage 15 profile schema"
+}

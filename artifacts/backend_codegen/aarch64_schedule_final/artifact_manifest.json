@@ -1,0 +1,2776 @@
+{
+  "tiers": {
+    "1": {
+      "name": "Reviewer-facing summary artifacts",
+      "description": "READMEs, human-readable summaries, commands.txt -- read these first."
+    },
+    "2": {
+      "name": "Reproducible intermediate evidence",
+      "description": "Structured JSON analysis results (register/schedule metrics, rankings, selection reports, domain summaries) -- regenerable from Tier 3 + the documented commands, never hand-edited."
+    },
+    "3": {
+      "name": "Large raw diagnostics",
+      "description": "Raw MIR/LLVM-IR/assembly/object files -- the actual compiler output each stage's tooling analyzed. Large, numerous, and fully regenerable from the fixture + documented compile command; kept for audit trail, not required reading."
+    }
+  },
+  "stages": {
+    "Stage 12 (LLVM scheduling evidence comparison)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling",
+      "file_count": 118,
+      "total_bytes": 6767043,
+      "owner_stage": "Stage 12 (LLVM scheduling evidence comparison)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/README.md",
+          "tier": 1,
+          "bytes": 17563,
+          "sha256": "8c5c25cd0a498ebd36b9bd61d57d4326424d0fca1ecab6ff6d4b849c96246dcd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/commands.txt",
+          "tier": 1,
+          "bytes": 4456,
+          "sha256": "77ce9a4eb863658908e990894bb6ecac6b9bb3949560516752b0e0b668460445"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/schedule_comparison_results.json",
+          "tier": 2,
+          "bytes": 144391,
+          "sha256": "7ea35c95d32e2624af983017efc57f490206323706e77df0c2099ad373192fb1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/schedule_comparison_summary.md",
+          "tier": 2,
+          "bytes": 1902,
+          "sha256": "7dd19841f7a98332390191d18bd2dd7fa39b70e4722ee5f3b5d5b72b791afa35"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 4232,
+          "sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 24770,
+          "sha256": "5406503b5f6ba475ff84d2353d6a6d46f1fa938c2b02d45742dcab113e45edf5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 236252,
+          "sha256": "b313907d4b665d1740ca9fbdc35dc0017e160e95b3eb3cd06ddf15ddacc18632"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 214894,
+          "sha256": "5633fceb65d348cdf2e55af36590975e0dc5407415e7afcba140899805810d01"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 209674,
+          "sha256": "e80d04b8ff6decc282aec80552912282bcec8f3386f54eaacf0b60307e90c7a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 234319,
+          "sha256": "d2ab387db2de96cb161346995c77cbfc55b1cb44e0e3e467feeab3a4d9690da5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 234319,
+          "sha256": "48718bea8dd63ca21b233d264ef488e82587be45e125c8afff62966ab94ca2aa"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.ll",
+          "tier": 3,
+          "bytes": 105149,
+          "sha256": "e8c0ec6d170131dc0e7f79f8837029d95067ea53b69757e8ead99caf652799db"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.o",
+          "tier": 3,
+          "bytes": 4232,
+          "sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.s",
+          "tier": 3,
+          "bytes": 24770,
+          "sha256": "5406503b5f6ba475ff84d2353d6a6d46f1fa938c2b02d45742dcab113e45edf5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 170709,
+          "sha256": "b880b0e906efdaf087da01b3ff32fec93b22a6ad0c38aaf6378599fb16eda747"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/register_metrics.json",
+          "tier": 2,
+          "bytes": 5261,
+          "sha256": "7becd261a37f2e4fa8a2b755fee9f5fe891901e2aa9e76520e9e1b85e5bd4e63"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1000,
+          "sha256": "2e935ed98c6b0c68bfaa253e870112573ab2ce8d857b32cf7f660e811647c2b7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1000,
+          "sha256": "5098db218c89e2b94db0737ba22316f9f9bd08fa1de4b2cd18212365d9f22952"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "ae13ab19d832d828255228a78cd9e7c6d4b0a760cfd4cdfcba14a3a661585d4d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 16764,
+          "sha256": "021019293f0421365ccf4a183dca85bc27ccf9a141803a93c232529f007d31e1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 165358,
+          "sha256": "6104bd98957dc6692498ae6c517c5e10b723cde80bcc24066997e32e94db5245"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 144354,
+          "sha256": "ccb10af25392c6174d10543f56f027e4b451d514968a23b35b4628632fc8c40c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 138855,
+          "sha256": "a2d41d6597037a5a6b5117132421ba7b5c164760a90584e82229f2b6e7c4fd88"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 162252,
+          "sha256": "a7365bc8a2616e90c21e30b857a56ac7f8739634f58bea464738dbf160590407"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 162252,
+          "sha256": "c38aac4af3ad7cc11353d5f193a804a847521f45127b789125198962f9bfe5de"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_uk2.ll",
+          "tier": 3,
+          "bytes": 71230,
+          "sha256": "3fce7fcb3e336eb4570f0b76a246f3cd91d5af34e805fa1b6dcb39788fc0bcd0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_uk2.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "ae13ab19d832d828255228a78cd9e7c6d4b0a760cfd4cdfcba14a3a661585d4d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_uk2.s",
+          "tier": 3,
+          "bytes": 16764,
+          "sha256": "021019293f0421365ccf4a183dca85bc27ccf9a141803a93c232529f007d31e1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/64x64x64_tm8_tn8_tk8_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "f878677505488a429009423579ba94069bef15e799fb6a01c41cebc114d9be33"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/register_metrics.json",
+          "tier": 2,
+          "bytes": 5155,
+          "sha256": "bf5905429d7f9236aa71de3b44ff9526a460002f0ac09e6aebf44be7b71d9a59"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1083,
+          "sha256": "04644ea340644411c7cb47d2e819e7ecf3818c7ff62755f1382a4ce7e6cd91a5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk2/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1088,
+          "sha256": "c052d304735361a190a2184c90b749114dc5ebab34bdf4f35c2f8ef50cf2b6b3"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 167644,
+          "sha256": "ea89965dd53a6153f6705ad4b0ced73e63cc59fbaca8d51d98337fb63ae6f51b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 146756,
+          "sha256": "6e1ed439b3955f03eaf69b3a68f3afe78e35011d2ae2a119f04c5ff0dba9e6de"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 141257,
+          "sha256": "8781dd142ca591107b0b5ccb9feb8681d7200078f8e3bd8d1c1e6402498e71e9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 164511,
+          "sha256": "773dd43d60baf373fc32115ed9e5722486ae3991db68077a16857e2aedbcac37"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 164511,
+          "sha256": "dcd040659fcd3531aa1ba59605310a79a2ab793efcc700c152ce9e9c9cf5675f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_uk2.ll",
+          "tier": 3,
+          "bytes": 71220,
+          "sha256": "25a9bcd7d4b551c033b814f92cdcca14ee37bbbf2d6cf9399423ce089b07f92b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_uk2.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_uk2.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/32x32x32_tm8_tn8_tk8_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "b968beef84f0d6365527688c9c2c41443f62a4787a50f32cbd98661a6fb6ddb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/hot_loop_region.s",
+          "tier": 3,
+          "bytes": 9739,
+          "sha256": "86380f4de985b2e7eed76a2f8d7fb1c1b91fdbe1b7b02f0944abe96c3cd52310"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/register_metrics.json",
+          "tier": 2,
+          "bytes": 5155,
+          "sha256": "948799e1954cc6fe9149a98de3a84a3f06fc4ebc804e8bd270463335d2772b3d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1083,
+          "sha256": "cb47b68ab65070bef435d054d57fa9fd7bfdbbd01822e1b395ad25bea5ba171b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk2/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1088,
+          "sha256": "92c42c35c2bb764106e2087406a96ddbb36ae8b691f5f3d7a3baa0bb2c4227b4"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 2608,
+          "sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 11774,
+          "sha256": "f4ce88a29694c5238c7af7a1f8548be2993d1b33e890b4c8e4b68a9328b304ad"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 118903,
+          "sha256": "e8349a35cebfd09b79d9f2221dbadf55fc6368bb3eb97dad6fab060372d82434"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 103317,
+          "sha256": "1bf273756e1043bb5d0779c3e11f8ef0068df1d2eb4d201bf9ae84e32e352565"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 97818,
+          "sha256": "1ccb4753682cb642d5d353d3e1278c831b5362d2b6f34878daa2299b353ed95d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 115770,
+          "sha256": "b84c73f1a757b523125284fccbe8ad505929403ea613d38318995e7d39d499cc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 115770,
+          "sha256": "3ecbe07fd70c3b8f29a780e3d7fcd81d8e571bdfc3ecedb42136001f3bd0dd7a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_uk1.ll",
+          "tier": 3,
+          "bytes": 48203,
+          "sha256": "13396af3036c45b50a79ad981c9dfde769585a5accf2c5d6c40464b4fdeab6ae"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_uk1.o",
+          "tier": 3,
+          "bytes": 2608,
+          "sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_uk1.s",
+          "tier": 3,
+          "bytes": 11774,
+          "sha256": "f4ce88a29694c5238c7af7a1f8548be2993d1b33e890b4c8e4b68a9328b304ad"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/32x32x32_tm8_tn8_tk8_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "58edc7fe7824c313346686c62321fee3667b120deb2cb231bd2c15c3ba2dc1fd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/hot_loop_region.s",
+          "tier": 3,
+          "bytes": 5178,
+          "sha256": "e0d0a0b6056a90bbd2a612a74566ee283b642c76156d7cff241932edbd636525"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/register_metrics.json",
+          "tier": 2,
+          "bytes": 5155,
+          "sha256": "35414e5f6e98338ec56b32906525d02cba4d5df7f71287b48aad9f8ef39de375"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1080,
+          "sha256": "b900854a7a92bc9c93833596b1c9ba0a000e1f7e4283e79b473e61965a25484e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk1/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1084,
+          "sha256": "2faf8ed892865e052f31c399a4677a9ca137fbb93751e2b678366f09254de5c7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 1696,
+          "sha256": "86f68ef7523f5f7ea06efe9ef2c7a3fbf3a2dd36b12d82e839ae013eabc383ec"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 5344,
+          "sha256": "b8bf72f5a4d1cf3a1f844a2c231dea9aed0d61640ef05556b9bd387c21309970"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 56890,
+          "sha256": "c91391a55b1488b61c19f7e71a3141c58957c7e24a0e88c148e434de51e0a72e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 47792,
+          "sha256": "8e0b3861cbe7f6d6cc7664f718c76d35df50c44e52ed788e79d9a6a5e61b0fd7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 45316,
+          "sha256": "b6420be0c30317b56da7b198037503555d678f8eb26e4457707f0c35c531fc7a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 54789,
+          "sha256": "4573e46235e4d37227bcf71a3b649014396dc8db71d57913fad580ec7f70f3f7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 54789,
+          "sha256": "a4b0c1558fa065b867f0b805e0bf27e8a8c1c53362bed7b9608184b450a6d1bd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_uk1.ll",
+          "tier": 3,
+          "bytes": 20394,
+          "sha256": "e9c0e4abb8be2d32b3b88f02c0ab2c6ac0d98731c132bfea150bd46f8c62af9f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_uk1.o",
+          "tier": 3,
+          "bytes": 1696,
+          "sha256": "86f68ef7523f5f7ea06efe9ef2c7a3fbf3a2dd36b12d82e839ae013eabc383ec"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_uk1.s",
+          "tier": 3,
+          "bytes": 5344,
+          "sha256": "b8bf72f5a4d1cf3a1f844a2c231dea9aed0d61640ef05556b9bd387c21309970"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 32941,
+          "sha256": "7428e83cb6509dd44e3dd39696f3a8e66c854af85059d250680e74f7b5e986c6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/register_metrics.json",
+          "tier": 2,
+          "bytes": 4912,
+          "sha256": "a2eaa93e76c950a54f31ee25778da58d8f5685baa63a5c5c8ecc2192be32890d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1073,
+          "sha256": "fdeaa1530ae04398721e445b9b770f9435a3fd5c5b5eeeafdde93b9a70d9ef50"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1066,
+          "sha256": "c9441eac9f4ebf631f023dd7370c7823ab908d95f105e941d992dec83ff447b0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "7b7709cdcc40abc0d574a5b9ba451877e28651bea9baf03b23a46f92ca59f2e9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 12154,
+          "sha256": "6eab5e145de9b71e2db1e6ee8f1296a7bfa089ba9765470407bbf6bb65a49a0c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 117899,
+          "sha256": "cce072e7818686124924d24d4d9ef7495d39fcdec52dac7f3a62aa5e39a06603"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 102181,
+          "sha256": "8fc1fc144532daab8b247fb19a769430867a05b116e66dc0a1f4c5eba44bacdf"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 96682,
+          "sha256": "5e33b3203ed62afe1d6fd371280ad526416087409f091c404d5e408fcb3880a1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 114793,
+          "sha256": "784727f365d9f6617e7ae38798ed9bc093b87dd850965d4db889719508119cb8"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 114793,
+          "sha256": "9362149a913a7aca79bbb8ef4251108660187b967ce3004911690f2a648773a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_uk1.ll",
+          "tier": 3,
+          "bytes": 48213,
+          "sha256": "ec715b105bcc639f152f6f5a4679a78c97b6e1020ab5e116c85fe50e9ce246c1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_uk1.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "7b7709cdcc40abc0d574a5b9ba451877e28651bea9baf03b23a46f92ca59f2e9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_uk1.s",
+          "tier": 3,
+          "bytes": 12154,
+          "sha256": "6eab5e145de9b71e2db1e6ee8f1296a7bfa089ba9765470407bbf6bb65a49a0c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/64x64x64_tm8_tn8_tk8_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "a5cb716e233b32f6506bfbfb8251e36d2d93730698c256bb92c6f4022956f523"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/register_metrics.json",
+          "tier": 2,
+          "bytes": 5155,
+          "sha256": "78a218fd0165bbf15b773d13d8e63829d581fcfb1c60944906aa34656762693b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1079,
+          "sha256": "b360f7aa9beda81338da0a61de65e29f7d0a57d9dafca355c6154fc4f23fb83c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/64x64x64_tm8_tn8_tk8_uk1/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1084,
+          "sha256": "fae383d5ab01ae55ca143aa029d2a7e52768e146f9405be3f196748ba1bf03eb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 2640,
+          "sha256": "71ec17d3df9d720b7028080f0f0f89cc7f6249e31c40a54dd0a74ed222c2ef55"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 12404,
+          "sha256": "2c033ddbd33097cc8812fafe03e214d70cc34c254918a147da0cc43dd355ee5c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 121310,
+          "sha256": "23ee341c70bb1c2afdd0d4f381e1cc8930b9ef1baae9661ec8659cdde71098f8"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 108591,
+          "sha256": "5c722f9e777f017405db869f2af13ecef5944ad95aa356b533248ad5f0612562"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 101180,
+          "sha256": "39941b657587a6669e1eb90f8ee3bfe7d1ddebe8bac6ff5b8d13ee424446c8f3"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 118177,
+          "sha256": "9265ac3a6d480e805ad2d6cf627ed88d62bd61b9aebfcbc79902ffba9bff3b48"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 118177,
+          "sha256": "8be70633c0b3efc46ded7077ce623c55221a85cc17fae03073ed4cdd6de56c72"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_uk2.ll",
+          "tier": 3,
+          "bytes": 50106,
+          "sha256": "87665dfa79215c351e3787b47b6e07743f9851f84da72ff675b612cd2aec500f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_uk2.o",
+          "tier": 3,
+          "bytes": 2640,
+          "sha256": "71ec17d3df9d720b7028080f0f0f89cc7f6249e31c40a54dd0a74ed222c2ef55"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_uk2.s",
+          "tier": 3,
+          "bytes": 12404,
+          "sha256": "2c033ddbd33097cc8812fafe03e214d70cc34c254918a147da0cc43dd355ee5c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/32x32x32_tm8_tn8_tk4_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 84749,
+          "sha256": "ffea83a34d7158c6ab2f75d2da2a9133f9310db8083d84ad4265d8523acc4986"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/register_metrics.json",
+          "tier": 2,
+          "bytes": 5259,
+          "sha256": "6f2575b601bdd2b60f292d1cdaee20af8969bca394d7758accb3b25f2868875b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1081,
+          "sha256": "74e0ff644a251afdfbaee2768ab86fb56fa891bf8a6883c20d7593898e490214"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk2/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1084,
+          "sha256": "08f6984a1f9898ed14321b7643ac4eb64500672c4c4c14182e248d62b34dcb17"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default.o",
+          "tier": 3,
+          "bytes": 2336,
+          "sha256": "a179ad97b9f2846ab22958a1917382e6dd4dcda309ef001936efd79e65b6332b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default.s",
+          "tier": 3,
+          "bytes": 9992,
+          "sha256": "a0916df3bc277da28d9889d041c0db27650a0c84130988a7729584c14942b472"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_isel.mir",
+          "tier": 3,
+          "bytes": 95745,
+          "sha256": "a0192ee01e2e34c9415e422523b906d8be698eed046ce6171b40006ab4889d6a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_prologue_epilogue.mir",
+          "tier": 3,
+          "bytes": 84583,
+          "sha256": "59d358e8b05fdd57a0e346559f4ba9825d43320812295818d62fe0a3e00c89b4"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default_post_ra.mir",
+          "tier": 3,
+          "bytes": 77412,
+          "sha256": "b9129896d6865b778883b138edc967c993ca58e1f69ab9e01a6c2da6db177f82"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default_pre_ra.mir",
+          "tier": 3,
+          "bytes": 92612,
+          "sha256": "98b50eb0abd8996a1b863df512589c5319afda2ec6bfc59f8ce7c8f5b93787cf"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_greedy_misched-default_pre_scheduler.mir",
+          "tier": 3,
+          "bytes": 92612,
+          "sha256": "fae8dfdd194d260a4121154a15beada930af9887fdc37fb2823363323d240258"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_uk1.ll",
+          "tier": 3,
+          "bytes": 37767,
+          "sha256": "bc4c9279c9c5a1558d7934c0429b9793c6b82c783843792eee8cdc7ffc2f228f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_uk1.o",
+          "tier": 3,
+          "bytes": 2336,
+          "sha256": "a179ad97b9f2846ab22958a1917382e6dd4dcda309ef001936efd79e65b6332b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_uk1.s",
+          "tier": 3,
+          "bytes": 9992,
+          "sha256": "a0916df3bc277da28d9889d041c0db27650a0c84130988a7729584c14942b472"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/32x32x32_tm8_tn8_tk4_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 64652,
+          "sha256": "ac7131c7f72f14d6e4e51856858bb2ac671e32141ad6352869c0f8dd9f5a1d90"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/register_metrics.json",
+          "tier": 2,
+          "bytes": 5252,
+          "sha256": "44daa0aabb2dfe8660e964972c253936802a99363b6aa39cf93d222107887d49"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/schedule_post_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1076,
+          "sha256": "d90528e8ff4066adb499a0fb438566b2b3896ead1e1cfce4646a495d04077be5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk4_uk1/schedule_pre_scheduler_metrics.json",
+          "tier": 2,
+          "bytes": 1081,
+          "sha256": "d057de7c2b6824581424f03993881dec6f250644d45f1b547e1da6bf398a24e7"
+        }
+      ]
+    },
+    "Stage 13 (Raspberry Pi correctness/benchmark validation)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling",
+      "file_count": 91,
+      "total_bytes": 3135401,
+      "owner_stage": "Stage 13 (Raspberry Pi correctness/benchmark validation)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/README.md",
+          "tier": 1,
+          "bytes": 15608,
+          "sha256": "6fbecced5af1c1990eb350367a3c212713fb3c57a52d076f54cf6f67c6ba038d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/commands.txt",
+          "tier": 1,
+          "bytes": 3523,
+          "sha256": "1269e26a4bbc22335451613f0e12156adb109ac78e918193066bfb82042319b4"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/environment.json",
+          "tier": 2,
+          "bytes": 5656,
+          "sha256": "d21f7010408c80c651310b29427d349319313dd1c49dfc6ceca723e355022020"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/environment_raw.txt",
+          "tier": 2,
+          "bytes": 4203,
+          "sha256": "216915e44907b1cadc4f64d80b27c823b333d52ef69477693b14f889d65350ac"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/pi_validation_results.json",
+          "tier": 2,
+          "bytes": 255086,
+          "sha256": "25fc362c7bb26f55d41cf86ee0f57bb0b95be69dba75761f328c13b4ec640d49"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/summary.json",
+          "tier": 1,
+          "bytes": 13662,
+          "sha256": "0a08f16c1a964fd6291c6b76fee1cb8eddfe86ab345525001c861bdbdd0303be"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/thermal_snapshots.jsonl",
+          "tier": 2,
+          "bytes": 219,
+          "sha256": "b4ae4035195a9ff623e6f45db14013607f3fad3557723097be236a69331dec10"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk1.ll",
+          "tier": 3,
+          "bytes": 48191,
+          "sha256": "12e94b196201799b3a62e955ef981ea58c94cf8cae337f5058a2a77d16eec6c9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk1.o",
+          "tier": 3,
+          "bytes": 2624,
+          "sha256": "65079c6285c1548000fdaae8f47b6b383f202ae1dd4f0eb6e5a66a3e3344a56b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk1.s",
+          "tier": 3,
+          "bytes": 11800,
+          "sha256": "2cdba431db3e9bab7809d74e850c53bdd1e17f639b78a9d21ff52a183b6c8945"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81369,
+          "sha256": "26f03601ba26f8b9d33a78727f3e278cf73511d13ff3532bc1b47d240b017071"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.ll",
+          "tier": 3,
+          "bytes": 59172,
+          "sha256": "8a79a9ae60a0d51a521ab9d8cf020acb9a685939b2d2061f263e21d1c7c4f497"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.o",
+          "tier": 3,
+          "bytes": 2968,
+          "sha256": "7e6c5d503cd1ce9a42a396b82cfc52fd9c98ecbbf1f5bcdb0d6094fa81e2fe7e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.s",
+          "tier": 3,
+          "bytes": 15541,
+          "sha256": "668e06cd020a148c16673c1c0cdc8d7865abf207cea11c1e61d85d7f33e9d1ee"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 95648,
+          "sha256": "f9a152b6f708de000f9af76ad0f1a1b2641136184a17f5f3a7a61c4ecfa5478a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk1.ll",
+          "tier": 3,
+          "bytes": 48213,
+          "sha256": "ec715b105bcc639f152f6f5a4679a78c97b6e1020ab5e116c85fe50e9ce246c1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk1.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "7b7709cdcc40abc0d574a5b9ba451877e28651bea9baf03b23a46f92ca59f2e9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk1.s",
+          "tier": 3,
+          "bytes": 12154,
+          "sha256": "6eab5e145de9b71e2db1e6ee8f1296a7bfa089ba9765470407bbf6bb65a49a0c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "a5cb716e233b32f6506bfbfb8251e36d2d93730698c256bb92c6f4022956f523"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk2.ll",
+          "tier": 3,
+          "bytes": 71230,
+          "sha256": "3fce7fcb3e336eb4570f0b76a246f3cd91d5af34e805fa1b6dcb39788fc0bcd0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk2.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "ae13ab19d832d828255228a78cd9e7c6d4b0a760cfd4cdfcba14a3a661585d4d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk2.s",
+          "tier": 3,
+          "bytes": 16764,
+          "sha256": "021019293f0421365ccf4a183dca85bc27ccf9a141803a93c232529f007d31e1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube64_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "f878677505488a429009423579ba94069bef15e799fb6a01c41cebc114d9be33"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk1.ll",
+          "tier": 3,
+          "bytes": 37767,
+          "sha256": "bc4c9279c9c5a1558d7934c0429b9793c6b82c783843792eee8cdc7ffc2f228f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk1.o",
+          "tier": 3,
+          "bytes": 2336,
+          "sha256": "a179ad97b9f2846ab22958a1917382e6dd4dcda309ef001936efd79e65b6332b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk1.s",
+          "tier": 3,
+          "bytes": 9992,
+          "sha256": "a0916df3bc277da28d9889d041c0db27650a0c84130988a7729584c14942b472"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 64652,
+          "sha256": "ac7131c7f72f14d6e4e51856858bb2ac671e32141ad6352869c0f8dd9f5a1d90"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk2.ll",
+          "tier": 3,
+          "bytes": 50106,
+          "sha256": "87665dfa79215c351e3787b47b6e07743f9851f84da72ff675b612cd2aec500f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk2.o",
+          "tier": 3,
+          "bytes": 2640,
+          "sha256": "71ec17d3df9d720b7028080f0f0f89cc7f6249e31c40a54dd0a74ed222c2ef55"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk2.s",
+          "tier": 3,
+          "bytes": 12404,
+          "sha256": "2c033ddbd33097cc8812fafe03e214d70cc34c254918a147da0cc43dd355ee5c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_alt_ktile_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 84749,
+          "sha256": "ffea83a34d7158c6ab2f75d2da2a9133f9310db8083d84ad4265d8523acc4986"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.ll",
+          "tier": 3,
+          "bytes": 105149,
+          "sha256": "e8c0ec6d170131dc0e7f79f8837029d95067ea53b69757e8ead99caf652799db"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.o",
+          "tier": 3,
+          "bytes": 4232,
+          "sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.s",
+          "tier": 3,
+          "bytes": 24770,
+          "sha256": "5406503b5f6ba475ff84d2353d6a6d46f1fa938c2b02d45742dcab113e45edf5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 170709,
+          "sha256": "b880b0e906efdaf087da01b3ff32fec93b22a6ad0c38aaf6378599fb16eda747"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk1.ll",
+          "tier": 3,
+          "bytes": 48269,
+          "sha256": "0e537eee2f033c3c672ee14763bbd78d20d26ea52104c8560c21f9f0604afb8a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk1.o",
+          "tier": 3,
+          "bytes": 2720,
+          "sha256": "9506f9b896e3d072fd1eeade779f07a47efb39cf89f89c07ad870bfc10242270"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk1.s",
+          "tier": 3,
+          "bytes": 12490,
+          "sha256": "a4e62eddacc84b2217bc75a8fd538a3210d402bcdb950c86ee115aefb5f89164"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81452,
+          "sha256": "b7deefc2d0f91b49878c40ebf94b78563aa66895238e19aee10f96b4b0828fee"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.ll",
+          "tier": 3,
+          "bytes": 71302,
+          "sha256": "d46a2b2513160c1ee4ac09edf0952672404a68030ae9e0a77c679580c41ddf04"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.o",
+          "tier": 3,
+          "bytes": 3360,
+          "sha256": "38caef90ea9ebef0cf1108169dacef8a70105e4fb6a196c4169f6127df726a6c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.s",
+          "tier": 3,
+          "bytes": 17079,
+          "sha256": "b8ecdbed64a988af7d1fee74a70966ff859f720d8e8d564d01617d18b6a9e496"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118850,
+          "sha256": "7e79bec95b71b58f83728617504b0fd7dd2265e39e73472ebed4a26a98cdd404"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk1.ll",
+          "tier": 3,
+          "bytes": 48203,
+          "sha256": "13396af3036c45b50a79ad981c9dfde769585a5accf2c5d6c40464b4fdeab6ae"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk1.o",
+          "tier": 3,
+          "bytes": 2608,
+          "sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk1.s",
+          "tier": 3,
+          "bytes": 11774,
+          "sha256": "f4ce88a29694c5238c7af7a1f8548be2993d1b33e890b4c8e4b68a9328b304ad"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "58edc7fe7824c313346686c62321fee3667b120deb2cb231bd2c15c3ba2dc1fd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk2.ll",
+          "tier": 3,
+          "bytes": 71220,
+          "sha256": "25a9bcd7d4b551c033b814f92cdcca14ee37bbbf2d6cf9399423ce089b07f92b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk2.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk2.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/primary_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "b968beef84f0d6365527688c9c2c41443f62a4787a50f32cbd98661a6fb6ddb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk1.ll",
+          "tier": 3,
+          "bytes": 48211,
+          "sha256": "3d0e3ffb738b9d8e85e88136ff87cc6e3c688ccd9d1e2fcf68501ccadc85ffe0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk1.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "b4fe24e50934f6148d9dc99466e43e17f596da7b5f2a8132129c61e801cc1f1b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk1.s",
+          "tier": 3,
+          "bytes": 12146,
+          "sha256": "d218d6d38814300003503359c2b8b67c4533380168af14af6ffbb6c36ec8dc50"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81422,
+          "sha256": "0753420d5a82ecc3359b1ba1ae1733050142e0b489cb9aac0b709bd5c8a362f5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk2.ll",
+          "tier": 3,
+          "bytes": 71228,
+          "sha256": "5bd48e604b14d7fb39f8f6a092ea96f89f83855b883bf39765545f02f6031481"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk2.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "d37ed0b6e45bcfe819124fbeb2649afe648122be84e05684b024a9021168b547"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk2.s",
+          "tier": 3,
+          "bytes": 16748,
+          "sha256": "00585b2fed8abc981cf57b5f653f1c24c39bac19145689b06d0ecca912a5cde6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/rect_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118804,
+          "sha256": "e452892b04eac3d40fd3305131af54f5c69be2013834031fddec558f9deb7764"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/small_control_uk1.ll",
+          "tier": 3,
+          "bytes": 20394,
+          "sha256": "e9c0e4abb8be2d32b3b88f02c0ab2c6ac0d98731c132bfea150bd46f8c62af9f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/small_control_uk1.o",
+          "tier": 3,
+          "bytes": 1696,
+          "sha256": "86f68ef7523f5f7ea06efe9ef2c7a3fbf3a2dd36b12d82e839ae013eabc383ec"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/small_control_uk1.s",
+          "tier": 3,
+          "bytes": 5344,
+          "sha256": "b8bf72f5a4d1cf3a1f844a2c231dea9aed0d61640ef05556b9bd387c21309970"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/small_control_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 32941,
+          "sha256": "7428e83cb6509dd44e3dd39696f3a8e66c854af85059d250680e74f7b5e986c6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/large_uk1/large_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17802,
+          "sha256": "3f14d19f0a19a03440218cc12238adfe3563b8b7c0947590f62ba1fe4466a30e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/large_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 4086,
+          "sha256": "7d4393201a858e6ef4631450ee271bbf9f8b05d90ed194ec9c206557ed3277f0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/rect_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 4055,
+          "sha256": "47ab33b1d726904d3f61f2915e45a131e2ce80b5ca3f5c27d8cac54253eedd81"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/rect_uk2/rect_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "250c6d1988a3a8bd46df1601c719a2d69a812a7567dc169ea3f43906b93a37a7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube16_uk1/cube16_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "09c126f4d9a7ab2da0b8138ef780579bff2746f25d3c899a4186a880d32aa2d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube16_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 4094,
+          "sha256": "7db7b0e89967ddf359b7cdf052e8a881af4887ea81daa6abb8f90494afbc495b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_alt_ktile_uk2/diag_alt_ktile_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_alt_ktile_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 20876,
+          "sha256": "af9e16929d1243b5d593522afe0181bc42f8b698b1a78cd58bb23cee07d5e0c2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube64_uk2/cube64_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "f45fd1610424e7425bd14dc0a41acc1970b6362f745cd76a9e7112223d008776"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube64_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 27268,
+          "sha256": "9cf78adba6140f5a7aff2d37dc822f101da691622e8c0a588d51d89550bef0d7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube64_uk1/cube64_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "f45fd1610424e7425bd14dc0a41acc1970b6362f745cd76a9e7112223d008776"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube64_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 27244,
+          "sha256": "79a6d32cd140b50ef74fdeda208d64ab0654611cce97236129c0f5517c9ecc3c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/primary_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 27306,
+          "sha256": "b7b39b035d80c00978216c2e60c9b5b38af6058268a7672161072dda890068c2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/primary_uk2/primary_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_full_unroll_uk4/diag_full_unroll_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_full_unroll_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 27526,
+          "sha256": "d9f321233c31fe04f59a80db3bc5a36c2de07db1343db5fd51f996e80b171c64"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/rect_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 4056,
+          "sha256": "0f4a684832c6db3bfe0682339b66c3a1d927bfa3b2967efe92711f136a81ac2d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/rect_uk1/rect_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "250c6d1988a3a8bd46df1601c719a2d69a812a7567dc169ea3f43906b93a37a7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/primary_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 27293,
+          "sha256": "b94d1fec06f20d1563b55833ff553b2f54be95993191ed6292f375f2f9a794c9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/primary_uk1/primary_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_alt_ktile_uk1/diag_alt_ktile_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_alt_ktile_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 20860,
+          "sha256": "351679fe5b003ebfc5e7471d25343df15234745e8f278902628395517d93a247"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube16_uk2/cube16_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "09c126f4d9a7ab2da0b8138ef780579bff2746f25d3c899a4186a880d32aa2d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube16_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 4092,
+          "sha256": "d3c72da495550b838378ce3950029aadcf9b1c601fd77e3cd86cdb6453f4c6c1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/large_uk2/large_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17802,
+          "sha256": "3f14d19f0a19a03440218cc12238adfe3563b8b7c0947590f62ba1fe4466a30e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/large_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 4086,
+          "sha256": "f0a6ed8dc93cf9a279447acfaf7a02f000218490bd3ae05eca3c7300010b00f9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/small_control_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 20201,
+          "sha256": "643805794b8d92f728393599299520521cfbf466b21f4dee2f119c158e291808"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/small_control_uk1/small_control_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17772,
+          "sha256": "c61be0fac8dbf3c17be2632534586766be0c5951ebc21ce5eb368f2b15c921ae"
+        }
+      ]
+    },
+    "Stage 14 (Schedule candidate evidence and cost model)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model",
+      "file_count": 13,
+      "total_bytes": 396272,
+      "owner_stage": "Stage 14 (Schedule candidate evidence and cost model)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/README.md",
+          "tier": 1,
+          "bytes": 16197,
+          "sha256": "c1152ff479982b25debc6aad49fe536978f37ccdb7b1fcc3798827369c6208cb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/attribution_summary.json",
+          "tier": 2,
+          "bytes": 22720,
+          "sha256": "f5d11c26aef02222b09ee41434fb3cee3742cc891e8123cb30449860b2595f68"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/calibrated_ranking.json",
+          "tier": 2,
+          "bytes": 6839,
+          "sha256": "3f909f79fe02899b4e2965866a2f198d9f0cd11759864e96185b36f550f53a13"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/candidate_schema.json",
+          "tier": 2,
+          "bytes": 2626,
+          "sha256": "c571366208839653524f23d12b6ae76d5007c5bbb3312a425794e75a8d2b9ca1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/classification_summary.json",
+          "tier": 2,
+          "bytes": 5470,
+          "sha256": "35a2363589a79378fb2e71dc1bb43944ed6118e9a720d0095af055ae55fb9a2b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/commands.txt",
+          "tier": 1,
+          "bytes": 2295,
+          "sha256": "e246ac1fe07fec43880e8ad7e6ea38e6f8f9fb75239c8e121f10cc5b182b9b7c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/evidence.json",
+          "tier": 2,
+          "bytes": 283895,
+          "sha256": "b40ffa84677dc49d66e52f668c06b697d310b83d7524dd098c74482c1fcb4f57"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/production_cost_breakdown_calibrated.json",
+          "tier": 2,
+          "bytes": 16264,
+          "sha256": "bf12666b3d86a0118b615e3133c6630f6de53ba54ff1ba178cb170d53157f6e5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/production_cost_breakdown_static.json",
+          "tier": 2,
+          "bytes": 15347,
+          "sha256": "74c4682dd74023a4d7bfd189d40ab41b9760df32e07c2c44a6d14a5d871387c9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/ranking_comparison.md",
+          "tier": 2,
+          "bytes": 3521,
+          "sha256": "179fb299d9266502eceb01f39736d61690ae2e1bd5c42f97a6bd27ee113499a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/ranking_prediction_comparison.json",
+          "tier": 2,
+          "bytes": 4162,
+          "sha256": "3e7d0bad73a811b82901e3edc2ec8d548222256ae560696e0724e22a62684eb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/shape_aware_findings.json",
+          "tier": 2,
+          "bytes": 3048,
+          "sha256": "7a9d6ec3856681ce0a36a890211ec8cd996fc1bfc04d867b1226478323848efb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_cost_model/static_ranking.json",
+          "tier": 2,
+          "bytes": 13888,
+          "sha256": "f0f7ba37928a198576e2470657f753d67324415273ae049fc0800d038ca91744"
+        }
+      ]
+    },
+    "Stage 15 (Opt-in compiler-side selection and materialization)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection",
+      "file_count": 38,
+      "total_bytes": 1133402,
+      "owner_stage": "Stage 15 (Opt-in compiler-side selection and materialization)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/README.md",
+          "tier": 1,
+          "bytes": 12811,
+          "sha256": "0943153fb125970bd5fbd646353cf1da8b9fc395f18ea13d0b3ed9fae97f086e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/calibrated_selection.json",
+          "tier": 2,
+          "bytes": 7284,
+          "sha256": "fe6078b160217d8daa49ca3d28d270ca524e3f24823115d247396f2c5ff352e5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/commands.txt",
+          "tier": 1,
+          "bytes": 3757,
+          "sha256": "67f93e73562cfd18e6020720344188b38a08eea73178f496617da0a47893eeb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/incompatible_fallback_selection.json",
+          "tier": 2,
+          "bytes": 7341,
+          "sha256": "f0c745aee802277787c613279739748eb6761d22a04b0d768b4da2f0117d3455"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/manual_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "b275578208d020f26999e1264eccbdf1082cfb211131250be3a77266ea69f103"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/manual_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "9a15f0203496bb7fe4e1c752fe7356747154bf8528c9b73183c4522ee7b6cde2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/pi_correctness_and_sanity_result.json",
+          "tier": 2,
+          "bytes": 3676,
+          "sha256": "387a60b382e46dc5c6d807098460965cd2a13a58983737e2c716a489cb523032"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/static_selection.json",
+          "tier": 2,
+          "bytes": 5930,
+          "sha256": "2592cdc14c2ce5dfb18dcdcbda564e630f0129c77e5a664e6b2b37032c66e5a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/calibrated_sel.ll",
+          "tier": 3,
+          "bytes": 105149,
+          "sha256": "e8c0ec6d170131dc0e7f79f8837029d95067ea53b69757e8ead99caf652799db"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/calibrated_sel.o",
+          "tier": 3,
+          "bytes": 4232,
+          "sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/calibrated_sel.s",
+          "tier": 3,
+          "bytes": 24770,
+          "sha256": "5406503b5f6ba475ff84d2353d6a6d46f1fa938c2b02d45742dcab113e45edf5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/calibrated_sel_llvm.mlir",
+          "tier": 3,
+          "bytes": 170709,
+          "sha256": "b880b0e906efdaf087da01b3ff32fec93b22a6ad0c38aaf6378599fb16eda747"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/calibrated_sel_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 747,
+          "sha256": "0ca897543327324204743e9e0440435d99fb14eb7e6d57584d3f592841298f9e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/fallback_sel.ll",
+          "tier": 3,
+          "bytes": 71220,
+          "sha256": "25a9bcd7d4b551c033b814f92cdcca14ee37bbbf2d6cf9399423ce089b07f92b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/fallback_sel.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/fallback_sel.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/fallback_sel_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "b968beef84f0d6365527688c9c2c41443f62a4787a50f32cbd98661a6fb6ddb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/fallback_sel_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 992,
+          "sha256": "fd1b85ee82842dc9fe8e77c525558466877b96319f2262e8bf33c025477e52cf"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk1.ll",
+          "tier": 3,
+          "bytes": 48203,
+          "sha256": "13396af3036c45b50a79ad981c9dfde769585a5accf2c5d6c40464b4fdeab6ae"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk1.o",
+          "tier": 3,
+          "bytes": 2608,
+          "sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk1.s",
+          "tier": 3,
+          "bytes": 11774,
+          "sha256": "f4ce88a29694c5238c7af7a1f8548be2993d1b33e890b4c8e4b68a9328b304ad"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "58edc7fe7824c313346686c62321fee3667b120deb2cb231bd2c15c3ba2dc1fd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "e0a3347f44f78e75eaf5d8bba26a43abe80c66076ebbd88b2ae33fbc1c9be0e4"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk2.ll",
+          "tier": 3,
+          "bytes": 71220,
+          "sha256": "25a9bcd7d4b551c033b814f92cdcca14ee37bbbf2d6cf9399423ce089b07f92b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk2.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk2.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "b968beef84f0d6365527688c9c2c41443f62a4787a50f32cbd98661a6fb6ddb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/manual_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "7a5d2108b44208ecfad4ec4152c34106e19409364d92909306a0287e78a94512"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/static_sel.ll",
+          "tier": 3,
+          "bytes": 71220,
+          "sha256": "25a9bcd7d4b551c033b814f92cdcca14ee37bbbf2d6cf9399423ce089b07f92b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/static_sel.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/static_sel.s",
+          "tier": 3,
+          "bytes": 16335,
+          "sha256": "0a94f8ee8b4aced54a15b44e0ad457f11704d2e40916f493f1a4fc9344f47168"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/static_sel_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "b968beef84f0d6365527688c9c2c41443f62a4787a50f32cbd98661a6fb6ddb0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/compiled/static_sel_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 740,
+          "sha256": "027b6ec6f04901f196afa67af81d3cf1f6f78d4e546410df2679a60f308a5604"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_incompatible_cortex_a72.json",
+          "tier": 2,
+          "bytes": 1024,
+          "sha256": "0f94eb240751b750f576f24c0eaf897463ae4a24ae4c37a3fa88a3ac7bae8d5d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_incompatible_feature_set.json",
+          "tier": 2,
+          "bytes": 1146,
+          "sha256": "a5ba2a5dd86c1a131ae2596392455e23ceb699311e226998a373ee6134986d71"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_incompatible_x86_64.json",
+          "tier": 2,
+          "bytes": 1029,
+          "sha256": "3e19b0ce02a03b9903d86f48f0573e38d205b12c249511aaa09e7778c3d362cb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_malformed_provenance.json",
+          "tier": 2,
+          "bytes": 322,
+          "sha256": "9b5822ab0093710a5f25ee60276e9984e61e944a50a400b2e435e8200bfdff59"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_stale_methodology.json",
+          "tier": 2,
+          "bytes": 987,
+          "sha256": "ef161d2d76c0692f2dc831458108a90d326bcad275cd7f9645cea544b5225f77"
+        }
+      ]
+    },
+    "Stage 16 (Multi-domain calibration)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain",
+      "file_count": 103,
+      "total_bytes": 3283320,
+      "owner_stage": "Stage 16 (Multi-domain calibration)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/README.md",
+          "tier": 1,
+          "bytes": 13193,
+          "sha256": "0734be9877abbce3d4937ee3a139f8e39aa280603281a966b54da53a20e7fd02"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/altk_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "397915016f54696fddce84f39a753e0dcb14c1e559b0311b716843a654cbb5f1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/altk_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "cf2103d258cace511a2d7c5474fb170acd85eb47ea12acd8c57577d75b4ee8c6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/altk_uk4_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "fbbd7cfb889367bcd64014f3017a64c4123d5567770be17d42180031e852461b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/calibrated_ranking.json",
+          "tier": 2,
+          "bytes": 11607,
+          "sha256": "9480500442cdd56d59cb12ac5a5728e9a784b193c58a0bc69b50b8982fd3ce80"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/commands.txt",
+          "tier": 1,
+          "bytes": 3790,
+          "sha256": "a4dc00635973b1d53a28c7b82eb7e5c873b2500cb33e7fe88f1cdb4389d319a5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compatibility_matrix.json",
+          "tier": 2,
+          "bytes": 57930,
+          "sha256": "a3eb1a9c8e9855c36179901ecf655672e41406a88eb0220d6379a804749ee2d5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/cross_domain_rejection_report.json",
+          "tier": 2,
+          "bytes": 5726,
+          "sha256": "10cf0601db6be788e1de363e467f39ad54343fbd6ae013a569d4875f8e22a487"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/cube64_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3281,
+          "sha256": "fbf57aa253c65dcfc53f8f7e6cbb7dafd8d513e5f9d2a47c78c23c798b7a2a5c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/cube64_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3281,
+          "sha256": "f92e3f3ddbd368aa220df4b27c498662db5f40e08f693f9d551c7413d14a2057"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/cube64_uk4_selection.json",
+          "tier": 2,
+          "bytes": 3281,
+          "sha256": "c095cad4872f2f7087d1e4f56cf38f321f10dd6699b1f046aa8f8d472a8f6fd9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/domain_summary.json",
+          "tier": 2,
+          "bytes": 3594,
+          "sha256": "abbd2559973b17dfa0f7b0b2bcefbd3a8483975f2d9c2f82759e5a05732f19e7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/environment.json",
+          "tier": 2,
+          "bytes": 6289,
+          "sha256": "62e10533833809116745d38f43e906701397b0420f4b1b319c73588877f37516"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/environment_raw.txt",
+          "tier": 2,
+          "bytes": 4203,
+          "sha256": "edf7537f28edfc228b885d1d55bdaac030ef86ab35c653b9182d55b2c1375b81"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/example1_primary_selection.json",
+          "tier": 2,
+          "bytes": 7304,
+          "sha256": "d5e08e807f9a573bf0028f59c8de6aa2915027bdfc136941d3b2987a04bd695d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/example2_cube64_selection.json",
+          "tier": 2,
+          "bytes": 7308,
+          "sha256": "204222f624da1800ccee867b36243b2bb4c1362fff1d5ead3bb388f54647d76f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/example3_unknown_selection.json",
+          "tier": 2,
+          "bytes": 3216,
+          "sha256": "0046a713fb924664c51670767460f201cb367352d9b9819af9086eb9a2d30e53"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/extended_stage12_evidence.json",
+          "tier": 2,
+          "bytes": 185279,
+          "sha256": "5affd5d6bb1d75f77324ba88678c43f24fe3d3b963b6152fd804f06a94db8785"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/multi_domain_profile.json",
+          "tier": 2,
+          "bytes": 5601,
+          "sha256": "69d700a015f66747c87fb0243d1e862da040dce9424e4563549500e4380fe212"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_multidomain_results.json",
+          "tier": 2,
+          "bytes": 97915,
+          "sha256": "44806428bfd714398ac7d0361551e1d3868568a589028d4e51bcd3a91d0371cd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/rect_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "b06ced4b0a634e7954d6f5a37d8bd40b85312022a80c29f7a702c96ad6366307"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/rect_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "c29baddfe8570bf92842e3d80f658813f41d1f8f252cdf00f4f96f9961f2d689"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/rect_uk4_selection.json",
+          "tier": 2,
+          "bytes": 3271,
+          "sha256": "e752f28aa3a5584232b6d21cd9f92d9cfc966e0fb7e0d535287f0580ad56d15e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/static_ranking.json",
+          "tier": 2,
+          "bytes": 10864,
+          "sha256": "d4221e3e19d1a755e933d542926c077efd13dd012c43216299e549704d59f03f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/thermal_snapshots.jsonl",
+          "tier": 2,
+          "bytes": 219,
+          "sha256": "e7289975f04cadb9c2ebb1ca0770d1887a7624c20726f1840079cb36569951b5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk1.ll",
+          "tier": 3,
+          "bytes": 37767,
+          "sha256": "bc4c9279c9c5a1558d7934c0429b9793c6b82c783843792eee8cdc7ffc2f228f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk1.o",
+          "tier": 3,
+          "bytes": 2336,
+          "sha256": "a179ad97b9f2846ab22958a1917382e6dd4dcda309ef001936efd79e65b6332b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk1.s",
+          "tier": 3,
+          "bytes": 9992,
+          "sha256": "a0916df3bc277da28d9889d041c0db27650a0c84130988a7729584c14942b472"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 64652,
+          "sha256": "ac7131c7f72f14d6e4e51856858bb2ac671e32141ad6352869c0f8dd9f5a1d90"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 794,
+          "sha256": "0b52d8cf8eb308b59e0e42fab9de6133dc387366cb81cf6eeb3953953e6b691e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk2.ll",
+          "tier": 3,
+          "bytes": 50106,
+          "sha256": "87665dfa79215c351e3787b47b6e07743f9851f84da72ff675b612cd2aec500f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk2.o",
+          "tier": 3,
+          "bytes": 2640,
+          "sha256": "71ec17d3df9d720b7028080f0f0f89cc7f6249e31c40a54dd0a74ed222c2ef55"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk2.s",
+          "tier": 3,
+          "bytes": 12404,
+          "sha256": "2c033ddbd33097cc8812fafe03e214d70cc34c254918a147da0cc43dd355ee5c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 84749,
+          "sha256": "ffea83a34d7158c6ab2f75d2da2a9133f9310db8083d84ad4265d8523acc4986"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "a44c93b9ef4a21c1191181ecafff6957311a7712f65ce358c719f7441b7b1c74"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk4.ll",
+          "tier": 3,
+          "bytes": 75222,
+          "sha256": "56ebf57ad951b68f19cfb1b04797204d913c9d8bd7a847d651af63586b2b3e02"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk4.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "adddf8fd448c122d8d5205543813ff1fa96cf0588d00064822642ba1379a2697"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk4.s",
+          "tier": 3,
+          "bytes": 16957,
+          "sha256": "49817629fe0efa71ba17fea43cc96f3a2af9cdeed2e069e0c500fe656233ca5d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 125627,
+          "sha256": "f7679455c2b5d4fa0eb4e1a13ab59740e98dd14ddf61e6b515fc555bce7bc545"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/altk_uk4_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "12681107de6e7180725fa775dfbca432a3f37e198712a38e6b9840b25af6297d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk1.ll",
+          "tier": 3,
+          "bytes": 48213,
+          "sha256": "ec715b105bcc639f152f6f5a4679a78c97b6e1020ab5e116c85fe50e9ce246c1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk1.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "7b7709cdcc40abc0d574a5b9ba451877e28651bea9baf03b23a46f92ca59f2e9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk1.s",
+          "tier": 3,
+          "bytes": 12154,
+          "sha256": "6eab5e145de9b71e2db1e6ee8f1296a7bfa089ba9765470407bbf6bb65a49a0c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81371,
+          "sha256": "a5cb716e233b32f6506bfbfb8251e36d2d93730698c256bb92c6f4022956f523"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "92c913ffc35e6fd26a4d8fdf02a12822663ad69bb13c236717c3549b8825869c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk2.ll",
+          "tier": 3,
+          "bytes": 71230,
+          "sha256": "3fce7fcb3e336eb4570f0b76a246f3cd91d5af34e805fa1b6dcb39788fc0bcd0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk2.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "ae13ab19d832d828255228a78cd9e7c6d4b0a760cfd4cdfcba14a3a661585d4d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk2.s",
+          "tier": 3,
+          "bytes": 16764,
+          "sha256": "021019293f0421365ccf4a183dca85bc27ccf9a141803a93c232529f007d31e1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118753,
+          "sha256": "f878677505488a429009423579ba94069bef15e799fb6a01c41cebc114d9be33"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "7cd8d75734ad3965e8e970fbd9d0a07a50ec71d1b9db4b63764bf5247fdf1629"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk4.ll",
+          "tier": 3,
+          "bytes": 118321,
+          "sha256": "6d0af367fa26ff520899b291ac2985cf2bf0bd1230f657b7cd71da0b2f8f6938"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk4.o",
+          "tier": 3,
+          "bytes": 4624,
+          "sha256": "ea24f664fab2fd6b7cbed37a0d6d0eb944ddafb2ce10a89d7a5fd0db44f88be2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk4.s",
+          "tier": 3,
+          "bytes": 25934,
+          "sha256": "8e03aacea9e81f9f172e5987c9dadda92f53ddac2f6ca97dbe616d8ff75196cc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 193753,
+          "sha256": "0323aa1cfec1af5116ce1688b9e91b42fb6f0aa18ea787e27ec0763b5865c995"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/cube64_uk4_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "e89b5702b62108df6f91ad5215e725053c1e1c3cb10d52fa86092bfa1e627d5a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example1_primary.ll",
+          "tier": 3,
+          "bytes": 105149,
+          "sha256": "e8c0ec6d170131dc0e7f79f8837029d95067ea53b69757e8ead99caf652799db"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example1_primary.o",
+          "tier": 3,
+          "bytes": 4232,
+          "sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example1_primary.s",
+          "tier": 3,
+          "bytes": 24770,
+          "sha256": "5406503b5f6ba475ff84d2353d6a6d46f1fa938c2b02d45742dcab113e45edf5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example1_primary_llvm.mlir",
+          "tier": 3,
+          "bytes": 170709,
+          "sha256": "b880b0e906efdaf087da01b3ff32fec93b22a6ad0c38aaf6378599fb16eda747"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example1_primary_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 748,
+          "sha256": "00a452dfd7d1b01ef97d9af4b25c4e97aeabf6c45aba1f2fcd699892b51518fc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example2_cube64.ll",
+          "tier": 3,
+          "bytes": 118321,
+          "sha256": "6d0af367fa26ff520899b291ac2985cf2bf0bd1230f657b7cd71da0b2f8f6938"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example2_cube64.o",
+          "tier": 3,
+          "bytes": 4624,
+          "sha256": "ea24f664fab2fd6b7cbed37a0d6d0eb944ddafb2ce10a89d7a5fd0db44f88be2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example2_cube64.s",
+          "tier": 3,
+          "bytes": 25934,
+          "sha256": "8e03aacea9e81f9f172e5987c9dadda92f53ddac2f6ca97dbe616d8ff75196cc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example2_cube64_llvm.mlir",
+          "tier": 3,
+          "bytes": 193753,
+          "sha256": "0323aa1cfec1af5116ce1688b9e91b42fb6f0aa18ea787e27ec0763b5865c995"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example2_cube64_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 748,
+          "sha256": "5a78ddca42bfcf5540a127e6741e3ec942367aa61259d3a7011ae198800c1ebd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example3_unknown.ll",
+          "tier": 3,
+          "bytes": 29007,
+          "sha256": "319eabb47806b77b59a5389bcf4b7787e30c79dced59642318cd54d7e0287148"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example3_unknown.o",
+          "tier": 3,
+          "bytes": 2128,
+          "sha256": "b13fe078a755f4dc642e26a2f84eec3b27f7b4e259293ddf3994f4467d5d530f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example3_unknown.s",
+          "tier": 3,
+          "bytes": 8796,
+          "sha256": "edf4d53ef33b7e110e01ae6a02ecc9796bb1e402e19bc3cad8f7128c5dd86a69"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example3_unknown_llvm.mlir",
+          "tier": 3,
+          "bytes": 48678,
+          "sha256": "6a707bd4df33173dbb68bf5bb2c4c491e1437facd5325e1787e78fe857aebb93"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/example3_unknown_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 863,
+          "sha256": "b41c01c48505e3d71f1f2aebe4fe66a0f3308204d0c9b7dcbf00d1e15c132f1b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk1.ll",
+          "tier": 3,
+          "bytes": 48211,
+          "sha256": "3d0e3ffb738b9d8e85e88136ff87cc6e3c688ccd9d1e2fcf68501ccadc85ffe0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk1.o",
+          "tier": 3,
+          "bytes": 2704,
+          "sha256": "b4fe24e50934f6148d9dc99466e43e17f596da7b5f2a8132129c61e801cc1f1b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk1.s",
+          "tier": 3,
+          "bytes": 12146,
+          "sha256": "d218d6d38814300003503359c2b8b67c4533380168af14af6ffbb6c36ec8dc50"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81422,
+          "sha256": "0753420d5a82ecc3359b1ba1ae1733050142e0b489cb9aac0b709bd5c8a362f5"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "c235e9f34164910561fdb677ef70c859cc3da571049cc9880756a97151496380"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk2.ll",
+          "tier": 3,
+          "bytes": 71228,
+          "sha256": "5bd48e604b14d7fb39f8f6a092ea96f89f83855b883bf39765545f02f6031481"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk2.o",
+          "tier": 3,
+          "bytes": 3344,
+          "sha256": "d37ed0b6e45bcfe819124fbeb2649afe648122be84e05684b024a9021168b547"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk2.s",
+          "tier": 3,
+          "bytes": 16748,
+          "sha256": "00585b2fed8abc981cf57b5f653f1c24c39bac19145689b06d0ecca912a5cde6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118804,
+          "sha256": "e452892b04eac3d40fd3305131af54f5c69be2013834031fddec558f9deb7764"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "b00d44520e5ff87c933dd026c265bacc2c4466b9533a561fc866dba70fbac8fc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk4.ll",
+          "tier": 3,
+          "bytes": 105167,
+          "sha256": "33dbfb30d0ebbc1e670f2b36c48309661db7fcc6461a7006163d943ceb44e479"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk4.o",
+          "tier": 3,
+          "bytes": 4360,
+          "sha256": "7934e35449bb1a2d30d0a0ec43943d7d0b0518e3d94a9b302cd907da0941897f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk4.s",
+          "tier": 3,
+          "bytes": 25597,
+          "sha256": "2eacf9322a4cbdb3586ae5f81e95e68316ea18cfcf4c3ac52f23b62328702ebb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 170760,
+          "sha256": "a16f0cbedde1a5ad5e18f70a0b319b75fae7e342dac743575cff62dc791bca5b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/compiled/rect_uk4_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "890cb1278677b857fa170f4ffd736aac011a39370449a65390acfd52fe2a9cea"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 8940,
+          "sha256": "b993c36a2dfe323439859dd7b957857e4f5bb362afb4624f3d365f60cdaf086b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk4/rect_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "250c6d1988a3a8bd46df1601c719a2d69a812a7567dc169ea3f43906b93a37a7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk1/altk_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 8944,
+          "sha256": "4f26aa180302c284908c51e87ea9923228cdcd0b001d3c394e535b1d569e390b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 8977,
+          "sha256": "a9bf5d195947470326dca65f42326953de364c2dc8860f157c811c1c21a61d63"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk2/rect_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "250c6d1988a3a8bd46df1601c719a2d69a812a7567dc169ea3f43906b93a37a7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk2/cube64_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "f45fd1610424e7425bd14dc0a41acc1970b6362f745cd76a9e7112223d008776"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 9006,
+          "sha256": "54a73bfbea92aa12cc4aa099c34411f11ad76f55c0409b55edb1e27670924382"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk4/altk_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 8975,
+          "sha256": "91b26e0c5b63a1da5448775014c44545f0a00e4042b8984503446db6a7b83662"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk1/cube64_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "f45fd1610424e7425bd14dc0a41acc1970b6362f745cd76a9e7112223d008776"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 9011,
+          "sha256": "4729ddca65d6b0a746ac2f0c4709b01419934c71554c68a134330ac79348517c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 8941,
+          "sha256": "2f7574ef3218e90f4ffe432b1fb9f6ac56e5a0a25783c37e116208db84e75d12"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/rect_uk1/rect_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "250c6d1988a3a8bd46df1601c719a2d69a812a7567dc169ea3f43906b93a37a7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk2/altk_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "b9e7e50da2195bf70f550ef26a0bca74b9a2a3a0fdedc7eee4209b56e394272a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/altk_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 8970,
+          "sha256": "ab46e8a5ce6ff4d6c4a39255aff6963f92dc6f541c00042a993bf68bda5136bb"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk4/cube64_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "f45fd1610424e7425bd14dc0a41acc1970b6362f745cd76a9e7112223d008776"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_multidomain/pi_candidates/cube64_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 8996,
+          "sha256": "73142abbbc68fdebb7c599c57cda63e945b22f4d21252efc02e3a291fbea5b3d"
+        }
+      ]
+    },
+    "Stage 17 (Schedule-unroll boundary search)": {
+      "directory": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary",
+      "file_count": 86,
+      "total_bytes": 2340971,
+      "owner_stage": "Stage 17 (Schedule-unroll boundary search)",
+      "regeneration_command": "see artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/commands.txt",
+      "files": [
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/README.md",
+          "tier": 1,
+          "bytes": 13157,
+          "sha256": "8b43e5fc78d6c53936a7c2a119e6d462c7f26a4dc78761249e6416ea78bbca0c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/backend_evidence.json",
+          "tier": 2,
+          "bytes": 640,
+          "sha256": "189b6b9d5ea07b2952fec1bc041c6bea3ca278eccf2f04cc554e32c125a46185"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/benchmark_results.json",
+          "tier": 2,
+          "bytes": 67726,
+          "sha256": "a222981ba8f99a9d3d2d7bcdbcf42a9c3f7e8a76b49faa4ff36268c1ad73317f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/boundary_analysis.json",
+          "tier": 2,
+          "bytes": 954,
+          "sha256": "fa7821c31598a435e964cbb67d6908278187295b564ee135493b21870c45bcb6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/calibrated_ranking_new_domains.json",
+          "tier": 2,
+          "bytes": 5794,
+          "sha256": "4496c52f8d20a7babc1b4f4fd4259aa5f01967c8b9a426bd5694ff1c7c1fb91e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/candidate_matrix.json",
+          "tier": 2,
+          "bytes": 2044,
+          "sha256": "89457b3dfc6864326951a8e5364b7168df9bfa2c5be810ff00831f3d1f037022"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/commands.txt",
+          "tier": 1,
+          "bytes": 3857,
+          "sha256": "1b6fabcbb2efc5262cc7e6848df8acc5c53ed132df3fe9d6186b61e6dfa6037f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/correctness_results.json",
+          "tier": 2,
+          "bytes": 1103,
+          "sha256": "d92c1438f7be8ffae907118f7e2a318aaa0e3bed52763ee5fda4be4f374718ff"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/cross_domain_rejection_report.json",
+          "tier": 2,
+          "bytes": 5274,
+          "sha256": "c075acdd8cba14625089dc640096d08552282a9f8f77ffdae6e71ec6d5d79dea"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/domain_design.json",
+          "tier": 2,
+          "bytes": 3675,
+          "sha256": "928d176536d0f3d7ee77ac0731b1eea0e1ab8947cdfaae0c129e317df37fdbdd"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/environment.json",
+          "tier": 2,
+          "bytes": 6582,
+          "sha256": "b64a2c1e8122199c145432714990def72d9aff97bd73e8a9ed8ce04f959418b2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/environment_raw.txt",
+          "tier": 2,
+          "bytes": 4203,
+          "sha256": "c5e41521bafb831378e717fdc55f7aef9acc731c695348f282231d22e839f43e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/extended_stage12_evidence.json",
+          "tier": 2,
+          "bytes": 234457,
+          "sha256": "87b05390ed3e30110df129bc6a5641c0992b95c9031af93234a7be1923e2ffd6"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/highK_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3267,
+          "sha256": "1170499e6e34766e30778509eaaa349bfa8d7c271804838eeee855e962bd91ef"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/highK_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3267,
+          "sha256": "d75ab02657db784cf7820498cc6eab4af59bb6a244934e97a39b5f4c66c79bd8"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/highK_uk4_selection.json",
+          "tier": 2,
+          "bytes": 3267,
+          "sha256": "423d7674d52532035ab6fc29f622a61ebcf26208db7ec20fad8a5f36d6b9c8ca"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/policy_comparison.json",
+          "tier": 2,
+          "bytes": 3469,
+          "sha256": "5c3db7650de5446d3d31343184d40bb2f7795713a2c0bd8171860bd1e7c4eeca"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/smallA_uk1_selection.json",
+          "tier": 2,
+          "bytes": 3266,
+          "sha256": "cf4b638343fee300d8ec23c041071a3b9296550ad748d81eaedc0963e43b73f7"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/smallA_uk2_selection.json",
+          "tier": 2,
+          "bytes": 3266,
+          "sha256": "7be63e7c595f0d581c3c41df3c128e730d11c9dda354c3c9af17c47775cdb349"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/smallA_uk4_selection.json",
+          "tier": 2,
+          "bytes": 3266,
+          "sha256": "b953dec1df118546c1470a5e0084b3bf73e27bd1e16ab7e0d1039959c3225d52"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/static_model_evaluation.json",
+          "tier": 2,
+          "bytes": 1454,
+          "sha256": "b352483381db5d53acbc3823340ab8532b37f969b50c4c2b515bd1835bb40ed8"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/static_ranking_new_domains.json",
+          "tier": 2,
+          "bytes": 5365,
+          "sha256": "7f63d8515c4265de6ed19710fd0f86eb5c0d625b8b9baf20fdd7d82360525cd9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/thermal_snapshots.jsonl",
+          "tier": 2,
+          "bytes": 217,
+          "sha256": "4a750b6ccd2321608ea4f9a053465087d1ef93660db520b6829412237e1af656"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/timing_quality.json",
+          "tier": 2,
+          "bytes": 5606,
+          "sha256": "030588a0a8974fdfd425c5230f0d16c9dd1849869b03f6683bd379ee8f3ced77"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/updated_multidomain_profile.json",
+          "tier": 2,
+          "bytes": 8644,
+          "sha256": "a1f975f5479a1bbe893166bb9b20ec708a28dbe59f01e4bded57660f089a97d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/winner_summary.json",
+          "tier": 2,
+          "bytes": 2019,
+          "sha256": "9aca513cfc022b809ce1925fe0366b03a52eb4c373519c9994a92c88530a6a7c"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk1.ll",
+          "tier": 3,
+          "bytes": 48215,
+          "sha256": "9ac74aea62ffd3a339fde5c8bce0e9d24141e9f6e778b1d9c14658da40666384"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk1.o",
+          "tier": 3,
+          "bytes": 2608,
+          "sha256": "91fb4402202f4dcf3252f8c390fb1464cf694ab5e410e1556782c6f4d94847f3"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk1.s",
+          "tier": 3,
+          "bytes": 11829,
+          "sha256": "8be3d937e6f2349e061f87e8dcb8847155c6e040049473abfbbd9f20919a7a87"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 81434,
+          "sha256": "a331397e82c8fcf4c5352d1d452b6aca8137a8f342444f3fff3aba40eeadd1d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 797,
+          "sha256": "8ff2a4b30d0b70f86e2770a28bad4da7cb46eaef3b903164df40f39730eff644"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk2.ll",
+          "tier": 3,
+          "bytes": 71240,
+          "sha256": "697383cd63b901b882945a7bae151b91cdd013bf67d152f2cb7f0b9be9daa3d1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk2.o",
+          "tier": 3,
+          "bytes": 3248,
+          "sha256": "9ac30e7bf9b071e21d67c70465c039b5b8eec6a423b9b57cfbb92c5aea616085"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk2.s",
+          "tier": 3,
+          "bytes": 16402,
+          "sha256": "2a0644b883d22f7732c527ed922be545f0dd98b2377083ce0b33c024cff8ff18"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 118824,
+          "sha256": "b6185abcac425e08beca0e6f4e6eb4dbe9018ccb149fa00cba8edd712a9ca23f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 797,
+          "sha256": "22174fd1d9c8f341eae5d9c69cb6de585032cc8392d21a4afaf624ef93818b35"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk4.ll",
+          "tier": 3,
+          "bytes": 118347,
+          "sha256": "68c8d04db2ca8efefb13a2062693305e1abdfd75e820a09bee75ea011caec9cc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk4.o",
+          "tier": 3,
+          "bytes": 4528,
+          "sha256": "428ada2a8783e76cd2fadde7ee6c6b6e1576d2c13467c63385471fee7c2a38a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk4.s",
+          "tier": 3,
+          "bytes": 25548,
+          "sha256": "945a28608663a05d1b27b93366816376c95ba0f87b392b220162ceca72a28796"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 193789,
+          "sha256": "ff57a8c83e076fec7974ef62d3f2de3c16553009009632586cb5702f10c50dc3"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/highK_uk4_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 797,
+          "sha256": "0629586982a667505db536435851c8885d6005204f7b414e8ca7c1ded2f3c7d9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk1.ll",
+          "tier": 3,
+          "bytes": 37755,
+          "sha256": "77d0bf01a18e5828ae47625e4096432c9be9b72997bcaf4afb3fb77b84086441"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk1.o",
+          "tier": 3,
+          "bytes": 2336,
+          "sha256": "422cee3eddaf97b497b43aef53eb1bafc61851b840ac47b7b659b545f2c19236"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk1.s",
+          "tier": 3,
+          "bytes": 10002,
+          "sha256": "2dbb64c3a98f6d5da19acda80eea0769b69ebf94bad30fda5d96969458d5abb1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk1_llvm.mlir",
+          "tier": 3,
+          "bytes": 64650,
+          "sha256": "da9e349111de638c586cb0b725dfca7395fb7d983cbb290eaa12a288f9e154e4"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk1_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 795,
+          "sha256": "11d6886449dcb65e6490123a08d5b6d994572958ffdfc14de12a7c685a7a0028"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk2.ll",
+          "tier": 3,
+          "bytes": 50094,
+          "sha256": "b5b96eec18bfbfad31aef4a258e449dd3f33feb9c112b6957384001691c40ac1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk2.o",
+          "tier": 3,
+          "bytes": 2640,
+          "sha256": "430a59867b6e8eadfa63b2b2a3231fd65fe9e3ada745bd95610b8ba71c8034f9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk2.s",
+          "tier": 3,
+          "bytes": 12450,
+          "sha256": "1921bfd3b909560870559863ec2301b72cbc52c0fd72f9a93a02eaabbf15bc98"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk2_llvm.mlir",
+          "tier": 3,
+          "bytes": 84747,
+          "sha256": "f9cb06f9f2712af4a0517d7cf8fa79fe48e6b10b93a64149cc5d3c2f1a813960"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk2_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 794,
+          "sha256": "8e15bf32c431188d73d8901d2f7fc1949dc28697970fb9de082ae47afa61494b"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk4.ll",
+          "tier": 3,
+          "bytes": 62962,
+          "sha256": "d5060aca7912db80d5c5ed3035c142ac01fb3322c4f26077e7f92ce443ee90ec"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk4.o",
+          "tier": 3,
+          "bytes": 2952,
+          "sha256": "d5c87a362bc1de8ddb634af88f79128da860c5ac8e896d182101f009a77dc7c2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk4.s",
+          "tier": 3,
+          "bytes": 15545,
+          "sha256": "79f69d2e07983f3620ebad6581c9252240e83c0bdb95ebb902eae37487c4d967"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk4_llvm.mlir",
+          "tier": 3,
+          "bytes": 102453,
+          "sha256": "fc70502e544cc09b2e3c7ebd5639997430654f185fcb29d9bc92dbc6b0135c21"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/compiled/smallA_uk4_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 794,
+          "sha256": "cb5b53050ff824b50bd2afb49a6ded3aa004777ba6e64c9332253c04fa494471"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk1/highK_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17792,
+          "sha256": "b21181ada1b89604cd97b6849c2414491c05af9abc3e4f8c903a62c01fd23b9d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 8991,
+          "sha256": "d2b49199216d0ad60e1df68a2be19fbb1d9aee75470858a4d3cb152a2be78a3a"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 8964,
+          "sha256": "69d92e594c32ba76f94622bdfbaf9e868e2ebdc5837171f954c27bad3b95b5d8"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk2/smallA_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "09c126f4d9a7ab2da0b8138ef780579bff2746f25d3c899a4186a880d32aa2d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 8956,
+          "sha256": "4c89617642a9b615256337f71fe08740373669a45c333b4f346ec1a5efd83575"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk4/smallA_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "09c126f4d9a7ab2da0b8138ef780579bff2746f25d3c899a4186a880d32aa2d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk2/highK_uk2_harness.cpp",
+          "tier": 3,
+          "bytes": 17792,
+          "sha256": "b21181ada1b89604cd97b6849c2414491c05af9abc3e4f8c903a62c01fd23b9d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk2/manifest.json",
+          "tier": 2,
+          "bytes": 8992,
+          "sha256": "490c99f59a99a90e2cddd6768291fac34e1196aa382b6c82b68c738f19f5d142"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk1/manifest.json",
+          "tier": 2,
+          "bytes": 8934,
+          "sha256": "1d858ec122e1eb82d4e7e74c3f4f9f0ee7a929f3f97306cea5449d47258e2a28"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/smallA_uk1/smallA_uk1_harness.cpp",
+          "tier": 3,
+          "bytes": 17787,
+          "sha256": "09c126f4d9a7ab2da0b8138ef780579bff2746f25d3c899a4186a880d32aa2d2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk4/highK_uk4_harness.cpp",
+          "tier": 3,
+          "bytes": 17792,
+          "sha256": "b21181ada1b89604cd97b6849c2414491c05af9abc3e4f8c903a62c01fd23b9d"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/pi_candidates/highK_uk4/manifest.json",
+          "tier": 2,
+          "bytes": 8998,
+          "sha256": "eb36e9f9d7708f221366936a6f9c366fa99fe6d7f26ca4875d88004732218338"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK.ll",
+          "tier": 3,
+          "bytes": 118347,
+          "sha256": "68c8d04db2ca8efefb13a2062693305e1abdfd75e820a09bee75ea011caec9cc"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK.o",
+          "tier": 3,
+          "bytes": 4528,
+          "sha256": "428ada2a8783e76cd2fadde7ee6c6b6e1576d2c13467c63385471fee7c2a38a0"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK.s",
+          "tier": 3,
+          "bytes": 25548,
+          "sha256": "945a28608663a05d1b27b93366816376c95ba0f87b392b220162ceca72a28796"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK_llvm.mlir",
+          "tier": 2,
+          "bytes": 193789,
+          "sha256": "ff57a8c83e076fec7974ef62d3f2de3c16553009009632586cb5702f10c50dc3"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 749,
+          "sha256": "dea532aba8c997e114a5967cfb67e0dbc28d6117e8a972916f0a2a90f1052cf2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example1_highK_selection.json",
+          "tier": 2,
+          "bytes": 7393,
+          "sha256": "2fce809e80ed8e84d1616c5c795c02bd78105cce3245cf0ba6aa0d66be89e429"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA.ll",
+          "tier": 3,
+          "bytes": 62962,
+          "sha256": "d5060aca7912db80d5c5ed3035c142ac01fb3322c4f26077e7f92ce443ee90ec"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA.o",
+          "tier": 3,
+          "bytes": 2952,
+          "sha256": "d5c87a362bc1de8ddb634af88f79128da860c5ac8e896d182101f009a77dc7c2"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA.s",
+          "tier": 3,
+          "bytes": 15545,
+          "sha256": "79f69d2e07983f3620ebad6581c9252240e83c0bdb95ebb902eae37487c4d967"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA_llvm.mlir",
+          "tier": 2,
+          "bytes": 102453,
+          "sha256": "fc70502e544cc09b2e3c7ebd5639997430654f185fcb29d9bc92dbc6b0135c21"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 747,
+          "sha256": "2ce124e1bfa772438ffaee44b2f90c2c4ba20c32394e25e0532a61d4e6b1371e"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example2_smallA_selection.json",
+          "tier": 2,
+          "bytes": 7377,
+          "sha256": "27654e7cc5c31ad19e03d8dd30bb758b19a5029e676adfe64f196e8f94d303c9"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported.ll",
+          "tier": 3,
+          "bytes": 29007,
+          "sha256": "319eabb47806b77b59a5389bcf4b7787e30c79dced59642318cd54d7e0287148"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported.o",
+          "tier": 3,
+          "bytes": 2128,
+          "sha256": "b13fe078a755f4dc642e26a2f84eec3b27f7b4e259293ddf3994f4467d5d530f"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported.s",
+          "tier": 3,
+          "bytes": 8796,
+          "sha256": "edf4d53ef33b7e110e01ae6a02ecc9796bb1e402e19bc3cad8f7128c5dd86a69"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported_llvm.mlir",
+          "tier": 2,
+          "bytes": 48678,
+          "sha256": "6a707bd4df33173dbb68bf5bb2c4c491e1437facd5325e1787e78fe857aebb93"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported_pre_compile_manifest.json",
+          "tier": 2,
+          "bytes": 863,
+          "sha256": "7b5549caa278d8587673fd349e14346394a8a6eab8068ee3a122d6ebd78f48a1"
+        },
+        {
+          "path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_boundary/integrated_selection_examples/example3_unsupported_selection.json",
+          "tier": 2,
+          "bytes": 3326,
+          "sha256": "c5b1c1d0e3bd607201aad4c08df57bb1290e601b81bb46c2e27e86106a5efde5"
+        }
+      ]
+    }
+  },
+  "totals": {
+    "total_files": 449,
+    "total_bytes": 17056409,
+    "tier_1_files": 13,
+    "tier_1_bytes": 123869,
+    "tier_2_files": 160,
+    "tier_2_bytes": 2439670,
+    "tier_3_files": 276,
+    "tier_3_bytes": 14492870
+  }
+}

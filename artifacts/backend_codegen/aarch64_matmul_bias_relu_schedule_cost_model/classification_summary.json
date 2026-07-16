@@ -1,0 +1,155 @@
+{
+  "primary_unroll1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "primary_unroll2": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 9.294253760123405,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-safe, hardware-confirmed profitable"
+  },
+  "primary_full_unroll": {
+    "backend_safety": "backend_costly",
+    "backend_safety_reasons": [
+      "11 spill store(s)",
+      "12 reload load(s)"
+    ],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 20.015426147319708,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-costly, hardware-confirmed profitable"
+  },
+  "alt_k_tile_unroll1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "alt_k_tile_unroll2": {
+    "backend_safety": "backend_costly",
+    "backend_safety_reasons": [
+      "2 spill store(s)",
+      "2 reload load(s)"
+    ],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 11.879851501856223,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-costly, hardware-confirmed profitable"
+  },
+  "cube64_unroll1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "cube64_unroll2": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 10.501012145748991,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-safe, hardware-confirmed profitable"
+  },
+  "small_control_collapsed": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "cube16_uk1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "cube16_uk2": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 23.974082073434126,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-safe, hardware-confirmed profitable"
+  },
+  "rect_uk1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "rect_uk2": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 9.78282136568187,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-safe, hardware-confirmed profitable"
+  },
+  "large_uk1": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_unknown",
+    "hardware_confirmation_detail": {
+      "label": "hardware_unknown",
+      "reason": "no compatible measured baseline/candidate pair available"
+    },
+    "combined_human_summary": "Backend-safe, hardware unknown"
+  },
+  "large_uk2": {
+    "backend_safety": "backend_safe",
+    "backend_safety_reasons": [],
+    "hardware_confirmation": "hardware_confirmed_profitable",
+    "hardware_confirmation_detail": {
+      "label": "hardware_confirmed_profitable",
+      "pct_change": 10.116675258055997,
+      "noise_floor_pct": 3.0
+    },
+    "combined_human_summary": "Backend-safe, hardware-confirmed profitable"
+  }
+}

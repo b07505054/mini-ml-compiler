@@ -1,0 +1,294 @@
+{
+  "label": "smallA_uk1",
+  "shape": "16x16x16",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 4
+  },
+  "schedule_unroll_k": 1,
+  "obj_sha256": "422cee3eddaf97b497b43aef53eb1bafc61851b840ac47b7b659b545f2c19236",
+  "measurement_groups": [
+    {
+      "candidate_label": "smallA_uk1",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 300,
+        "iterations": 3000,
+        "unit": "ms",
+        "min_ms": 0.0005,
+        "median_ms": 0.0005,
+        "mean_ms": 0.000514136333,
+        "p95_ms": 0.000519,
+        "stddev_ms": 0.000487775525,
+        "cv": 0.948727981
+      },
+      "output_dump_path": "/tmp/stage17_boundary_pi_1784240154/smallA_uk1_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/smallA_uk1_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 1 --candidate-label smallA_uk1 --iterations 3000 --warmup 300 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage17_boundary_pi_1784240154/smallA_uk1_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "smallA_uk1",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 300,
+        "iterations": 3000,
+        "unit": "ms",
+        "min_ms": 0.0005,
+        "median_ms": 0.0005,
+        "mean_ms": 0.000509352333,
+        "p95_ms": 0.000519,
+        "stddev_ms": 0.000270130692,
+        "cv": 0.530341523
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/smallA_uk1_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 1 --candidate-label smallA_uk1 --iterations 3000 --warmup 300 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "smallA_uk1",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 300,
+        "iterations": 3000,
+        "unit": "ms",
+        "min_ms": 0.0005,
+        "median_ms": 0.0005,
+        "mean_ms": 0.000512209333,
+        "p95_ms": 0.000519,
+        "stddev_ms": 0.000282965855,
+        "cv": 0.552441817
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/smallA_uk1_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 1 --candidate-label smallA_uk1 --iterations 3000 --warmup 300 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "smallA_uk1",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 300,
+        "iterations": 3000,
+        "unit": "ms",
+        "min_ms": 0.0005,
+        "median_ms": 0.0005,
+        "mean_ms": 0.000506776667,
+        "p95_ms": 0.000519,
+        "stddev_ms": 9.19072661e-06,
+        "cv": 0.0181356546
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/smallA_uk1_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 1 --candidate-label smallA_uk1 --iterations 3000 --warmup 300 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "smallA_uk1",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 300,
+        "iterations": 3000,
+        "unit": "ms",
+        "min_ms": 0.000499,
+        "median_ms": 0.0005,
+        "mean_ms": 0.000510764,
+        "p95_ms": 0.000519,
+        "stddev_ms": 0.000365079053,
+        "cv": 0.714770526
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/smallA_uk1_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 1 --candidate-label smallA_uk1 --iterations 3000 --warmup 300 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.0005,
+    "min_of_mins_ms": 0.000499,
+    "mean_of_medians_ms": 0.0005,
+    "stddev_of_medians_ms": 0.0,
+    "cv_of_medians": 0.0,
+    "per_group_medians_ms": [
+      0.0005,
+      0.0005,
+      0.0005,
+      0.0005,
+      0.0005
+    ]
+  }
+}

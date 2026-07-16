@@ -1,0 +1,72 @@
+Commands used to produce every file in this directory (Stage 13: Raspberry
+Pi correctness and controlled runtime validation). All paths relative to
+the ml-graph-compiler-runtime repo root unless absolute.
+
+1. Compile each candidate on the dev host (reuses the Stage 10
+   compile-interface extension unmodified):
+
+   bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+     --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 \
+     --schedule-unroll-k 2 \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <compile_dir> <candidate_name>
+
+2. Generate the per-shape correctness+benchmark harness (Stage 13, new --
+   see aarch64_matmul_bias_relu_schedule_harness.cpp.template's header for
+   why this is a separate template from the existing 5-way tiled_harness):
+
+   bash mlir_passes/tools/generate_schedule_harness.sh \
+     --shape 32x32x32 --output <scratch>/harness.cpp
+
+3. Transfer the generated harness .cpp and the compiled .o to the
+   Raspberry Pi, verify byte-for-byte transfer integrity via sha256sum on
+   both sides (stale/corrupt-binary guard), and build:
+
+   scp harness.cpp allen@100.110.37.6:<pi_dir>/<name>_harness.cpp
+   scp <name>.o     allen@100.110.37.6:<pi_dir>/<name>.o
+   ssh allen@100.110.37.6 "sha256sum '<pi_dir>/<name>.o>'"   # compared against the local sha256
+   ssh allen@100.110.37.6 "cd <pi_dir> && \
+     g++ -O2 -std=c++17 -c <name>_harness.cpp -o <name>_harness.o && \
+     g++ -O2 <name>_harness.o <name>.o -o <name>_bin"
+
+4. Run the harness on the Pi, pinned to one core, with candidate identity
+   baked into both the CLI arguments and the JSON output:
+
+   ssh allen@100.110.37.6 "taskset -c 3 <pi_dir>/<name>_bin \
+     --shape-m 32 --shape-n 32 --shape-k 32 \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 \
+     --candidate-label primary_uk2 --iterations 2000 --warmup 200 \
+     --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed \
+     --dump-output <pi_dir>/primary_uk2_out_g0.bin"
+
+5. Capture Pi environment (model, CPU, OS, kernel, governor, frequency,
+   temperature, throttle state, memory, tool versions, perf/taskset
+   availability) before the run, plus a thermal snapshot before and after
+   the full candidate matrix:
+
+   ssh allen@100.110.37.6 "vcgencmd measure_temp; vcgencmd get_throttled; \
+     cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor; lscpu; ..."
+   (full command list in environment_raw.txt)
+
+6. Full orchestration -- compiles/transfers/builds/runs all 14 candidates
+   (11 Group A + 3 Group B), with baseline/scheduled measurement groups
+   for matched pairs run in INTERLEAVED order (not two back-to-back
+   blocks), computes the matched-comparison guard, aggregates statistics,
+   classifies runtime outcomes (A/B/C/D/E), builds the spill-prediction
+   validation table, and writes this directory's contents:
+
+   python3 tools/run_aarch64_schedule_pi_validation.py \
+     --output-dir artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling
+
+7. Regression checks against Stage 11/12 (unmodified by Stage 13):
+
+   python3 tools/validate_aarch64_tiled_schedule_structure.py \
+     --input mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 \
+     --output /tmp/s11_regress.json
+
+   python3 -m unittest tests.test_aarch64_schedule_comparison -v
+
+8. Focused Stage 13 host-side tests (no SSH/Pi/toolchain dependency):
+
+   python3 -m unittest tests.test_aarch64_schedule_pi_validation -v

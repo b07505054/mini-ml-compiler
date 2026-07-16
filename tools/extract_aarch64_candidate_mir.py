@@ -16,7 +16,20 @@ and artifacts/.../aarch64_matmul_bias_relu_mir_analysis/README.md
     present, register classes attached, AArch64 machine opcodes
     (post-isel form) present. NOT yet scheduled/coalesced/allocated.
 
+  pre_scheduler         --stop-before=machine-scheduler
+    ADDED for the scheduling-analysis slice: stops immediately BEFORE the
+    pre-RA machine scheduler pass runs (after two-address-instruction
+    conversion, live-interval computation, and register coalescing, which
+    all precede -machine-scheduler in the pipeline -- see
+    -debug-pass=Structure output). Virtual registers still 100% present.
+    Verified empirically to differ in real instruction ORDER from pre_ra
+    below (e.g. loads are grouped in address-adjacent bursts here, vs.
+    interleaved with compute after scheduling) -- this is the "before" half
+    of the pre/post-scheduler comparison this slice adds.
+
   pre_ra               --stop-after=machine-scheduler
+    Also usable as "post_scheduler" for the pre/post-scheduler comparison
+    above -- this IS the machine-scheduler pass's own output boundary.
     The LAST pass boundary before the register allocator (-greedy) runs.
     Verified empirically: virtual registers are still 100% present here
     (185 distinct vregs for the 32x32x32/tm8_tn8_tk8 candidate), zero
@@ -62,7 +75,15 @@ Usage:
     --shape 32x32x32 \
     --tile-m 8 --tile-n 8 --tile-k 8 \
     --output-dir /tmp/mir_32x32x32_tm8_tn8_tk8 \
-    [--regalloc greedy|fast]
+    [--regalloc greedy|fast] [--misched default|disabled]
+
+--misched disabled passes -enable-misched=false to llc, which was
+verified (this slice) to produce a genuinely different object
+(different .text, different SHA-256) from the default -- i.e. it has
+real effect on this pipeline, not a no-op flag. Note LLVM's own
+-debug-pass=Structure output still LISTS the -machine-scheduler pass in
+the pipeline even with this flag set; the flag changes the pass's
+internal behavior rather than removing it from the pipeline.
 """
 import argparse
 import os
@@ -71,10 +92,12 @@ import sys
 
 STAGE_PASSES = {
     "post_isel": "finalize-isel",
-    "pre_ra": "machine-scheduler",
+    "pre_scheduler": "machine-scheduler",  # --stop-BEFORE
+    "pre_ra": "machine-scheduler",  # --stop-AFTER (== post_scheduler)
     "post_ra": "virtregrewriter",
     "post_prologue_epilogue": "prologepilog",
 }
+STOP_BEFORE_STAGES = {"pre_scheduler"}
 
 
 def run_llc(llvm_ir, cpu, args_extra, output):
@@ -93,7 +116,9 @@ def main():
     ap.add_argument("--tile-k", type=int, required=True)
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--regalloc", default="greedy", choices=["greedy", "fast"],
-                     help="Register allocator to use (Stage 8 greedy-vs-fast experiment). Default: greedy (LLVM's normal optimized default for this target).")
+                     help="Register allocator to use (prior MIR-analysis slice's greedy-vs-fast experiment). Default: greedy (LLVM's normal optimized default for this target).")
+    ap.add_argument("--misched", default="default", choices=["default", "disabled"],
+                     help="default: LLVM's normal pre-RA machine scheduler. disabled: -enable-misched=false (Stage 4 scheduler on/off experiment).")
     args = ap.parse_args()
 
     if not os.path.isfile(args.llvm_ir):
@@ -101,14 +126,17 @@ def main():
         return 1
 
     os.makedirs(args.output_dir, exist_ok=True)
-    prefix = f"{args.shape}_tm{args.tile_m}_tn{args.tile_n}_tk{args.tile_k}_{args.regalloc}"
+    prefix = f"{args.shape}_tm{args.tile_m}_tn{args.tile_n}_tk{args.tile_k}_{args.regalloc}_misched-{args.misched}"
 
     regalloc_flag = [] if args.regalloc == "greedy" else [f"-regalloc={args.regalloc}"]
+    misched_flag = [] if args.misched == "default" else ["-enable-misched=false"]
+    common_flags = regalloc_flag + misched_flag
 
     results = {}
     for stage, pass_name in STAGE_PASSES.items():
         out_path = os.path.join(args.output_dir, f"{prefix}_{stage}.mir")
-        proc, cmd = run_llc(args.llvm_ir, args.cpu, regalloc_flag + [f"--stop-after={pass_name}"], out_path)
+        boundary_flag = f"--stop-before={pass_name}" if stage in STOP_BEFORE_STAGES else f"--stop-after={pass_name}"
+        proc, cmd = run_llc(args.llvm_ir, args.cpu, common_flags + [boundary_flag], out_path)
         if proc.returncode != 0:
             print(f"error extracting {stage} (pass={pass_name}):", file=sys.stderr)
             print(" ".join(cmd), file=sys.stderr)
@@ -116,13 +144,13 @@ def main():
             results[stage] = {"ok": False, "pass": pass_name, "stderr": proc.stderr[-2000:]}
             continue
         results[stage] = {"ok": True, "pass": pass_name, "path": out_path}
-        print(f"OK  {stage:24s} (--stop-after={pass_name}) -> {out_path}")
+        print(f"OK  {stage:24s} ({boundary_flag}) -> {out_path}")
 
-    # Final assembly + object, full pipeline, same regalloc choice.
+    # Final assembly + object, full pipeline, same regalloc/misched choice.
     asm_path = os.path.join(args.output_dir, f"{prefix}.s")
     obj_path = os.path.join(args.output_dir, f"{prefix}.o")
-    proc_s, _ = run_llc(args.llvm_ir, args.cpu, regalloc_flag + ["-filetype=asm"], asm_path)
-    proc_o, _ = run_llc(args.llvm_ir, args.cpu, regalloc_flag + ["-filetype=obj"], obj_path)
+    proc_s, _ = run_llc(args.llvm_ir, args.cpu, common_flags + ["-filetype=asm"], asm_path)
+    proc_o, _ = run_llc(args.llvm_ir, args.cpu, common_flags + ["-filetype=obj"], obj_path)
     if proc_s.returncode != 0 or proc_o.returncode != 0:
         print("error: final assembly/object generation failed", file=sys.stderr)
         print(proc_s.stderr, file=sys.stderr)

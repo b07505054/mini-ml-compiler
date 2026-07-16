@@ -92,6 +92,27 @@
 #     an explicit error message (no tail handling) -- use --variant generic
 #     or vectorized for such shapes instead.
 #
+#   --variant tiled-scheduled [--tile-m M] [--tile-n N] [--tile-k K] [--schedule-unroll-k F]
+#     Machine-scheduling analysis slice (see
+#     artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/README.md).
+#     Identical to --variant tiled-vectorized in every respect (same
+#     legality rule, same downstream lowering pipeline) EXCEPT the
+#     Transform-dialect script additionally applies stock
+#     `transform.loop.unroll` (factor F, default 1 -- a verified true
+#     no-op producing byte-identical .text to tiled-vectorized) to the
+#     K-reduction scf.for loop, right after K-tiling and before
+#     vectorization. This is Option A ("K-loop unroll and interleave")
+#     from that slice's Transformation Design Gate: halving the K-loop's
+#     dynamic trip count (for F=2) gives LLVM's own machine scheduler a
+#     larger static loop body -- more independent per-static-body
+#     accumulator-chain material -- to interleave, without any
+#     project-owned instruction reordering or custom scheduling logic.
+#     Uses mlir_passes/transforms/tile_schedule_matmul_bias_relu.template.mlir
+#     and mlir_passes/tools/generate_scheduled_transform.sh (siblings of
+#     the tiled-vectorized template/generator, not the same files -- kept
+#     separate so tiled-vectorized's own output can never be affected by
+#     this variant's existence).
+#
 # No variant hand-writes NEON intrinsics anywhere in this script or in the
 # C++ harnesses that call the resulting objects -- all are compiler output,
 # not handwritten kernels.
@@ -134,7 +155,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 [--variant generic|vectorized|tiled-vectorized] [--tile-m M --tile-n N --tile-k K] <input.mlir> <output_dir> [artifact_name]" >&2
+  echo "usage: $0 [--variant generic|vectorized|tiled-vectorized|tiled-scheduled] [--tile-m M --tile-n N --tile-k K] [--schedule-unroll-k F] <input.mlir> <output_dir> [artifact_name]" >&2
   exit 1
 }
 
@@ -142,6 +163,7 @@ VARIANT="generic"
 ARG_TILE_M=""
 ARG_TILE_N=""
 ARG_TILE_K=""
+ARG_SCHEDULE_UNROLL_K=""
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -165,6 +187,10 @@ while [[ $# -gt 0 ]]; do
       ARG_TILE_K="$2"
       shift 2
       ;;
+    --schedule-unroll-k)
+      ARG_SCHEDULE_UNROLL_K="$2"
+      shift 2
+      ;;
     *)
       POSITIONAL+=("$1")
       shift
@@ -173,8 +199,8 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" ]] || {
-  echo "error: --variant must be 'generic', 'vectorized', or 'tiled-vectorized' (got '$VARIANT')" >&2
+[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]] || {
+  echo "error: --variant must be 'generic', 'vectorized', 'tiled-vectorized', or 'tiled-scheduled' (got '$VARIANT')" >&2
   exit 1
 }
 
@@ -192,6 +218,8 @@ PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/libHIRMatMulBiasReluFusionPass.so}"
 TRANSFORM_SCRIPT="${TRANSFORM_SCRIPT:-$REPO_ROOT/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir}"
 TILE_TRANSFORM_TEMPLATE="${TILE_TRANSFORM_TEMPLATE:-$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir}"
 GENERATE_TILED_TRANSFORM="$REPO_ROOT/mlir_passes/tools/generate_tiled_transform.sh"
+SCHEDULE_TRANSFORM_TEMPLATE="${SCHEDULE_TRANSFORM_TEMPLATE:-$REPO_ROOT/mlir_passes/transforms/tile_schedule_matmul_bias_relu.template.mlir}"
+GENERATE_SCHEDULED_TRANSFORM="$REPO_ROOT/mlir_passes/tools/generate_scheduled_transform.sh"
 LLC="${LLC:-llc}"
 TARGET_TRIPLE="${TARGET_TRIPLE:-aarch64-linux-gnu}"
 TARGET_CPU="${TARGET_CPU:-cortex-a76}"
@@ -206,6 +234,10 @@ TARGET_CPU="${TARGET_CPU:-cortex-a76}"
 TILE_M="${ARG_TILE_M:-4}"
 TILE_N="${ARG_TILE_N:-8}"
 TILE_K="${ARG_TILE_K:-8}"
+# K-loop unroll factor for --variant tiled-scheduled only. Default 1 is a
+# verified true no-op (byte-identical .text to tiled-vectorized -- see
+# artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/README.md).
+SCHEDULE_UNROLL_K="${ARG_SCHEDULE_UNROLL_K:-1}"
 
 MLIR_OPT="$MLIR_BIN/mlir-opt"
 MLIR_TRANSLATE="$MLIR_BIN/mlir-translate"
@@ -218,13 +250,18 @@ command -v "$LLC" >/dev/null 2>&1 || { echo "error: llc not found on PATH" >&2; 
 if [[ "$VARIANT" == "vectorized" ]]; then
   [[ -f "$TRANSFORM_SCRIPT" ]] || { echo "error: vectorization transform script not found at $TRANSFORM_SCRIPT" >&2; exit 1; }
 fi
-if [[ "$VARIANT" == "tiled-vectorized" ]]; then
+if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]]; then
   [[ -f "$TILE_TRANSFORM_TEMPLATE" ]] || { echo "error: tiled transform template not found at $TILE_TRANSFORM_TEMPLATE" >&2; exit 1; }
   [[ -x "$GENERATE_TILED_TRANSFORM" ]] || { echo "error: $GENERATE_TILED_TRANSFORM not found/executable" >&2; exit 1; }
   for name_val in "TILE_M:$TILE_M" "TILE_N:$TILE_N" "TILE_K:$TILE_K"; do
     val="${name_val##*:}"
     [[ "$val" =~ ^[0-9]+$ && "$val" -ge 1 ]] || { echo "error: ${name_val%%:*} must be a positive integer (got '$val')" >&2; exit 1; }
   done
+  if [[ "$VARIANT" == "tiled-scheduled" ]]; then
+    [[ -f "$SCHEDULE_TRANSFORM_TEMPLATE" ]] || { echo "error: scheduled transform template not found at $SCHEDULE_TRANSFORM_TEMPLATE" >&2; exit 1; }
+    [[ -x "$GENERATE_SCHEDULED_TRANSFORM" ]] || { echo "error: $GENERATE_SCHEDULED_TRANSFORM not found/executable" >&2; exit 1; }
+    [[ "$SCHEDULE_UNROLL_K" =~ ^[0-9]+$ && "$SCHEDULE_UNROLL_K" -ge 1 ]] || { echo "error: --schedule-unroll-k must be a positive integer (got '$SCHEDULE_UNROLL_K')" >&2; exit 1; }
+  fi
 
   # Legality check: reject shapes that do not divide evenly by the
   # requested tile size (no tail handling -- see the header comment).
@@ -236,10 +273,22 @@ if [[ "$VARIANT" == "tiled-vectorized" ]]; then
   SHAPE_K="${DIMS[0]##*x}"
   SHAPE_N="${DIMS[1]##*x}"
   if (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 || SHAPE_K % TILE_K != 0 )); then
-    echo "error: --variant tiled-vectorized requires M%${TILE_M}==0, N%${TILE_N}==0, K%${TILE_K}==0" >&2
+    echo "error: --variant $VARIANT requires M%${TILE_M}==0, N%${TILE_N}==0, K%${TILE_K}==0" >&2
     echo "       got M=$SHAPE_M N=$SHAPE_N K=$SHAPE_K (from $INPUT_MLIR) -- no tail handling in this version" >&2
     echo "       use --variant generic or --variant vectorized for this shape instead" >&2
     exit 1
+  fi
+  if [[ "$VARIANT" == "tiled-scheduled" ]]; then
+    # The K-loop's dynamic trip count (K/TILE_K) must itself be evenly
+    # divisible by the unroll factor -- transform.loop.unroll silently
+    # clamps an oversized factor down to the trip count, but does not
+    # guarantee a clean result for a factor that divides neither the trip
+    # count nor 1, so reject explicitly here instead of trusting that.
+    K_TRIP_COUNT=$(( SHAPE_K / TILE_K ))
+    if (( K_TRIP_COUNT % SCHEDULE_UNROLL_K != 0 )); then
+      echo "error: --schedule-unroll-k=$SCHEDULE_UNROLL_K must evenly divide the K-loop trip count (K/TILE_K = $K_TRIP_COUNT)" >&2
+      exit 1
+    fi
   fi
 fi
 
@@ -319,10 +368,31 @@ if [[ "$VARIANT" == "tiled-vectorized" ]]; then
   TILED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$GENERATED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 fi
 
+# Tiled-scheduled variant: same tile-and-fuse structure as tiled-vectorized,
+# generated from tile_schedule_matmul_bias_relu.template.mlir instead, which
+# adds one transform.loop.unroll on the K-reduction loop (Stage 8/9/10 of the
+# machine-scheduling analysis slice -- see that template's header comment for
+# the full rationale). Downstream lowering stages are identical to
+# TILED_PIPELINE; only the preloaded transform-library path differs.
+TILED_SCHEDULED_PIPELINE=""
+GENERATED_SCHEDULE_TRANSFORM_SCRIPT=""
+if [[ "$VARIANT" == "tiled-scheduled" ]]; then
+  GENERATED_SCHEDULE_TRANSFORM_SCRIPT="$(mktemp -t schedule_transform_XXXXXX.mlir)"
+  trap 'rm -f "$GENERATED_SCHEDULE_TRANSFORM_SCRIPT"' EXIT
+  TEMPLATE="$SCHEDULE_TRANSFORM_TEMPLATE" bash "$GENERATE_SCHEDULED_TRANSFORM" \
+    --tile-m "$TILE_M" --tile-n "$TILE_N" --tile-k "$TILE_K" \
+    --schedule-unroll-k "$SCHEDULE_UNROLL_K" \
+    --output "$GENERATED_SCHEDULE_TRANSFORM_SCRIPT" >/dev/null
+  TILED_SCHEDULED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$GENERATED_SCHEDULE_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+fi
+
 if [[ "$VARIANT" == "generic" ]]; then
   PASS_PIPELINE="$GENERIC_PIPELINE"
 elif [[ "$VARIANT" == "vectorized" ]]; then
   PASS_PIPELINE="$VECTORIZED_PIPELINE"
+elif [[ "$VARIANT" == "tiled-scheduled" ]]; then
+  PASS_PIPELINE="$TILED_SCHEDULED_PIPELINE"
+  echo "[tile] TM=$TILE_M TN=$TILE_N TK=$TILE_K SCHEDULE_UNROLL_K=$SCHEDULE_UNROLL_K (transform script: $GENERATED_SCHEDULE_TRANSFORM_SCRIPT)"
 else
   PASS_PIPELINE="$TILED_PIPELINE"
   echo "[tile] TM=$TILE_M TN=$TILE_N TK=$TILE_K (transform script: $GENERATED_TRANSFORM_SCRIPT)"

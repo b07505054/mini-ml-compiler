@@ -1,0 +1,255 @@
+{
+  "schema_version": "stage16_multidomain_profile_v1",
+  "benchmark_methodology_version": "stage13_pi5_harness_v1",
+  "hardware_identity": "raspberry_pi_5_cortex_a76",
+  "domains": {
+    "primary": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 8
+        },
+        "shape": "32x32x32"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "primary_unroll1",
+          "median_latency_ms": 0.002593,
+          "cv": 0.0032817311580793933,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "primary_unroll2",
+          "median_latency_ms": 0.002352,
+          "cv": 0.0041789615272520815,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "primary_full_unroll",
+          "median_latency_ms": 0.002074,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 11,
+          "reloads": 12
+        }
+      }
+    },
+    "cube64": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 8
+        },
+        "shape": "64x64x64"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "cube64_uk1",
+          "median_latency_ms": 0.019759,
+          "cv": 0.0018250781133218252,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "cube64_uk2",
+          "median_latency_ms": 0.017685,
+          "cv": 0.001600946198179788,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "cube64_uk4",
+          "median_latency_ms": 0.01663,
+          "cv": 0.0014353857139509831,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        }
+      }
+    },
+    "altk": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 4
+        },
+        "shape": "32x32x32"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "altk_uk1",
+          "median_latency_ms": 0.002981,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "altk_uk2",
+          "median_latency_ms": 0.00263,
+          "cv": 0.0030565935293891794,
+          "correctness_pass": true,
+          "spills": 2,
+          "reloads": 2
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "altk_uk4",
+          "median_latency_ms": 0.002407,
+          "cv": 0.003400368903595,
+          "correctness_pass": true,
+          "spills": 4,
+          "reloads": 4
+        }
+      }
+    },
+    "rect": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 8
+        },
+        "shape": "32x64x32"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "rect_uk1",
+          "median_latency_ms": 0.005185,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "rect_uk2",
+          "median_latency_ms": 0.004667,
+          "cv": 0.0021092392356109866,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0
+        },
+        "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "rect_uk4",
+          "median_latency_ms": 0.004278,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 18,
+          "reloads": 20
+        }
+      }
+    },
+    "smallA": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 4
+        },
+        "shape": "16x16x16"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "smallA_uk1",
+          "median_latency_ms": 0.0005,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0,
+          "timing_quality": "reliable"
+        },
+        "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "smallA_uk2",
+          "median_latency_ms": 0.000463,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 2,
+          "reloads": 2,
+          "timing_quality": "reliable"
+        },
+        "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "smallA_uk4",
+          "median_latency_ms": 0.000351,
+          "cv": 0.0,
+          "correctness_pass": true,
+          "spills": 10,
+          "reloads": 11,
+          "timing_quality": "borderline"
+        }
+      },
+      "stress_category": "very_small_workload_with_spilling"
+    },
+    "highK": {
+      "domain_identity": {
+        "target_arch": "aarch64",
+        "target_cpu": "cortex-a76",
+        "target_features": "none",
+        "dtype": "f32",
+        "tile": {
+          "m": 8,
+          "n": 8,
+          "k": 8
+        },
+        "shape": "32x32x128"
+      },
+      "candidates": {
+        "aarch64:cortex-a76:none:f32:shape32x32x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "highK_uk1",
+          "median_latency_ms": 0.009186,
+          "cv": 0.003645485735059083,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0,
+          "timing_quality": "reliable"
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "highK_uk2",
+          "median_latency_ms": 0.008222,
+          "cv": 0.003419814943110412,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0,
+          "timing_quality": "reliable"
+        },
+        "aarch64:cortex-a76:none:f32:shape32x32x128:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1": {
+          "label": "highK_uk4",
+          "median_latency_ms": 0.007778,
+          "cv": 0.0036335362688723278,
+          "correctness_pass": true,
+          "spills": 0,
+          "reloads": 0,
+          "timing_quality": "reliable"
+        }
+      },
+      "stress_category": "larger_k_loop_trip_count"
+    }
+  }
+}

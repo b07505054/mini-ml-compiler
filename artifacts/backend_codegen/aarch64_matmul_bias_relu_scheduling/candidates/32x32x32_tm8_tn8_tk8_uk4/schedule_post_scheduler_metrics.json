@@ -1,0 +1,33 @@
+{
+  "function_name": "matmul_bias_relu_tiled_32x32x32",
+  "fmla_count": 512,
+  "load_count": 146,
+  "store_count": 16,
+  "branch_count": 6,
+  "copy_count": 9,
+  "hot_loop_instruction_count": 762,
+  "accumulator_chains": 16,
+  "max_accumulator_chain_length": 32,
+  "min_accumulator_chain_length": 32,
+  "average_accumulator_chain_length": 32,
+  "same_accumulator_distance": {
+    "note": "intervening (independent-of-that-chain) instruction count between consecutive FMLA writes to the same accumulator vreg -- a scheduling-distance metric derived from MIR instruction order, NOT cycle-accurate latency",
+    "min": 0,
+    "median": 16.0,
+    "p95": 43,
+    "max": 197,
+    "sample_count": 496
+  },
+  "load_to_use_distance": {
+    "min": null,
+    "median": null,
+    "p95": null,
+    "max": null,
+    "sample_count": 0,
+    "note": "no vector loads found feeding an FMLA directly in this stage's kernel body"
+  },
+  "assembly_cross_check": {
+    "asm_fmla_count": 512,
+    "asm_branch_count": 5
+  }
+}

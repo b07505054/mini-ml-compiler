@@ -1,0 +1,212 @@
+[
+  {
+    "query_domain": "primary",
+    "evidence_domain": "cube64",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "altk",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "rect",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "smallA",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "highK",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "primary",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "altk",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "rect",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "smallA",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "highK",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "primary",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "cube64",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "rect",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "smallA",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "highK",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "primary",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "cube64",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "altk",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "smallA",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "highK",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "smallA",
+    "evidence_domain": "primary",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "smallA",
+    "evidence_domain": "cube64",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "smallA",
+    "evidence_domain": "altk",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "smallA",
+    "evidence_domain": "rect",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "smallA",
+    "evidence_domain": "highK",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "highK",
+    "evidence_domain": "primary",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "highK",
+    "evidence_domain": "cube64",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "highK",
+    "evidence_domain": "altk",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "highK",
+    "evidence_domain": "rect",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "highK",
+    "evidence_domain": "smallA",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  }
+]

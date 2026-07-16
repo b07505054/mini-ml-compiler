@@ -1,0 +1,44 @@
+{
+  "smallA_uk1": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 500,
+    "repeated_call_fail_count": 0
+  },
+  "smallA_uk2": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 500,
+    "repeated_call_fail_count": 0
+  },
+  "smallA_uk4": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 500,
+    "repeated_call_fail_count": 0
+  },
+  "highK_uk1": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 300,
+    "repeated_call_fail_count": 0
+  },
+  "highK_uk2": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 300,
+    "repeated_call_fail_count": 0
+  },
+  "highK_uk4": {
+    "overall_pass": true,
+    "deterministic_max_abs_error": 0,
+    "random_seed_max_abs_error": 0,
+    "repeated_calls": 300,
+    "repeated_call_fail_count": 0
+  }
+}

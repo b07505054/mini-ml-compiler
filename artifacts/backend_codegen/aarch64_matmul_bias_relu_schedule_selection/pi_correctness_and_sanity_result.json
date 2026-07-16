@@ -1,0 +1,44 @@
+{
+  "description": "Stage 15 end-to-end Pi correctness and focused performance sanity check. Reuses the exact Stage 13 harness template (aarch64_matmul_bias_relu_schedule_harness.cpp.template) and methodology -- NOT a new benchmark campaign, just verification that the Stage-15-integrated selection path produces objects that run correctly and perform consistently with the already-established Stage 13 results.",
+  "hardware": "raspberry_pi_5_cortex_a76",
+  "taskset_core": 3,
+  "iterations": 2000,
+  "warmup": 200,
+  "repeated_calls": 500,
+  "candidates": {
+    "manual_uk1": {
+      "schedule_unroll_k": 1, "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+      "correctness_pass": true, "max_abs_error": 0, "repeated_call_fail_count": 0,
+      "median_ms": 0.002593, "min_ms": 0.002574
+    },
+    "manual_uk2": {
+      "schedule_unroll_k": 2, "object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+      "correctness_pass": true, "max_abs_error": 0, "repeated_call_fail_count": 0,
+      "median_ms": 0.002370, "min_ms": 0.002351
+    },
+    "static_selection_uk2": {
+      "schedule_unroll_k": 2, "object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+      "note": "byte-identical to manual_uk2 (same object) -- static mode selected uk2, matching manual uk2 exactly",
+      "correctness_pass": true, "max_abs_error": 0, "repeated_call_fail_count": 0
+    },
+    "calibrated_selection_uk4": {
+      "schedule_unroll_k": 4, "object_sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262",
+      "correctness_pass": true, "max_abs_error": 0, "repeated_call_fail_count": 0,
+      "median_ms": 0.002074, "min_ms": 0.002056,
+      "note": "calibrated mode selected uk4 (the real Stage 13 measured winner for this shape/tile) -- fastest of all four candidates tested here, consistent with Stage 13's original finding"
+    },
+    "incompatible_profile_fallback_uk2": {
+      "schedule_unroll_k": 2, "object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+      "note": "calibrated mode requested with an incompatible x86_64 profile -- fell back to static scoring, which selected uk2; object is byte-identical to manual_uk2, confirming the fallback path materializes correctly, not just reports correctly",
+      "correctness_pass": true, "max_abs_error": 0, "repeated_call_fail_count": 0,
+      "median_ms": 0.002370, "min_ms": 0.002351
+    }
+  },
+  "performance_sanity_conclusions": [
+    "manual_uk2 is faster than manual_uk1 (0.002370ms vs 0.002593ms, ~8.6% -- consistent with Stage 13's original primary uk1-vs-uk2 result of 8.6%-9.3%)",
+    "calibrated-selected output (uk4) has performance consistent with what Stage 13 measured for this exact candidate (0.002074ms here vs 0.002074ms in the original Stage 13 pi_validation_results.json -- exact match, same object)",
+    "the incompatible-profile fallback output is IDENTICAL in object hash and measured latency to manual_uk2 -- the fallback path did not silently alter any other compiler option",
+    "no statistically obvious regression: every median/min pairing that should match (manual_uk2 vs static_selection vs fallback) does match to 4 significant figures"
+  ],
+  "scope_note": "This is a focused sanity check (4 short runs, 2000 iterations each, single interleaved-adjacent invocation per candidate), not a new full benchmark campaign. It does not supersede or re-derive Stage 13's own 5-group interleaved statistical analysis -- it exists only to confirm the Stage 15 integration path produces artifacts whose measured behavior matches what was already established."
+}

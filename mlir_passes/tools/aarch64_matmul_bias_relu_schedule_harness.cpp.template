@@ -1,0 +1,383 @@
+// aarch64_matmul_bias_relu_schedule_harness.cpp.template
+//
+// Stage 13 (Raspberry Pi correctness + controlled runtime validation of the
+// machine-scheduling slice). Per-candidate correctness + benchmark harness
+// for exactly ONE compiled matmul_bias_relu_tiled_<SHAPE_TOKEN> object.
+//
+// WHY A NEW TEMPLATE INSTEAD OF EXTENDING THE EXISTING 5-WAY
+// aarch64_matmul_bias_relu_tiled_harness.cpp: that harness links multiple
+// VARIANTS of the SAME shape into one binary (generic/vectorized/tiled-
+// vectorized/handwritten), which works because each variant's HIR fixture
+// gives its compiled object a DISTINCT exported symbol name. The
+// tiled-scheduled variant at different schedule-unroll-k values reuses the
+// SAME HIR fixture (matmul_bias_relu_tiled_<shape>.mlir) and therefore
+// exports the IDENTICAL symbol name regardless of --schedule-unroll-k --
+// two such objects cannot be linked into the same binary (duplicate-symbol
+// link error). This template is generated (SHAPE_TOKEN substituted, see
+// mlir_passes/tools/generate_schedule_harness.sh, mirroring
+// generate_scheduled_transform.sh's convention) and compiled ONCE PER
+// CANDIDATE, one object linked per binary, so candidates are compared by
+// running separate processes/binaries -- the same "process isolation"
+// principle already established by this project's per-shape harness
+// invocation pattern, extended here to per-(shape, tile, schedule-unroll-k)
+// candidates.
+//
+// Candidate identity (shape/tile/schedule-unroll-k/label) is baked in at
+// build time via CLI arguments echoed straight into the JSON output, so a
+// stale or mismatched binary is directly observable from its own output,
+// not just from an external manifest.
+//
+// Reuses the established methodology from aarch64_matmul_bias_relu_tiled_harness.cpp
+// (scalar reference, deterministic LCG fill, MemRef2D ABI, steady_clock
+// per-iteration timing) and aarch64_matmul_bias_relu_repeated_call_test.cpp
+// (guarded buffers, bit-exact sentinel comparison, descriptor sanity
+// checks) verbatim where the methodology applies -- no new tolerance
+// policy, no new ABI assumptions.
+//
+// Usage:
+//   ./schedule_harness_<candidate> \
+//     --shape-m M --shape-n N --shape-k K \
+//     --tile-m TM --tile-n TN --tile-k TK --schedule-unroll-k F \
+//     --candidate-label LABEL \
+//     [--iterations N] [--warmup N] [--repeated-calls N] \
+//     [--seed-a HEX] [--seed-b HEX] \
+//     [--dump-output PATH]
+//
+// Prints one JSON object to stdout. Exit code 0 iff all correctness checks
+// passed (benchmark numbers are still printed on a correctness failure, for
+// diagnostic visibility, but the exit code and the JSON's "correctness_pass"
+// field are authoritative).
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <string>
+#include <vector>
+
+extern "C" {
+struct MemRef2D {
+  float* allocated;
+  float* aligned;
+  int64_t offset;
+  int64_t sizes[2];
+  int64_t strides[2];
+};
+void _mlir_ciface_matmul_bias_relu_tiled_SHAPE_TOKEN(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+}
+
+using GeneratedFn = void (*)(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
+
+namespace {
+
+constexpr int64_t kMaxTimedIterations = 20000;
+constexpr int64_t kGuardElems = 64;
+constexpr uint32_t kSentinelBits = 0xDEADBEEFu;
+
+float sentinelValue(int index) {
+  uint32_t bits = kSentinelBits ^ static_cast<uint32_t>(index * 2654435761u);
+  float f;
+  std::memcpy(&f, &bits, sizeof(f));
+  return f;
+}
+
+bool bitsEqual(float a, float b) {
+  uint32_t ba, bb;
+  std::memcpy(&ba, &a, sizeof(ba));
+  std::memcpy(&bb, &b, sizeof(bb));
+  return ba == bb;
+}
+
+struct GuardedBuffer {
+  std::vector<float> storage;
+  int64_t payloadElems;
+
+  explicit GuardedBuffer(int64_t elems)
+      : storage(static_cast<size_t>(elems + 2 * kGuardElems)), payloadElems(elems) {
+    for (int64_t i = 0; i < kGuardElems; ++i) {
+      storage[static_cast<size_t>(i)] = sentinelValue(static_cast<int>(i));
+      storage[static_cast<size_t>(kGuardElems + payloadElems + i)] = sentinelValue(static_cast<int>(1000 + i));
+    }
+  }
+  float* payload() { return storage.data() + kGuardElems; }
+
+  int checkGuards() {
+    for (int64_t i = 0; i < kGuardElems; ++i) {
+      if (!bitsEqual(storage[static_cast<size_t>(i)], sentinelValue(static_cast<int>(i)))) return static_cast<int>(i - kGuardElems);
+    }
+    for (int64_t i = 0; i < kGuardElems; ++i) {
+      size_t idx = static_cast<size_t>(kGuardElems + payloadElems + i);
+      if (!bitsEqual(storage[idx], sentinelValue(static_cast<int>(1000 + i)))) return static_cast<int>(payloadElems + i);
+    }
+    return -1;
+  }
+};
+
+void fillDeterministic(float* payload, int64_t n, uint32_t seed) {
+  uint32_t state = seed;
+  for (int64_t i = 0; i < n; ++i) {
+    state = state * 1664525u + 1013904223u;
+    payload[i] = static_cast<float>((state >> 8) & 0xFFFFu) / 65536.0f - 0.5f;
+  }
+}
+
+void scalarReferenceMatMulBiasRelu(const float* lhs, const float* rhs, const float* bias,
+                                    std::vector<float>& out, int64_t M, int64_t N, int64_t K) {
+  for (int64_t i = 0; i < M; ++i) {
+    for (int64_t j = 0; j < N; ++j) {
+      float acc = 0.0f;
+      for (int64_t k = 0; k < K; ++k) acc += lhs[i * K + k] * rhs[k * N + j];
+      float v = acc + bias[i * N + j];
+      out[static_cast<size_t>(i * N + j)] = v > 0.0f ? v : 0.0f;
+    }
+  }
+}
+
+MemRef2D makeDescriptor(float* data, int64_t rows, int64_t cols) {
+  MemRef2D d{};
+  d.allocated = data;
+  d.aligned = data;
+  d.offset = 0;
+  d.sizes[0] = rows;
+  d.sizes[1] = cols;
+  d.strides[0] = cols;
+  d.strides[1] = 1;
+  return d;
+}
+
+double percentile(std::vector<double> v, double p) {
+  std::sort(v.begin(), v.end());
+  size_t idx = static_cast<size_t>(p * static_cast<double>(v.size() - 1));
+  return v[idx];
+}
+
+struct BenchStats {
+  double minMs = 0, medianMs = 0, meanMs = 0, p95Ms = 0, stddevMs = 0, cv = 0;
+};
+
+BenchStats summarize(const std::vector<double>& v) {
+  BenchStats s;
+  s.minMs = *std::min_element(v.begin(), v.end());
+  s.medianMs = percentile(v, 0.5);
+  s.p95Ms = percentile(v, 0.95);
+  double sum = 0;
+  for (double x : v) sum += x;
+  s.meanMs = sum / static_cast<double>(v.size());
+  double sqSum = 0;
+  for (double x : v) sqSum += (x - s.meanMs) * (x - s.meanMs);
+  s.stddevMs = std::sqrt(sqSum / static_cast<double>(v.size()));
+  s.cv = s.meanMs > 0 ? s.stddevMs / s.meanMs : 0;
+  return s;
+}
+
+const char* getArg(int argc, char** argv, const char* flag, const char* def) {
+  for (int i = 1; i < argc - 1; ++i) {
+    if (std::strcmp(argv[i], flag) == 0) return argv[i + 1];
+  }
+  return def;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  int64_t M = std::atoll(getArg(argc, argv, "--shape-m", "0"));
+  int64_t N = std::atoll(getArg(argc, argv, "--shape-n", "0"));
+  int64_t K = std::atoll(getArg(argc, argv, "--shape-k", "0"));
+  int64_t tileM = std::atoll(getArg(argc, argv, "--tile-m", "0"));
+  int64_t tileN = std::atoll(getArg(argc, argv, "--tile-n", "0"));
+  int64_t tileK = std::atoll(getArg(argc, argv, "--tile-k", "0"));
+  int64_t scheduleUnrollK = std::atoll(getArg(argc, argv, "--schedule-unroll-k", "1"));
+  std::string candidateLabel = getArg(argc, argv, "--candidate-label", "unlabeled");
+  int64_t iterations = std::atoll(getArg(argc, argv, "--iterations", "500"));
+  int64_t warmup = std::atoll(getArg(argc, argv, "--warmup", "100"));
+  int64_t repeatedCalls = std::atoll(getArg(argc, argv, "--repeated-calls", "200"));
+  uint32_t seedA = static_cast<uint32_t>(std::strtoul(getArg(argc, argv, "--seed-a", "0x1234"), nullptr, 0));
+  uint32_t seedB = static_cast<uint32_t>(std::strtoul(getArg(argc, argv, "--seed-b", "0x5eed"), nullptr, 0));
+  std::string dumpOutputPath = getArg(argc, argv, "--dump-output", "");
+
+  if (M <= 0 || N <= 0 || K <= 0) {
+    std::fprintf(stderr, "error: --shape-m/--shape-n/--shape-k are required and must be positive\n");
+    return 2;
+  }
+  if (iterations > kMaxTimedIterations) iterations = kMaxTimedIterations;
+
+  GeneratedFn kernelFn = _mlir_ciface_matmul_bias_relu_tiled_SHAPE_TOKEN;
+
+  bool overallPass = true;
+  std::string firstFailureReason;
+
+  // ---- Phase 1: deterministic-seed correctness (bit/tolerance check) ----
+  auto runCorrectnessTrial = [&](uint32_t seed, const char* trialLabel, double& maxAbsErrOut,
+                                  double& maxRelErrOut, int64_t& firstFailIdxOut,
+                                  float& expectedAtFailOut, float& actualAtFailOut,
+                                  std::vector<float>* dumpTarget) -> bool {
+    GuardedBuffer lhsBuf(M * K), rhsBuf(K * N), biasBuf(M * N);
+    fillDeterministic(lhsBuf.payload(), M * K, seed);
+    fillDeterministic(rhsBuf.payload(), K * N, seed ^ 0x9e3779b9u);
+    fillDeterministic(biasBuf.payload(), M * N, seed ^ 0x85ebca6bu);
+
+    std::vector<float> refOut(static_cast<size_t>(M * N));
+    scalarReferenceMatMulBiasRelu(lhsBuf.payload(), rhsBuf.payload(), biasBuf.payload(), refOut, M, N, K);
+
+    MemRef2D lhsDesc = makeDescriptor(lhsBuf.payload(), M, K);
+    MemRef2D rhsDesc = makeDescriptor(rhsBuf.payload(), K, N);
+    MemRef2D biasDesc = makeDescriptor(biasBuf.payload(), M, N);
+    MemRef2D outDesc{};
+    kernelFn(&outDesc, &lhsDesc, &rhsDesc, &biasDesc);
+
+    bool ok = true;
+    int guardBad = lhsBuf.checkGuards();
+    if (guardBad != -1) { ok = false; std::fprintf(stderr, "[%s] lhs guard corruption at %lld\n", trialLabel, static_cast<long long>(guardBad)); }
+    guardBad = rhsBuf.checkGuards();
+    if (guardBad != -1) { ok = false; std::fprintf(stderr, "[%s] rhs guard corruption at %lld\n", trialLabel, static_cast<long long>(guardBad)); }
+    guardBad = biasBuf.checkGuards();
+    if (guardBad != -1) { ok = false; std::fprintf(stderr, "[%s] bias guard corruption at %lld\n", trialLabel, static_cast<long long>(guardBad)); }
+
+    if (outDesc.sizes[0] != M || outDesc.sizes[1] != N) {
+      ok = false;
+      std::fprintf(stderr, "[%s] descriptor size mismatch: got %lldx%lld expected %lldx%lld\n", trialLabel,
+                   static_cast<long long>(outDesc.sizes[0]), static_cast<long long>(outDesc.sizes[1]),
+                   static_cast<long long>(M), static_cast<long long>(N));
+    }
+
+    maxAbsErrOut = 0.0;
+    maxRelErrOut = 0.0;
+    firstFailIdxOut = -1;
+    expectedAtFailOut = 0.0f;
+    actualAtFailOut = 0.0f;
+    for (int64_t i = 0; i < M * N; ++i) {
+      float actual = outDesc.aligned[i];
+      float expected = refOut[static_cast<size_t>(i)];
+      double absErr = std::fabs(static_cast<double>(actual) - static_cast<double>(expected));
+      double relErr = absErr / std::max(1e-6, std::fabs(static_cast<double>(expected)));
+      if (absErr > maxAbsErrOut) maxAbsErrOut = absErr;
+      if (relErr > maxRelErrOut) maxRelErrOut = relErr;
+      if (absErr >= 1e-3 && firstFailIdxOut == -1) {
+        firstFailIdxOut = i;
+        expectedAtFailOut = expected;
+        actualAtFailOut = actual;
+      }
+    }
+    if (maxAbsErrOut >= 1e-3) ok = false;
+
+    if (dumpTarget) {
+      dumpTarget->assign(outDesc.aligned, outDesc.aligned + M * N);
+    }
+    if (outDesc.allocated) std::free(outDesc.allocated);
+    return ok;
+  };
+
+  double detMaxAbsErr = 0, detMaxRelErr = 0, randMaxAbsErr = 0, randMaxRelErr = 0;
+  int64_t detFirstFailIdx = -1, randFirstFailIdx = -1;
+  float detExpectedAtFail = 0, detActualAtFail = 0, randExpectedAtFail = 0, randActualAtFail = 0;
+  std::vector<float> dumpBuf;
+
+  bool detPass = runCorrectnessTrial(seedA, "deterministic", detMaxAbsErr, detMaxRelErr, detFirstFailIdx,
+                                      detExpectedAtFail, detActualAtFail,
+                                      dumpOutputPath.empty() ? nullptr : &dumpBuf);
+  bool randPass = runCorrectnessTrial(seedB, "random-seed", randMaxAbsErr, randMaxRelErr, randFirstFailIdx,
+                                       randExpectedAtFail, randActualAtFail, nullptr);
+  if (!detPass) { overallPass = false; firstFailureReason = "deterministic-seed trial failed"; }
+  if (!randPass) { overallPass = false; if (firstFailureReason.empty()) firstFailureReason = "random-seed trial failed"; }
+
+  if (!dumpOutputPath.empty() && !dumpBuf.empty()) {
+    std::ofstream f(dumpOutputPath, std::ios::binary);
+    f.write(reinterpret_cast<const char*>(dumpBuf.data()), static_cast<std::streamsize>(dumpBuf.size() * sizeof(float)));
+  }
+
+  // ---- Phase 2: repeated same-process invocation (state-leak / corruption detection) ----
+  GuardedBuffer repLhs(M * K), repRhs(K * N), repBias(M * N);
+  fillDeterministic(repLhs.payload(), M * K, seedA);
+  fillDeterministic(repRhs.payload(), K * N, seedA ^ 0x9e3779b9u);
+  fillDeterministic(repBias.payload(), M * N, seedA ^ 0x85ebca6bu);
+  std::vector<float> repRefOut(static_cast<size_t>(M * N));
+  scalarReferenceMatMulBiasRelu(repLhs.payload(), repRhs.payload(), repBias.payload(), repRefOut, M, N, K);
+  MemRef2D repLhsDesc = makeDescriptor(repLhs.payload(), M, K);
+  MemRef2D repRhsDesc = makeDescriptor(repRhs.payload(), K, N);
+  MemRef2D repBiasDesc = makeDescriptor(repBias.payload(), M, N);
+
+  int64_t repeatedFailCount = 0;
+  for (int64_t call = 0; call < repeatedCalls; ++call) {
+    MemRef2D out{};
+    kernelFn(&out, &repLhsDesc, &repRhsDesc, &repBiasDesc);
+    double maxErr = 0.0;
+    for (int64_t i = 0; i < M * N; ++i) {
+      maxErr = std::max(maxErr, static_cast<double>(std::fabs(out.aligned[i] - repRefOut[static_cast<size_t>(i)])));
+    }
+    if (maxErr >= 1e-3) ++repeatedFailCount;
+    if (out.allocated) std::free(out.allocated);
+  }
+  if (repLhs.checkGuards() != -1 || repRhs.checkGuards() != -1 || repBias.checkGuards() != -1) {
+    overallPass = false;
+    if (firstFailureReason.empty()) firstFailureReason = "guard corruption detected after repeated-call phase";
+  }
+  if (repeatedFailCount > 0) {
+    overallPass = false;
+    if (firstFailureReason.empty()) firstFailureReason = "repeated-call correctness failures";
+  }
+
+  // ---- Phase 3: benchmark (only meaningful if correctness passed, but run
+  // regardless for diagnostic visibility -- e.g. Group B candidates should
+  // still report latency even where correctness/spills are already known
+  // from Stage 12) ----
+  GuardedBuffer benchLhs(M * K), benchRhs(K * N), benchBias(M * N);
+  fillDeterministic(benchLhs.payload(), M * K, seedA);
+  fillDeterministic(benchRhs.payload(), K * N, seedA ^ 0x9e3779b9u);
+  fillDeterministic(benchBias.payload(), M * N, seedA ^ 0x85ebca6bu);
+  MemRef2D benchLhsDesc = makeDescriptor(benchLhs.payload(), M, K);
+  MemRef2D benchRhsDesc = makeDescriptor(benchRhs.payload(), K, N);
+  MemRef2D benchBiasDesc = makeDescriptor(benchBias.payload(), M, N);
+
+  for (int64_t i = 0; i < warmup; ++i) {
+    MemRef2D o{};
+    kernelFn(&o, &benchLhsDesc, &benchRhsDesc, &benchBiasDesc);
+    if (o.allocated) std::free(o.allocated);
+  }
+  std::vector<double> timesMs;
+  timesMs.reserve(static_cast<size_t>(iterations));
+  for (int64_t i = 0; i < iterations; ++i) {
+    MemRef2D o{};
+    auto t0 = std::chrono::steady_clock::now();
+    kernelFn(&o, &benchLhsDesc, &benchRhsDesc, &benchBiasDesc);
+    auto t1 = std::chrono::steady_clock::now();
+    timesMs.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
+    if (o.allocated) std::free(o.allocated);
+  }
+  BenchStats stats = summarize(timesMs);
+
+  std::printf("{\n");
+  std::printf("  \"candidate_label\": \"%s\",\n", candidateLabel.c_str());
+  std::printf("  \"shape\": {\"m\": %lld, \"n\": %lld, \"k\": %lld},\n",
+              static_cast<long long>(M), static_cast<long long>(N), static_cast<long long>(K));
+  std::printf("  \"tile\": {\"m\": %lld, \"n\": %lld, \"k\": %lld},\n",
+              static_cast<long long>(tileM), static_cast<long long>(tileN), static_cast<long long>(tileK));
+  std::printf("  \"schedule_unroll_k\": %lld,\n", static_cast<long long>(scheduleUnrollK));
+  std::printf("  \"symbol\": \"matmul_bias_relu_tiled_SHAPE_TOKEN\",\n");
+  std::printf("  \"correctness\": {\n");
+  std::printf("    \"deterministic_trial\": {\"pass\": %s, \"max_abs_error\": %.9g, \"max_rel_error\": %.9g, \"first_fail_index\": %lld, \"expected_at_fail\": %.9g, \"actual_at_fail\": %.9g},\n",
+              detPass ? "true" : "false", detMaxAbsErr, detMaxRelErr, static_cast<long long>(detFirstFailIdx),
+              static_cast<double>(detExpectedAtFail), static_cast<double>(detActualAtFail));
+  std::printf("    \"random_seed_trial\": {\"pass\": %s, \"max_abs_error\": %.9g, \"max_rel_error\": %.9g, \"first_fail_index\": %lld, \"expected_at_fail\": %.9g, \"actual_at_fail\": %.9g},\n",
+              randPass ? "true" : "false", randMaxAbsErr, randMaxRelErr, static_cast<long long>(randFirstFailIdx),
+              static_cast<double>(randExpectedAtFail), static_cast<double>(randActualAtFail));
+  std::printf("    \"repeated_calls\": %lld,\n", static_cast<long long>(repeatedCalls));
+  std::printf("    \"repeated_call_fail_count\": %lld,\n", static_cast<long long>(repeatedFailCount));
+  std::printf("    \"tolerance_policy\": \"max_abs_error < 1e-3 (repository-established threshold, unchanged)\",\n");
+  std::printf("    \"overall_pass\": %s,\n", overallPass ? "true" : "false");
+  std::printf("    \"first_failure_reason\": \"%s\"\n", firstFailureReason.c_str());
+  std::printf("  },\n");
+  std::printf("  \"benchmark\": {\n");
+  std::printf("    \"warmup\": %lld, \"iterations\": %lld, \"unit\": \"ms\",\n",
+              static_cast<long long>(warmup), static_cast<long long>(iterations));
+  std::printf("    \"min_ms\": %.9g, \"median_ms\": %.9g, \"mean_ms\": %.9g, \"p95_ms\": %.9g, \"stddev_ms\": %.9g, \"cv\": %.9g\n",
+              stats.minMs, stats.medianMs, stats.meanMs, stats.p95Ms, stats.stddevMs, stats.cv);
+  std::printf("  },\n");
+  std::printf("  \"output_dump_path\": \"%s\"\n", dumpOutputPath.c_str());
+  std::printf("}\n");
+
+  return overallPass ? 0 : 1;
+}

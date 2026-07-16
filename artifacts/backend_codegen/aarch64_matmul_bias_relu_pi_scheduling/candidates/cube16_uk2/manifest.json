@@ -1,0 +1,110 @@
+{
+  "label": "cube16_uk2",
+  "shape": "16x16x16",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 2,
+  "group": "A",
+  "full_rigor": false,
+  "compiled": {
+    "obj_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.o",
+    "obj_sha256": "7e6c5d503cd1ce9a42a396b82cfc52fd9c98ecbbf1f5bcdb0d6094fa81e2fe7e",
+    "obj_bytes": 2968,
+    "asm_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.s",
+    "ll_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2.ll",
+    "llvm_mlir_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/cube16_uk2_llvm.mlir"
+  },
+  "compile_command": "bash /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_16x16x16.mlir artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled cube16_uk2",
+  "build": {
+    "harness_cpp_local": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/cube16_uk2/cube16_uk2_harness.cpp",
+    "remote_binary": "/tmp/stage13_schedule_pi_1784230712/cube16_uk2_bin",
+    "remote_obj_sha256_verified": true,
+    "build_command": "cd '/tmp/stage13_schedule_pi_1784230712' && g++ -O2 -std=c++17 -c cube16_uk2_harness.cpp -o cube16_uk2_harness.o && g++ -O2 cube16_uk2_harness.o cube16_uk2.o -o cube16_uk2_bin"
+  },
+  "measurement_groups": [
+    {
+      "candidate_label": "cube16_uk2",
+      "shape": {
+        "m": 16,
+        "n": 16,
+        "k": 16
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 2,
+      "symbol": "matmul_bias_relu_tiled_16x16x16",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.000333,
+        "median_ms": 0.000352,
+        "mean_ms": 0.000348036,
+        "p95_ms": 0.000352,
+        "stddev_ms": 7.89573961e-06,
+        "cv": 0.02268656
+      },
+      "output_dump_path": "/tmp/stage13_schedule_pi_1784230712/cube16_uk2_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/cube16_uk2_bin --shape-m 16 --shape-n 16 --shape-k 16 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 --candidate-label cube16_uk2 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage13_schedule_pi_1784230712/cube16_uk2_out_g0.bin",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 1,
+    "median_of_medians_ms": 0.000352,
+    "min_of_mins_ms": 0.000333,
+    "mean_of_medians_ms": 0.000352,
+    "stddev_of_medians_ms": 0.0,
+    "cv_of_medians": 0.0,
+    "per_group_medians_ms": [
+      0.000352
+    ]
+  },
+  "stage12_key": null,
+  "stage12_evidence": null,
+  "config_for_matching": {
+    "shape": "16x16x16",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "target_cpu": "cortex-a76",
+    "opt_level": "O2",
+    "iterations": 1000,
+    "warmup": 200,
+    "git_commit": "ca5c375151a02fc835cc09e1e49daee7d66d82f5",
+    "schedule_unroll_k": 2
+  }
+}

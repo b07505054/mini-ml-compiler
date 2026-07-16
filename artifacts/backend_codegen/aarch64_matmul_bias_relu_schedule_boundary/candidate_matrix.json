@@ -1,0 +1,110 @@
+[
+  {
+    "domain": "smallA",
+    "shape": "16x16x16",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 4
+    },
+    "label": "smallA_uk1",
+    "unroll_k": 1,
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 128,
+    "object_bytes": 2336,
+    "median_ms": 0.0005,
+    "correctness_pass": true,
+    "timing_quality": "reliable"
+  },
+  {
+    "domain": "smallA",
+    "shape": "16x16x16",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 4
+    },
+    "label": "smallA_uk2",
+    "unroll_k": 2,
+    "spills": 2,
+    "reloads": 2,
+    "stack_bytes": 176,
+    "object_bytes": 2640,
+    "median_ms": 0.000463,
+    "correctness_pass": true,
+    "timing_quality": "reliable"
+  },
+  {
+    "domain": "smallA",
+    "shape": "16x16x16",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 4
+    },
+    "label": "smallA_uk4",
+    "unroll_k": 4,
+    "spills": 10,
+    "reloads": 11,
+    "stack_bytes": 256,
+    "object_bytes": 2952,
+    "median_ms": 0.000351,
+    "correctness_pass": true,
+    "timing_quality": "borderline"
+  },
+  {
+    "domain": "highK",
+    "shape": "32x32x128",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "label": "highK_uk1",
+    "unroll_k": 1,
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 2608,
+    "median_ms": 0.009186,
+    "correctness_pass": true,
+    "timing_quality": "reliable"
+  },
+  {
+    "domain": "highK",
+    "shape": "32x32x128",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "label": "highK_uk2",
+    "unroll_k": 2,
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 3248,
+    "median_ms": 0.008222,
+    "correctness_pass": true,
+    "timing_quality": "reliable"
+  },
+  {
+    "domain": "highK",
+    "shape": "32x32x128",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "label": "highK_uk4",
+    "unroll_k": 4,
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 4528,
+    "median_ms": 0.007778,
+    "correctness_pass": true,
+    "timing_quality": "reliable"
+  }
+]

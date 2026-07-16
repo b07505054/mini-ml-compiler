@@ -1,0 +1,52 @@
+{
+  "top_choice_agreement": {
+    "primary": {
+      "static_top": "primary_unroll2",
+      "measured_winner": "primary_full_unroll",
+      "agree": false
+    },
+    "cube64": {
+      "static_top": "cube64_uk4",
+      "measured_winner": "cube64_uk4",
+      "agree": true
+    },
+    "altk": {
+      "static_top": "alt_k_tile_unroll1",
+      "measured_winner": "altk_uk4",
+      "agree": false
+    },
+    "rect": {
+      "static_top": "rect_uk2",
+      "measured_winner": "rect_uk4",
+      "agree": false
+    },
+    "smallA": {
+      "static_top": "smallA_uk1",
+      "measured_winner": "smallA_uk4",
+      "agree": false
+    },
+    "highK": {
+      "static_top": "highK_uk4",
+      "measured_winner": "highK_uk4",
+      "agree": true
+    }
+  },
+  "domains_correctly_predicted": [
+    "cube64",
+    "highK"
+  ],
+  "domains_mispredicted": [
+    "primary",
+    "altk",
+    "rect",
+    "smallA"
+  ],
+  "spill_related_mispredictions": [
+    "primary",
+    "altk",
+    "rect",
+    "smallA"
+  ],
+  "top_choice_agreement_rate": 0.3333333333333333,
+  "conclusion": "No currently collected static metric reliably predicts the measured winner across the tested domain set -- static evidence correctly predicted the top choice in only 2 of 6 domains (the one(s) where the winner happened to be spill-free). Exact-domain calibration remains necessary for reliable winner selection with this microkernel family. Weights were NOT retuned to fit this expanded dataset."
+}

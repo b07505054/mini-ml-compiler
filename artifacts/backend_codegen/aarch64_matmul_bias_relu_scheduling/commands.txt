@@ -1,0 +1,96 @@
+Commands used to produce every file in this directory (Stage 12: LLVM
+scheduling evidence comparison). All paths relative to the
+ml-graph-compiler-runtime repo root unless absolute.
+
+1. Compile the HIR fixture through the tiled-scheduled variant (Stage 10)
+   for a given tile shape / schedule-unroll-k, producing LLVM-dialect
+   MLIR, LLVM IR, assembly, and object:
+
+   bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+     --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 \
+     --schedule-unroll-k 2 \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <candidate_dir> <name>
+
+   Baseline (schedule-unroll-k=1) uses the SAME variant/pipeline flag,
+   differing only in --schedule-unroll-k -- verified in Stage 11
+   (tools/validate_aarch64_tiled_schedule_structure.py's
+   schedule_unroll_1_is_noop check) to be a structural and byte-for-byte
+   .text no-op vs. the separate tiled-vectorized variant. This keeps the
+   baseline/scheduled comparison controlled: nothing else in the pipeline
+   differs.
+
+2. Extract MIR at 5 real llc pass boundaries plus final assembly/object
+   (Stage 3 tool, reused unmodified):
+
+   python3 tools/extract_aarch64_candidate_mir.py \
+     --llvm-ir <name>.ll --cpu cortex-a76 --shape 32x32x32 \
+     --tile-m 8 --tile-n 8 --tile-k 8 --output-dir <candidate_dir>
+
+   Boundaries (discovered via `llc -debug-pass=Structure` on this exact
+   LLVM 21.1.8 build -- see that tool's own header for the full
+   discovery record):
+     post_isel              --stop-after=finalize-isel
+     pre_scheduler           --stop-before=machine-scheduler
+     pre_ra (= post_scheduler)  --stop-after=machine-scheduler
+     post_ra                 --stop-after=virtregrewriter
+     post_prologue_epilogue  --stop-after=prologepilog
+
+3. Register-class / frame-object / spill-vs-callee-saved analysis (Stage
+   5/6/7 tool, reused unmodified):
+
+   python3 tools/analyze_aarch64_candidate_mir.py \
+     --post-isel <prefix>_post_isel.mir --pre-ra <prefix>_pre_ra.mir \
+     --post-ra <prefix>_post_ra.mir \
+     --post-prologue-epilogue <prefix>_post_prologue_epilogue.mir \
+     --output register_metrics.json
+
+4. FMLA accumulator-chain / load-to-use-distance scheduling metrics
+   (Stage 5 tool, reused unmodified), run TWICE per candidate -- once on
+   pre_scheduler MIR, once on pre_ra (post-scheduler) MIR -- to get a
+   genuine before/after machine-scheduler comparison:
+
+   python3 tools/analyze_aarch64_machine_schedule.py \
+     --mir <prefix>_pre_scheduler.mir --asm <prefix>.s \
+     --output schedule_pre_scheduler_metrics.json
+
+   python3 tools/analyze_aarch64_machine_schedule.py \
+     --mir <prefix>_pre_ra.mir --asm <prefix>.s \
+     --output schedule_post_scheduler_metrics.json
+
+5. Locate the innermost ("This Inner Loop Header") loop region in the
+   final assembly via its LLVM block-comment annotations, wrap it in
+   llvm-mca's own '# LLVM-MCA-BEGIN'/'# LLVM-MCA-END' region markers, and
+   run llvm-mca against the Cortex-A76 scheduling model (STATIC estimate
+   only -- no Raspberry Pi execution in this script):
+
+   llvm-mca -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -iterations=100 \
+     hot_loop_region.s
+
+   Run only for the primary comparison pair (32x32x32/tile-8x8x8,
+   schedule-unroll-k 1 vs 2), per task instruction to scope llvm-mca to
+   "the main baseline/scheduled comparison", not the full candidate
+   matrix.
+
+6. Orchestration script that runs 1-5 for every candidate in the matrix,
+   plus the new FP-reduction-order check (parses @llvm.fmuladd calls in
+   the LLVM IR, checks for fast-math-flag tokens, reconstructs
+   accumulator chains) and assembly-level FMLA/load/store/branch counts,
+   and classifies each baseline/scheduled pair (A/B/C/D per task section
+   12):
+
+   python3 tools/compare_aarch64_schedule_variants.py \
+     --output-dir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling
+
+7. Structural-validation regression check (Stage 11 tool, unmodified by
+   Stage 12 -- re-run here only to confirm no Stage 12 change affected the
+   Stage 11 pipeline):
+
+   python3 tools/validate_aarch64_tiled_schedule_structure.py \
+     --input mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 \
+     --output /tmp/stage11_regress.json
+
+8. Focused analyzer tests (new, Stage 12):
+
+   python3 -m unittest tests.test_aarch64_schedule_comparison -v

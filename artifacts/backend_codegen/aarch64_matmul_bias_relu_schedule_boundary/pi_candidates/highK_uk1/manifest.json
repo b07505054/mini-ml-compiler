@@ -1,0 +1,294 @@
+{
+  "label": "highK_uk1",
+  "shape": "32x32x128",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 1,
+  "obj_sha256": "91fb4402202f4dcf3252f8c390fb1464cf694ab5e410e1556782c6f4d94847f3",
+  "measurement_groups": [
+    {
+      "candidate_label": "highK_uk1",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x32x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 300,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.009092,
+        "median_ms": 0.009111,
+        "mean_ms": 0.009123916,
+        "p95_ms": 0.009148,
+        "stddev_ms": 0.000111316265,
+        "cv": 0.0122004921
+      },
+      "output_dump_path": "/tmp/stage17_boundary_pi_1784240154/highK_uk1_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/highK_uk1_bin --shape-m 32 --shape-n 32 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label highK_uk1 --iterations 1000 --warmup 200 --repeated-calls 300 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage17_boundary_pi_1784240154/highK_uk1_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "highK_uk1",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x32x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 300,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.009111,
+        "median_ms": 0.009186,
+        "mean_ms": 0.009212172,
+        "p95_ms": 0.009222,
+        "stddev_ms": 0.000382684617,
+        "cv": 0.0415411933
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/highK_uk1_bin --shape-m 32 --shape-n 32 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label highK_uk1 --iterations 1000 --warmup 200 --repeated-calls 300 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "highK_uk1",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x32x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 300,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.009129,
+        "median_ms": 0.009186,
+        "mean_ms": 0.009210866,
+        "p95_ms": 0.009222,
+        "stddev_ms": 0.000415591692,
+        "cv": 0.0451197196
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/highK_uk1_bin --shape-m 32 --shape-n 32 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label highK_uk1 --iterations 1000 --warmup 200 --repeated-calls 300 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "highK_uk1",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x32x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 300,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.009093,
+        "median_ms": 0.009185,
+        "mean_ms": 0.009215478,
+        "p95_ms": 0.009204,
+        "stddev_ms": 0.00079244117,
+        "cv": 0.0859902405
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/highK_uk1_bin --shape-m 32 --shape-n 32 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label highK_uk1 --iterations 1000 --warmup 200 --repeated-calls 300 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "highK_uk1",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x32x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 300,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.009111,
+        "median_ms": 0.009186,
+        "mean_ms": 0.009198133,
+        "p95_ms": 0.009222,
+        "stddev_ms": 0.000131363341,
+        "cv": 0.0142815222
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage17_boundary_pi_1784240154/highK_uk1_bin --shape-m 32 --shape-n 32 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label highK_uk1 --iterations 1000 --warmup 200 --repeated-calls 300 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.009186,
+    "min_of_mins_ms": 0.009092,
+    "mean_of_medians_ms": 0.0091708,
+    "stddev_of_medians_ms": 3.343202057907984e-05,
+    "cv_of_medians": 0.003645485735059083,
+    "per_group_medians_ms": [
+      0.009111,
+      0.009186,
+      0.009186,
+      0.009185,
+      0.009186
+    ]
+  }
+}

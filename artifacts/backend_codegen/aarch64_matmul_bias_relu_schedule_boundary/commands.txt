@@ -1,0 +1,84 @@
+Commands used to produce every file in this directory (Stage 17:
+schedule-unroll boundary search and counterexample-oriented validation).
+All paths relative to the ml-graph-compiler-runtime repo root unless
+absolute.
+
+1. Empirical timer/harness-overhead probe (run once, informs the
+   timing-quality thresholds used throughout this stage):
+
+   g++ -O2 -std=c++17 tools/timer_overhead_probe.cpp -o /tmp/timer_probe
+   taskset -c 3 /tmp/timer_probe
+
+2. Stage 11 structural legality gate for both new domains' full uk1/uk2/uk4
+   candidate sets (run BEFORE compiling):
+
+   python3 tools/validate_aarch64_tiled_schedule_structure.py \
+     --input mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_16x16x16.mlir \
+     --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k <1|2|4> --output /tmp/check.json
+   (repeated for highK: tile 8x8x8 on the new 32x32x128 fixture)
+
+3. Materialize all 6 new candidates through the Stage 15 selector's
+   manual mode (real compile pipeline, unmodified):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode manual --schedule-unroll-k <1|2|4> \
+     --tile-m 8 --tile-n 8 --tile-k <4|8> \
+     --emit-schedule-selection <out>/<name>_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_<shape>.mlir \
+     <out>/compiled <name>
+
+4. Extract static/backend evidence (Stage 3/5 tools, unmodified):
+
+   python3 tools/extract_aarch64_candidate_mir.py --llvm-ir <name>.ll \
+     --cpu cortex-a76 --shape <shape> --tile-m <M> --tile-n <N> --tile-k <K> \
+     --output-dir /tmp/s17_evidence/<name>
+   python3 tools/analyze_aarch64_candidate_mir.py --post-isel ... --pre-ra ... \
+     --post-ra ... --post-prologue-epilogue ... --output register_metrics.json
+   python3 tools/analyze_aarch64_machine_schedule.py --mir ... --asm ... \
+     --output schedule_metrics.json
+
+5. Pi benchmark matrix for the 6 new candidates, interleaved measurement
+   groups (5 per domain), Stage 13 methodology reused via direct import:
+
+   python3 tools/run_boundary_pi.py
+
+6. Full boundary analysis: timing-quality classification, per-domain
+   winner determination, static-model re-evaluation across all 6 domains
+   (4 from Stage 16 + 2 new), 3-policy comparison, extended multi-domain
+   profile, 6-domain cross-domain rejection re-verification:
+
+   python3 tools/run_boundary_analysis.py
+
+7. Extended Stage-12-shaped evidence file (all new-this-stage candidates'
+   static evidence, same schema as Stage 16's fix, via the existing
+   --stage12-json override):
+
+   (inline Python, see run_boundary_analysis.py's evidence-merge pattern)
+
+8. Three integrated selection/materialization examples:
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode calibrated \
+     --schedule-profile <out>/updated_multidomain_profile.json \
+     --stage12-json <out>/extended_stage12_evidence.json \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <out>/integrated_selection_examples/example1_highK_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x128.mlir \
+     <out>/integrated_selection_examples example1_highK
+
+   (example 2: smallA, tile 8x8x4, 16x16x16; example 3: unsupported
+   domain 16x16x16/tile-4x8x8, expects conservative fallback)
+
+9. Focused Stage 17 host-side tests (no SSH/Pi/toolchain dependency):
+
+   python3 -m unittest tests.test_aarch64_schedule_boundary -v
+
+10. Full combined suite across every scheduling-slice stage:
+
+    python3 -m unittest tests.test_aarch64_mir_analysis \
+      tests.test_aarch64_schedule_comparison \
+      tests.test_aarch64_schedule_pi_validation \
+      tests.test_aarch64_schedule_candidate_model \
+      tests.test_aarch64_schedule_selection \
+      tests.test_aarch64_schedule_multidomain \
+      tests.test_aarch64_schedule_boundary

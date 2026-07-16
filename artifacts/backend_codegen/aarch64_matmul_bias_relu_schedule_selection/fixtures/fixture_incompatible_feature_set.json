@@ -1,0 +1,21 @@
+{
+  "_fixture_kind": "COMPATIBILITY_TEST_FIXTURE -- NOT a measured benchmark profile",
+  "_provenance": "Same real target_cpu (cortex-a76) as this project's actual Raspberry Pi 5, but a different declared target_features string. No compiler in this project's actual pipeline ever passes -mattr flags (target_features is always 'none' in every real Stage 12/13 artifact) -- this fixture is intentionally synthetic on this one field to exercise the wrong-feature-set compatibility-rejection path, which check_compatibility() treats as a hard (equality-required) field even when target_cpu itself matches.",
+  "schema_version": "stage15_schedule_profile_v1",
+  "profile_kind": "compatibility_test_fixture",
+  "target_arch": "aarch64",
+  "target_cpu": "cortex-a76",
+  "target_features": "+dotprod",
+  "dtype": "f32",
+  "benchmark_methodology_version": "stage13_pi5_harness_v1",
+  "candidates": {
+    "hypothetical_primary_uk2": {
+      "shape_m": 32, "shape_n": 32, "shape_k": 32,
+      "tile_m": 8, "tile_n": 8, "tile_k": 8,
+      "schedule_unroll_k": 2,
+      "median_latency_ms": null,
+      "correctness_pass": null,
+      "cv": null
+    }
+  }
+}

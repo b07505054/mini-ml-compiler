@@ -1,0 +1,21 @@
+{
+  "_fixture_kind": "COMPATIBILITY_TEST_FIXTURE -- NOT a measured benchmark profile",
+  "_provenance": "target_arch/target_cpu are real values directly observed via `llc --version` on this project's own dev host (allen@100.87.220.5) during this session -- 'Default target: x86_64-pc-linux-gnu', 'Host CPU: skylake'. No latency numbers are included: this fixture exists only to exercise the wrong-architecture compatibility-rejection path, not to claim any x86 matmul kernel was ever measured.",
+  "schema_version": "stage15_schedule_profile_v1",
+  "profile_kind": "compatibility_test_fixture",
+  "target_arch": "x86_64",
+  "target_cpu": "skylake",
+  "target_features": "none",
+  "dtype": "f32",
+  "benchmark_methodology_version": "stage13_pi5_harness_v1",
+  "candidates": {
+    "hypothetical_primary_uk2": {
+      "shape_m": 32, "shape_n": 32, "shape_k": 32,
+      "tile_m": 8, "tile_n": 8, "tile_k": 8,
+      "schedule_unroll_k": 2,
+      "median_latency_ms": null,
+      "correctness_pass": null,
+      "cv": null
+    }
+  }
+}

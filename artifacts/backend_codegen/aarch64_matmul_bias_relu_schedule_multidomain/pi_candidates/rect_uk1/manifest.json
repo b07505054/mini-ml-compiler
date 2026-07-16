@@ -1,0 +1,294 @@
+{
+  "label": "rect_uk1",
+  "shape": "32x64x32",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 1,
+  "obj_sha256": "b4fe24e50934f6148d9dc99466e43e17f596da7b5f2a8132129c61e801cc1f1b",
+  "measurement_groups": [
+    {
+      "candidate_label": "rect_uk1",
+      "shape": {
+        "m": 32,
+        "n": 64,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x64x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.005166,
+        "median_ms": 0.005185,
+        "mean_ms": 0.005191961,
+        "p95_ms": 0.005186,
+        "stddev_ms": 0.000345493423,
+        "cv": 0.0665439173
+      },
+      "output_dump_path": "/tmp/stage16_multidomain_pi_1784237167/rect_uk1_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/rect_uk1_bin --shape-m 32 --shape-n 64 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label rect_uk1 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage16_multidomain_pi_1784237167/rect_uk1_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "rect_uk1",
+      "shape": {
+        "m": 32,
+        "n": 64,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x64x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.005166,
+        "median_ms": 0.005185,
+        "mean_ms": 0.005189152,
+        "p95_ms": 0.005186,
+        "stddev_ms": 0.000227380089,
+        "cv": 0.043818352
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/rect_uk1_bin --shape-m 32 --shape-n 64 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label rect_uk1 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "rect_uk1",
+      "shape": {
+        "m": 32,
+        "n": 64,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x64x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.005166,
+        "median_ms": 0.005185,
+        "mean_ms": 0.005188149,
+        "p95_ms": 0.005186,
+        "stddev_ms": 0.000160434924,
+        "cv": 0.0309233455
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/rect_uk1_bin --shape-m 32 --shape-n 64 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label rect_uk1 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "rect_uk1",
+      "shape": {
+        "m": 32,
+        "n": 64,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x64x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.005166,
+        "median_ms": 0.005185,
+        "mean_ms": 0.00519598,
+        "p95_ms": 0.005186,
+        "stddev_ms": 0.000419860588,
+        "cv": 0.0808048892
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/rect_uk1_bin --shape-m 32 --shape-n 64 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label rect_uk1 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "rect_uk1",
+      "shape": {
+        "m": 32,
+        "n": 64,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 1,
+      "symbol": "matmul_bias_relu_tiled_32x64x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 1000,
+        "unit": "ms",
+        "min_ms": 0.005166,
+        "median_ms": 0.005185,
+        "mean_ms": 0.005200698,
+        "p95_ms": 0.005204,
+        "stddev_ms": 0.000366564762,
+        "cv": 0.0704837624
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/rect_uk1_bin --shape-m 32 --shape-n 64 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 1 --candidate-label rect_uk1 --iterations 1000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.005185,
+    "min_of_mins_ms": 0.005166,
+    "mean_of_medians_ms": 0.005185,
+    "stddev_of_medians_ms": 0.0,
+    "cv_of_medians": 0.0,
+    "per_group_medians_ms": [
+      0.005185,
+      0.005185,
+      0.005185,
+      0.005185,
+      0.005185
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "label": "large_uk2",
+  "shape": "128x128x128",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 2,
+  "group": "A",
+  "full_rigor": false,
+  "compiled": {
+    "obj_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.o",
+    "obj_sha256": "38caef90ea9ebef0cf1108169dacef8a70105e4fb6a196c4169f6127df726a6c",
+    "obj_bytes": 3360,
+    "asm_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.s",
+    "ll_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2.ll",
+    "llvm_mlir_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/large_uk2_llvm.mlir"
+  },
+  "compile_command": "bash /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_128x128x128.mlir artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled large_uk2",
+  "build": {
+    "harness_cpp_local": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/large_uk2/large_uk2_harness.cpp",
+    "remote_binary": "/tmp/stage13_schedule_pi_1784230712/large_uk2_bin",
+    "remote_obj_sha256_verified": true,
+    "build_command": "cd '/tmp/stage13_schedule_pi_1784230712' && g++ -O2 -std=c++17 -c large_uk2_harness.cpp -o large_uk2_harness.o && g++ -O2 large_uk2_harness.o large_uk2.o -o large_uk2_bin"
+  },
+  "measurement_groups": [
+    {
+      "candidate_label": "large_uk2",
+      "shape": {
+        "m": 128,
+        "n": 128,
+        "k": 128
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 2,
+      "symbol": "matmul_bias_relu_tiled_128x128x128",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 100,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 50,
+        "iterations": 200,
+        "unit": "ms",
+        "min_ms": 0.142518,
+        "median_ms": 0.142981,
+        "mean_ms": 0.1431266,
+        "p95_ms": 0.143759,
+        "stddev_ms": 0.000746472176,
+        "cv": 0.00521546782
+      },
+      "output_dump_path": "/tmp/stage13_schedule_pi_1784230712/large_uk2_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/large_uk2_bin --shape-m 128 --shape-n 128 --shape-k 128 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 2 --candidate-label large_uk2 --iterations 200 --warmup 50 --repeated-calls 100 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage13_schedule_pi_1784230712/large_uk2_out_g0.bin",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 1,
+    "median_of_medians_ms": 0.142981,
+    "min_of_mins_ms": 0.142518,
+    "mean_of_medians_ms": 0.142981,
+    "stddev_of_medians_ms": 0.0,
+    "cv_of_medians": 0.0,
+    "per_group_medians_ms": [
+      0.142981
+    ]
+  },
+  "stage12_key": null,
+  "stage12_evidence": null,
+  "config_for_matching": {
+    "shape": "128x128x128",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "target_cpu": "cortex-a76",
+    "opt_level": "O2",
+    "iterations": 200,
+    "warmup": 50,
+    "git_commit": "ca5c375151a02fc835cc09e1e49daee7d66d82f5",
+    "schedule_unroll_k": 2
+  }
+}

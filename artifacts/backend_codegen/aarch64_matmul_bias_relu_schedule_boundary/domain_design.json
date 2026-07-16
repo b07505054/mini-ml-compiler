@@ -1,0 +1,31 @@
+{
+  "methodology": "counterexample-oriented: domains were selected specifically to stress costs uk4 introduces (spill/reload overhead, live ranges, stack frame, code growth, prologue/epilogue fraction, partial-unroll behavior), not a broad representative sweep.",
+  "domains": {
+    "smallA": {
+      "shape": "16x16x16", "tile": {"m": 8, "n": 8, "k": 4}, "category": "A -- very small workload",
+      "rationale": "Smallest problem where uk4 is legally available (K trip count 4, tile_k=4 gives finer K granularity than tile_k=8 would at this shape scale). Total problem size (4096 FLOPs) is far smaller than any domain tested in Stages 12-16 where uk4 was legal.",
+      "hypothesized_uk4_benefits": ["fewer K-loop branches", "fewer induction-variable updates"],
+      "hypothesized_uk4_costs": ["spill/reload fixed overhead becoming a larger fraction of tiny total work", "prologue/epilogue overhead becoming a larger fraction of total work", "code footprint growth relative to genuinely tiny useful compute"],
+      "measured_outcome": "uk4 still won (351ns vs 500ns for uk1), despite real spills (10 stores/11 reloads) -- the worst spill count of any domain except rect. Hypothesized costs did not dominate at this scale."
+    },
+    "highK": {
+      "shape": "32x32x128", "tile": {"m": 8, "n": 8, "k": 8}, "category": "B -- larger K-loop trip count",
+      "rationale": "K trip count 16 -- double the largest previously tested (cube64, trip 8). uk4 here is a genuine PARTIAL unroll (4 remaining dynamic iterations), not a full collapse, distinguishing this from every uk4 case tested in Stage 16.",
+      "hypothesized_uk4_benefits": ["same repeated loop-control reduction mechanism as smaller domains", "larger scheduling region per static loop body"],
+      "hypothesized_uk4_costs": ["longer live ranges across a larger unrolled body", "repeated spill traffic across more dynamic iterations if spills occur"],
+      "measured_outcome": "uk4 still won (7.778ms vs 9.186ms for uk1). Zero spills at any factor -- the hypothesized repeated-spill-traffic cost never materialized because no spilling occurred at all."
+    },
+    "rect_reused": {
+      "shape": "32x64x32", "tile": {"m": 8, "n": 8, "k": 8}, "category": "C -- highest register pressure (reused from Stage 16)",
+      "rationale": "No tile larger than 8x8x8 in any dimension has ever passed Stage 11 structural validation; no new tiling implementation was added for this experiment (explicit scope limit). rect_uk4 (18 spills, 20 reloads, 368 stack bytes) remains this project's strongest register-pressure case to date.",
+      "measured_outcome": "uk4 still won in Stage 16 (0.004278ms vs 0.005185ms for uk1) despite the heaviest spilling ever measured."
+    },
+    "code_size_stress_reused": {
+      "shapes": ["32x32x32 (primary, +62% code growth at uk4)", "32x64x32 (rect, +61% code growth at uk4)"],
+      "category": "D -- code-size/instruction-footprint stress (reused, treated as signal only)",
+      "rationale": "perf is unavailable on this Pi (same limitation as Stages 13/16) so no instruction-cache-miss counter evidence can be collected. Code size is reported as a stress SIGNAL, never as a measured cache effect. A dedicated kernel-rotation stress harness (compiling/interleaving multiple distinct kernels to force real icache eviction) was NOT built this stage -- documented as an explicit untested dimension, not silently omitted."
+    }
+  },
+  "candidates_rejected": [],
+  "structural_validation": "all 6 new candidates (smallA/highK x uk1/uk2/uk4) passed Stage 11 structural validation before compilation; no candidate was rejected for structural, correctness, or unsupported reasons."
+}

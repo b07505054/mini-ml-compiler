@@ -1,0 +1,960 @@
+--- |
+  ; ModuleID = 'artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/8x8x8_tm4_tn8_tk8_uk1/8x8x8_tm4_tn8_tk8_uk1.ll'
+  source_filename = "LLVMDialectModule"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  declare ptr @malloc(i64) #0
+  
+  define { ptr, ptr, i64, [2 x i64], [2 x i64] } @matmul_bias_relu_tiled_8x8x8(ptr %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, ptr %7, ptr %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, ptr %14, ptr %15, i64 %16, i64 %17, i64 %18, i64 %19, i64 %20) #0 {
+    %22 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %14, 0
+    %23 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %22, ptr %15, 1
+    %24 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %23, i64 %16, 2
+    %25 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %24, i64 %17, 3, 0
+    %26 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %25, i64 %19, 4, 0
+    %27 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %26, i64 %18, 3, 1
+    %28 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %27, i64 %20, 4, 1
+    %29 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %7, 0
+    %30 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %29, ptr %8, 1
+    %31 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %30, i64 %9, 2
+    %32 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, i64 %10, 3, 0
+    %33 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %32, i64 %12, 4, 0
+    %34 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %33, i64 %11, 3, 1
+    %35 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %34, i64 %13, 4, 1
+    %36 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %0, 0
+    %37 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %36, ptr %1, 1
+    %38 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %37, i64 %2, 2
+    %39 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %38, i64 %3, 3, 0
+    %40 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %39, i64 %5, 4, 0
+    %41 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %40, i64 %4, 3, 1
+    %42 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %41, i64 %6, 4, 1
+    %43 = call ptr @malloc(i64 320)
+    %44 = ptrtoint ptr %43 to i64
+    %45 = add i64 %44, 63
+    %46 = urem i64 %45, 64
+    %47 = sub i64 %45, %46
+    %48 = inttoptr i64 %47 to ptr
+    %49 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %43, 0
+    %50 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %49, ptr %48, 1
+    %51 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %50, i64 0, 2
+    %52 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %51, i64 8, 3, 0
+    %53 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %52, i64 8, 3, 1
+    %54 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %53, i64 8, 4, 0
+    %55 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %54, i64 1, 4, 1
+    br label %56
+  
+  56:                                               ; preds = %59, %21
+    %57 = phi i64 [ %264, %59 ], [ 0, %21 ]
+    %58 = icmp slt i64 %57, 8
+    br i1 %58, label %59, label %265
+  
+  59:                                               ; preds = %56
+    %60 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %61 = shl nuw nsw i64 %57, 5
+    %scevgep20 = getelementptr i8, ptr %60, i64 %61
+    %62 = load <8 x float>, ptr %scevgep20, align 4
+    %63 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %64 = shl nuw nsw i64 %57, 5
+    %scevgep18 = getelementptr i8, ptr %63, i64 %64
+    %scevgep19 = getelementptr i8, ptr %scevgep18, i64 32
+    %65 = load <8 x float>, ptr %scevgep19, align 4
+    %66 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %67 = shl nuw nsw i64 %57, 5
+    %scevgep16 = getelementptr i8, ptr %66, i64 %67
+    %scevgep17 = getelementptr i8, ptr %scevgep16, i64 64
+    %68 = load <8 x float>, ptr %scevgep17, align 4
+    %69 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %70 = shl nuw nsw i64 %57, 5
+    %scevgep14 = getelementptr i8, ptr %69, i64 %70
+    %scevgep15 = getelementptr i8, ptr %scevgep14, i64 96
+    %71 = load <8 x float>, ptr %scevgep15, align 4
+    %72 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %73 = bitcast ptr %72 to ptr
+    %74 = load <8 x float>, ptr %73, align 4
+    %75 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %76 = getelementptr float, ptr %75, i64 8
+    %77 = load <8 x float>, ptr %76, align 4
+    %78 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %79 = getelementptr float, ptr %78, i64 16
+    %80 = load <8 x float>, ptr %79, align 4
+    %81 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %82 = getelementptr float, ptr %81, i64 24
+    %83 = load <8 x float>, ptr %82, align 4
+    %84 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %85 = getelementptr float, ptr %84, i64 32
+    %86 = load <8 x float>, ptr %85, align 4
+    %87 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %88 = getelementptr float, ptr %87, i64 40
+    %89 = load <8 x float>, ptr %88, align 4
+    %90 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %91 = getelementptr float, ptr %90, i64 48
+    %92 = load <8 x float>, ptr %91, align 4
+    %93 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %94 = getelementptr float, ptr %93, i64 56
+    %95 = load <8 x float>, ptr %94, align 4
+    %96 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %97 = shl nuw nsw i64 %57, 5
+    %scevgep13 = getelementptr i8, ptr %96, i64 %97
+    %98 = load <8 x float>, ptr %scevgep13, align 4
+    %99 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %100 = shl nuw nsw i64 %57, 5
+    %scevgep11 = getelementptr i8, ptr %99, i64 %100
+    %scevgep12 = getelementptr i8, ptr %scevgep11, i64 32
+    %101 = load <8 x float>, ptr %scevgep12, align 4
+    %102 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %103 = shl nuw nsw i64 %57, 5
+    %scevgep9 = getelementptr i8, ptr %102, i64 %103
+    %scevgep10 = getelementptr i8, ptr %scevgep9, i64 64
+    %104 = load <8 x float>, ptr %scevgep10, align 4
+    %105 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %106 = shl nuw nsw i64 %57, 5
+    %scevgep7 = getelementptr i8, ptr %105, i64 %106
+    %scevgep8 = getelementptr i8, ptr %scevgep7, i64 96
+    %107 = load <8 x float>, ptr %scevgep8, align 4
+    %108 = extractelement <8 x float> %62, i64 0
+    %109 = insertelement <8 x float> poison, float %108, i32 0
+    %110 = shufflevector <8 x float> %109, <8 x float> poison, <8 x i32> zeroinitializer
+    %111 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %110, <8 x float> %74, <8 x float> %98)
+    %112 = extractelement <8 x float> %65, i64 0
+    %113 = insertelement <8 x float> poison, float %112, i32 0
+    %114 = shufflevector <8 x float> %113, <8 x float> poison, <8 x i32> zeroinitializer
+    %115 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %114, <8 x float> %74, <8 x float> %101)
+    %116 = extractelement <8 x float> %68, i64 0
+    %117 = insertelement <8 x float> poison, float %116, i32 0
+    %118 = shufflevector <8 x float> %117, <8 x float> poison, <8 x i32> zeroinitializer
+    %119 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %118, <8 x float> %74, <8 x float> %104)
+    %120 = extractelement <8 x float> %71, i64 0
+    %121 = insertelement <8 x float> poison, float %120, i32 0
+    %122 = shufflevector <8 x float> %121, <8 x float> poison, <8 x i32> zeroinitializer
+    %123 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %122, <8 x float> %74, <8 x float> %107)
+    %124 = extractelement <8 x float> %62, i64 1
+    %125 = insertelement <8 x float> poison, float %124, i32 0
+    %126 = shufflevector <8 x float> %125, <8 x float> poison, <8 x i32> zeroinitializer
+    %127 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %126, <8 x float> %77, <8 x float> %111)
+    %128 = extractelement <8 x float> %65, i64 1
+    %129 = insertelement <8 x float> poison, float %128, i32 0
+    %130 = shufflevector <8 x float> %129, <8 x float> poison, <8 x i32> zeroinitializer
+    %131 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %130, <8 x float> %77, <8 x float> %115)
+    %132 = extractelement <8 x float> %68, i64 1
+    %133 = insertelement <8 x float> poison, float %132, i32 0
+    %134 = shufflevector <8 x float> %133, <8 x float> poison, <8 x i32> zeroinitializer
+    %135 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %134, <8 x float> %77, <8 x float> %119)
+    %136 = extractelement <8 x float> %71, i64 1
+    %137 = insertelement <8 x float> poison, float %136, i32 0
+    %138 = shufflevector <8 x float> %137, <8 x float> poison, <8 x i32> zeroinitializer
+    %139 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %138, <8 x float> %77, <8 x float> %123)
+    %140 = extractelement <8 x float> %62, i64 2
+    %141 = insertelement <8 x float> poison, float %140, i32 0
+    %142 = shufflevector <8 x float> %141, <8 x float> poison, <8 x i32> zeroinitializer
+    %143 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %142, <8 x float> %80, <8 x float> %127)
+    %144 = extractelement <8 x float> %65, i64 2
+    %145 = insertelement <8 x float> poison, float %144, i32 0
+    %146 = shufflevector <8 x float> %145, <8 x float> poison, <8 x i32> zeroinitializer
+    %147 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %146, <8 x float> %80, <8 x float> %131)
+    %148 = extractelement <8 x float> %68, i64 2
+    %149 = insertelement <8 x float> poison, float %148, i32 0
+    %150 = shufflevector <8 x float> %149, <8 x float> poison, <8 x i32> zeroinitializer
+    %151 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %150, <8 x float> %80, <8 x float> %135)
+    %152 = extractelement <8 x float> %71, i64 2
+    %153 = insertelement <8 x float> poison, float %152, i32 0
+    %154 = shufflevector <8 x float> %153, <8 x float> poison, <8 x i32> zeroinitializer
+    %155 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %154, <8 x float> %80, <8 x float> %139)
+    %156 = extractelement <8 x float> %62, i64 3
+    %157 = insertelement <8 x float> poison, float %156, i32 0
+    %158 = shufflevector <8 x float> %157, <8 x float> poison, <8 x i32> zeroinitializer
+    %159 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %158, <8 x float> %83, <8 x float> %143)
+    %160 = extractelement <8 x float> %65, i64 3
+    %161 = insertelement <8 x float> poison, float %160, i32 0
+    %162 = shufflevector <8 x float> %161, <8 x float> poison, <8 x i32> zeroinitializer
+    %163 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %162, <8 x float> %83, <8 x float> %147)
+    %164 = extractelement <8 x float> %68, i64 3
+    %165 = insertelement <8 x float> poison, float %164, i32 0
+    %166 = shufflevector <8 x float> %165, <8 x float> poison, <8 x i32> zeroinitializer
+    %167 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %166, <8 x float> %83, <8 x float> %151)
+    %168 = extractelement <8 x float> %71, i64 3
+    %169 = insertelement <8 x float> poison, float %168, i32 0
+    %170 = shufflevector <8 x float> %169, <8 x float> poison, <8 x i32> zeroinitializer
+    %171 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %170, <8 x float> %83, <8 x float> %155)
+    %172 = extractelement <8 x float> %62, i64 4
+    %173 = insertelement <8 x float> poison, float %172, i32 0
+    %174 = shufflevector <8 x float> %173, <8 x float> poison, <8 x i32> zeroinitializer
+    %175 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %174, <8 x float> %86, <8 x float> %159)
+    %176 = extractelement <8 x float> %65, i64 4
+    %177 = insertelement <8 x float> poison, float %176, i32 0
+    %178 = shufflevector <8 x float> %177, <8 x float> poison, <8 x i32> zeroinitializer
+    %179 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %178, <8 x float> %86, <8 x float> %163)
+    %180 = extractelement <8 x float> %68, i64 4
+    %181 = insertelement <8 x float> poison, float %180, i32 0
+    %182 = shufflevector <8 x float> %181, <8 x float> poison, <8 x i32> zeroinitializer
+    %183 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %182, <8 x float> %86, <8 x float> %167)
+    %184 = extractelement <8 x float> %71, i64 4
+    %185 = insertelement <8 x float> poison, float %184, i32 0
+    %186 = shufflevector <8 x float> %185, <8 x float> poison, <8 x i32> zeroinitializer
+    %187 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %186, <8 x float> %86, <8 x float> %171)
+    %188 = extractelement <8 x float> %62, i64 5
+    %189 = insertelement <8 x float> poison, float %188, i32 0
+    %190 = shufflevector <8 x float> %189, <8 x float> poison, <8 x i32> zeroinitializer
+    %191 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %190, <8 x float> %89, <8 x float> %175)
+    %192 = extractelement <8 x float> %65, i64 5
+    %193 = insertelement <8 x float> poison, float %192, i32 0
+    %194 = shufflevector <8 x float> %193, <8 x float> poison, <8 x i32> zeroinitializer
+    %195 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %194, <8 x float> %89, <8 x float> %179)
+    %196 = extractelement <8 x float> %68, i64 5
+    %197 = insertelement <8 x float> poison, float %196, i32 0
+    %198 = shufflevector <8 x float> %197, <8 x float> poison, <8 x i32> zeroinitializer
+    %199 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %198, <8 x float> %89, <8 x float> %183)
+    %200 = extractelement <8 x float> %71, i64 5
+    %201 = insertelement <8 x float> poison, float %200, i32 0
+    %202 = shufflevector <8 x float> %201, <8 x float> poison, <8 x i32> zeroinitializer
+    %203 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %202, <8 x float> %89, <8 x float> %187)
+    %204 = extractelement <8 x float> %62, i64 6
+    %205 = insertelement <8 x float> poison, float %204, i32 0
+    %206 = shufflevector <8 x float> %205, <8 x float> poison, <8 x i32> zeroinitializer
+    %207 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %206, <8 x float> %92, <8 x float> %191)
+    %208 = extractelement <8 x float> %65, i64 6
+    %209 = insertelement <8 x float> poison, float %208, i32 0
+    %210 = shufflevector <8 x float> %209, <8 x float> poison, <8 x i32> zeroinitializer
+    %211 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %210, <8 x float> %92, <8 x float> %195)
+    %212 = extractelement <8 x float> %68, i64 6
+    %213 = insertelement <8 x float> poison, float %212, i32 0
+    %214 = shufflevector <8 x float> %213, <8 x float> poison, <8 x i32> zeroinitializer
+    %215 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %214, <8 x float> %92, <8 x float> %199)
+    %216 = extractelement <8 x float> %71, i64 6
+    %217 = insertelement <8 x float> poison, float %216, i32 0
+    %218 = shufflevector <8 x float> %217, <8 x float> poison, <8 x i32> zeroinitializer
+    %219 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %218, <8 x float> %92, <8 x float> %203)
+    %220 = extractelement <8 x float> %62, i64 7
+    %221 = insertelement <8 x float> poison, float %220, i32 0
+    %222 = shufflevector <8 x float> %221, <8 x float> poison, <8 x i32> zeroinitializer
+    %223 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %222, <8 x float> %95, <8 x float> %207)
+    %224 = insertvalue [4 x <8 x float>] zeroinitializer, <8 x float> %223, 0
+    %225 = extractelement <8 x float> %65, i64 7
+    %226 = insertelement <8 x float> poison, float %225, i32 0
+    %227 = shufflevector <8 x float> %226, <8 x float> poison, <8 x i32> zeroinitializer
+    %228 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %227, <8 x float> %95, <8 x float> %211)
+    %229 = insertvalue [4 x <8 x float>] %224, <8 x float> %228, 1
+    %230 = extractelement <8 x float> %68, i64 7
+    %231 = insertelement <8 x float> poison, float %230, i32 0
+    %232 = shufflevector <8 x float> %231, <8 x float> poison, <8 x i32> zeroinitializer
+    %233 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %232, <8 x float> %95, <8 x float> %215)
+    %234 = insertvalue [4 x <8 x float>] %229, <8 x float> %233, 2
+    %235 = extractelement <8 x float> %71, i64 7
+    %236 = insertelement <8 x float> poison, float %235, i32 0
+    %237 = shufflevector <8 x float> %236, <8 x float> poison, <8 x i32> zeroinitializer
+    %238 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %237, <8 x float> %95, <8 x float> %219)
+    %239 = insertvalue [4 x <8 x float>] %234, <8 x float> %238, 3
+    %240 = extractvalue [4 x <8 x float>] %239, 0
+    %241 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %240, <8 x float> zeroinitializer)
+    %242 = insertvalue [4 x <8 x float>] poison, <8 x float> %241, 0
+    %243 = extractvalue [4 x <8 x float>] %239, 1
+    %244 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %243, <8 x float> zeroinitializer)
+    %245 = insertvalue [4 x <8 x float>] %242, <8 x float> %244, 1
+    %246 = extractvalue [4 x <8 x float>] %239, 2
+    %247 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %246, <8 x float> zeroinitializer)
+    %248 = insertvalue [4 x <8 x float>] %245, <8 x float> %247, 2
+    %249 = extractvalue [4 x <8 x float>] %239, 3
+    %250 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %249, <8 x float> zeroinitializer)
+    %251 = insertvalue [4 x <8 x float>] %248, <8 x float> %250, 3
+    %252 = extractvalue [4 x <8 x float>] %251, 0
+    %253 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %254 = shl nuw nsw i64 %57, 5
+    %scevgep6 = getelementptr i8, ptr %253, i64 %254
+    store <8 x float> %252, ptr %scevgep6, align 4
+    %255 = extractvalue [4 x <8 x float>] %251, 1
+    %256 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %257 = shl nuw nsw i64 %57, 5
+    %scevgep4 = getelementptr i8, ptr %256, i64 %257
+    %scevgep5 = getelementptr i8, ptr %scevgep4, i64 32
+    store <8 x float> %255, ptr %scevgep5, align 4
+    %258 = extractvalue [4 x <8 x float>] %251, 2
+    %259 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %260 = shl nuw nsw i64 %57, 5
+    %scevgep2 = getelementptr i8, ptr %259, i64 %260
+    %scevgep3 = getelementptr i8, ptr %scevgep2, i64 64
+    store <8 x float> %258, ptr %scevgep3, align 4
+    %261 = extractvalue [4 x <8 x float>] %251, 3
+    %262 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %263 = shl nuw nsw i64 %57, 5
+    %scevgep = getelementptr i8, ptr %262, i64 %263
+    %scevgep1 = getelementptr i8, ptr %scevgep, i64 96
+    store <8 x float> %261, ptr %scevgep1, align 4
+    %264 = add i64 %57, 4
+    br label %56
+  
+  265:                                              ; preds = %56
+    ret { ptr, ptr, i64, [2 x i64], [2 x i64] } %55
+  }
+  
+  define void @_mlir_ciface_matmul_bias_relu_tiled_8x8x8(ptr %0, ptr %1, ptr %2, ptr %3) #0 {
+    %5 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %1, align 8
+    %6 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 0
+    %7 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 1
+    %8 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 2
+    %9 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 3, 0
+    %10 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 3, 1
+    %11 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 4, 0
+    %12 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 4, 1
+    %13 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %2, align 8
+    %14 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 0
+    %15 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 1
+    %16 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 2
+    %17 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 3, 0
+    %18 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 3, 1
+    %19 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 4, 0
+    %20 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 4, 1
+    %21 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %3, align 8
+    %22 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 0
+    %23 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 1
+    %24 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 2
+    %25 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 3, 0
+    %26 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 3, 1
+    %27 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 4, 0
+    %28 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 4, 1
+    %29 = call { ptr, ptr, i64, [2 x i64], [2 x i64] } @matmul_bias_relu_tiled_8x8x8(ptr %6, ptr %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, ptr %14, ptr %15, i64 %16, i64 %17, i64 %18, i64 %19, i64 %20, ptr %22, ptr %23, i64 %24, i64 %25, i64 %26, i64 %27, i64 %28)
+    store { ptr, ptr, i64, [2 x i64], [2 x i64] } %29, ptr %0, align 8
+    ret void
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>) #1
+  
+  attributes #0 = { "target-cpu"="cortex-a76" }
+  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="cortex-a76" }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+...
+---
+name:            matmul_bias_relu_tiled_8x8x8
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 2, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 3, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 4, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 5, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 6, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 7, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 8, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 9, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 10, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 11, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 12, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 13, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 14, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 15, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 16, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 17, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 18, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 19, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 20, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 21, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 22, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 23, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 24, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 25, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 26, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 27, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 28, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 29, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 30, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 31, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 32, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 33, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 34, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 35, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 36, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 37, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 38, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 39, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 40, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 41, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 42, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 43, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 44, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 45, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 46, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 47, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 48, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 49, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 50, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 51, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 52, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 53, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 54, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 55, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 56, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 57, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 58, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 59, class: gpr32, preferred-register: '', flags: [  ] }
+  - { id: 60, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 61, class: gpr64all, preferred-register: '', flags: [  ] }
+  - { id: 62, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 63, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 64, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 65, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 66, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 67, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 68, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 69, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 70, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 71, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 72, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 73, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 74, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 75, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 76, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 77, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 78, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 79, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 80, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 81, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 82, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 83, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 84, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 85, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 86, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 87, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 88, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 89, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 90, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 91, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 92, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 93, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 94, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 95, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 96, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 97, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 98, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 99, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 100, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 101, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 102, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 103, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 104, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 105, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 106, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 107, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 108, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 109, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 110, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 111, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 112, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 113, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 114, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 115, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 116, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 117, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 118, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 119, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 120, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 121, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 122, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 123, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 124, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 125, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 126, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 127, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 128, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 129, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 130, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 131, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 132, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 133, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 134, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 135, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 136, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 137, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 138, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 139, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 140, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 141, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 142, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 143, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 144, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 145, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 146, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 147, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 148, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 149, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 150, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 151, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 152, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 153, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 154, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 155, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 156, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 157, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 158, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 159, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 160, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 161, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 162, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 163, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 164, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 165, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 166, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 167, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 168, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 169, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 170, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 171, class: gpr64sp, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$x0', virtual-reg: '%30' }
+  - { reg: '$x1', virtual-reg: '%31' }
+  - { reg: '$x2', virtual-reg: '%32' }
+  - { reg: '$x3', virtual-reg: '%33' }
+  - { reg: '$x4', virtual-reg: '%34' }
+  - { reg: '$x5', virtual-reg: '%35' }
+  - { reg: '$x6', virtual-reg: '%36' }
+  - { reg: '$x7', virtual-reg: '%37' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 96, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 88, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 80, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: default, offset: 72, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: default, offset: 64, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: default, offset: 56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, type: default, offset: 48, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, type: default, offset: 40, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, type: default, offset: 32, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 10, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 11, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 12, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.21):
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
+  
+    %37:gpr64 = COPY $x7
+    %36:gpr64 = COPY $x6
+    %35:gpr64 = COPY $x5
+    %34:gpr64 = COPY $x4
+    %33:gpr64 = COPY $x3
+    %32:gpr64 = COPY $x2
+    %31:gpr64 = COPY $x1
+    %30:gpr64 = COPY $x0
+    %39:gpr64 = LDRXui %fixed-stack.0, 0 :: (load (s64) from %fixed-stack.0, align 16)
+    %40:gpr64 = LDRXui %fixed-stack.1, 0 :: (load (s64) from %fixed-stack.1)
+    %41:gpr64 = LDRXui %fixed-stack.2, 0 :: (load (s64) from %fixed-stack.2, align 16)
+    %42:gpr64 = LDRXui %fixed-stack.3, 0 :: (load (s64) from %fixed-stack.3)
+    %43:gpr64 = LDRXui %fixed-stack.4, 0 :: (load (s64) from %fixed-stack.4, align 16)
+    %44:gpr64 = LDRXui %fixed-stack.5, 0 :: (load (s64) from %fixed-stack.5)
+    %45:gpr64 = LDRXui %fixed-stack.6, 0 :: (load (s64) from %fixed-stack.6, align 16)
+    %46:gpr64 = LDRXui %fixed-stack.7, 0 :: (load (s64) from %fixed-stack.7)
+    %47:gpr64 = LDRXui %fixed-stack.8, 0 :: (load (s64) from %fixed-stack.8, align 16)
+    %48:gpr64 = LDRXui %fixed-stack.9, 0 :: (load (s64) from %fixed-stack.9)
+    %49:gpr64 = LDRXui %fixed-stack.10, 0 :: (load (s64) from %fixed-stack.10, align 16)
+    %50:gpr64 = LDRXui %fixed-stack.11, 0 :: (load (s64) from %fixed-stack.11)
+    %51:gpr64 = LDRXui %fixed-stack.12, 0 :: (load (s64) from %fixed-stack.12, align 16)
+    %6:gpr64all = COPY %39
+    %5:gpr64all = COPY %40
+    %4:gpr64all = COPY %41
+    %3:gpr64all = COPY %42
+    %2:gpr64all = COPY %43
+    %1:gpr64 = COPY %44
+    %0:gpr64all = COPY %45
+    %13:gpr64all = COPY %46
+    %12:gpr64all = COPY %47
+    %11:gpr64all = COPY %48
+    %10:gpr64all = COPY %49
+    %9:gpr64all = COPY %50
+    %8:gpr64sp = COPY %51
+    %7:gpr64all = COPY %37
+    %20:gpr64all = COPY %36
+    %19:gpr64all = COPY %35
+    %18:gpr64all = COPY %34
+    %17:gpr64all = COPY %33
+    %16:gpr64all = COPY %32
+    %15:gpr64 = COPY %31
+    %14:gpr64all = COPY %30
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %52:gpr32 = MOVi32imm 320
+    %53:gpr64all = SUBREG_TO_REG 0, killed %52, %subreg.sub_32
+    $x0 = COPY %53
+    BL @malloc, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %54:gpr64sp = COPY $x0
+    %55:gpr64common = ADDXri %54, 63, 0
+    %56:gpr64sp = ANDXri killed %55, 7865
+    %57:gpr64all = COPY $xzr
+    %23:gpr64all = COPY %57
+    %38:gpr64all = COPY %57
+    %58:gpr32 = MOVi32imm 1
+    %27:gpr64all = SUBREG_TO_REG 0, killed %58, %subreg.sub_32
+    %59:gpr32 = MOVi32imm 8
+    %24:gpr64all = SUBREG_TO_REG 0, killed %59, %subreg.sub_32
+    %26:gpr64all = COPY %24
+    %25:gpr64all = COPY %24
+    %21:gpr64all = COPY %54
+    %22:gpr64 = COPY %56
+  
+  bb.1 (%ir-block.56):
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  
+    %28:gpr64common = PHI %38, %bb.0, %29, %bb.2
+    %60:gpr64 = SUBSXri %28, 7, 0, implicit-def $nzcv
+    Bcc 12, %bb.3, implicit $nzcv
+    B %bb.2
+  
+  bb.2 (%ir-block.59):
+    successors: %bb.1(0x80000000)
+  
+    %62:gpr64 = nuw nsw UBFMXri %28, 59, 58
+    %63:gpr64common = ADDXrr %15, %62
+    %64:fpr128 = LDRQui %63, 1 :: (load (s128) from %ir.scevgep20 + 16, align 4)
+    %65:fpr128 = LDRQui %63, 0 :: (load (s128) from %ir.scevgep20, align 4)
+    %66:fpr128 = LDRQui %63, 3 :: (load (s128) from %ir.scevgep19 + 16, align 4)
+    %67:fpr128 = LDRQui %63, 2 :: (load (s128) from %ir.scevgep19, align 4)
+    %68:fpr128 = LDRQui %63, 5 :: (load (s128) from %ir.scevgep17 + 16, align 4)
+    %69:fpr128 = LDRQui %63, 4 :: (load (s128) from %ir.scevgep17, align 4)
+    %70:fpr128 = LDRQui %63, 7 :: (load (s128) from %ir.scevgep15 + 16, align 4)
+    %71:fpr128 = LDRQui %63, 6 :: (load (s128) from %ir.scevgep15, align 4)
+    %72:fpr128 = LDRQui %8, 0 :: (load (s128) from %ir.73, align 4)
+    %73:fpr128 = LDRQui %8, 1 :: (load (s128) from %ir.73 + 16, align 4)
+    %74:fpr128 = LDRQui %8, 3 :: (load (s128) from %ir.76 + 16, align 4)
+    %75:fpr128 = LDRQui %8, 2 :: (load (s128) from %ir.76, align 4)
+    %76:fpr128 = LDRQui %8, 4 :: (load (s128) from %ir.79, align 4)
+    %77:fpr128 = LDRQui %8, 5 :: (load (s128) from %ir.79 + 16, align 4)
+    %78:fpr128 = LDRQui %8, 7 :: (load (s128) from %ir.82 + 16, align 4)
+    %79:fpr128 = LDRQui %8, 6 :: (load (s128) from %ir.82, align 4)
+    %80:fpr128 = LDRQui %8, 8 :: (load (s128) from %ir.85, align 4)
+    %81:fpr128 = LDRQui %8, 9 :: (load (s128) from %ir.85 + 16, align 4)
+    %82:fpr128 = LDRQui %8, 11 :: (load (s128) from %ir.88 + 16, align 4)
+    %83:fpr128 = LDRQui %8, 10 :: (load (s128) from %ir.88, align 4)
+    %84:fpr128 = LDRQui %8, 12 :: (load (s128) from %ir.91, align 4)
+    %85:fpr128 = LDRQui %8, 13 :: (load (s128) from %ir.91 + 16, align 4)
+    %86:fpr128 = LDRQui %8, 15 :: (load (s128) from %ir.94 + 16, align 4)
+    %87:fpr128 = LDRQui %8, 14 :: (load (s128) from %ir.94, align 4)
+    %88:gpr64common = ADDXrr %1, %62
+    %89:fpr128 = LDRQui %88, 0 :: (load (s128) from %ir.scevgep13, align 4)
+    %90:fpr128 = LDRQui %88, 1 :: (load (s128) from %ir.scevgep13 + 16, align 4)
+    %91:fpr128 = LDRQui %88, 2 :: (load (s128) from %ir.scevgep12, align 4)
+    %92:fpr128 = LDRQui %88, 3 :: (load (s128) from %ir.scevgep12 + 16, align 4)
+    %93:fpr128 = LDRQui %88, 4 :: (load (s128) from %ir.scevgep10, align 4)
+    %94:fpr128 = LDRQui %88, 5 :: (load (s128) from %ir.scevgep10 + 16, align 4)
+    %95:fpr128 = LDRQui %88, 6 :: (load (s128) from %ir.scevgep8, align 4)
+    %96:fpr128 = LDRQui %88, 7 :: (load (s128) from %ir.scevgep8 + 16, align 4)
+    %97:fpr128 = nofpexcept FMLAv4i32_indexed %90, %73, %65, 0, implicit $fpcr
+    %98:fpr128 = nofpexcept FMLAv4i32_indexed %89, %72, %65, 0, implicit $fpcr
+    %99:fpr128 = nofpexcept FMLAv4i32_indexed %92, %73, %67, 0, implicit $fpcr
+    %100:fpr128 = nofpexcept FMLAv4i32_indexed %91, %72, %67, 0, implicit $fpcr
+    %101:fpr128 = nofpexcept FMLAv4i32_indexed %94, %73, %69, 0, implicit $fpcr
+    %102:fpr128 = nofpexcept FMLAv4i32_indexed %93, %72, %69, 0, implicit $fpcr
+    %103:fpr128 = nofpexcept FMLAv4i32_indexed %96, %73, %71, 0, implicit $fpcr
+    %104:fpr128 = nofpexcept FMLAv4i32_indexed %95, %72, %71, 0, implicit $fpcr
+    %105:fpr128 = nofpexcept FMLAv4i32_indexed %98, %75, %65, 1, implicit $fpcr
+    %106:fpr128 = nofpexcept FMLAv4i32_indexed %97, %74, %65, 1, implicit $fpcr
+    %107:fpr128 = nofpexcept FMLAv4i32_indexed %100, %75, %67, 1, implicit $fpcr
+    %108:fpr128 = nofpexcept FMLAv4i32_indexed %99, %74, %67, 1, implicit $fpcr
+    %109:fpr128 = nofpexcept FMLAv4i32_indexed %102, %75, %69, 1, implicit $fpcr
+    %110:fpr128 = nofpexcept FMLAv4i32_indexed %101, %74, %69, 1, implicit $fpcr
+    %111:fpr128 = nofpexcept FMLAv4i32_indexed %104, %75, %71, 1, implicit $fpcr
+    %112:fpr128 = nofpexcept FMLAv4i32_indexed %103, %74, %71, 1, implicit $fpcr
+    %113:fpr128 = nofpexcept FMLAv4i32_indexed %106, %77, %65, 2, implicit $fpcr
+    %114:fpr128 = nofpexcept FMLAv4i32_indexed %105, %76, %65, 2, implicit $fpcr
+    %115:fpr128 = nofpexcept FMLAv4i32_indexed %108, %77, %67, 2, implicit $fpcr
+    %116:fpr128 = nofpexcept FMLAv4i32_indexed %107, %76, %67, 2, implicit $fpcr
+    %117:fpr128 = nofpexcept FMLAv4i32_indexed %110, %77, %69, 2, implicit $fpcr
+    %118:fpr128 = nofpexcept FMLAv4i32_indexed %109, %76, %69, 2, implicit $fpcr
+    %119:fpr128 = nofpexcept FMLAv4i32_indexed %112, %77, %71, 2, implicit $fpcr
+    %120:fpr128 = nofpexcept FMLAv4i32_indexed %111, %76, %71, 2, implicit $fpcr
+    %121:fpr128 = nofpexcept FMLAv4i32_indexed %114, %79, %65, 3, implicit $fpcr
+    %122:fpr128 = nofpexcept FMLAv4i32_indexed %113, %78, %65, 3, implicit $fpcr
+    %123:fpr128 = nofpexcept FMLAv4i32_indexed %116, %79, %67, 3, implicit $fpcr
+    %124:fpr128 = nofpexcept FMLAv4i32_indexed %115, %78, %67, 3, implicit $fpcr
+    %125:fpr128 = nofpexcept FMLAv4i32_indexed %118, %79, %69, 3, implicit $fpcr
+    %126:fpr128 = nofpexcept FMLAv4i32_indexed %117, %78, %69, 3, implicit $fpcr
+    %127:fpr128 = nofpexcept FMLAv4i32_indexed %120, %79, %71, 3, implicit $fpcr
+    %128:fpr128 = nofpexcept FMLAv4i32_indexed %119, %78, %71, 3, implicit $fpcr
+    %129:fpr128 = nofpexcept FMLAv4i32_indexed %122, %81, %64, 0, implicit $fpcr
+    %130:fpr128 = nofpexcept FMLAv4i32_indexed %121, %80, %64, 0, implicit $fpcr
+    %131:fpr128 = nofpexcept FMLAv4i32_indexed %124, %81, %66, 0, implicit $fpcr
+    %132:fpr128 = nofpexcept FMLAv4i32_indexed %123, %80, %66, 0, implicit $fpcr
+    %133:fpr128 = nofpexcept FMLAv4i32_indexed %126, %81, %68, 0, implicit $fpcr
+    %134:fpr128 = nofpexcept FMLAv4i32_indexed %125, %80, %68, 0, implicit $fpcr
+    %135:fpr128 = nofpexcept FMLAv4i32_indexed %128, %81, %70, 0, implicit $fpcr
+    %136:fpr128 = nofpexcept FMLAv4i32_indexed %127, %80, %70, 0, implicit $fpcr
+    %137:fpr128 = nofpexcept FMLAv4i32_indexed %130, %83, %64, 1, implicit $fpcr
+    %138:fpr128 = nofpexcept FMLAv4i32_indexed %129, %82, %64, 1, implicit $fpcr
+    %139:fpr128 = nofpexcept FMLAv4i32_indexed %132, %83, %66, 1, implicit $fpcr
+    %140:fpr128 = nofpexcept FMLAv4i32_indexed %131, %82, %66, 1, implicit $fpcr
+    %141:fpr128 = nofpexcept FMLAv4i32_indexed %134, %83, %68, 1, implicit $fpcr
+    %142:fpr128 = nofpexcept FMLAv4i32_indexed %133, %82, %68, 1, implicit $fpcr
+    %143:fpr128 = nofpexcept FMLAv4i32_indexed %136, %83, %70, 1, implicit $fpcr
+    %144:fpr128 = nofpexcept FMLAv4i32_indexed %135, %82, %70, 1, implicit $fpcr
+    %145:fpr128 = nofpexcept FMLAv4i32_indexed %138, %85, %64, 2, implicit $fpcr
+    %146:fpr128 = nofpexcept FMLAv4i32_indexed %137, %84, %64, 2, implicit $fpcr
+    %147:fpr128 = nofpexcept FMLAv4i32_indexed %140, %85, %66, 2, implicit $fpcr
+    %148:fpr128 = nofpexcept FMLAv4i32_indexed %139, %84, %66, 2, implicit $fpcr
+    %149:fpr128 = nofpexcept FMLAv4i32_indexed %142, %85, %68, 2, implicit $fpcr
+    %150:fpr128 = nofpexcept FMLAv4i32_indexed %141, %84, %68, 2, implicit $fpcr
+    %151:fpr128 = nofpexcept FMLAv4i32_indexed %144, %85, %70, 2, implicit $fpcr
+    %152:fpr128 = nofpexcept FMLAv4i32_indexed %143, %84, %70, 2, implicit $fpcr
+    %153:fpr128 = nofpexcept FMLAv4i32_indexed %146, %87, %64, 3, implicit $fpcr
+    %154:fpr128 = nofpexcept FMLAv4i32_indexed %145, %86, %64, 3, implicit $fpcr
+    %155:fpr128 = MOVIv2d_ns 0
+    %156:fpr128 = nofpexcept FMLAv4i32_indexed %148, %87, %66, 3, implicit $fpcr
+    %157:fpr128 = nofpexcept FMLAv4i32_indexed %147, %86, %66, 3, implicit $fpcr
+    %158:fpr128 = nofpexcept FMLAv4i32_indexed %150, %87, %68, 3, implicit $fpcr
+    %159:fpr128 = nofpexcept FMLAv4i32_indexed %149, %86, %68, 3, implicit $fpcr
+    %160:fpr128 = nofpexcept FMLAv4i32_indexed %152, %87, %70, 3, implicit $fpcr
+    %161:fpr128 = nofpexcept FMLAv4i32_indexed %151, %86, %70, 3, implicit $fpcr
+    %162:fpr128 = nofpexcept FMAXv4f32 killed %154, %155, implicit $fpcr
+    %163:fpr128 = nofpexcept FMAXv4f32 killed %153, %155, implicit $fpcr
+    %164:fpr128 = nofpexcept FMAXv4f32 killed %157, %155, implicit $fpcr
+    %165:fpr128 = nofpexcept FMAXv4f32 killed %156, %155, implicit $fpcr
+    %166:fpr128 = nofpexcept FMAXv4f32 killed %159, %155, implicit $fpcr
+    %167:fpr128 = nofpexcept FMAXv4f32 killed %158, %155, implicit $fpcr
+    %168:fpr128 = nofpexcept FMAXv4f32 killed %161, %155, implicit $fpcr
+    %169:fpr128 = nofpexcept FMAXv4f32 killed %160, %155, implicit $fpcr
+    %170:gpr64common = ADDXrr %22, %62
+    STRQui killed %163, %170, 0 :: (store (s128) into %ir.scevgep6, align 4)
+    STRQui killed %162, %170, 1 :: (store (s128) into %ir.scevgep6 + 16, align 4)
+    STRQui killed %165, %170, 2 :: (store (s128) into %ir.scevgep5, align 4)
+    STRQui killed %164, %170, 3 :: (store (s128) into %ir.scevgep5 + 16, align 4)
+    STRQui killed %167, %170, 4 :: (store (s128) into %ir.scevgep3, align 4)
+    STRQui killed %166, %170, 5 :: (store (s128) into %ir.scevgep3 + 16, align 4)
+    STRQui killed %169, %170, 6 :: (store (s128) into %ir.scevgep1, align 4)
+    STRQui killed %168, %170, 7 :: (store (s128) into %ir.scevgep1 + 16, align 4)
+    %171:gpr64sp = ADDXri %28, 4, 0
+    %29:gpr64all = COPY %171
+    B %bb.1
+  
+  bb.3 (%ir-block.265):
+    %61:gpr64all = COPY $xzr
+    $x0 = COPY %21
+    $x1 = COPY %22
+    $x2 = COPY %61
+    $x3 = COPY %24
+    $x4 = COPY %25
+    $x5 = COPY %26
+    $x6 = COPY %27
+    RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6
+...
+---
+name:            _mlir_ciface_matmul_bias_relu_tiled_8x8x8
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 2, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 3, class: gpr64common, preferred-register: '', flags: [  ] }
+  - { id: 4, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 5, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 6, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 7, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 8, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 9, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 10, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 11, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 12, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 13, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 14, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 15, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 16, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 17, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 18, class: fpr128, preferred-register: '', flags: [  ] }
+  - { id: 19, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 20, class: gpr64sp, preferred-register: '', flags: [  ] }
+  - { id: 21, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 22, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 23, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 24, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 25, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 26, class: gpr64, preferred-register: '', flags: [  ] }
+  - { id: 27, class: gpr64, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+  - { reg: '$x2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 104
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.4):
+    liveins: $x0, $x1, $x2, $x3
+  
+    %3:gpr64common = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr64common = COPY $x1
+    %0:gpr64common = COPY $x0
+    %4:gpr64 = LDRXui %1, 6 :: (load (s64) from %ir.1 + 48)
+    %5:gpr64 = LDRXui %1, 5 :: (load (s64) from %ir.1 + 40)
+    %6:gpr64 = LDRXui %1, 4 :: (load (s64) from %ir.1 + 32)
+    %7:gpr64 = LDRXui %1, 3 :: (load (s64) from %ir.1 + 24)
+    %8:gpr64 = LDRXui %1, 2 :: (load (s64) from %ir.1 + 16)
+    %9:gpr64 = LDRXui %1, 1 :: (load (s64) from %ir.1 + 8)
+    %10:gpr64 = LDRXui %1, 0 :: (load (s64) from %ir.1)
+    %11:gpr64 = LDRXui %2, 0 :: (load (s64) from %ir.2)
+    %12:fpr128 = LDURQi %2, 8 :: (load (s128) from %ir.2 + 8, align 8)
+    %13:fpr128 = LDURQi %2, 24 :: (load (s128) from %ir.2 + 24, align 8)
+    %14:gpr64 = LDRXui %2, 5 :: (load (s64) from %ir.2 + 40)
+    %15:gpr64 = LDRXui %2, 6 :: (load (s64) from %ir.2 + 48)
+    %16:fpr128 = LDRQui %3, 0 :: (load (s128) from %ir.3, align 8)
+    %17:fpr128 = LDRQui %3, 1 :: (load (s128) from %ir.3 + 16, align 8)
+    %18:fpr128 = LDRQui %3, 2 :: (load (s128) from %ir.3 + 32, align 8)
+    %19:gpr64 = LDRXui %3, 6 :: (load (s64) from %ir.3 + 48)
+    ADJCALLSTACKDOWN 104, 0, implicit-def dead $sp, implicit $sp
+    %20:gpr64sp = COPY $sp
+    STRXui killed %19, %20, 12 :: (store (s64) into stack + 96)
+    STRQui killed %18, %20, 5 :: (store (s128), align 8)
+    STRQui killed %17, %20, 4 :: (store (s128), align 8)
+    STRQui killed %16, %20, 3 :: (store (s128), align 8)
+    STRXui killed %15, %20, 5 :: (store (s64) into stack + 40)
+    STRXui killed %14, %20, 4 :: (store (s64) into stack + 32)
+    STRQui killed %13, %20, 1 :: (store (s128), align 8)
+    STRQui killed %12, %20, 0 :: (store (s128), align 8)
+    $x0 = COPY %10
+    $x1 = COPY %9
+    $x2 = COPY %8
+    $x3 = COPY %7
+    $x4 = COPY %6
+    $x5 = COPY %5
+    $x6 = COPY %4
+    $x7 = COPY %11
+    BL @matmul_bias_relu_tiled_8x8x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $sp, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x4, implicit-def $x5, implicit-def $x6
+    ADJCALLSTACKUP 104, 0, implicit-def dead $sp, implicit $sp
+    %21:gpr64 = COPY $x0
+    %22:gpr64 = COPY $x1
+    %23:gpr64 = COPY $x2
+    %24:gpr64 = COPY $x3
+    %25:gpr64 = COPY $x4
+    %26:gpr64 = COPY $x5
+    %27:gpr64 = COPY $x6
+    STRXui %21, %0, 0 :: (store (s64) into %ir.0)
+    STRXui %22, %0, 1 :: (store (s64) into %ir.0 + 8)
+    STRXui %23, %0, 2 :: (store (s64) into %ir.0 + 16)
+    STRXui %24, %0, 3 :: (store (s64) into %ir.0 + 24)
+    STRXui %25, %0, 4 :: (store (s64) into %ir.0 + 32)
+    STRXui %26, %0, 5 :: (store (s64) into %ir.0 + 40)
+    STRXui %27, %0, 6 :: (store (s64) into %ir.0 + 48)
+    RET_ReallyLR
+...

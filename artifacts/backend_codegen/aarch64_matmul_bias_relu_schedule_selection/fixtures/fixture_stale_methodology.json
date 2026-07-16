@@ -1,0 +1,21 @@
+{
+  "_fixture_kind": "COMPATIBILITY_TEST_FIXTURE -- NOT a measured benchmark profile",
+  "_provenance": "Otherwise identical to a real compatible Pi profile entry, but declares an older/different benchmark_methodology_version than this project's current Stage 13 harness (stage13_pi5_harness_v1). Exercises the stale-schema-version rejection path -- the whole profile must be rejected regardless of how well every other field matches.",
+  "schema_version": "stage15_schedule_profile_v1",
+  "profile_kind": "compatibility_test_fixture",
+  "target_arch": "aarch64",
+  "target_cpu": "cortex-a76",
+  "target_features": "none",
+  "dtype": "f32",
+  "benchmark_methodology_version": "stage13_pi5_harness_v0_preliminary",
+  "candidates": {
+    "hypothetical_primary_uk2": {
+      "shape_m": 32, "shape_n": 32, "shape_k": 32,
+      "tile_m": 8, "tile_n": 8, "tile_k": 8,
+      "schedule_unroll_k": 2,
+      "median_latency_ms": 0.002,
+      "correctness_pass": true,
+      "cv": 0.01
+    }
+  }
+}

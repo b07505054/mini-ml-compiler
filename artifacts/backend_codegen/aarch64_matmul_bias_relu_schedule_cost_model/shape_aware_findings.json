@@ -1,0 +1,72 @@
+{
+  "sample_count": 5,
+  "rows": [
+    {
+      "pair": "cube16_uk1_vs_cube16_uk2",
+      "shape": "16x16x16",
+      "k_trip_count_pre_unroll": 2,
+      "speedup_pct": 31.534090909090917,
+      "classification": "A"
+    },
+    {
+      "pair": "primary_uk1_vs_primary_uk2",
+      "shape": "32x32x32",
+      "k_trip_count_pre_unroll": 4,
+      "speedup_pct": 10.246598639455783,
+      "classification": "A"
+    },
+    {
+      "pair": "cube64_uk1_vs_cube64_uk2",
+      "shape": "64x64x64",
+      "k_trip_count_pre_unroll": 8,
+      "speedup_pct": 11.733107152954481,
+      "classification": "A"
+    },
+    {
+      "pair": "rect_uk1_vs_rect_uk2",
+      "shape": "32x64x32",
+      "k_trip_count_pre_unroll": 4,
+      "speedup_pct": 10.843634786380395,
+      "classification": "A"
+    },
+    {
+      "pair": "large_uk1_vs_large_uk2",
+      "shape": "128x128x128",
+      "k_trip_count_pre_unroll": 16,
+      "speedup_pct": 11.255341618816495,
+      "classification": "A"
+    }
+  ],
+  "conclusions": [
+    {
+      "statement": "schedule-unroll-k 1->2 at the 8x8x8 tile is profitable on every shape tested",
+      "classification": "directly_measured",
+      "basis": "5 independent shapes tested (8x8x8-derived small_control excluded, not a comparable pair), all classified A"
+    },
+    {
+      "statement": "the effect generalizes to matmul shapes broadly (any M/N/K, any tile)",
+      "classification": "unsupported",
+      "basis": "only 5 shapes tested, all at the SAME tile (8x8x8) and SAME unroll factor (2); no data exists for other tiles/unroll factors across multiple shapes, and no data exists for non-matmul kernels"
+    },
+    {
+      "statement": "speedup magnitude varies across shapes (10.2%-31.5%) but sign (positive) is consistent",
+      "classification": "repeated_cross_shape_observation",
+      "basis": "observed directly across 5 shapes, not fit from a formula"
+    },
+    {
+      "statement": "speedup magnitude correlates with K-loop trip count or code-size growth in a fittable, predictive way",
+      "classification": "unsupported",
+      "basis": "only 5 data points available; a regression fit from 5 points would be a curve through noise, not a validated model -- task brief section 9 explicitly requires discrete evidence buckets over an unjustified formula at this sample size"
+    },
+    {
+      "statement": "spilling candidates can be profitable even though spills are a real backend cost",
+      "classification": "directly_measured",
+      "basis": "directly measured for 2 of 2 tested Group B diagnostics (full-K-unroll, alt-K-tile) -- both faster than their matched baselines despite spills"
+    },
+    {
+      "statement": "spilling candidates are USUALLY profitable / spills rarely matter in general",
+      "classification": "plausible_hypothesis",
+      "basis": "only 2 spilling candidates were ever measured, both from the same 32x32x32 shape and same underlying tile/unroll mechanism -- suggestive, not sufficient to generalize across problem sizes where the spilled working set no longer fits L1"
+    }
+  ]
+}

@@ -1,0 +1,675 @@
+{
+  "label": "diag_full_unroll_uk4",
+  "shape": "32x32x32",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 4,
+  "group": "B",
+  "full_rigor": false,
+  "compiled": {
+    "obj_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.o",
+    "obj_sha256": "aec26e5acb2e4b3103aec634e0890cfe2179173d0f5ebd1ed99683b6cabd3262",
+    "obj_bytes": 4232,
+    "asm_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.s",
+    "ll_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4.ll",
+    "llvm_mlir_path": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled/diag_full_unroll_uk4_llvm.mlir"
+  },
+  "compile_command": "bash /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/compiled diag_full_unroll_uk4",
+  "build": {
+    "harness_cpp_local": "artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/candidates/diag_full_unroll_uk4/diag_full_unroll_uk4_harness.cpp",
+    "remote_binary": "/tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin",
+    "remote_obj_sha256_verified": true,
+    "build_command": "cd '/tmp/stage13_schedule_pi_1784230712' && g++ -O2 -std=c++17 -c diag_full_unroll_uk4_harness.cpp -o diag_full_unroll_uk4_harness.o && g++ -O2 diag_full_unroll_uk4_harness.o diag_full_unroll_uk4.o -o diag_full_unroll_uk4_bin"
+  },
+  "measurement_groups": [
+    {
+      "candidate_label": "diag_full_unroll_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002055,
+        "median_ms": 0.002074,
+        "mean_ms": 0.0020852285,
+        "p95_ms": 0.002092,
+        "stddev_ms": 0.000498280494,
+        "cv": 0.238957262
+      },
+      "output_dump_path": "/tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label diag_full_unroll_uk4 --iterations 2000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "diag_full_unroll_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002055,
+        "median_ms": 0.002074,
+        "mean_ms": 0.002077727,
+        "p95_ms": 0.002092,
+        "stddev_ms": 9.49547022e-05,
+        "cv": 0.0457012409
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label diag_full_unroll_uk4 --iterations 2000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "diag_full_unroll_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002055,
+        "median_ms": 0.002074,
+        "mean_ms": 0.0020811645,
+        "p95_ms": 0.002093,
+        "stddev_ms": 0.000257110866,
+        "cv": 0.123541828
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label diag_full_unroll_uk4 --iterations 2000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "diag_full_unroll_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002055,
+        "median_ms": 0.002074,
+        "mean_ms": 0.002082164,
+        "p95_ms": 0.002092,
+        "stddev_ms": 0.000336232491,
+        "cv": 0.161482232
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label diag_full_unroll_uk4 --iterations 2000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "diag_full_unroll_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002055,
+        "median_ms": 0.002074,
+        "mean_ms": 0.0020794035,
+        "p95_ms": 0.002075,
+        "stddev_ms": 0.000268734017,
+        "cv": 0.129236109
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage13_schedule_pi_1784230712/diag_full_unroll_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label diag_full_unroll_uk4 --iterations 2000 --warmup 200 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.002074,
+    "min_of_mins_ms": 0.002055,
+    "mean_of_medians_ms": 0.002074,
+    "stddev_of_medians_ms": 0.0,
+    "cv_of_medians": 0.0,
+    "per_group_medians_ms": [
+      0.002074,
+      0.002074,
+      0.002074,
+      0.002074,
+      0.002074
+    ]
+  },
+  "stage12_key": "primary_full_unroll",
+  "stage12_evidence": {
+    "shape": "32x32x32",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "schedule_unroll_k": 4,
+    "variant": "tiled-scheduled",
+    "candidate_dir": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4",
+    "commands": {
+      "compile": "bash /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4 32x32x32_tm8_tn8_tk8_uk4",
+      "extract_mir": "python3 /home/allen/Desktop/Project/ml-graph-compiler-runtime/tools/extract_aarch64_candidate_mir.py --llvm-ir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.ll --cpu cortex-a76 --shape 32x32x32 --tile-m 8 --tile-n 8 --tile-k 8 --output-dir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4",
+      "register_analysis": "python3 /home/allen/Desktop/Project/ml-graph-compiler-runtime/tools/analyze_aarch64_candidate_mir.py --post-isel artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_isel.mir --pre-ra artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir --post-ra artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_ra.mir --post-prologue-epilogue artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir --output artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/register_metrics.json",
+      "schedule_analysis_pre_scheduler": "python3 /home/allen/Desktop/Project/ml-graph-compiler-runtime/tools/analyze_aarch64_machine_schedule.py --mir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir --asm artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.s --output artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/schedule_pre_scheduler_metrics.json",
+      "schedule_analysis_post_scheduler": "python3 /home/allen/Desktop/Project/ml-graph-compiler-runtime/tools/analyze_aarch64_machine_schedule.py --mir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir --asm artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.s --output artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/schedule_post_scheduler_metrics.json"
+    },
+    "artifact_paths": {
+      "command": "bash /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-scheduled --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 /home/allen/Desktop/Project/ml-graph-compiler-runtime/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4 32x32x32_tm8_tn8_tk8_uk4",
+      "llvm_ir": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.ll",
+      "llvm_dialect_mlir": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4_llvm.mlir",
+      "asm": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.s",
+      "obj": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_uk4.o",
+      "mir_post_isel": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_isel.mir",
+      "mir_pre_scheduler": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_scheduler.mir",
+      "mir_pre_ra": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_pre_ra.mir",
+      "mir_post_ra": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_ra.mir",
+      "mir_post_prologue_epilogue": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default_post_prologue_epilogue.mir",
+      "mir_final_asm": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.s",
+      "mir_final_obj": "artifacts/backend_codegen/aarch64_matmul_bias_relu_scheduling/candidates/32x32x32_tm8_tn8_tk8_uk4/32x32x32_tm8_tn8_tk8_greedy_misched-default.o"
+    },
+    "pass_boundaries": {
+      "instruction_selection_output": "finalize-isel",
+      "machine_scheduler_input": "machine-scheduler (--stop-before)",
+      "machine_scheduler_output": "machine-scheduler (--stop-after, == pre_ra)",
+      "register_allocator_input": "machine-scheduler (--stop-after)",
+      "register_allocator_output": "virtregrewriter",
+      "post_ra_scheduler": "not enabled/inspected in this slice (task brief explicitly excludes custom/post-RA scheduling work)",
+      "final_emission_input": "prologepilog"
+    },
+    "register_allocation": {
+      "stages": {
+        "post_isel": {
+          "stage": "post_isel",
+          "function_name": "matmul_bias_relu_tiled_32x32x32",
+          "virtual_registers_total": 770,
+          "virtual_vector_registers": 689,
+          "virtual_gpr_registers": 81,
+          "register_class_distribution": {
+            "gpr64all": 34,
+            "gpr64": 29,
+            "gpr64common": 8,
+            "gpr64sp": 7,
+            "gpr32": 3,
+            "fpr128": 689
+          },
+          "frame_objects_total": 0,
+          "fixed_stack_objects": 13,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "callee_saved_stack_slots": 0,
+          "frame_info": {
+            "stackSize": 0,
+            "maxAlignment": 8,
+            "hasCalls": "true",
+            "adjustsStack": "true"
+          },
+          "physical_vector_registers_referenced": 0,
+          "physical_vector_register_ids": [],
+          "physical_gpr_registers_referenced": 8,
+          "machine_basic_blocks": 7,
+          "machine_instructions": 805,
+          "copies": 52,
+          "spill_stores": 0,
+          "spill_reloads": 0,
+          "approx_peak_live_vector_registers": 658
+        },
+        "pre_ra": {
+          "stage": "pre_ra",
+          "function_name": "matmul_bias_relu_tiled_32x32x32",
+          "virtual_registers_total": 774,
+          "virtual_vector_registers": 689,
+          "virtual_gpr_registers": 85,
+          "register_class_distribution": {
+            "gpr64all": 25,
+            "gpr64": 32,
+            "gpr64sp": 12,
+            "gpr64common": 13,
+            "gpr32": 3,
+            "fpr128": 689
+          },
+          "frame_objects_total": 0,
+          "fixed_stack_objects": 13,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "callee_saved_stack_slots": 0,
+          "frame_info": {
+            "stackSize": 0,
+            "maxAlignment": 8,
+            "hasCalls": "true",
+            "adjustsStack": "true"
+          },
+          "physical_vector_registers_referenced": 0,
+          "physical_vector_register_ids": [],
+          "physical_gpr_registers_referenced": 13,
+          "machine_basic_blocks": 7,
+          "machine_instructions": 762,
+          "copies": 9,
+          "spill_stores": 0,
+          "spill_reloads": 0,
+          "approx_peak_live_vector_registers": 193
+        },
+        "post_ra": {
+          "stage": "post_ra",
+          "function_name": "matmul_bias_relu_tiled_32x32x32",
+          "virtual_registers_total": 0,
+          "virtual_vector_registers": 0,
+          "virtual_gpr_registers": 0,
+          "register_class_distribution": {},
+          "frame_objects_total": 11,
+          "fixed_stack_objects": 13,
+          "spill_slot_count": 11,
+          "spill_slot_bytes": 176,
+          "callee_saved_stack_slots": 0,
+          "frame_info": {
+            "stackSize": 0,
+            "maxAlignment": 16,
+            "hasCalls": "true",
+            "adjustsStack": "true"
+          },
+          "physical_vector_registers_referenced": 32,
+          "physical_vector_register_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "physical_gpr_registers_referenced": 24,
+          "machine_basic_blocks": 7,
+          "machine_instructions": 786,
+          "copies": 10,
+          "spill_stores": 11,
+          "spill_reloads": 12,
+          "approx_peak_live_vector_registers": null
+        },
+        "post_prologue_epilogue": {
+          "stage": "post_prologue_epilogue",
+          "function_name": "matmul_bias_relu_tiled_32x32x32",
+          "virtual_registers_total": 0,
+          "virtual_vector_registers": 0,
+          "virtual_gpr_registers": 0,
+          "register_class_distribution": {},
+          "frame_objects_total": 20,
+          "fixed_stack_objects": 13,
+          "spill_slot_count": 7,
+          "spill_slot_bytes": 112,
+          "callee_saved_stack_slots": 13,
+          "frame_info": {
+            "stackSize": 224,
+            "maxAlignment": 16,
+            "hasCalls": "true",
+            "adjustsStack": "true"
+          },
+          "physical_vector_registers_referenced": 32,
+          "physical_vector_register_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "physical_gpr_registers_referenced": 29,
+          "machine_basic_blocks": 7,
+          "machine_instructions": 814,
+          "copies": 10,
+          "spill_stores": 11,
+          "spill_reloads": 12,
+          "approx_peak_live_vector_registers": null
+        }
+      },
+      "comparison": {
+        "virtual_registers_before_ra": 774,
+        "virtual_vector_registers_before_ra": 689,
+        "physical_vector_registers_after_ra": 32,
+        "spill_stores_inserted_by_ra": 11,
+        "reload_loads_inserted_by_ra": 12,
+        "spill_slot_count": 11,
+        "spill_slot_bytes": 176,
+        "copies_pre_ra": 9,
+        "copies_post_ra": 10,
+        "copies_removed_by_ra": -1,
+        "approx_peak_live_vector_registers_note": "MIR-derived approximate peak live registers (linear scan over def/kill order, not a full dataflow analysis) -- see pre_ra.approx_peak_live_vector_registers"
+      },
+      "final_stack_frame_bytes": 224
+    },
+    "schedule": {
+      "pre_scheduler": {
+        "function_name": "matmul_bias_relu_tiled_32x32x32",
+        "fmla_count": 512,
+        "load_count": 146,
+        "store_count": 16,
+        "branch_count": 6,
+        "copy_count": 9,
+        "hot_loop_instruction_count": 762,
+        "accumulator_chains": 16,
+        "max_accumulator_chain_length": 32,
+        "min_accumulator_chain_length": 32,
+        "average_accumulator_chain_length": 32,
+        "same_accumulator_distance": {
+          "note": "intervening (independent-of-that-chain) instruction count between consecutive FMLA writes to the same accumulator vreg -- a scheduling-distance metric derived from MIR instruction order, NOT cycle-accurate latency",
+          "min": 14,
+          "median": 16.0,
+          "p95": 46,
+          "max": 48,
+          "sample_count": 496
+        },
+        "load_to_use_distance": {
+          "min": null,
+          "median": null,
+          "p95": null,
+          "max": null,
+          "sample_count": 0,
+          "note": "no vector loads found feeding an FMLA directly in this stage's kernel body"
+        },
+        "assembly_cross_check": {
+          "asm_fmla_count": 512,
+          "asm_branch_count": 5
+        }
+      },
+      "post_scheduler": {
+        "function_name": "matmul_bias_relu_tiled_32x32x32",
+        "fmla_count": 512,
+        "load_count": 146,
+        "store_count": 16,
+        "branch_count": 6,
+        "copy_count": 9,
+        "hot_loop_instruction_count": 762,
+        "accumulator_chains": 16,
+        "max_accumulator_chain_length": 32,
+        "min_accumulator_chain_length": 32,
+        "average_accumulator_chain_length": 32,
+        "same_accumulator_distance": {
+          "note": "intervening (independent-of-that-chain) instruction count between consecutive FMLA writes to the same accumulator vreg -- a scheduling-distance metric derived from MIR instruction order, NOT cycle-accurate latency",
+          "min": 0,
+          "median": 16.0,
+          "p95": 43,
+          "max": 197,
+          "sample_count": 496
+        },
+        "load_to_use_distance": {
+          "min": null,
+          "median": null,
+          "p95": null,
+          "max": null,
+          "sample_count": 0,
+          "note": "no vector loads found feeding an FMLA directly in this stage's kernel body"
+        },
+        "assembly_cross_check": {
+          "asm_fmla_count": 512,
+          "asm_branch_count": 5
+        }
+      }
+    },
+    "fp_reduction_order": {
+      "fmuladd_call_count": 256,
+      "fmf_flags_found_on_fmuladd_calls": [],
+      "fmf_flags_found_note": "empty list means no fast-math-flag tokens (fast/reassoc/contract/afn/nnan/ninf/nsz/arcp) were found on any @llvm.fmuladd call -- fusion here comes from MLIR's vector-to-llvm lowering emitting the fmuladd intrinsic directly (unconditionally fused by the intrinsic's own definition), not from FMF-gated reassociation",
+      "fadd_call_count": 8,
+      "fmul_call_count": 0,
+      "accumulator_chain_count": 8,
+      "accumulator_chain_lengths": [
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32
+      ],
+      "max_accumulator_chain_length": 32,
+      "all_fmuladd_calls_accounted_for": true,
+      "reduction_order_note": "chains reconstructed by following each fmuladd call's accumulator (3rd) operand back to an earlier call's destination in the same function, mirroring analyze_aarch64_machine_schedule.py's MIR-level accumulator-chain methodology one level higher (LLVM IR); a chain count/length that matches the MIR-level accumulator_chains/max_accumulator_chain_length is direct cross-level evidence that LLVM preserved the MLIR transform's serial reduction order rather than reassociating into independent parallel partial sums"
+    },
+    "assembly_counts": {
+      "fmla": 512,
+      "vector_load": 117,
+      "vector_store": 18,
+      "scalar_load": 6,
+      "scalar_store": 3,
+      "branch": 5,
+      "object_bytes_note": "see object_bytes field alongside this record for the compiled .o size"
+    },
+    "object_bytes": 4232
+  },
+  "config_for_matching": {
+    "shape": "32x32x32",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "target_cpu": "cortex-a76",
+    "opt_level": "O2",
+    "iterations": 2000,
+    "warmup": 200,
+    "git_commit": "ca5c375151a02fc835cc09e1e49daee7d66d82f5",
+    "schedule_unroll_k": 4
+  }
+}

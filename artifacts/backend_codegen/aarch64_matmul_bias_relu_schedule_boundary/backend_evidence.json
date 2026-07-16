@@ -1,0 +1,38 @@
+{
+  "smallA_uk1": {
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 128,
+    "object_bytes": 2336
+  },
+  "smallA_uk2": {
+    "spills": 2,
+    "reloads": 2,
+    "stack_bytes": 176,
+    "object_bytes": 2640
+  },
+  "smallA_uk4": {
+    "spills": 10,
+    "reloads": 11,
+    "stack_bytes": 256,
+    "object_bytes": 2952
+  },
+  "highK_uk1": {
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 2608
+  },
+  "highK_uk2": {
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 3248
+  },
+  "highK_uk4": {
+    "spills": 0,
+    "reloads": 0,
+    "stack_bytes": 96,
+    "object_bytes": 4528
+  }
+}

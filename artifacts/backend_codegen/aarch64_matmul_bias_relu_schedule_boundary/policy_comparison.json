@@ -1,0 +1,107 @@
+{
+  "policy_1_exact_calibration_only": {
+    "primary": {
+      "selected": "primary_full_unroll",
+      "matches_measured_winner": true
+    },
+    "cube64": {
+      "selected": "cube64_uk4",
+      "matches_measured_winner": true
+    },
+    "altk": {
+      "selected": "altk_uk4",
+      "matches_measured_winner": true
+    },
+    "rect": {
+      "selected": "rect_uk4",
+      "matches_measured_winner": true
+    },
+    "smallA": {
+      "selected": "smallA_uk4",
+      "matches_measured_winner": true
+    },
+    "highK": {
+      "selected": "highK_uk4",
+      "matches_measured_winner": true
+    }
+  },
+  "policy_2_bounded_heuristic_offline_only": {
+    "primary": {
+      "selected": "uk4 candidate for primary",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    },
+    "cube64": {
+      "selected": "uk4 candidate for cube64",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    },
+    "altk": {
+      "selected": "uk4 candidate for altk",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    },
+    "rect": {
+      "selected": "uk4 candidate for rect",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    },
+    "smallA": {
+      "selected": "uk4 candidate for smallA",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    },
+    "highK": {
+      "selected": "uk4 candidate for highK",
+      "in_bounded_bucket": true,
+      "matches_measured_winner": true
+    }
+  },
+  "policy_3_universal_uk4_UNSAFE_evaluation_only": {
+    "primary": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    },
+    "cube64": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    },
+    "altk": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    },
+    "rect": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    },
+    "smallA": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    },
+    "highK": {
+      "selected": "uk4 (unconditional)",
+      "matches_measured_winner": true,
+      "risk_note": "would silently select uk4 even for a domain/target never measured -- this is exactly the failure mode Stage 14-17 exist to prevent"
+    }
+  },
+  "policy_1_exact_calibration_only_summary": {
+    "agreement_count": 6,
+    "total_domains": 6,
+    "fallback_count": 0
+  },
+  "policy_2_bounded_heuristic_offline_only_summary": {
+    "agreement_count": 6,
+    "total_domains": 6,
+    "fallback_count": 0
+  },
+  "policy_3_universal_uk4_UNSAFE_evaluation_only_summary": {
+    "agreement_count": 6,
+    "total_domains": 6,
+    "fallback_count": 0
+  }
+}

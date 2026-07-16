@@ -1,0 +1,83 @@
+Commands used to produce every file in this directory (Stage 16:
+multi-domain calibration and shape/tile compatibility validation). All
+paths relative to the ml-graph-compiler-runtime repo root unless
+absolute.
+
+1. Stage 11 structural legality gate for the 3 new domains' uk4
+   candidates (run BEFORE compiling):
+
+   python3 tools/validate_aarch64_tiled_schedule_structure.py \
+     --input mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_64x64x64.mlir \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --output /tmp/check.json
+   (repeated for altk: tile 8x8x4 on 32x32x32; rect: tile 8x8x8 on 32x64x32)
+
+2. Materialize all 9 new candidates (3 domains x uk1/uk2/uk4) through the
+   Stage 15 selector's manual mode (real compile pipeline, unmodified):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode manual --schedule-unroll-k <1|2|4> \
+     --tile-m 8 --tile-n 8 --tile-k <8|4> \
+     --emit-schedule-selection <out>/<name>_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_<shape>.mlir \
+     <out>/compiled <name>
+
+3. Extract static/backend evidence for the 5 genuinely new candidates
+   (Stage 3/5 tools, unmodified):
+
+   python3 tools/extract_aarch64_candidate_mir.py --llvm-ir <name>.ll \
+     --cpu cortex-a76 --shape <shape> --tile-m <M> --tile-n <N> --tile-k <K> \
+     --output-dir /tmp/s16_evidence/<name>
+   python3 tools/analyze_aarch64_candidate_mir.py --post-isel ... --pre-ra ... \
+     --post-ra ... --post-prologue-epilogue ... --output register_metrics.json
+   python3 tools/analyze_aarch64_machine_schedule.py --mir ... --asm ... \
+     --output schedule_metrics.json
+
+4. Pi benchmark matrix for the 9 new candidates, interleaved measurement
+   groups (5 per domain), Stage 13 methodology reused via direct import:
+
+   python3 tools/run_multidomain_pi.py
+
+5. Multi-domain analysis: build CandidateEvidenceRecords for all 4
+   domains, per-domain static/calibrated ranking, multi-domain profile,
+   cross-domain rejection report, compatibility matrix:
+
+   python3 tools/run_multidomain_analysis.py
+
+6. Extended Stage-12-shaped evidence file (the 5 new candidates' static
+   evidence in the schema select_and_compile_aarch64_matmul_schedule.py's
+   --stage12-json loader already understands -- the Example 2 bug fix):
+
+   python3 /tmp/build_extended_stage12.py
+
+7. Three integrated selection/materialization examples:
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode calibrated \
+     --schedule-profile <out>/multi_domain_profile.json \
+     --stage12-json <out>/extended_stage12_evidence.json \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <out>/example1_primary_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <out>/compiled example1_primary
+
+   (example2: 64x64x64/8x8x8; example3: 16x16x16/4x8x8, expects fallback)
+
+8. Focused Pi verification of the one genuinely new object (example 3's
+   fallback -- examples 1/2 are byte-identical to already-tested objects):
+
+   bash mlir_passes/tools/generate_schedule_harness.sh --shape 16x16x16 \
+     --output <scratch>/harness.cpp
+   # transfer, build, run on Pi with the Stage 13 harness methodology
+
+9. Focused Stage 16 host-side tests (no SSH/Pi/toolchain dependency):
+
+   python3 -m unittest tests.test_aarch64_schedule_multidomain -v
+
+10. Full combined suite across every scheduling-slice stage:
+
+    python3 -m unittest tests.test_aarch64_mir_analysis \
+      tests.test_aarch64_schedule_comparison \
+      tests.test_aarch64_schedule_pi_validation \
+      tests.test_aarch64_schedule_candidate_model \
+      tests.test_aarch64_schedule_selection \
+      tests.test_aarch64_schedule_multidomain

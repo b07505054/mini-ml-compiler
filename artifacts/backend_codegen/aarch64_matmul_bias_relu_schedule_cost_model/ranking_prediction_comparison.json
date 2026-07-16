@@ -1,0 +1,163 @@
+{
+  "primary_32x32x32_unroll_family": {
+    "static_hard_reject_spill": {
+      "predicted_order": [
+        "primary_unroll2",
+        "primary_unroll1",
+        "primary_full_unroll"
+      ],
+      "measured_order": [
+        "primary_full_unroll",
+        "primary_unroll2",
+        "primary_unroll1"
+      ],
+      "top_predicted": "primary_unroll2",
+      "top_measured": "primary_full_unroll",
+      "top_matches": false,
+      "pairwise_agreement": 0.3333333333333333,
+      "mispredictions": [
+        "primary_unroll2",
+        "primary_unroll1",
+        "primary_full_unroll"
+      ]
+    },
+    "static_soft_penalty": {
+      "predicted_order": [
+        "primary_unroll2",
+        "primary_unroll1",
+        "primary_full_unroll"
+      ],
+      "measured_order": [
+        "primary_full_unroll",
+        "primary_unroll2",
+        "primary_unroll1"
+      ],
+      "top_predicted": "primary_unroll2",
+      "top_measured": "primary_full_unroll",
+      "top_matches": false,
+      "pairwise_agreement": 0.3333333333333333,
+      "mispredictions": [
+        "primary_unroll2",
+        "primary_unroll1",
+        "primary_full_unroll"
+      ]
+    },
+    "calibrated_raspberry_pi_5": {
+      "predicted_order": [
+        "primary_full_unroll",
+        "primary_unroll2",
+        "primary_unroll1"
+      ],
+      "measured_order": [
+        "primary_full_unroll",
+        "primary_unroll2",
+        "primary_unroll1"
+      ],
+      "top_predicted": "primary_full_unroll",
+      "top_measured": "primary_full_unroll",
+      "top_matches": true,
+      "pairwise_agreement": 1.0,
+      "mispredictions": []
+    }
+  },
+  "alt_k_tile_8x8x4": {
+    "static_hard_reject_spill": {
+      "predicted_order": [
+        "alt_k_tile_unroll1",
+        "alt_k_tile_unroll2"
+      ],
+      "measured_order": [
+        "alt_k_tile_unroll2",
+        "alt_k_tile_unroll1"
+      ],
+      "top_predicted": "alt_k_tile_unroll1",
+      "top_measured": "alt_k_tile_unroll2",
+      "top_matches": false,
+      "pairwise_agreement": 0.0,
+      "mispredictions": [
+        "alt_k_tile_unroll1",
+        "alt_k_tile_unroll2"
+      ]
+    },
+    "static_soft_penalty": {
+      "predicted_order": [
+        "alt_k_tile_unroll1",
+        "alt_k_tile_unroll2"
+      ],
+      "measured_order": [
+        "alt_k_tile_unroll2",
+        "alt_k_tile_unroll1"
+      ],
+      "top_predicted": "alt_k_tile_unroll1",
+      "top_measured": "alt_k_tile_unroll2",
+      "top_matches": false,
+      "pairwise_agreement": 0.0,
+      "mispredictions": [
+        "alt_k_tile_unroll1",
+        "alt_k_tile_unroll2"
+      ]
+    },
+    "calibrated_raspberry_pi_5": {
+      "predicted_order": [
+        "alt_k_tile_unroll2",
+        "alt_k_tile_unroll1"
+      ],
+      "measured_order": [
+        "alt_k_tile_unroll2",
+        "alt_k_tile_unroll1"
+      ],
+      "top_predicted": "alt_k_tile_unroll2",
+      "top_measured": "alt_k_tile_unroll2",
+      "top_matches": true,
+      "pairwise_agreement": 1.0,
+      "mispredictions": []
+    }
+  },
+  "cube64_8x8x8": {
+    "static_hard_reject_spill": {
+      "predicted_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "measured_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "top_predicted": "cube64_unroll2",
+      "top_measured": "cube64_unroll2",
+      "top_matches": true,
+      "pairwise_agreement": 1.0,
+      "mispredictions": []
+    },
+    "static_soft_penalty": {
+      "predicted_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "measured_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "top_predicted": "cube64_unroll2",
+      "top_measured": "cube64_unroll2",
+      "top_matches": true,
+      "pairwise_agreement": 1.0,
+      "mispredictions": []
+    },
+    "calibrated_raspberry_pi_5": {
+      "predicted_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "measured_order": [
+        "cube64_unroll2",
+        "cube64_unroll1"
+      ],
+      "top_predicted": "cube64_unroll2",
+      "top_measured": "cube64_unroll2",
+      "top_matches": true,
+      "pairwise_agreement": 1.0,
+      "mispredictions": []
+    }
+  }
+}

@@ -1,0 +1,79 @@
+Commands used to produce every file in this directory (Stage 15: opt-in
+compiler-side schedule candidate selection and materialization). All
+paths relative to the ml-graph-compiler-runtime repo root unless absolute.
+
+1. Manual mode (existing behavior, unchanged):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode manual --schedule-unroll-k 1 \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <output_dir>/manual_uk1_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <output_dir>/compiled manual_uk1
+
+   (repeat with --schedule-unroll-k 2 for manual_uk2)
+
+2. Static mode (opt-in, backend evidence only, no Pi measurement used):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode static \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <output_dir>/static_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <output_dir>/compiled static_sel
+
+3. Calibrated mode (opt-in, requires a compatible profile):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode calibrated \
+     --schedule-profile artifacts/backend_codegen/aarch64_matmul_bias_relu_pi_scheduling/pi_validation_results.json \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <output_dir>/calibrated_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <output_dir>/compiled calibrated_sel
+
+4. Calibrated mode with an incompatible profile (explicit fallback):
+
+   python3 tools/select_and_compile_aarch64_matmul_schedule.py \
+     --schedule-candidate-mode calibrated \
+     --schedule-profile artifacts/backend_codegen/aarch64_matmul_bias_relu_schedule_selection/fixtures/fixture_incompatible_x86_64.json \
+     --tile-m 8 --tile-n 8 --tile-k 8 \
+     --emit-schedule-selection <output_dir>/incompatible_fallback_selection.json \
+     mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     <output_dir>/compiled fallback_sel
+
+5. Stage 11 structural validator, confirming the selected schedules
+   materialize the expected structure (baseline no-op for uk1, real
+   unroll for uk2, full collapse for uk4):
+
+   python3 tools/validate_aarch64_tiled_schedule_structure.py \
+     --input mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k <1|2|4> \
+     --output /tmp/s11_check.json
+
+6. Pi correctness + focused performance sanity check: generate the Stage
+   13 harness for the primary shape, transfer + build all 5 compiled
+   objects on the Pi, run each with the Stage 13 methodology:
+
+   bash mlir_passes/tools/generate_schedule_harness.sh --shape 32x32x32 \
+     --output <scratch>/harness_32x32x32.cpp
+
+   # per candidate, on the Pi:
+   g++ -O2 -std=c++17 -c <name>_harness.cpp -o <name>_harness.o
+   g++ -O2 <name>_harness.o <name>.o -o <name>_bin
+   taskset -c 3 ./<name>_bin --shape-m 32 --shape-n 32 --shape-k 32 \
+     --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k <N> \
+     --candidate-label <name> --iterations 2000 --warmup 200 \
+     --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed
+
+7. Focused Stage 15 host-side tests (no SSH/Pi/toolchain dependency):
+
+   python3 -m unittest tests.test_aarch64_schedule_selection -v
+
+8. Full combined suite across every scheduling-slice stage:
+
+   python3 -m unittest tests.test_aarch64_mir_analysis \
+     tests.test_aarch64_schedule_comparison \
+     tests.test_aarch64_schedule_pi_validation \
+     tests.test_aarch64_schedule_candidate_model \
+     tests.test_aarch64_schedule_selection

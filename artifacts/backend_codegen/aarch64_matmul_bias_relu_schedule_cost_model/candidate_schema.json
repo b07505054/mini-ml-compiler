@@ -1,0 +1,112 @@
+{
+  "schema_version": "aarch64_schedule_candidate_model_v1",
+  "CandidateKey_fields": [
+    "target_arch",
+    "target_cpu",
+    "target_features",
+    "dtype",
+    "shape_m",
+    "shape_n",
+    "shape_k",
+    "tile_m",
+    "tile_n",
+    "tile_k",
+    "vector_width",
+    "schedule_unroll_k",
+    "loop_order_id",
+    "microkernel_id"
+  ],
+  "StaticIRBEvidence_fields": [
+    "m_trip_count",
+    "n_trip_count",
+    "k_trip_count_post_unroll",
+    "surviving_loop_count",
+    "k_loop_collapsed",
+    "static_vector_contract_count",
+    "estimated_dynamic_k_loop_iterations",
+    "estimated_dynamic_loop_control_reduction_pct"
+  ],
+  "LLVMBackendEvidence_fields": [
+    "pre_ra_approx_peak_live_vector_registers",
+    "physical_vector_registers_post_ra",
+    "spill_store_count",
+    "reload_load_count",
+    "stack_frame_bytes",
+    "object_bytes",
+    "static_fmla_asm_count",
+    "accumulator_chains",
+    "max_accumulator_chain_length",
+    "llvm_mca_block_rthroughput"
+  ],
+  "MeasuredHardwareEvidence_fields": [
+    "median_latency_ms",
+    "p95_latency_ms",
+    "mean_latency_ms",
+    "stddev_latency_ms",
+    "cv",
+    "correctness_pass",
+    "hardware_identity"
+  ],
+  "CostBreakdown_fields": [
+    "candidate_id",
+    "label",
+    "static_compute_cost",
+    "loop_control_cost",
+    "register_pressure_penalty",
+    "spill_penalty",
+    "reload_penalty",
+    "code_size_penalty",
+    "stack_frame_penalty",
+    "target_specific_penalty",
+    "measured_latency_calibration_bonus",
+    "total_cost",
+    "cost_model_id",
+    "truth_boundary",
+    "ranking_mode",
+    "rejected",
+    "rejection_reason",
+    "missing_evidence_fields",
+    "confidence",
+    "rank"
+  ],
+  "default_weights": {
+    "compute_cost_scale": 1e-06,
+    "loop_control_cost_per_iteration": 1.0,
+    "register_pressure_weight": 0.0,
+    "spill_weight": 2.0,
+    "reload_weight": 1.5,
+    "code_size_weight_per_kb": 0.05,
+    "stack_frame_weight_per_64b": 0.1,
+    "target_specific_penalty": 0.0,
+    "hard_reject_on_any_spill": false,
+    "calibration_weight": 1000.0
+  },
+  "source_levels": [
+    "mlir",
+    "llvm_ir",
+    "mir",
+    "assembly",
+    "llvm_mca",
+    "raspberry_pi_measured",
+    "manual_config"
+  ],
+  "classification_labels": {
+    "backend_safety": [
+      "backend_safe",
+      "backend_costly"
+    ],
+    "hardware_confirmation": [
+      "hardware_confirmed_profitable",
+      "hardware_confirmed_neutral",
+      "hardware_confirmed_regression",
+      "hardware_unknown",
+      "incorrect"
+    ]
+  },
+  "compatibility_levels": [
+    "exact_match",
+    "cross_shape_same_schedule",
+    "shape_bucket",
+    "incompatible"
+  ]
+}

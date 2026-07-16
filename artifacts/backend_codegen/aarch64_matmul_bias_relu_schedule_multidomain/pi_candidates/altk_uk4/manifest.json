@@ -1,0 +1,294 @@
+{
+  "label": "altk_uk4",
+  "shape": "32x32x32",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 4
+  },
+  "schedule_unroll_k": 4,
+  "obj_sha256": "adddf8fd448c122d8d5205543813ff1fa96cf0588d00064822642ba1379a2697",
+  "measurement_groups": [
+    {
+      "candidate_label": "altk_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002388,
+        "median_ms": 0.002389,
+        "mean_ms": 0.0023942215,
+        "p95_ms": 0.002407,
+        "stddev_ms": 0.000155613985,
+        "cv": 0.0649956511
+      },
+      "output_dump_path": "/tmp/stage16_multidomain_pi_1784237167/altk_uk4_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/altk_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 4 --candidate-label altk_uk4 --iterations 2000 --warmup 200 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage16_multidomain_pi_1784237167/altk_uk4_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "altk_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002388,
+        "median_ms": 0.002407,
+        "mean_ms": 0.002417797,
+        "p95_ms": 0.002408,
+        "stddev_ms": 0.000348847935,
+        "cv": 0.144283385
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/altk_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 4 --candidate-label altk_uk4 --iterations 2000 --warmup 200 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "altk_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002407,
+        "median_ms": 0.002408,
+        "mean_ms": 0.002411956,
+        "p95_ms": 0.002426,
+        "stddev_ms": 6.55042981e-05,
+        "cv": 0.0271581646
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/altk_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 4 --candidate-label altk_uk4 --iterations 2000 --warmup 200 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "altk_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002388,
+        "median_ms": 0.002407,
+        "mean_ms": 0.00241286,
+        "p95_ms": 0.002408,
+        "stddev_ms": 0.000267511793,
+        "cv": 0.110869173
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/altk_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 4 --candidate-label altk_uk4 --iterations 2000 --warmup 200 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "altk_uk4",
+      "shape": {
+        "m": 32,
+        "n": 32,
+        "k": 32
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_32x32x32",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 500,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 200,
+        "iterations": 2000,
+        "unit": "ms",
+        "min_ms": 0.002388,
+        "median_ms": 0.002407,
+        "mean_ms": 0.0024137735,
+        "p95_ms": 0.002426,
+        "stddev_ms": 0.000147147301,
+        "cv": 0.0609615198
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/altk_uk4_bin --shape-m 32 --shape-n 32 --shape-k 32 --tile-m 8 --tile-n 8 --tile-k 4 --schedule-unroll-k 4 --candidate-label altk_uk4 --iterations 2000 --warmup 200 --repeated-calls 500 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.002407,
+    "min_of_mins_ms": 0.002388,
+    "mean_of_medians_ms": 0.0024036,
+    "stddev_of_medians_ms": 8.173126696680942e-06,
+    "cv_of_medians": 0.003400368903595,
+    "per_group_medians_ms": [
+      0.002389,
+      0.002407,
+      0.002408,
+      0.002407,
+      0.002407
+    ]
+  }
+}

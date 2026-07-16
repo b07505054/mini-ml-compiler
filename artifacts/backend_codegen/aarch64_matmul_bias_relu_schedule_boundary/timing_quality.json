@@ -1,0 +1,51 @@
+{
+  "clock_overhead_ns": 37.0,
+  "malloc_overhead_ns": 37.0,
+  "reliable_threshold_ns": 370.0,
+  "borderline_threshold_ns": 185.0,
+  "per_candidate": {
+    "smallA_uk1": {
+      "median_ns": 500.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.074,
+      "quality": "reliable",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    },
+    "smallA_uk2": {
+      "median_ns": 463.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.07991360691144708,
+      "quality": "reliable",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    },
+    "smallA_uk4": {
+      "median_ns": 351.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.10541310541310542,
+      "quality": "borderline",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    },
+    "highK_uk1": {
+      "median_ns": 9186.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.004027868495536686,
+      "quality": "reliable",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    },
+    "highK_uk2": {
+      "median_ns": 8222.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.004500121624908781,
+      "quality": "reliable",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    },
+    "highK_uk4": {
+      "median_ns": 7778.0,
+      "clock_overhead_ns": 37.0,
+      "overhead_fraction": 0.004757006942658781,
+      "quality": "reliable",
+      "note": "malloc(4160)+free overhead (~37ns) is REAL kernel work (the generated ABI's sret-return allocation), not harness overhead, and is included in the measured time on purpose; only clock-read overhead (~37ns per back-to-back now()/now() pair, empirically measured on this Pi via tools/timer_overhead_probe.cpp) is treated as pure measurement overhead here. Because this overhead is approximately constant across uk1/uk2/uk4 for the same domain (identical malloc call site and size), RELATIVE ranking between factors in a 'borderline' domain remains defensible even when absolute latency numbers are not precise to more than ~1 significant figure."
+    }
+  },
+  "retroactive_note": "Applying this same threshold retroactively to Stage 13's smallest-ever measurement (small_control_uk1, median 92ns): overhead_fraction = 37/92 = 40%, well into 'unreliable' territory by this stage's standard. That measurement was never used for an unroll-factor COMPARISON (only uk1 was legal for that shape/tile), so no prior ranking conclusion is invalidated by this finding -- but it is flagged here as a real, previously-uncaught gap in measurement rigor for absolute-latency claims at that scale."
+}

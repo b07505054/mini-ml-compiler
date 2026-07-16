@@ -1,0 +1,294 @@
+{
+  "label": "cube64_uk4",
+  "shape": "64x64x64",
+  "tile": {
+    "m": 8,
+    "n": 8,
+    "k": 8
+  },
+  "schedule_unroll_k": 4,
+  "obj_sha256": "ea24f664fab2fd6b7cbed37a0d6d0eb944ddafb2ce10a89d7a5fd0db44f88be2",
+  "measurement_groups": [
+    {
+      "candidate_label": "cube64_uk4",
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_64x64x64",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 100,
+        "iterations": 500,
+        "unit": "ms",
+        "min_ms": 0.016611,
+        "median_ms": 0.016685,
+        "mean_ms": 0.01668728,
+        "p95_ms": 0.016722,
+        "stddev_ms": 0.000148669599,
+        "cv": 0.00890915708
+      },
+      "output_dump_path": "/tmp/stage16_multidomain_pi_1784237167/cube64_uk4_out_g0.bin",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_bin --shape-m 64 --shape-n 64 --shape-k 64 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label cube64_uk4 --iterations 500 --warmup 100 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed --dump-output /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_out_g0.bin",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "cube64_uk4",
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_64x64x64",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 100,
+        "iterations": 500,
+        "unit": "ms",
+        "min_ms": 0.016556,
+        "median_ms": 0.01663,
+        "mean_ms": 0.01664522,
+        "p95_ms": 0.016667,
+        "stddev_ms": 0.000207571818,
+        "cv": 0.0124703559
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_bin --shape-m 64 --shape-n 64 --shape-k 64 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label cube64_uk4 --iterations 500 --warmup 100 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "cube64_uk4",
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_64x64x64",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 100,
+        "iterations": 500,
+        "unit": "ms",
+        "min_ms": 0.016574,
+        "median_ms": 0.016648,
+        "mean_ms": 0.01665647,
+        "p95_ms": 0.016686,
+        "stddev_ms": 0.000177169481,
+        "cv": 0.0106366764
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_bin --shape-m 64 --shape-n 64 --shape-k 64 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label cube64_uk4 --iterations 500 --warmup 100 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "cube64_uk4",
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_64x64x64",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 100,
+        "iterations": 500,
+        "unit": "ms",
+        "min_ms": 0.016574,
+        "median_ms": 0.01663,
+        "mean_ms": 0.016647212,
+        "p95_ms": 0.016685,
+        "stddev_ms": 0.000168869592,
+        "cv": 0.0101440164
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_bin --shape-m 64 --shape-n 64 --shape-k 64 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label cube64_uk4 --iterations 500 --warmup 100 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    },
+    {
+      "candidate_label": "cube64_uk4",
+      "shape": {
+        "m": 64,
+        "n": 64,
+        "k": 64
+      },
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "schedule_unroll_k": 4,
+      "symbol": "matmul_bias_relu_tiled_64x64x64",
+      "correctness": {
+        "deterministic_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "random_seed_trial": {
+          "pass": true,
+          "max_abs_error": 0,
+          "max_rel_error": 0,
+          "first_fail_index": -1,
+          "expected_at_fail": 0,
+          "actual_at_fail": 0
+        },
+        "repeated_calls": 200,
+        "repeated_call_fail_count": 0,
+        "tolerance_policy": "max_abs_error < 1e-3 (repository-established threshold, unchanged)",
+        "overall_pass": true,
+        "first_failure_reason": ""
+      },
+      "benchmark": {
+        "warmup": 100,
+        "iterations": 500,
+        "unit": "ms",
+        "min_ms": 0.016556,
+        "median_ms": 0.01663,
+        "mean_ms": 0.01664349,
+        "p95_ms": 0.016667,
+        "stddev_ms": 0.00021518189,
+        "cv": 0.0129288923
+      },
+      "output_dump_path": "",
+      "_exit_code": 0,
+      "_command": "taskset -c 3 /tmp/stage16_multidomain_pi_1784237167/cube64_uk4_bin --shape-m 64 --shape-n 64 --shape-k 64 --tile-m 8 --tile-n 8 --tile-k 8 --schedule-unroll-k 4 --candidate-label cube64_uk4 --iterations 500 --warmup 100 --repeated-calls 200 --seed-a 0x1234 --seed-b 0x5eed",
+      "_stderr": ""
+    }
+  ],
+  "correctness_pass": true,
+  "benchmark_aggregate": {
+    "group_count": 5,
+    "median_of_medians_ms": 0.01663,
+    "min_of_mins_ms": 0.016556,
+    "mean_of_medians_ms": 0.0166446,
+    "stddev_of_medians_ms": 2.3891421054428532e-05,
+    "cv_of_medians": 0.0014353857139509831,
+    "per_group_medians_ms": [
+      0.016685,
+      0.01663,
+      0.016648,
+      0.01663,
+      0.01663
+    ]
+  }
+}

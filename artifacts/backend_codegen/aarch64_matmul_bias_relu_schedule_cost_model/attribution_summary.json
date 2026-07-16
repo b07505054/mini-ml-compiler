@@ -1,0 +1,534 @@
+{
+  "primary_unroll1_vs_primary_unroll2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": 4,
+        "scheduled": 2,
+        "delta": -2,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": 128,
+        "scheduled_static_contract_count_per_body": 256,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": 128,
+        "scheduled_fmla_count": 256,
+        "delta_pct": 100.0,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": 2608,
+        "scheduled_bytes": 3248,
+        "delta_bytes": 640,
+        "delta_pct": 24.539877300613497,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": 0,
+        "scheduled": 0,
+        "delta": 0,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": 0,
+        "scheduled": 0,
+        "delta": 0,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": 96,
+        "scheduled_bytes": 96,
+        "delta_bytes": 0,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": 28,
+        "scheduled": 28,
+        "delta": 0,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.002593,
+      "scheduled_median_ms": 0.002352,
+      "measured_latency_delta_pct": 9.294253760123405,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "primary_unroll1_vs_primary_full_unroll": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": 4,
+        "scheduled": 1,
+        "delta": -3,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": -75.0
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": -75.0
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": 128,
+        "scheduled_static_contract_count_per_body": 512,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": 128,
+        "scheduled_fmla_count": 512,
+        "delta_pct": 300.0,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": 2608,
+        "scheduled_bytes": 4232,
+        "delta_bytes": 1624,
+        "delta_pct": 62.26993865030674,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": 0,
+        "scheduled": 11,
+        "delta": 11,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": 0,
+        "scheduled": 12,
+        "delta": 12,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": 96,
+        "scheduled_bytes": 224,
+        "delta_bytes": 128,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": 28,
+        "scheduled": 32,
+        "delta": 4,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.002593,
+      "scheduled_median_ms": 0.002074,
+      "measured_latency_delta_pct": 20.015426147319708,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "alt_k_tile_unroll1_vs_alt_k_tile_unroll2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": 8,
+        "scheduled": 4,
+        "delta": -4,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": 64,
+        "scheduled_static_contract_count_per_body": 128,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": 64,
+        "scheduled_fmla_count": 128,
+        "delta_pct": 100.0,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": 2336,
+        "scheduled_bytes": 2640,
+        "delta_bytes": 304,
+        "delta_pct": 13.013698630136986,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": 0,
+        "scheduled": 2,
+        "delta": 2,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": 0,
+        "scheduled": 2,
+        "delta": 2,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": 128,
+        "scheduled_bytes": 176,
+        "delta_bytes": 48,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": 32,
+        "scheduled": 32,
+        "delta": 0,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.002963,
+      "scheduled_median_ms": 0.002611,
+      "measured_latency_delta_pct": 11.879851501856223,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "cube64_unroll1_vs_cube64_unroll2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": 8,
+        "scheduled": 4,
+        "delta": -4,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": -50.0
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": 128,
+        "scheduled_static_contract_count_per_body": 256,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": 128,
+        "scheduled_fmla_count": 256,
+        "delta_pct": 100.0,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": 2704,
+        "scheduled_bytes": 3344,
+        "delta_bytes": 640,
+        "delta_pct": 23.668639053254438,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": 0,
+        "scheduled": 0,
+        "delta": 0,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": 0,
+        "scheduled": 0,
+        "delta": 0,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": 96,
+        "scheduled_bytes": 96,
+        "delta_bytes": 0,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": 28,
+        "scheduled": 28,
+        "delta": 0,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.01976,
+      "scheduled_median_ms": 0.017685,
+      "measured_latency_delta_pct": 10.501012145748991,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "cube16_uk1_vs_cube16_uk2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": null,
+        "scheduled_static_contract_count_per_body": null,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": null,
+        "scheduled_fmla_count": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.000463,
+      "scheduled_median_ms": 0.000352,
+      "measured_latency_delta_pct": 23.974082073434126,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "rect_uk1_vs_rect_uk2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": null,
+        "scheduled_static_contract_count_per_body": null,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": null,
+        "scheduled_fmla_count": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.005111,
+      "scheduled_median_ms": 0.004611,
+      "measured_latency_delta_pct": 9.78282136568187,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  },
+  "large_uk1_vs_large_uk2": {
+    "baseline_id": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "scheduled_id": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "benefit_signals": {
+      "k_loop_dynamic_trip_count_reduction": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": true,
+        "note": "estimated_dynamic_k_loop_iterations = (K_trip_count_pre_unroll / schedule_unroll_k); a static-IR-derived estimate, not a dynamic instrumentation count"
+      },
+      "dynamic_loop_branch_reduction_estimate": {
+        "note": "each dynamic K-loop back-edge corresponds to exactly one conditional branch in the compiled loop; reduction is the same ratio as the trip-count reduction above (one branch retired per iteration removed)",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "dynamic_compare_update_reduction_estimate": {
+        "note": "each removed K-loop iteration also removes one induction-variable update and one trip-count compare (standard scf.for lowering, one add + one compare per back-edge); same ratio as the branch reduction above",
+        "estimated": true,
+        "delta_pct": null
+      },
+      "larger_scheduling_region": {
+        "baseline_static_contract_count_per_body": null,
+        "scheduled_static_contract_count_per_body": null,
+        "note": "more independent FMLA work is visible to the LLVM machine scheduler within one static loop body copy (Stage 12 evidence: same_accumulator_distance was not worse after unrolling)",
+        "estimated": false
+      }
+    },
+    "cost_signals": {
+      "static_body_growth": {
+        "baseline_fmla_count": null,
+        "scheduled_fmla_count": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "code_size_growth": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "delta_pct": null,
+        "estimated": false
+      },
+      "spill_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "reload_increase": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false
+      },
+      "stack_frame_change": {
+        "baseline_bytes": null,
+        "scheduled_bytes": null,
+        "delta_bytes": null,
+        "estimated": false
+      },
+      "physical_register_change": {
+        "baseline": null,
+        "scheduled": null,
+        "delta": null,
+        "estimated": false,
+        "note": "authoritative post-RA physical register count, NOT the pre-RA approx_peak_live heuristic (see Stage 12 finding: that heuristic over-counts on this project's loop-bodied MIR and is not used as a scoring signal here)"
+      }
+    },
+    "measured_result": {
+      "baseline_median_ms": 0.159074,
+      "scheduled_median_ms": 0.142981,
+      "measured_latency_delta_pct": 10.116675258055997,
+      "estimated": false,
+      "note": "the only non-estimated, non-static number in this report -- real Raspberry Pi measurement"
+    }
+  }
+}

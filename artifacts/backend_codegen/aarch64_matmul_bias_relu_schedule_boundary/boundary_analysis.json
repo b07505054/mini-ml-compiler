@@ -1,0 +1,26 @@
+{
+  "counterexample_found": false,
+  "domains_tested_total": 6,
+  "uk4_win_count": 6,
+  "uk4_loss_count": 0,
+  "uk4_tie_count": 0,
+  "k_trip_count_range_tested": [
+    4,
+    16
+  ],
+  "spill_count_range_at_measured_winner": [
+    0,
+    18
+  ],
+  "shape_flop_range_tested": [
+    4096,
+    262144
+  ],
+  "observations": [
+    "Every winning uk4 candidate reduces dynamic K-loop trip count by 50-75% relative to uk1.",
+    "Spill count at the measured winner ranges 0-18 with no observed case severe enough to flip ranking.",
+    "Smallest tested problem (smallA, 4096 FLOPs) still favored uk4 despite 10/11 spills/reloads -- fixed overhead did not dominate at this scale, contrary to the a priori hypothesis.",
+    "Highest K-trip-count domain (highK, trip 16) was completely spill-free and had the cleanest static-model agreement."
+  ],
+  "no_regression_model_fit": "Explicitly not attempted at n=6 domains, per task instruction against overfitting."
+}

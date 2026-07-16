@@ -1,0 +1,110 @@
+[
+  {
+    "query_domain": "primary",
+    "evidence_domain": "cube64",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "altk",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "primary",
+    "evidence_domain": "rect",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "primary",
+    "query_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "altk",
+    "query_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "cube64",
+    "evidence_domain": "rect",
+    "query_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "primary",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "cube64",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "altk",
+    "evidence_domain": "rect",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "primary",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "cube64",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "cross_shape_same_schedule",
+    "confidence": 0.7,
+    "exact_match_rejected": true
+  },
+  {
+    "query_domain": "rect",
+    "evidence_domain": "altk",
+    "query_key": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence_key": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "compatibility_level": "incompatible",
+    "confidence": 0.0,
+    "exact_match_rejected": true
+  }
+]

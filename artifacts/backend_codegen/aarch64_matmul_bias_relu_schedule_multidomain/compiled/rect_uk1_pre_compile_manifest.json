@@ -1,0 +1,24 @@
+{
+  "selected_candidate_key": {
+    "target_arch": "aarch64",
+    "target_cpu": "cortex-a76",
+    "target_features": "none",
+    "dtype": "f32",
+    "shape_m": 32,
+    "shape_n": 64,
+    "shape_k": 32,
+    "tile_m": 8,
+    "tile_n": 8,
+    "tile_k": 8,
+    "vector_width": 4,
+    "schedule_unroll_k": 1,
+    "loop_order_id": "tiled_mnk_row_major_v1",
+    "microkernel_id": "hir_fused_matmul_bias_relu_tiled_scheduled_v1"
+  },
+  "selected_candidate_canonical_id": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+  "requested_mode": "manual",
+  "effective_mode": "manual",
+  "fallback_reason": "none -- manual mode never overrides the user-supplied value",
+  "confidence": 1.0,
+  "timestamp": 1784237083.7423697
+}

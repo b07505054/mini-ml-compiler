@@ -1,0 +1,170 @@
+{
+  "primary": {
+    "shape": "32x32x32",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "rows": [
+      {
+        "label": "primary_unroll1",
+        "unroll_k": 1,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 2608,
+        "median_ms": 0.002593,
+        "correctness_pass": true
+      },
+      {
+        "label": "primary_unroll2",
+        "unroll_k": 2,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 3248,
+        "median_ms": 0.002352,
+        "correctness_pass": true
+      },
+      {
+        "label": "primary_full_unroll",
+        "unroll_k": 4,
+        "spills": 11,
+        "reloads": 12,
+        "stack_bytes": 224,
+        "object_bytes": 4232,
+        "median_ms": 0.002074,
+        "correctness_pass": true
+      }
+    ],
+    "winner": "primary_full_unroll",
+    "classification": "uk4_winner"
+  },
+  "cube64": {
+    "shape": "64x64x64",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "rows": [
+      {
+        "label": "cube64_uk1",
+        "unroll_k": 1,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 2704,
+        "median_ms": 0.019759,
+        "correctness_pass": true
+      },
+      {
+        "label": "cube64_uk2",
+        "unroll_k": 2,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 3344,
+        "median_ms": 0.017685,
+        "correctness_pass": true
+      },
+      {
+        "label": "cube64_uk4",
+        "unroll_k": 4,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 4624,
+        "median_ms": 0.01663,
+        "correctness_pass": true
+      }
+    ],
+    "winner": "cube64_uk4",
+    "classification": "uk4_winner"
+  },
+  "altk": {
+    "shape": "32x32x32",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 4
+    },
+    "rows": [
+      {
+        "label": "altk_uk1",
+        "unroll_k": 1,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 128,
+        "object_bytes": 2336,
+        "median_ms": 0.002981,
+        "correctness_pass": true
+      },
+      {
+        "label": "altk_uk2",
+        "unroll_k": 2,
+        "spills": 2,
+        "reloads": 2,
+        "stack_bytes": 176,
+        "object_bytes": 2640,
+        "median_ms": 0.00263,
+        "correctness_pass": true
+      },
+      {
+        "label": "altk_uk4",
+        "unroll_k": 4,
+        "spills": 4,
+        "reloads": 4,
+        "stack_bytes": 176,
+        "object_bytes": 3248,
+        "median_ms": 0.002407,
+        "correctness_pass": true
+      }
+    ],
+    "winner": "altk_uk4",
+    "classification": "uk4_winner"
+  },
+  "rect": {
+    "shape": "32x64x32",
+    "tile": {
+      "m": 8,
+      "n": 8,
+      "k": 8
+    },
+    "rows": [
+      {
+        "label": "rect_uk1",
+        "unroll_k": 1,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 2704,
+        "median_ms": 0.005185,
+        "correctness_pass": true
+      },
+      {
+        "label": "rect_uk2",
+        "unroll_k": 2,
+        "spills": 0,
+        "reloads": 0,
+        "stack_bytes": 96,
+        "object_bytes": 3344,
+        "median_ms": 0.004667,
+        "correctness_pass": true
+      },
+      {
+        "label": "rect_uk4",
+        "unroll_k": 4,
+        "spills": 18,
+        "reloads": 20,
+        "stack_bytes": 368,
+        "object_bytes": 4360,
+        "median_ms": 0.004278,
+        "correctness_pass": true
+      }
+    ],
+    "winner": "rect_uk4",
+    "classification": "uk4_winner"
+  }
+}

@@ -1,0 +1,974 @@
+[
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x4:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x32x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape16x16x16:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk1:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape128x128x128:tile8x8x8:vw4:uk2:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "shape_bucket",
+    "confidence": 0.4
+  },
+  {
+    "query": "aarch64:cortex-a76:none:f32:shape32x64x32:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "evidence": "aarch64:cortex-a76:none:f32:shape64x64x64:tile8x8x8:vw4:uk4:tiled_mnk_row_major_v1:hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+    "level": "cross_shape_same_schedule",
+    "confidence": 0.7
+  }
+]
