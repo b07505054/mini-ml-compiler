@@ -1,0 +1,15 @@
+{
+  "shape": "64x64x64",
+  "M": 64, "N": 64, "K": 64,
+  "iterations": 500,
+  "scalar_median_ms": 0.190296,
+  "candidates": [
+    {"tile": "tm4_tn4_tk4", "tm": 4, "tn": 4, "tk": 4, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.032352, "p95_ms": 0.032426},
+    {"tile": "tm4_tn8_tk4", "tm": 4, "tn": 8, "tk": 4, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.023185, "p95_ms": 0.023259},
+    {"tile": "tm4_tn8_tk8", "tm": 4, "tn": 8, "tk": 8, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.019685, "p95_ms": 0.019740},
+    {"tile": "tm8_tn4_tk4", "tm": 8, "tn": 4, "tk": 4, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.025371, "p95_ms": 0.025426},
+    {"tile": "tm8_tn4_tk8", "tm": 8, "tn": 4, "tk": 8, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.024518, "p95_ms": 0.024537},
+    {"tile": "tm8_tn8_tk4", "tm": 8, "tn": 8, "tk": 4, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.022185, "p95_ms": 0.022223},
+    {"tile": "tm8_tn8_tk8", "tm": 8, "tn": 8, "tk": 8, "correct": true, "max_abs_error": 0.00000000, "median_ms": 0.019852, "p95_ms": 0.019926}
+  ]
+}

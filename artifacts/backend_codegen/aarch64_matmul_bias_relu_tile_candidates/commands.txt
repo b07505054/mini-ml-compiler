@@ -1,0 +1,94 @@
+Commands used to produce every file in this directory. All paths are
+relative to the ml-graph-compiler-runtime repo root.
+
+1. Compile all 42 legal candidates (7 tiles x 6 shapes -- static legality,
+   structural MLIR checks, and LLVM/AArch64 backend metrics collection):
+
+   python3 tools/generate_aarch64_matmul_tile_candidates.py \
+     --output-dir <objects_dir> \
+     --results tile_candidate_static_results.json
+
+   This internally invokes, per candidate:
+     bash mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh \
+       --variant tiled-vectorized --tile-m M --tile-n N --tile-k K \
+       <renamed_fixture> <objects_dir> matmul_<shape>_tm<M>_tn<N>_tk<K>
+   against a per-candidate copy of mlir_passes/test/backend_codegen/
+   matmul_bias_relu_tiled_<shape>.mlir with its func.func renamed to embed
+   the tile (matmul_bias_relu_tiled_<shape>_tm<M>_tn<N>_tk<K>) -- required
+   so all 42 candidates' _mlir_ciface_ symbols are unique and can link into
+   one Raspberry Pi test binary (see generate_aarch64_matmul_tile_candidates.py
+   renamed_fixture()).
+
+2. Assembly-derived register-pressure evidence for every compiled candidate:
+
+   python3 tools/analyze_register_pressure.py \
+     --objects-dir <objects_dir> \
+     --candidates tile_candidate_static_results.json \
+     --output tile_candidate_register_pressure.json
+
+3. Generate the three Pi test/benchmark harnesses from the candidate list
+   (NOT committed -- deterministically regenerable from step 1's output;
+   see README.md "Why the harness .cpp files are not committed"):
+
+   python3 tools/generate_tile_candidate_harness.py \
+     --candidates tile_candidate_static_results.json \
+     --output-dir <harness_dir>
+
+4. Real Raspberry Pi execution: repeated-call correctness (1 + 1000 calls,
+   all 42 candidates, one process), mixed-candidate stress (200 cycles,
+   the exact 5-step sequence from the task brief), and per-shape benchmark
+   (all candidates for that shape + scalar reference, 2000 iterations for
+   8x8x8/16x16x16/32x32x32, 500 for the three larger/rectangular shapes):
+
+   PI_HOST=allen@100.110.37.6 REPEATED_CALLS=1000 MIXED_CYCLES=200 \
+   ITERATIONS=2000 ITERATIONS_LARGE=500 \
+   bash tools/run_tile_candidates_pi_integration.sh \
+     <objects_dir> <harness_dir> tile_candidate_static_results.json <pi_results_dir>
+
+5. Merge static/structural/backend metrics + register-pressure evidence +
+   Pi correctness + Pi benchmark into candidate_results.json:
+
+   python3 tools/merge_tile_candidate_results.py \
+     --static tile_candidate_static_results.json \
+     --register-pressure tile_candidate_register_pressure.json \
+     --pi-results-dir <pi_results_dir> \
+     --output candidate_results.json
+
+6. Score and select one tile per shape (scoring_policy.json documents the
+   exact formula and rationale):
+
+   python3 tools/select_aarch64_matmul_tile_candidate.py \
+     --results candidate_results.json \
+     --output selected_tiles.json \
+     --scoring-policy scoring_policy.json
+
+7. Verify the selected candidate for a shape reproduces byte-identically
+   in .text section content (not whole-object size -- see
+   reproduce_selected_tile_candidate.py's docstring for why whole-object
+   size legitimately differs by the tile-suffix symbol-name length):
+
+   python3 tools/reproduce_selected_tile_candidate.py \
+     --selection selected_tiles.json \
+     --candidates candidate_results.json \
+     --shape 32x32x32 \
+     --output-dir <repro_dir>
+
+8. Representative candidate full artifacts
+   (representative_candidate_32x32x32_tm8_tn8_tk8/) were copied directly
+   from step 1's <objects_dir> output for that one candidate (input.mlir,
+   the generated transform_instance.mlir, tiled_vector_dialect.mlir,
+   lowered_llvm_dialect.mlir, generated.ll/.s, objdump.txt via
+   llvm-objdump -d).
+
+9. Disassembly excerpts (disasm_excerpts/) via
+   llvm-objdump -d --no-show-raw-insn <obj> | head -N for the two most
+   instructive losing candidates (see README.md).
+
+Toolchain versions used (dev host, recorded at generation time):
+   Ubuntu LLVM/clang 21.1.8 (llc, mlir-opt, mlir-translate, llvm-objdump)
+   mlir-opt / mlir-translate from the project-local build at
+   /home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm-21/bin
+
+Raspberry Pi target (pi_device_state.txt has the live capture):
+   hostname edgeaiplatform, Cortex-A76 (Raspberry Pi 5 SoC), aarch64,
+   Debian (trixie), gcc 14.2.0

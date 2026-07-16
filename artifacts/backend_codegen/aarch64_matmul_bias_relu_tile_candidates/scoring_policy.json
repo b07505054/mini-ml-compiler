@@ -1,0 +1,22 @@
+{
+  "hard_rejection": [
+    "not legal",
+    "not correct (failed Pi repeated-call check or max_abs_error >= 1e-3)"
+  ],
+  "score_formula": "latency_ms/best_latency_ms + 0.20*hot_loop_vector_spills + 0.20*hot_loop_vector_reloads + 0.10*(object_bytes/smallest_object_bytes) + 0.05*max(0, vector_registers_referenced-28)",
+  "weights": {
+    "spill": 0.2,
+    "reload": 0.2,
+    "object_size": 0.1,
+    "register_soft_threshold": 28,
+    "register_penalty_per_register_over_threshold": 0.05
+  },
+  "tie_break_order": [
+    "lower latency",
+    "zero spills+reloads",
+    "smaller object_bytes",
+    "fewer vector_registers_referenced",
+    "smaller tile volume (tm*tn*tk)"
+  ],
+  "rationale": "Latency is the primary signal (coefficient 1.0). A single hot-loop spill (+0.20) outweighs a latency advantage smaller than 20% of the best candidate's latency; a larger latency advantage still wins even with one spill. Object-size growth is a minor tiebreaker (0.10) since all candidates here are 1.7-2.7KB -- the difference is real but small next to a spill. The register penalty only activates within 4 registers of the 32-register ceiling, since the prior single-tile slice already showed 32-registers-zero-spills is fine on its own; it exists to break near-ties toward candidates with more headroom."
+}

@@ -1,0 +1,2655 @@
+{
+  "target": {
+    "architecture": "aarch64",
+    "cpu": "cortex-a76",
+    "device": "Raspberry Pi 5"
+  },
+  "results": [
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.00063,
+        "p95_ms": 0.000648
+      },
+      "backend": {
+        "object_bytes": 1808,
+        "text_bytes": 632,
+        "aarch64_instructions": 158,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 12,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000519,
+        "p95_ms": 0.000519
+      },
+      "backend": {
+        "object_bytes": 1952,
+        "text_bytes": 776,
+        "aarch64_instructions": 194,
+        "llvm_ir_instructions": 396,
+        "loads": 39,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.0005,
+        "p95_ms": 0.0005
+      },
+      "backend": {
+        "object_bytes": 2136,
+        "text_bytes": 936,
+        "aarch64_instructions": 234,
+        "llvm_ir_instructions": 484,
+        "loads": 47,
+        "stores": 30,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000555,
+        "p95_ms": 0.000556
+      },
+      "backend": {
+        "object_bytes": 2048,
+        "text_bytes": 872,
+        "aarch64_instructions": 218,
+        "llvm_ir_instructions": 652,
+        "loads": 54,
+        "stores": 38,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000519,
+        "p95_ms": 0.000537
+      },
+      "backend": {
+        "object_bytes": 2232,
+        "text_bytes": 1032,
+        "aarch64_instructions": 258,
+        "llvm_ir_instructions": 804,
+        "loads": 62,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.0005,
+        "p95_ms": 0.000519
+      },
+      "backend": {
+        "object_bytes": 2344,
+        "text_bytes": 1144,
+        "aarch64_instructions": 286,
+        "llvm_ir_instructions": 652,
+        "loads": 59,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_16x16x16_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_16x16x16_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000445,
+        "p95_ms": 0.000463
+      },
+      "backend": {
+        "object_bytes": 2632,
+        "text_bytes": 1448,
+        "aarch64_instructions": 362,
+        "llvm_ir_instructions": 804,
+        "loads": 69,
+        "stores": 40,
+        "branches": 11,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 7,
+        "abi_callee_saved_folded_reloads": 7,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.00413,
+        "p95_ms": 0.004148
+      },
+      "backend": {
+        "object_bytes": 1808,
+        "text_bytes": 632,
+        "aarch64_instructions": 158,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 10,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.003093,
+        "p95_ms": 0.003111
+      },
+      "backend": {
+        "object_bytes": 1936,
+        "text_bytes": 760,
+        "aarch64_instructions": 190,
+        "llvm_ir_instructions": 396,
+        "loads": 39,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.002926,
+        "p95_ms": 0.002926
+      },
+      "backend": {
+        "object_bytes": 2136,
+        "text_bytes": 936,
+        "aarch64_instructions": 234,
+        "llvm_ir_instructions": 484,
+        "loads": 47,
+        "stores": 30,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.003389,
+        "p95_ms": 0.003408
+      },
+      "backend": {
+        "object_bytes": 2048,
+        "text_bytes": 872,
+        "aarch64_instructions": 218,
+        "llvm_ir_instructions": 652,
+        "loads": 54,
+        "stores": 38,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.003222,
+        "p95_ms": 0.003223
+      },
+      "backend": {
+        "object_bytes": 2232,
+        "text_bytes": 1032,
+        "aarch64_instructions": 258,
+        "llvm_ir_instructions": 804,
+        "loads": 62,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.002982,
+        "p95_ms": 0.003
+      },
+      "backend": {
+        "object_bytes": 2344,
+        "text_bytes": 1144,
+        "aarch64_instructions": 286,
+        "llvm_ir_instructions": 652,
+        "loads": 59,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x32x32_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x32x32_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.002593,
+        "p95_ms": 0.002611
+      },
+      "backend": {
+        "object_bytes": 2616,
+        "text_bytes": 1432,
+        "aarch64_instructions": 358,
+        "llvm_ir_instructions": 804,
+        "loads": 69,
+        "stores": 40,
+        "branches": 11,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 7,
+        "abi_callee_saved_folded_reloads": 7,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.032352,
+        "p95_ms": 0.032426
+      },
+      "backend": {
+        "object_bytes": 1824,
+        "text_bytes": 648,
+        "aarch64_instructions": 162,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 10,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.023185,
+        "p95_ms": 0.023259
+      },
+      "backend": {
+        "object_bytes": 1952,
+        "text_bytes": 776,
+        "aarch64_instructions": 194,
+        "llvm_ir_instructions": 396,
+        "loads": 39,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 16,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.019685,
+        "p95_ms": 0.01974
+      },
+      "backend": {
+        "object_bytes": 2112,
+        "text_bytes": 936,
+        "aarch64_instructions": 234,
+        "llvm_ir_instructions": 484,
+        "loads": 47,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.025371,
+        "p95_ms": 0.025426
+      },
+      "backend": {
+        "object_bytes": 2064,
+        "text_bytes": 888,
+        "aarch64_instructions": 222,
+        "llvm_ir_instructions": 652,
+        "loads": 54,
+        "stores": 38,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.024518,
+        "p95_ms": 0.024537
+      },
+      "backend": {
+        "object_bytes": 2248,
+        "text_bytes": 1048,
+        "aarch64_instructions": 262,
+        "llvm_ir_instructions": 804,
+        "loads": 66,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.022185,
+        "p95_ms": 0.022223
+      },
+      "backend": {
+        "object_bytes": 2424,
+        "text_bytes": 1224,
+        "aarch64_instructions": 306,
+        "llvm_ir_instructions": 652,
+        "loads": 66,
+        "stores": 50,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 30,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x64x64_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x64x64_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.019852,
+        "p95_ms": 0.019926
+      },
+      "backend": {
+        "object_bytes": 2712,
+        "text_bytes": 1528,
+        "aarch64_instructions": 382,
+        "llvm_ir_instructions": 804,
+        "loads": 80,
+        "stores": 48,
+        "branches": 11,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 7,
+        "abi_callee_saved_folded_reloads": 7,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.008148,
+        "p95_ms": 0.008167
+      },
+      "backend": {
+        "object_bytes": 1808,
+        "text_bytes": 632,
+        "aarch64_instructions": 158,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 10,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.006093,
+        "p95_ms": 0.006111
+      },
+      "backend": {
+        "object_bytes": 1952,
+        "text_bytes": 776,
+        "aarch64_instructions": 194,
+        "llvm_ir_instructions": 396,
+        "loads": 39,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 16,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.005148,
+        "p95_ms": 0.005167
+      },
+      "backend": {
+        "object_bytes": 2096,
+        "text_bytes": 920,
+        "aarch64_instructions": 230,
+        "llvm_ir_instructions": 484,
+        "loads": 47,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.0065,
+        "p95_ms": 0.006519
+      },
+      "backend": {
+        "object_bytes": 2064,
+        "text_bytes": 888,
+        "aarch64_instructions": 222,
+        "llvm_ir_instructions": 652,
+        "loads": 54,
+        "stores": 38,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.006315,
+        "p95_ms": 0.006334
+      },
+      "backend": {
+        "object_bytes": 2232,
+        "text_bytes": 1032,
+        "aarch64_instructions": 258,
+        "llvm_ir_instructions": 804,
+        "loads": 62,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.005759,
+        "p95_ms": 0.005777
+      },
+      "backend": {
+        "object_bytes": 2424,
+        "text_bytes": 1224,
+        "aarch64_instructions": 306,
+        "llvm_ir_instructions": 652,
+        "loads": 66,
+        "stores": 50,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 30,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_32x64x32_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.00513,
+        "p95_ms": 0.00513
+      },
+      "backend": {
+        "object_bytes": 2712,
+        "text_bytes": 1528,
+        "aarch64_instructions": 382,
+        "llvm_ir_instructions": 804,
+        "loads": 80,
+        "stores": 48,
+        "branches": 11,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 7,
+        "abi_callee_saved_folded_reloads": 7,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.016,
+        "p95_ms": 0.016037
+      },
+      "backend": {
+        "object_bytes": 1824,
+        "text_bytes": 648,
+        "aarch64_instructions": 162,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 10,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.011537,
+        "p95_ms": 0.011574
+      },
+      "backend": {
+        "object_bytes": 1936,
+        "text_bytes": 760,
+        "aarch64_instructions": 190,
+        "llvm_ir_instructions": 396,
+        "loads": 39,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.010777,
+        "p95_ms": 0.010778
+      },
+      "backend": {
+        "object_bytes": 2136,
+        "text_bytes": 936,
+        "aarch64_instructions": 234,
+        "llvm_ir_instructions": 484,
+        "loads": 47,
+        "stores": 30,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.013,
+        "p95_ms": 0.013
+      },
+      "backend": {
+        "object_bytes": 2048,
+        "text_bytes": 872,
+        "aarch64_instructions": 218,
+        "llvm_ir_instructions": 652,
+        "loads": 54,
+        "stores": 38,
+        "branches": 11,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.012129,
+        "p95_ms": 0.01213
+      },
+      "backend": {
+        "object_bytes": 2248,
+        "text_bytes": 1048,
+        "aarch64_instructions": 262,
+        "llvm_ir_instructions": 804,
+        "loads": 66,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.011,
+        "p95_ms": 0.011019
+      },
+      "backend": {
+        "object_bytes": 2344,
+        "text_bytes": 1144,
+        "aarch64_instructions": 286,
+        "llvm_ir_instructions": 652,
+        "loads": 59,
+        "stores": 42,
+        "branches": 11,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 9,
+        "abi_callee_saved_folded_reloads": 9,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_64x32x64_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_64x32x64_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.009518,
+        "p95_ms": 0.009574
+      },
+      "backend": {
+        "object_bytes": 2616,
+        "text_bytes": 1432,
+        "aarch64_instructions": 358,
+        "llvm_ir_instructions": 804,
+        "loads": 69,
+        "stores": 40,
+        "branches": 11,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 7,
+        "abi_callee_saved_folded_reloads": 7,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 9,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm4_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm4_tn4_tk4",
+      "structural": {
+        "scf_for_count": 3,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 16,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.00013,
+        "p95_ms": 0.000149
+      },
+      "backend": {
+        "object_bytes": 1808,
+        "text_bytes": 632,
+        "aarch64_instructions": 158,
+        "llvm_ir_instructions": 396,
+        "loads": 38,
+        "stores": 26,
+        "branches": 11,
+        "static_fmla": 16,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 12,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm4_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm4_tn8_tk4",
+      "structural": {
+        "scf_for_count": 2,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000129,
+        "p95_ms": 0.00013
+      },
+      "backend": {
+        "object_bytes": 1904,
+        "text_bytes": 728,
+        "aarch64_instructions": 182,
+        "llvm_ir_instructions": 386,
+        "loads": 39,
+        "stores": 26,
+        "branches": 9,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 14,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm4_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm4_tn8_tk8",
+      "structural": {
+        "scf_for_count": 1,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 3,
+        "vector_transfer_write_count": 1,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 6e-08,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 9.2e-05,
+        "p95_ms": 9.3e-05
+      },
+      "backend": {
+        "object_bytes": 1704,
+        "text_bytes": 616,
+        "aarch64_instructions": 154,
+        "llvm_ir_instructions": 317,
+        "loads": 33,
+        "stores": 16,
+        "branches": 4,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 19,
+        "abi_callee_saved_folded_spills": 3,
+        "abi_callee_saved_folded_reloads": 3,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm8_tn4_tk4",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm8_tn4_tk4",
+      "structural": {
+        "scf_for_count": 2,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 32,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000129,
+        "p95_ms": 0.00013
+      },
+      "backend": {
+        "object_bytes": 2000,
+        "text_bytes": 824,
+        "aarch64_instructions": 206,
+        "llvm_ir_instructions": 596,
+        "loads": 54,
+        "stores": 38,
+        "branches": 9,
+        "static_fmla": 32,
+        "largest_llvm_vector_width": 4,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 20,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 8,
+        "n": 4,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 17,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm8_tn4_tk8",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm8_tn4_tk8",
+      "structural": {
+        "scf_for_count": 1,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 3,
+        "vector_transfer_write_count": 1,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 6e-08,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 9.3e-05,
+        "p95_ms": 9.3e-05
+      },
+      "backend": {
+        "object_bytes": 1776,
+        "text_bytes": 680,
+        "aarch64_instructions": 170,
+        "llvm_ir_instructions": 492,
+        "loads": 43,
+        "stores": 22,
+        "branches": 4,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 27,
+        "abi_callee_saved_folded_spills": 5,
+        "abi_callee_saved_folded_reloads": 5,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm8_tn8_tk4",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm8_tn8_tk4",
+      "structural": {
+        "scf_for_count": 1,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 5,
+        "vector_transfer_write_count": 3,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 0.0,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 0.000111,
+        "p95_ms": 0.00013
+      },
+      "backend": {
+        "object_bytes": 2144,
+        "text_bytes": 952,
+        "aarch64_instructions": 238,
+        "llvm_ir_instructions": 498,
+        "loads": 58,
+        "stores": 41,
+        "branches": 6,
+        "static_fmla": 64,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 128,
+        "hot_loop_vector_spills": 0,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 0,
+        "hot_loop_integer_reloads": 0,
+        "vector_registers_referenced": 30,
+        "abi_callee_saved_folded_spills": 8,
+        "abi_callee_saved_folded_reloads": 8,
+        "hot_loop_is_whole_function": false,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "legality": {
+        "legal": true,
+        "rejection_reasons": [],
+        "register_estimate": {
+          "worst_case_registers": 26,
+          "hard_limit": 32,
+          "note": "pre-codegen analytical estimate (accumulator + B operand + worst-case A broadcasts); not a measurement -- see backend.vector_registers_referenced for assembly-derived evidence"
+        }
+      },
+      "object_name": "matmul_8x8x8_tm8_tn8_tk8",
+      "function_name": "matmul_bias_relu_tiled_8x8x8_tm8_tn8_tk8",
+      "structural": {
+        "scf_for_count": 0,
+        "vector_contract_count": 1,
+        "vector_transfer_read_count": 3,
+        "vector_transfer_write_count": 1,
+        "largest_vector_lanes": 64,
+        "bias_relu_present": true,
+        "bare_uninitialized_tensor_empty_accumulator": false
+      },
+      "correctness": {
+        "passed": true,
+        "max_abs_error": 6e-08,
+        "repeated_calls": 1000,
+        "note": null
+      },
+      "performance": {
+        "median_ms": 9.2e-05,
+        "p95_ms": 9.3e-05
+      },
+      "backend": {
+        "object_bytes": 2064,
+        "text_bytes": 952,
+        "aarch64_instructions": 238,
+        "llvm_ir_instructions": 459,
+        "loads": 47,
+        "stores": 25,
+        "branches": 2,
+        "static_fmla": 128,
+        "largest_llvm_vector_width": 8,
+        "stack_frame_bytes": 112,
+        "hot_loop_vector_spills": 3,
+        "hot_loop_vector_reloads": 0,
+        "hot_loop_integer_spills": 2,
+        "hot_loop_integer_reloads": 2,
+        "vector_registers_referenced": 32,
+        "abi_callee_saved_folded_spills": 8,
+        "abi_callee_saved_folded_reloads": 8,
+        "hot_loop_is_whole_function": true,
+        "register_pressure_evidence_kind": "assembly-derived register-use evidence (not exact LLVM register-pressure analysis)"
+      }
+    }
+  ]
+}

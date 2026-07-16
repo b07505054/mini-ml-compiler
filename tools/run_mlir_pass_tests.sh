@@ -868,7 +868,15 @@ run_backend_codegen_tiled_static_checks() {
   local out_dir
   out_dir="$(mktemp -d)"
   local name="matmul_bias_relu_tiled_${shape}"
-  local transform_script="$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir"
+  # Default tile (4, 8, 8) -- since the tile-candidate slice, the fixed
+  # transform file this test used to point at directly is gone; a concrete
+  # instance is generated from the parameterized template instead (same
+  # mechanism compile_hir_matmul_bias_relu_aarch64.sh --variant
+  # tiled-vectorized uses internally with no --tile-m/--tile-n/--tile-k
+  # given).
+  local transform_script="$out_dir/transform.mlir"
+  bash "$REPO_ROOT/mlir_passes/tools/generate_tiled_transform.sh" \
+    --tile-m 4 --tile-n 8 --tile-k 8 --output "$transform_script" >/dev/null
 
   echo "[MLIR test] backend codegen tiled-vectorized static checks ($shape)"
 
@@ -970,5 +978,92 @@ run_backend_codegen_tiled_static_checks() {
 for shape in 8x8x8 16x16x16 32x32x32 64x64x64 32x64x32 64x32x64; do
   run_backend_codegen_tiled_static_checks "$shape"
 done
+
+# ---------------------------------------------------------------------------
+# Host-side static checks for the PARAMETERIZED tiled-vectorized variant
+# (compile_hir_matmul_bias_relu_aarch64.sh --variant tiled-vectorized
+# --tile-m/--tile-n/--tile-k), added for the tile-candidate selection slice.
+# Requires no network access and no Raspberry Pi. Exercises a sample of
+# non-default tile candidates (not all 42 -- see
+# artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/
+# candidate_results.json for the full evaluated set) to confirm the
+# parameterized transform template produces the same class of evidence
+# (bounded vector width, real FMLA, real loop branches) as the fixed 4x8x8
+# tile already covered by run_backend_codegen_tiled_static_checks above.
+# ---------------------------------------------------------------------------
+run_backend_codegen_tile_candidate_static_checks() {
+  local shape="$1" tm="$2" tn="$3" tk="$4"
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_${shape}.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_tiled_${shape}_tm${tm}_tn${tn}_tk${tk}"
+  local transform_template="$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir"
+  local transform_instance="$out_dir/transform.mlir"
+
+  echo "[MLIR test] tile candidate static checks (shape=$shape tile=${tm}x${tn}x${tk})"
+
+  bash "$REPO_ROOT/mlir_passes/tools/generate_tiled_transform.sh" \
+    --tile-m "$tm" --tile-n "$tn" --tile-k "$tk" --output "$transform_instance" >/dev/null
+
+  # 1. Tiled vector IR structural test (pre-bufferization): real scf.for
+  #    loops plus vector transfer/fma ops, bounded vector width.
+  "$MLIR_OPT" "$input" \
+    --load-dialect-plugin="$PLUGIN" \
+    --load-pass-plugin="$PLUGIN" \
+    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_instance},transform-interpreter{entry-point=__transform_main})" \
+    -o "$out_dir/${name}_vector.mlir"
+  if ! grep -q "scf.for" "$out_dir/${name}_vector.mlir"; then
+    echo "error: expected scf.for in ${name}_vector.mlir" >&2
+    exit 1
+  fi
+  if ! grep -qE "vector\.(contract|fma|transfer_read|transfer_write)" "$out_dir/${name}_vector.mlir"; then
+    echo "error: expected vector.{contract,fma,transfer_read,transfer_write} in ${name}_vector.mlir" >&2
+    exit 1
+  fi
+  local bad_vec
+  bad_vec="$(grep -oE 'vector<[0-9]+(x[0-9]+)*xf32>' "$out_dir/${name}_vector.mlir" | sort -u | while read -r v; do
+    dims="$(echo "$v" | grep -oE '[0-9]+' | head -n -1)"
+    [[ -z "$dims" ]] && dims="$(echo "$v" | grep -oE '[0-9]+')"
+    lanes=1
+    for d in $dims; do lanes=$((lanes * d)); done
+    if [[ "$lanes" -gt 64 ]]; then echo "$v (lanes=$lanes)"; fi
+  done)"
+  if [[ -n "$bad_vec" ]]; then
+    echo "error: found vector type(s) exceeding 64 FP32 lanes in ${name}_vector.mlir:" >&2
+    echo "$bad_vec" >&2
+    exit 1
+  fi
+
+  # 2. Full pipeline via the parameterized compile-script interface.
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+    --variant tiled-vectorized --tile-m "$tm" --tile-n "$tn" --tile-k "$tk" \
+    "$input" "$out_dir" "$name"
+
+  # 3. Real NEON FMLA.
+  if ! grep -qE '^\s+fmla\s+v[0-9]+\.4s' "$out_dir/${name}.s"; then
+    echo "error: expected 'fmla v*.4s' in ${name}.s" >&2
+    exit 1
+  fi
+
+  # 4. Real loop branch present (at least one conditional branch/back-edge).
+  local cond_branches
+  cond_branches="$(grep -cE '^\s+(b\.[a-z]+|cbz|cbnz)\s' "$out_dir/${name}.s" || true)"
+  if [[ "$cond_branches" -lt 1 ]]; then
+    echo "error: expected at least one conditional branch in ${name}.s, found $cond_branches" >&2
+    exit 1
+  fi
+
+  rm -rf "$out_dir"
+}
+
+# Sample of non-default candidates: the two tiles this slice's scoring
+# policy actually selected for at least one shape (4x8x8, 8x8x8) plus one
+# never-selected candidate (4x4x4), each on a distinct shape, to keep this
+# host-suite addition fast while still exercising the parameterized path
+# beyond the already-covered fixed 4x8x8 default.
+run_backend_codegen_tile_candidate_static_checks "32x32x32" 8 8 8
+run_backend_codegen_tile_candidate_static_checks "64x64x64" 4 8 8
+run_backend_codegen_tile_candidate_static_checks "16x16x16" 4 4 4
 
 echo "[MLIR test] all passed"

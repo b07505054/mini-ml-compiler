@@ -1,0 +1,51 @@
+
+/tmp/tile_candidate_objects/matmul_32x64x32_tm8_tn8_tk8.o:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000000000 <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8>:
+       0:      	stp	d11, d10, [sp, #-0x60]!
+       4:      	stp	d9, d8, [sp, #0x10]
+       8:      	stp	x30, x25, [sp, #0x20]
+       c:      	stp	x24, x23, [sp, #0x30]
+      10:      	stp	x22, x21, [sp, #0x40]
+      14:      	stp	x20, x19, [sp, #0x50]
+      18:      	mov	x19, x1
+      1c:      	ldr	x23, [sp, #0x98]
+      20:      	ldr	x24, [sp, #0x60]
+      24:      	mov	w0, #0x2040             // =8256
+      28:      	bl	0x28 <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8+0x28>
+      2c:      	mov	x20, x0
+      30:      	add	x8, x0, #0x3f
+      34:      	and	x25, x8, #0xffffffffffffffc0
+      38:      	mov	w0, #0x2040             // =8256
+      3c:      	bl	0x3c <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8+0x3c>
+      40:      	mov	x21, x0
+      44:      	mov	x8, xzr
+      48:      	mov	x9, xzr
+      4c:      	add	x10, x0, #0x3f
+      50:      	and	x22, x10, #0xffffffffffffffc0
+      54:      	movi	v0.2d, #0000000000000000
+      58:      	b	0x68 <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8+0x68>
+      5c:      	nop
+      60:      	add	x9, x9, #0x8
+      64:      	add	x8, x8, #0x400
+      68:      	cmp	x9, #0x1f
+      6c:      	b.gt	0x534 <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8+0x534>
+      70:      	mov	x10, xzr
+      74:      	mov	x11, xzr
+      78:      	b	0x1dc <matmul_bias_relu_tiled_32x64x32_tm8_tn8_tk8+0x1dc>
+      7c:      	nop
+      80:      	add	x17, x25, x12, lsl #2
+      84:      	add	x18, x23, x12, lsl #2
+      88:      	lsl	x1, x12, #2
+      8c:      	add	x16, x1, #0x100
+      90:      	add	x15, x1, #0x200
+      94:      	add	x14, x1, #0x300
+      98:      	add	x13, x1, #0x400
+      9c:      	ldp	q1, q2, [x17]
+      a0:      	ldp	q3, q4, [x17, #0x100]
+      a4:      	ldp	q5, q6, [x18]
+      a8:      	add	x18, x23, x16
+      ac:      	add	x0, x23, x15
+... (truncated; this candidate was the single fastest measured for 32x64x32 but was NOT selected -- see selected_tiles.json selection_reasons)

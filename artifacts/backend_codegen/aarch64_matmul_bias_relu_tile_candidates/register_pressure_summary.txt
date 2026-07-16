@@ -1,0 +1,50 @@
+Register-pressure summary across all 42 legal tile candidates (7 tiles x 6
+shapes). Full per-candidate data is in candidate_results.json's
+backend.{hot_loop_vector_spills,hot_loop_vector_reloads,
+vector_registers_referenced,hot_loop_is_whole_function} fields. Method:
+see tools/analyze_register_pressure.py -- assembly-derived evidence only
+(hot-loop basic block identified by loop-nest depth + fmla density; ABI
+callee-saved folded spill/reload lines explicitly excluded from the
+hot-loop counts).
+
+Headline finding: 41 of 42 candidates show ZERO hot-loop vector spills and
+ZERO hot-loop vector reloads, regardless of vector_registers_referenced
+(which ranges 10-32 across candidates). This matches the prior single-tile
+slice's finding that LLVM's scheduler can legitimately use all 32
+registers with no spills.
+
+The ONE exception: shape=8x8x8, tile=(8,8,8) -- 3 hot-loop-adjacent vector
+spills, 0 reloads, 32 registers referenced. This is the single most
+register-hungry (tile == shape exactly, so the loop nest collapses
+entirely via MLIR canonicalization -- see structural.scf_for_count=0 for
+this candidate -- meaning all 128 static FMLA instructions live in ONE
+straight-line block with no loop-driven register reuse) candidate in the
+whole 42-candidate set, and it is the only one where real spill evidence
+appears. See disasm_excerpts/8x8x8_tm8_tn8_tk8_spilling_head.txt.
+
+This is treated as a genuine, informative finding, not a bug: it is
+exactly the scenario the register-pressure analysis exists to catch, and
+it correctly does NOT appear for the same (8,8,8) tile at any larger shape
+(16x16x16 through 64x32x64), where the loop nest survives and provides
+register reuse across iterations instead of requiring everything live at
+once.
+
+vector_registers_referenced distribution (all 42 candidates):
+  10 registers: 6 candidates (all tile=(4,4,4))
+  12 registers: 2 candidates
+  14-20 registers: 15 candidates
+  27 registers: 9 candidates (mostly tile=(8,8,8) at larger shapes)
+  30 registers: 3 candidates
+  32 registers: 7 candidates (mostly tile=(4,8,8) or (8,4,8) at shapes
+    where K=8 exactly matches the tile's K, and the single 8x8x8/(8,8,8)
+    spilling case)
+
+Correctness of the analysis itself: the analysis script's initial version
+mis-attributed the function prologue's AAPCS64 callee-saved
+stp/ldp d8-d15 "Folded Spill"/"Folded Reload" lines as hot-loop spills for
+the one degenerate (no-labeled-loop-blocks) candidate; fixed by excluding
+any line containing "Folded Spill"/"Folded Reload" from the hot-loop
+spill/reload counters unconditionally (see tools/analyze_register_pressure.py
+classify_stack_access() docstring). Verified the fix against the raw
+assembly by hand for that specific candidate before trusting the automated
+result across all 42.

@@ -1,0 +1,549 @@
+{
+  "target": {
+    "architecture": "aarch64",
+    "cpu": "cortex-a76",
+    "device": "Raspberry Pi 5"
+  },
+  "selections": [
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "selected_tile": [
+        4,
+        8,
+        8
+      ],
+      "score": 1.1,
+      "median_ms": 9.2e-05,
+      "object_bytes": 1704,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 19,
+      "selection_reasons": [
+        "lowest measured median latency",
+        "zero hot-loop spills/reloads",
+        "1,704-byte object",
+        "score=1.1000 (latency_term=1.0000, spill_term=0.0000, size_term=0.1000)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          4,
+          8,
+          8
+        ],
+        "median_ms": 9.2e-05,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": true,
+      "rejected_candidates": [
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.1151,
+          "reason": "0.000093ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.4323,
+          "reason": "0.000111ms slower"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.5139,
+          "reason": "0.000129ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.5191,
+          "reason": "0.000130ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.5195,
+          "reason": "0.000129ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            8
+          ],
+          "score": 1.9211,
+          "reason": "3 hot-loop vector spill/reload events"
+        }
+      ]
+    },
+    {
+      "shape": [
+        16,
+        16,
+        16
+      ],
+      "selected_tile": [
+        8,
+        8,
+        8
+      ],
+      "score": 1.1456,
+      "median_ms": 0.000445,
+      "object_bytes": 2632,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 27,
+      "selection_reasons": [
+        "lowest measured median latency",
+        "zero hot-loop spills/reloads",
+        "2,632-byte object",
+        "score=1.1456 (latency_term=1.0000, spill_term=0.0000, size_term=0.1456)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          8,
+          8,
+          8
+        ],
+        "median_ms": 0.000445,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": true,
+      "rejected_candidates": [
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.2743,
+          "reason": "0.000519ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.3605,
+          "reason": "0.000555ms slower"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            8
+          ],
+          "score": 1.4417,
+          "reason": "0.000500ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.4532,
+          "reason": "0.000500ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.4897,
+          "reason": "0.000519ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.5157,
+          "reason": "0.000630ms slower"
+        }
+      ]
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "selected_tile": [
+        8,
+        8,
+        8
+      ],
+      "score": 1.1447,
+      "median_ms": 0.002593,
+      "object_bytes": 2616,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 27,
+      "selection_reasons": [
+        "lowest measured median latency",
+        "zero hot-loop spills/reloads",
+        "2,616-byte object",
+        "score=1.1447 (latency_term=1.0000, spill_term=0.0000, size_term=0.1447)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          8,
+          8,
+          8
+        ],
+        "median_ms": 0.002593,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": true,
+      "rejected_candidates": [
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.2999,
+          "reason": "0.003093ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.4203,
+          "reason": "0.003389ms slower"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            8
+          ],
+          "score": 1.4466,
+          "reason": "0.002926ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.4797,
+          "reason": "0.002982ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.566,
+          "reason": "0.003222ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.6927,
+          "reason": "0.004130ms slower"
+        }
+      ]
+    },
+    {
+      "shape": [
+        32,
+        64,
+        32
+      ],
+      "selected_tile": [
+        4,
+        8,
+        8
+      ],
+      "score": 1.1194,
+      "median_ms": 0.005148,
+      "object_bytes": 2096,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 19,
+      "selection_reasons": [
+        "not the single fastest candidate (0.4% slower than fastest), but best overall score",
+        "zero hot-loop spills/reloads",
+        "2,096-byte object",
+        "score=1.1194 (latency_term=1.0035, spill_term=0.0000, size_term=0.1159)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          8,
+          8,
+          8
+        ],
+        "median_ms": 0.00513,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": false,
+      "rejected_candidates": [
+        {
+          "tile": [
+            8,
+            8,
+            8
+          ],
+          "score": 1.15,
+          "reason": "higher overall score (1.1500 vs 1.1194)"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.2957,
+          "reason": "0.006093ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.3567,
+          "reason": "0.005759ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.3812,
+          "reason": "0.006500ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.5544,
+          "reason": "0.006315ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.6883,
+          "reason": "0.008148ms slower"
+        }
+      ]
+    },
+    {
+      "shape": [
+        64,
+        32,
+        64
+      ],
+      "selected_tile": [
+        8,
+        8,
+        8
+      ],
+      "score": 1.1434,
+      "median_ms": 0.009518,
+      "object_bytes": 2616,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 27,
+      "selection_reasons": [
+        "lowest measured median latency",
+        "zero hot-loop spills/reloads",
+        "2,616-byte object",
+        "score=1.1434 (latency_term=1.0000, spill_term=0.0000, size_term=0.1434)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          8,
+          8,
+          8
+        ],
+        "median_ms": 0.009518,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": true,
+      "rejected_candidates": [
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.3183,
+          "reason": "0.011537ms slower"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            8
+          ],
+          "score": 1.4494,
+          "reason": "0.010777ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.4781,
+          "reason": "0.013000ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.4842,
+          "reason": "0.011000ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.5976,
+          "reason": "0.012129ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.781,
+          "reason": "0.016000ms slower"
+        }
+      ]
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "selected_tile": [
+        4,
+        8,
+        8
+      ],
+      "score": 1.1158,
+      "median_ms": 0.019685,
+      "object_bytes": 2112,
+      "hot_loop_vector_spills": 0,
+      "hot_loop_vector_reloads": 0,
+      "vector_registers_referenced": 20,
+      "selection_reasons": [
+        "lowest measured median latency",
+        "zero hot-loop spills/reloads",
+        "2,112-byte object",
+        "score=1.1158 (latency_term=1.0000, spill_term=0.0000, size_term=0.1158)"
+      ],
+      "fastest_measured": {
+        "tile": [
+          4,
+          8,
+          8
+        ],
+        "median_ms": 0.019685,
+        "hot_loop_vector_spills": 0
+      },
+      "selected_matches_fastest": true,
+      "rejected_candidates": [
+        {
+          "tile": [
+            8,
+            8,
+            8
+          ],
+          "score": 1.1572,
+          "reason": "0.019852ms slower"
+        },
+        {
+          "tile": [
+            4,
+            8,
+            4
+          ],
+          "score": 1.2848,
+          "reason": "0.023185ms slower"
+        },
+        {
+          "tile": [
+            8,
+            8,
+            4
+          ],
+          "score": 1.3599,
+          "reason": "0.022185ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            4
+          ],
+          "score": 1.402,
+          "reason": "0.025371ms slower"
+        },
+        {
+          "tile": [
+            8,
+            4,
+            8
+          ],
+          "score": 1.5688,
+          "reason": "0.024518ms slower"
+        },
+        {
+          "tile": [
+            4,
+            4,
+            4
+          ],
+          "score": 1.7435,
+          "reason": "0.032352ms slower"
+        }
+      ]
+    }
+  ]
+}

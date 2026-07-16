@@ -17,7 +17,8 @@ This table is a maturity assessment, not a roadmap promise and not a percentage 
 | Runtime boundary | strong for canonical paths | strict adapter validation and E3 contract validation | older simulations/evaluation paths must stay scoped |
 | AArch64 native codegen: generic baseline (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware | `artifacts/backend_codegen/aarch64_matmul_bias_relu/` (superseded object hashes; see vectorized artifact for current), `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/generic/` (current); `mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant generic` | one op (`hir.fused_matmul_bias_relu`), three fixed shapes (8x8x8/16x16x16/32x32x32), no project-owned target-specific instruction selection/scheduling/register allocation, generated code slower than an `-O2` scalar C++ reference on the same device; not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
 | AArch64 native codegen: MLIR vectorization slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/` (both variants' generated `.mlir`/`.ll`/`.s`/`.o`, objdump, vector-dialect intermediate, repeated-call and mixed-shape correctness logs, benchmark/metrics JSON, Pi device state); `mlir_passes/transforms/vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_vectorized_pi_integration.sh` | project-owned contribution is invoking upstream MLIR's `vectorize_children_and_apply_patterns` Transform op at this point in the project's own pipeline, not a project-authored instruction selector; all NEON `fmla` selection, register allocation, and scheduling remain LLVM's `llc`, unmodified; one op, three fixed static shapes, fully unrolled (object size/instruction count scale with M*N*K -- SUPERSEDED for larger shapes by the tiled slice below, kept for the three original shapes as a comparison baseline); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
-| AArch64 native codegen: tiled vector microkernel slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed, bounded code size confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/` (full artifacts for the 32x32x32 representative shape, metrics/correctness/benchmark JSON for all 6 shapes, disassembly excerpts, register-pressure precheck); `mlir_passes/transforms/tile_vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_tiled_pi_integration.sh` | project-owned contribution is composing stock upstream MLIR Transform ops (tile_using_for + fuse_into_containing_op + vectorize_children_and_apply_patterns) into a fixed 4x8x8 tile, not a project-authored tiling algorithm or instruction selector; fixed tile size (no cost model, no per-shape tuning); requires exact tile divisibility (no tail handling -- non-divisible shapes rejected, not silently miscompiled); six shapes validated (8/16/32/64 square + 32x64x32/64x32x64); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
+| AArch64 native codegen: tiled vector microkernel slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed, bounded code size confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/` (full artifacts for the 32x32x32 representative shape, metrics/correctness/benchmark JSON for all 6 shapes, disassembly excerpts, register-pressure precheck) | project-owned contribution is composing stock upstream MLIR Transform ops (tile_using_for + fuse_into_containing_op + vectorize_children_and_apply_patterns) into a fixed 4x8x8 tile, not a project-authored tiling algorithm or instruction selector; the fixed 4x8x8 choice is now backed by comparative evidence (see the tile-candidate row below) rather than being the only tile evaluated; requires exact tile divisibility (no tail handling); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
+| AArch64 native codegen: tile-candidate selection slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware across 42 candidates, artifact-backed offline selection | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/` (candidate_results.json, selected_tiles.json, scoring_policy.json, per-shape benchmarks, register-pressure summary, one full representative candidate, disassembly excerpts for two instructive losing candidates); `mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir`; `tools/generate_aarch64_matmul_tile_candidates.py`, `tools/analyze_register_pressure.py`, `tools/select_aarch64_matmul_tile_candidate.py`, `tools/reproduce_selected_tile_candidate.py` | replaces the single fixed 4x8x8 tile with 42 measured candidates (7 tiles x 6 shapes, all legal, all correct); selection is OFFLINE and shape-specific -- a new shape requires its own candidate sweep, no online/runtime autotuning, no dynamic-shape generalization, not wired into any production plan-selection pass; register-pressure evidence is assembly-derived, not exact LLVM liveness analysis; no single tile is universally best (2 tiles split the 6 shapes 3/3, both sharing TN=8/TK=8) |
 
 See `PROJECT_MATURITY.md` for the four-pillar assessment.
 
@@ -164,9 +165,55 @@ correctness verified with zero tolerance for failure on real hardware.
 - General arbitrary-shape tail handling: shapes not divisible by 4/8/8 are
   rejected outright by `compile_hir_matmul_bias_relu_aarch64.sh
   --variant tiled-vectorized`, not silently miscompiled
-- Cost-model-driven tile selection (one fixed tile, not tuned per shape)
+- Cost-model-driven tile selection at build time for this one fixed 4x8x8
+  default. **Addressed as a standalone, offline, evidence-backed capability**
+  by the tile-candidate selection slice below (still not integrated into
+  any production compiler pass).
 - Prefetching
 - Generated-code runtime loading (same gap as the other AArch64 slices)
 - General operator coverage (only `hir.fused_matmul_bias_relu`)
 - GPU code generation of any kind
+
+## AArch64 tile-candidate selection detail (2026-07-16)
+
+Replaces the single hard-coded 4x8x8 tile (above) with a real
+multi-candidate, evidence-driven selection flow: 7 tile configurations x 6
+matrix shapes = 42 candidates, all compiled through the real, unmodified
+LLVM AArch64 backend and executed on the real Raspberry Pi. Full
+methodology, scoring policy, and results in
+`artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/README.md`;
+only the summary is repeated here.
+
+**Newly implemented:** a parameterized Transform-dialect template
+(`mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir`,
+replacing the prior slice's single fixed-tile file) plus a build-time
+candidate-generation, register-pressure-analysis, and scoring/selection
+pipeline (`tools/generate_aarch64_matmul_tile_candidates.py`,
+`tools/analyze_register_pressure.py`,
+`tools/select_aarch64_matmul_tile_candidate.py`). All 42 candidates are
+statically legal (shape%tile divisibility) and all 42 compiled and
+executed correctly on the Raspberry Pi (1-call + 1000-call repeated-call
+tests, plus a 200-cycle mixed-candidate same-process stress test with
+allocator noise -- zero failures). The scoring policy is explicit,
+inspectable arithmetic (latency + spill/reload penalties + a code-size
+tiebreaker + a near-ceiling register penalty) -- no machine learning, no
+hidden weights. Selection matches the single fastest measured candidate at
+5 of 6 shapes exactly; at the sixth (32x64x32) it trades 0.35% latency for
+a 22.7% smaller object at equal (zero) spill count. No single tile wins
+universally: 2 tiles (4x8x8, 8x8x8) split the 6 shapes 3/3, with both
+sharing TN=8/TK=8 and differing only in TM.
+
+**Still not implemented:**
+- Online runtime autotuning (offline, build-time selection over a fixed,
+  pre-enumerated candidate set)
+- General dynamic-shape tile selection (only the 6 evaluated shapes have a
+  selection result; a new shape needs its own candidate sweep)
+- Full LLVM register-pressure analysis (assembly-derived evidence only,
+  labeled as such throughout `candidate_results.json`)
+- MIR-level compiler pass, instruction scheduling, software pipelining,
+  prefetch insertion (all remain entirely LLVM's `llc`)
+- Cost-model integration into any production plan-selection pass (this
+  slice is a standalone, artifact-backed selector tool, not wired into
+  `CandidateEvaluationPass` or any runtime dispatch)
+- INT8 / SDOT / UDOT dot-product lowering
 - GPU code generation of any kind

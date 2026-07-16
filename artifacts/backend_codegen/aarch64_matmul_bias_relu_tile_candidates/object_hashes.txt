@@ -1,0 +1,173 @@
+SHA-256 and size of all 42 generated AArch64 tile-candidate objects at
+artifact-generation time (2026-07-16). None are committed -- this
+repo excludes *.o repo-wide via .gitignore. Regenerate with the
+commands in commands.txt and compare against these hashes.
+
+matmul_16x16x16_tm4_tn4_tk4.o
+  sha256: 70d2aa8dae69f27c9e08478e0c8e5bc8559638d8e1be685a91a0e6c5f5ea00c5
+  size:   1808 bytes
+
+matmul_16x16x16_tm4_tn8_tk4.o
+  sha256: e1d15553e962039e774e95d15bdff7258ddd01a39bdd47246b6182a99c19f0be
+  size:   1952 bytes
+
+matmul_16x16x16_tm4_tn8_tk8.o
+  sha256: ed47a7ebf387940f87b71ccacd16181fe0b767c76bd1d0675568cdc7b6dff11d
+  size:   2136 bytes
+
+matmul_16x16x16_tm8_tn4_tk4.o
+  sha256: 55e1e8579a191f641851766ef9bec2420b6dd459d673023b8919f95c9150dbaa
+  size:   2048 bytes
+
+matmul_16x16x16_tm8_tn4_tk8.o
+  sha256: 6f9c5ca4fd6e383bb435025391be2b0ed8bfb2325c0e6e57beb85699967a2a3d
+  size:   2232 bytes
+
+matmul_16x16x16_tm8_tn8_tk4.o
+  sha256: f1bbf1e24271f0b99795c497b776d32873d69fa60be8dd02662ca8249f2d9066
+  size:   2344 bytes
+
+matmul_16x16x16_tm8_tn8_tk8.o
+  sha256: b651d1f43ed23d602be8a7d0707a080e3779c39dd1497c02ffdfeef47a1c7267
+  size:   2632 bytes
+
+matmul_32x32x32_tm4_tn4_tk4.o
+  sha256: bb9ee093759b18576f2ee56fbcdf19434cc6f23d516234177f6717e31872e49a
+  size:   1808 bytes
+
+matmul_32x32x32_tm4_tn8_tk4.o
+  sha256: e63f56b3c1f44d2ae647e0eb3ec1fb180f4d6e3fcccfa66592dc44762bd50141
+  size:   1936 bytes
+
+matmul_32x32x32_tm4_tn8_tk8.o
+  sha256: acdf3121c4d7926d487ad92fdc25358352a8632aea61141729b454132ba740a8
+  size:   2136 bytes
+
+matmul_32x32x32_tm8_tn4_tk4.o
+  sha256: a5889851154fcb32f3941d31972465da37be3cec7540b7d02f4891ed0a14d085
+  size:   2048 bytes
+
+matmul_32x32x32_tm8_tn4_tk8.o
+  sha256: b55cd6ec8519ce4db5fcc1f26336323b410a86188f161a4a10f86cd49bbbfcb2
+  size:   2232 bytes
+
+matmul_32x32x32_tm8_tn8_tk4.o
+  sha256: 8f459ef51fffee2a6faa9e3dffdef5d1e8acb956a077dbc37cf277e7a586dc47
+  size:   2344 bytes
+
+matmul_32x32x32_tm8_tn8_tk8.o
+  sha256: 6690f743afd1a31947f851a9fcfb8f710a834001951b36dfa0ee0ed6a942e4a7
+  size:   2616 bytes
+
+matmul_32x64x32_tm4_tn4_tk4.o
+  sha256: d01f1861b3280597c82e26939758793aa7122816f142f507edb4330a17bd0d4f
+  size:   1808 bytes
+
+matmul_32x64x32_tm4_tn8_tk4.o
+  sha256: a773e199f2bffe8fb77da159aff6bdf50b1fbe445dea9912114b8d15f846e221
+  size:   1952 bytes
+
+matmul_32x64x32_tm4_tn8_tk8.o
+  sha256: aa558225905b4d6c176e35b7cf704bff471e9b31b613ae683395b52fcbd096e0
+  size:   2096 bytes
+
+matmul_32x64x32_tm8_tn4_tk4.o
+  sha256: 6582fb71b86babea64606b233e24d98fe9803740c604383f1a7478af07f41328
+  size:   2064 bytes
+
+matmul_32x64x32_tm8_tn4_tk8.o
+  sha256: 693f2f60e5dfe2059c9aad40d90a064195e9cda0ea00af63634d37b342d4a500
+  size:   2232 bytes
+
+matmul_32x64x32_tm8_tn8_tk4.o
+  sha256: 685b679150e80d05e15b788ca090bf0589b15420cf3e2e99fd29661d2ea63784
+  size:   2424 bytes
+
+matmul_32x64x32_tm8_tn8_tk8.o
+  sha256: 50bca84e9d6651e8e9b5b7c5420bbb773b5271e181d55448d88d4600c69ab50d
+  size:   2712 bytes
+
+matmul_64x32x64_tm4_tn4_tk4.o
+  sha256: 29b2e92ea7a0dd00aa81058677c13755aab46e572557540ed1951ca458d32322
+  size:   1824 bytes
+
+matmul_64x32x64_tm4_tn8_tk4.o
+  sha256: 289a68095a2f4f44f9d9f0890299522663f8da01978602bf868bd4fb9b8664c9
+  size:   1936 bytes
+
+matmul_64x32x64_tm4_tn8_tk8.o
+  sha256: cea43425ada6f003cb2d0601f7cd1b77a01159e8fe35f369d94b8eec60bb69e1
+  size:   2136 bytes
+
+matmul_64x32x64_tm8_tn4_tk4.o
+  sha256: 5f03ab865f6a48885b06e04c3a7fed44c1d3b26c72d979c92b91a7f8a86f5ffc
+  size:   2048 bytes
+
+matmul_64x32x64_tm8_tn4_tk8.o
+  sha256: b9ddd9bb366c3baa4f111ea057922d813aa55a8faffeb7be622e0a1cf139a56e
+  size:   2248 bytes
+
+matmul_64x32x64_tm8_tn8_tk4.o
+  sha256: aa70f56b7aa6caa05831cafaae39b41bd6ec3329eb7764354c1c0fd401522f6e
+  size:   2344 bytes
+
+matmul_64x32x64_tm8_tn8_tk8.o
+  sha256: 8e7e9f8d184facb137b6347068ee9495c6e80d140be66ad9639e70c5ade399ce
+  size:   2616 bytes
+
+matmul_64x64x64_tm4_tn4_tk4.o
+  sha256: 9e7c5fab5ff01738263e6d5d335a5cc7993d6f70f386ad32ac6dbb5ae8523298
+  size:   1824 bytes
+
+matmul_64x64x64_tm4_tn8_tk4.o
+  sha256: 4ab1a69ce9441d0f92fc160913f0a437d78370de3490deec918285643cb8ae34
+  size:   1952 bytes
+
+matmul_64x64x64_tm4_tn8_tk8.o
+  sha256: c343348b0cd88444389fc7c177639621394d5fa99ab372fdb4770d119948f2b7
+  size:   2112 bytes
+
+matmul_64x64x64_tm8_tn4_tk4.o
+  sha256: caa5e7d3974f4dec50158ee63baf7bce8e99a371aad1d118a6bb4dd3c2648744
+  size:   2064 bytes
+
+matmul_64x64x64_tm8_tn4_tk8.o
+  sha256: b90364f4aba9db348524a468c98bdf5db65b8406f01d37797c8fe07f3249c2b3
+  size:   2248 bytes
+
+matmul_64x64x64_tm8_tn8_tk4.o
+  sha256: 4f26c275a3210b0b6ebfbb1772023703ca521ffdc2e57fb7107178a175d2dc94
+  size:   2424 bytes
+
+matmul_64x64x64_tm8_tn8_tk8.o
+  sha256: dc1eeddb5b68d58097ed2aa39f4531401c569d9c8658263c96d3964b0fa8aa84
+  size:   2712 bytes
+
+matmul_8x8x8_tm4_tn4_tk4.o
+  sha256: 0ef1832ed7e363bf443f3adf674a7e9343f36ddba5e4f50bb48cd96c4cec366b
+  size:   1808 bytes
+
+matmul_8x8x8_tm4_tn8_tk4.o
+  sha256: 4ccc7ba22fb13a892a8ae1a132afac53c2b40bfd6bc63d43e750406be5bdc4ec
+  size:   1904 bytes
+
+matmul_8x8x8_tm4_tn8_tk8.o
+  sha256: b8019b86f745418fda3c944ee5071dd35cc8344ec93cc4828ff6179ed1f4a708
+  size:   1704 bytes
+
+matmul_8x8x8_tm8_tn4_tk4.o
+  sha256: fed34d993cd26169a0637c1b7f8bd9ced1f8626f4011cecf842259cf4c9bb606
+  size:   2000 bytes
+
+matmul_8x8x8_tm8_tn4_tk8.o
+  sha256: f5e4520d981324b6e3a5521666fdc1e9d70b96eadc993addaf2b1522640f8938
+  size:   1776 bytes
+
+matmul_8x8x8_tm8_tn8_tk4.o
+  sha256: cbcb7484d167d0c3f2d080cdaa04dde76bb74967852f33bf3ea7aa294075af80
+  size:   2144 bytes
+
+matmul_8x8x8_tm8_tn8_tk8.o
+  sha256: 6f40c5d0552aba0b0b55969533d3b563686470d1559734a04ed1833ffd67784b
+  size:   2064 bytes
+

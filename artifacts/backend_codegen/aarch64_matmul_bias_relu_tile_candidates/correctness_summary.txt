@@ -1,0 +1,28 @@
+Correctness summary for the AArch64 tile-candidate slice, real Raspberry Pi
+5 execution. Full logs: repeated_call_results.txt, mixed_stress_results.txt.
+
+Repeated-call correctness: 42 legal candidates x (1 call + 1000 calls) = 84
+test invocations, all in one process (tools/generate_tile_candidate_harness.py
+-generated aarch64_matmul_tile_candidate_repeated_call_test.cpp). Every
+invocation checks: output values (max abs error < 1e-3 vs. a scalar
+double-accumulated reference), output descriptor sanity (sizes/strides/
+offset/non-null pointers), and sentinel guard regions (64-float prefix +
+suffix around each of lhs/rhs/bias, bit-exact comparison to avoid
+NaN-bit-pattern false positives).
+
+  OVERALL: PASS (42 candidates, 1-call + 1000-call each) -- zero failures,
+  zero guard corruption, zero descriptor corruption.
+
+Mixed-candidate stress: the exact 5-step sequence from the task brief
+(16x16x16/tile 4x4x4, 32x32x32/tile 4x8x8, 64x64x64/tile 8x4x8,
+32x64x32/tile 8x8x4, 64x32x64/tile 4x8x8), 200 cycles (1000 total calls),
+single process, unrelated heap-allocation noise (16-528 bytes, varying)
+injected between every call.
+
+  PASS: 200 cycles (1000 total calls) all correct.
+
+Both tests together demonstrate: no incorrect output, no guard corruption,
+no allocator error, no descriptor corruption, across every legal candidate
+individually AND across candidates alternating in the same process. No
+candidate was excluded from correctness testing or marked invalid --
+all 42 legal candidates passed.
