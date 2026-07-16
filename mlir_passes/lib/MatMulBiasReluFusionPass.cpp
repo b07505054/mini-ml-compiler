@@ -128,10 +128,6 @@ struct MatMulBiasReluLegality {
   bool legal = false;
   StringRef reason = "unknown";
   Value bias;
-  bool sparseCandidate = false;
-  bool sparseProfileFaster = false;
-  bool sparse2_4Legal = false;
-  StringRef sparseFallbackReason = "";
   bool requiresPaddingCrop = false;
   int64_t m = 0;
   int64_t n = 0;
@@ -142,55 +138,6 @@ struct MatMulBiasReluLegality {
   double paddingComputeOverhead = 1.0;
   double paddingOutputOverhead = 1.0;
 };
-
-bool requestsSparse2_4(linalg::MatmulOp matmul) {
-  auto candidate = matmul->getAttrOfType<StringAttr>("sparse.candidate");
-  return candidate && candidate.getValue() == "2_4";
-}
-
-bool sparse2_4ProfileFaster(linalg::MatmulOp matmul) {
-  auto profile = matmul->getAttrOfType<StringAttr>("profile.sparse_2_4_path");
-  return profile && profile.getValue() == "faster";
-}
-
-StringRef checkRhs2_4Sparsity(Value rhs, int64_t k) {
-  if (k % 4 != 0) {
-    return "sparse_2_4_k_not_multiple_of_4";
-  }
-  auto constant = rhs.getDefiningOp<arith::ConstantOp>();
-  if (!constant) {
-    return "sparse_2_4_not_compile_time_verifiable";
-  }
-  auto elements = dyn_cast<DenseFPElementsAttr>(constant.getValue());
-  if (!elements) {
-    return "sparse_2_4_not_compile_time_verifiable";
-  }
-  auto type = dyn_cast<RankedTensorType>(elements.getType());
-  if (!type || type.getRank() != 2 || type.getDimSize(0) != k) {
-    return "sparse_2_4_not_compile_time_verifiable";
-  }
-  int64_t n = type.getDimSize(1);
-  SmallVector<llvm::APFloat> values;
-  values.reserve(elements.getNumElements());
-  for (llvm::APFloat value : elements.getValues<llvm::APFloat>()) {
-    values.push_back(value);
-  }
-  for (int64_t col = 0; col < n; ++col) {
-    for (int64_t group = 0; group < k; group += 4) {
-      int nonzero = 0;
-      for (int64_t offset = 0; offset < 4; ++offset) {
-        const llvm::APFloat &value = values[(group + offset) * n + col];
-        if (!value.isZero()) {
-          ++nonzero;
-        }
-      }
-      if (nonzero > 2) {
-        return "sparse_2_4_illegal";
-      }
-    }
-  }
-  return "";
-}
 
 MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
                                                    linalg::MapOp addMap,
@@ -277,25 +224,10 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
     return {false, "padding_output_overhead_too_high", bias};
   }
 
-  bool sparseCandidate = requestsSparse2_4(matmul);
-  bool profileFaster = sparse2_4ProfileFaster(matmul);
-  bool sparseLegal = false;
-  StringRef sparseReason = "";
-  if (sparseCandidate && profileFaster) {
-    sparseReason = checkRhs2_4Sparsity(matmul.getInputs()[1], k);
-    sparseLegal = sparseReason.empty();
-  } else if (sparseCandidate) {
-    sparseReason = "sparse_2_4_profile_not_faster";
-  }
-
   return {true,
           requiresPaddingCrop ? "target_legal_with_padding_crop"
                               : "target_legal",
           bias,
-          sparseCandidate,
-          profileFaster,
-          sparseLegal,
-          sparseReason,
           requiresPaddingCrop,
           m,
           n,
@@ -307,10 +239,10 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
           outputOverhead};
 }
 
-void attachSparseCoreTargetAttrs(Operation *op, OpBuilder &builder) {
+void attachTargetProfileAttrs(Operation *op, OpBuilder &builder) {
   MLIRContext *context = op->getContext();
   op->setAttr("target.model",
-              StringAttr::get(context, "sparsecore_like_v1"));
+              StringAttr::get(context, "portable_accelerator_v1"));
   op->setAttr("target.memory_hierarchy",
               StringAttr::get(context, "global_sram_register"));
   op->setAttr("target.sram_kb",
@@ -325,31 +257,8 @@ void attachSparseCoreTargetAttrs(Operation *op, OpBuilder &builder) {
               builder.getI32IntegerAttr(kTargetAlignmentBytes));
   op->setAttr("target.alignment",
               builder.getI32IntegerAttr(kTargetAlignmentBytes));
-  op->setAttr("target.sparse_layout",
-              StringAttr::get(context, "dense_or_2_4"));
   op->setAttr("target.collective",
               StringAttr::get(context, "none"));
-}
-
-void attachSparse2_4Attrs(Operation *op, OpBuilder &builder,
-                          const MatMulBiasReluLegality &legality) {
-  MLIRContext *context = op->getContext();
-  if (!legality.sparseCandidate) {
-    return;
-  }
-  op->setAttr("sparse.candidate", StringAttr::get(context, "2_4"));
-  if (legality.sparse2_4Legal) {
-    op->setAttr("sparse.legal", builder.getBoolAttr(true));
-    op->setAttr("target.sparse_layout",
-                StringAttr::get(context, "structured_2_4"));
-    op->setAttr("target.sparse_axis", StringAttr::get(context, "rhs_k"));
-    op->setAttr("target.sparse_group_size", builder.getI32IntegerAttr(4));
-    op->setAttr("target.sparse_max_nonzero", builder.getI32IntegerAttr(2));
-    return;
-  }
-  op->setAttr("sparse.legal", builder.getBoolAttr(false));
-  op->setAttr("sparse.fallback_reason",
-              StringAttr::get(context, legality.sparseFallbackReason));
 }
 
 void attachPaddingAttrs(Operation *op, OpBuilder &builder,
@@ -621,7 +530,7 @@ struct MatMulBiasReluToHIRConversionPattern
                          rewriter.getI32IntegerAttr(0));
       quantized->setAttr("rhs_zero_point",
                          rewriter.getI32IntegerAttr(0));
-      attachSparseCoreTargetAttrs(quantized.getOperation(), rewriter);
+      attachTargetProfileAttrs(quantized.getOperation(), rewriter);
       attachPaddingAttrs(quantized.getOperation(), rewriter, legality);
       fused = quantized.getOperation();
     } else {
@@ -631,14 +540,10 @@ struct MatMulBiasReluToHIRConversionPattern
       fp32->setAttr("fusion.candidate", candidate);
       fp32->setAttr("fusion.group", matmul->getAttr("fusion.group"));
       fp32->setAttr("kernel.selection",
-                    StringAttr::get(
-                        matmul.getContext(),
-                        legality.sparse2_4Legal ? "sparse_2_4_profile"
-                                                 : "runtime_profile"));
+                    StringAttr::get(matmul.getContext(), "runtime_profile"));
       fp32->setAttr("lowering.source",
                     StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
-      attachSparseCoreTargetAttrs(fp32.getOperation(), rewriter);
-      attachSparse2_4Attrs(fp32.getOperation(), rewriter, legality);
+      attachTargetProfileAttrs(fp32.getOperation(), rewriter);
       attachPaddingAttrs(fp32.getOperation(), rewriter, legality);
       fused = fp32.getOperation();
     }

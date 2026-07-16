@@ -13,9 +13,9 @@
   `PatternRewriter`, `RewritePatternSet`, and the greedy rewrite driver
 - MatMul + Bias Add + ReLU fusion candidate detection
 - Fusion group and role annotations across producer and consumer ops
-- SparseCore-like HIR target model metadata for fused MatMul lowering:
-  tile shape 16x16x32, 256 KB SRAM model, 128-byte vector/alignment
-  constraints, dense-or-2:4 sparse layout metadata, and memory-hierarchy tags
+- Portable accelerator-style HIR target model metadata for fused MatMul
+  lowering: tile shape 16x16x32, 256 KB SRAM model, 128-byte
+  vector/alignment constraints, and memory-hierarchy tags
 - Legality-driven MatMul-Bias-ReLU rewrite guards for one-use producer results,
   one-use bias-add results, ranked/static tensor shapes, supported dtypes,
   legal bias shape, and target tile multiples before fusion annotation
@@ -262,7 +262,7 @@ relu(relu(x)) canonicalized to relu(x)
 canonicalization_enables_fusion.mlir gains fusion.candidate after cleanup
 fusion.candidate = "matmul_bias_relu"
 fusion.group = "matmul_bias_relu_0"
-target.model = "sparsecore_like_v1"
+target.model = "portable_accelerator_v1"
 target.tile_m/tile_n/tile_k = 16/16/32
 hir.fused_matmul_bias_relu emitted by HIRFusionLoweringPass
 FusedMatMulBiasReLU
@@ -293,7 +293,7 @@ This demonstrates:
 - MLIR dialect/op definition with TableGen and C++ op verifiers
 - Quantization-aware lowering surface for INT8 mobile/accelerator kernels
 - Target-aware lowering legality for accelerator-style tile, memory hierarchy,
-  sparse layout, and vector alignment constraints
+  and vector alignment constraints
 - Target-aware tile planning that enumerates legal/rejected tiles and emits a
   dispatch descriptor consumed by execution-plan artifacts
 - Layout-aware verifier checks for memory alignment and tile/channel

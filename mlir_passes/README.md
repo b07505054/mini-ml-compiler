@@ -118,32 +118,16 @@ patterns remain unfused so the original IR can fall back conservatively.
 The target model attached during lowering is intentionally small but real:
 
 ```text
-target.model = "sparsecore_like_v1"
+target.model = "portable_accelerator_v1"
 tile_m/tile_n/tile_k = 16/16/32
 target.sram_kb = 256
 target.vector_bytes = 128
 target.alignment = 128
-target.sparse_layout = "dense_or_2_4"
 target.memory_hierarchy = "global_sram_register"
 ```
 
 The HIR verifier checks these attributes when present, so invalid target
 metadata is rejected before artifact export.
-
-Sparse layout is now a compiler decision rather than passive metadata for the
-supported constant-weight case. When a MatMul requests:
-
-```text
-sparse.candidate = "2_4"
-profile.sparse_2_4_path = "faster"
-```
-
-the fusion pass checks the RHS/weight tensor at compile time. Along the K
-dimension, every group of 4 values for each output channel must contain at most
-2 non-zero values. Legal constant weights emit `target.sparse_layout =
-"structured_2_4"` plus group metadata; illegal or non-constant weights fall
-back to the dense fused path and record the sparse fallback reason. This models
-accelerator sparse-layout legality without claiming a real SparseCore backend.
 
 The runtime JSON bridge also turns target metadata into a dispatch descriptor.
 For fused MatMul and qmatmul HIR ops, it parses M/N/K/dtype from the emitted

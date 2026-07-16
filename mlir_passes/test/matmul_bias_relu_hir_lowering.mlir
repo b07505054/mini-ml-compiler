@@ -12,7 +12,7 @@ func.func @main(
   // CHECK-SAME: fusion.candidate = "matmul_bias_relu"
   // CHECK-SAME: kernel.selection = "runtime_profile"
   // CHECK-SAME: lowering.source = "linalg.matmul_add_relu"
-  // CHECK-SAME: target.model = "sparsecore_like_v1"
+  // CHECK-SAME: target.model = "portable_accelerator_v1"
   // CHECK-SAME: target.tile_k = 32
   // CHECK-SAME: target.tile_m = 16
   // CHECK-SAME: target.tile_n = 16

@@ -69,19 +69,18 @@ static std::optional<int64_t> integerAttrValue(Operation *op, StringRef name) {
   return attr.getInt();
 }
 
-static LogicalResult verifySparseCoreTargetAttrs(Operation *op,
-                                                RankedTensorType lhsType,
-                                                RankedTensorType rhsType) {
+static LogicalResult verifyTargetProfileAttrs(Operation *op,
+                                              RankedTensorType lhsType,
+                                              RankedTensorType rhsType) {
   auto target = op->getAttrOfType<StringAttr>("target.model");
   if (!target) {
     return success();
   }
-  if (target.getValue() != "sparsecore_like_v1") {
-    return op->emitOpError("requires target.model = \"sparsecore_like_v1\"");
+  if (target.getValue() != "portable_accelerator_v1") {
+    return op->emitOpError("requires target.model = \"portable_accelerator_v1\"");
   }
   if (failed(requireStringAttr(op, "target.memory_hierarchy",
                                "global_sram_register")) ||
-      failed(requireStringAttr(op, "target.sparse_layout")) ||
       failed(requireStringAttr(op, "target.collective")) ||
       failed(requireIntegerAttr(op, "target.tile_m")) ||
       failed(requireIntegerAttr(op, "target.tile_n")) ||
@@ -99,32 +98,10 @@ static LogicalResult verifySparseCoreTargetAttrs(Operation *op,
   auto alignment = integerAttrValue(op, "target.alignment");
   if (!tileM || *tileM != 16 || !tileN || *tileN != 16 ||
       !tileK || *tileK != 32) {
-    return op->emitOpError("requires SparseCore-like tile shape 16x16x32");
+    return op->emitOpError("requires target tile shape 16x16x32");
   }
   if (!vectorBytes || *vectorBytes != 128 || !alignment || *alignment != 128) {
     return op->emitOpError("requires 128-byte target vector/alignment");
-  }
-  auto sparseLayout = op->getAttrOfType<StringAttr>("target.sparse_layout");
-  if (!sparseLayout ||
-      (sparseLayout.getValue() != "dense_or_2_4" &&
-       sparseLayout.getValue() != "structured_2_4")) {
-    return op->emitOpError("requires target.sparse_layout = \"dense_or_2_4\" or \"structured_2_4\"");
-  }
-  if (sparseLayout.getValue() == "structured_2_4") {
-    if (failed(requireStringAttr(op, "target.sparse_axis", "rhs_k")) ||
-        failed(requireIntegerAttr(op, "target.sparse_group_size")) ||
-        failed(requireIntegerAttr(op, "target.sparse_max_nonzero"))) {
-      return failure();
-    }
-    auto groupSize = integerAttrValue(op, "target.sparse_group_size");
-    auto maxNonzero = integerAttrValue(op, "target.sparse_max_nonzero");
-    if (!groupSize || *groupSize != 4 || !maxNonzero || *maxNonzero != 2) {
-      return op->emitOpError("requires structured 2:4 sparse metadata");
-    }
-    if (rhsType.getDimSize(0) != ShapedType::kDynamic &&
-        rhsType.getDimSize(0) % *groupSize != 0) {
-      return op->emitOpError("requires rhs K dimension to be a multiple of structured sparse group size");
-    }
   }
 
   auto padding = op->getAttrOfType<StringAttr>("target.padding");
@@ -291,7 +268,7 @@ LogicalResult FusedMatMulBiasReluOp::verify() {
       return failure();
     }
   }
-  if (failed(verifySparseCoreTargetAttrs(getOperation(), lhsType, rhsType))) {
+  if (failed(verifyTargetProfileAttrs(getOperation(), lhsType, rhsType))) {
     return failure();
   }
   return success();

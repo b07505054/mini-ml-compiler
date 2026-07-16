@@ -231,10 +231,6 @@ run_verify_diagnostics \
   "$REPO_ROOT/mlir_passes/test/hir_padded_target_verifier_invalid.mlir"
 
 run_verify_diagnostics \
-  "HIR target verifier rejects invalid structured 2:4 metadata" \
-  "$REPO_ROOT/mlir_passes/test/hir_sparse_2_4_verifier_invalid.mlir"
-
-run_verify_diagnostics \
   "HIR verifier rejects invalid bias broadcast" \
   "$REPO_ROOT/mlir_passes/test/hir_bad_bias_broadcast_invalid.mlir"
 
@@ -306,27 +302,6 @@ run_filecheck \
   --allow-unregistered-dialect \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering)'
-
-run_filecheck \
-  "legal structured 2:4 MatMul-Bias-ReLU selects sparse HIR metadata" \
-  "$REPO_ROOT/mlir_passes/test/sparse_2_4_matmul_hir_lowering.mlir" \
-  --allow-unregistered-dialect \
-  --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
-
-run_filecheck \
-  "illegal structured 2:4 RHS falls back to dense HIR metadata" \
-  "$REPO_ROOT/mlir_passes/test/sparse_2_4_illegal_fallback.mlir" \
-  --allow-unregistered-dialect \
-  --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
-
-run_filecheck \
-  "non-constant structured 2:4 RHS falls back to dense HIR metadata" \
-  "$REPO_ROOT/mlir_passes/test/sparse_2_4_nonconstant_fallback.mlir" \
-  --allow-unregistered-dialect \
-  --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(hir-canonicalize,matmul-bias-relu-fusion,hir-fusion-lowering,hir-verify-fused-ops)'
 
 run_filecheck \
   "rmsnorm HIR lowering" \

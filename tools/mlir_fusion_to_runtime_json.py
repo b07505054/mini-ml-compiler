@@ -954,15 +954,14 @@ def build_runtime_dispatch_contract(hir_op_type, runtime_op_type, selection):
     }
 
 
-def sparsecore_like_target_model():
+def portable_accelerator_target_model():
     return {
-        "target": "sparsecore_like_v1",
+        "target": "portable_accelerator_v1",
         "base_tile_shape": {"m": 16, "n": 16, "k": 32},
         "memory_hierarchy": "global_sram_register",
         "sram_kb": 256,
         "vector_bytes": 128,
         "alignment_bytes": 128,
-        "sparse_layout": "dense_or_2_4",
         "collective": "none",
         "legality": [
             "matmul result must have one use",
@@ -1128,7 +1127,6 @@ def build_dispatch_descriptor(hir_op_type, runtime_op_type, selection, shape, ta
         "memory_hierarchy": target["memory_hierarchy"],
         "alignment_bytes": target["alignment_bytes"],
         "vector_bytes": target["vector_bytes"],
-        "sparse_layout": target["sparse_layout"],
     }
 
 
@@ -1198,49 +1196,7 @@ def build_matmul_op(index, match, profile, source_text):
         DEFAULT_MATMUL_KERNEL_CONFIG,
         profile,
     )
-    target = sparsecore_like_target_model()
-    line = op_line(source_text, match)
-    sparse_layout = string_attr(line, "target.sparse_layout")
-    sparse_legal = bool_attr(line, "sparse.legal")
-    sparse_fallback_reason = string_attr(line, "sparse.fallback_reason")
-    sparse_metadata = None
-    if sparse_layout == "structured_2_4":
-        target = dict(target)
-        target["sparse_layout"] = "structured_2_4"
-        target["sparse_axis"] = "rhs_k"
-        target["sparse_group_size"] = 4
-        target["sparse_max_nonzero"] = 2
-        selection = {
-            **selection,
-            "selected_kernel": "sparsecore_like_2_4_matmul",
-            "selected_backend": "SparseCoreLike",
-            "candidate_kernel": "sparsecore_like_2_4_matmul",
-            "candidate_backend": "SparseCoreLike",
-            "fallback_kernel": "dense_fused_matmul_bias_relu",
-            "fallback_backend": "CPU",
-            "selection_reason": "profile_guided_sparse_2_4_legal",
-            "profile_calibrated": True,
-            "selection": {
-                **selection["selection"],
-                "policy": "sparse_layout_override",
-                "fallback_used": False,
-            },
-        }
-        sparse_metadata = {
-            "sparse_candidate": "2_4",
-            "sparse_legal": True,
-            "sparse_layout": "structured_2_4",
-            "sparse_axis": "rhs_k",
-            "sparse_group_size": 4,
-            "sparse_max_nonzero": 2,
-        }
-    elif sparse_legal is False:
-        sparse_metadata = {
-            "sparse_candidate": "2_4",
-            "sparse_legal": False,
-            "fallback_reason": sparse_fallback_reason or "sparse_2_4_not_selected",
-            "runtime_kernel": selection["selected_kernel"],
-        }
+    target = portable_accelerator_target_model()
     dispatch_descriptor = build_dispatch_descriptor(
         hir_op_type,
         runtime_op_type,
@@ -1269,7 +1225,6 @@ def build_matmul_op(index, match, profile, source_text):
         ),
         "target_model": target,
         "dispatch_descriptor": dispatch_descriptor,
-        "sparse_metadata": sparse_metadata,
         "fusion_candidate": "matmul_bias_relu",
         "fusion_group": "matmul_bias_relu_0",
         "inputs": ["A", "B", "bias"],
@@ -1369,7 +1324,7 @@ def build_qmatmul_op(index, match, profile, source_text):
         {"m": 128, "k": 128, "n": 128, "dtype": "i8"},
     )
     shape["dtype"] = "i8"
-    target = sparsecore_like_target_model()
+    target = portable_accelerator_target_model()
     dispatch_descriptor = build_dispatch_descriptor(
         hir_op_type,
         runtime_op_type,
