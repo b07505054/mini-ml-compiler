@@ -1,0 +1,94 @@
+Commands used to produce every file in this directory. All paths relative
+to the ml-graph-compiler-runtime repo root unless absolute.
+
+1. Discover exact LLVM 21.1.8 pass names for this target/pipeline (do not
+   assume names from another LLVM version):
+
+   llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -O2 -filetype=obj \
+     -debug-pass=Structure <any-candidate>.ll -o /dev/null
+
+   Relevant pass names found in the "Pass Arguments:" line, in pipeline
+   order: -aarch64-isel -finalize-isel ... -twoaddressinstruction
+   -liveintervals -register-coalescer -machine-scheduler -greedy
+   -virtregrewriter ... -prologepilog ... -aarch64-asm-printer
+
+2. Extract MIR for one candidate at all four pipeline boundaries plus
+   final assembly/object, for a given allocator:
+
+   python3 tools/extract_aarch64_candidate_mir.py \
+     --llvm-ir <candidate>.ll --cpu cortex-a76 \
+     --shape 32x32x32 --tile-m 8 --tile-n 8 --tile-k 8 \
+     --output-dir <dir> --regalloc greedy
+
+   Internally runs, for each stage:
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -O2 \
+       [-regalloc=<allocator> if not greedy] \
+       --stop-after=<pass> <candidate>.ll -o <stage>.mir
+   pass names: post_isel=finalize-isel, pre_ra=machine-scheduler,
+   post_ra=virtregrewriter, post_prologue_epilogue=prologepilog.
+   Plus a full -filetype=asm and -filetype=obj run with no --stop-after.
+
+3. Analyze the four MIR files for one candidate:
+
+   python3 tools/analyze_aarch64_candidate_mir.py \
+     --post-isel <dir>/..._post_isel.mir \
+     --pre-ra <dir>/..._pre_ra.mir \
+     --post-ra <dir>/..._post_ra.mir \
+     --post-prologue-epilogue <dir>/..._post_prologue_epilogue.mir \
+     --output metrics.json --report report.txt
+
+4. The 8 mandatory deep-analysis candidates (see README.md "Candidate
+   Set") were all run through steps 2-3 with --regalloc greedy (LLVM's
+   default for this target/pipeline). Object sizes were verified
+   byte-identical to the already-committed
+   artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/
+   object_hashes.txt entries (same shape/tile, same compiler, same
+   flags), so existing committed Raspberry Pi correctness and benchmark
+   results were reused rather than re-measured -- see README.md Stage 2.
+
+5. Greedy-vs-fast allocator experiment (3 mandatory candidates:
+   8x8x8/tile-8x8x8, 32x32x32/tile-8x8x8, 32x32x32/tile-4x8x8): each
+   candidate's HIR fixture was first copied with its func.func renamed to
+   append "_fast" (avoiding a _mlir_ciface_ symbol collision with the
+   already-existing greedy-named object of the same shape/tile, needed to
+   link both into one Pi test binary), then compiled through the normal
+   pipeline to LLVM IR, then:
+
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -O2 \
+       -regalloc=fast -filetype=obj <renamed>.ll -o <name>_fast.o
+     llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a76 -O2 \
+       -regalloc=fast -filetype=asm <renamed>.ll -o <name>_fast.s
+
+   and the same extract/analyze steps (2-3) with --regalloc fast.
+
+6. Raspberry Pi correctness (1-call + 1000-call per candidate/allocator
+   pair, plus 200-cycle mixed allocator/candidate stress) and benchmark
+   (2000 iterations, 200 warmup) for the 6 greedy+fast objects covering
+   the 3 mandatory allocator-comparison candidates: hand-written harnesses
+   (not committed -- ad hoc for this slice, see git history / session
+   transcript if regeneration is needed), transferred and built with the
+   Pi's native g++, executed via SSH allen@100.110.37.6.
+
+7. representative_32x32x32_tm8_tn8_tk8_{pre_ra,post_ra}.mir: copied
+   directly from step 2's output for shape=32x32x32, tile=8x8x8 (the
+   winning/selected candidate for that shape).
+
+   spill_example_8x8x8_tm8_tn8_tk8_post_ra.mir: copied directly from step
+   2's output for shape=8x8x8, tile=8x8x8 (the one candidate in the
+   8-candidate set with a real allocator spill+reload pair).
+
+   mir_excerpts/*.mir: first 60 lines of each remaining candidate's
+   post_ra body section (llc's `body: |` block onward), via:
+     sed -n '/^body:/,$p' <post_ra.mir> | head -60
+
+8. object_hashes.txt: sha256sum on the 3 -regalloc=fast objects (the 8
+   greedy objects are already recorded in the tile-candidates artifact
+   directory and were verified byte-identical, not re-recorded here).
+
+Toolchain: Ubuntu LLVM/clang 21.1.8 (llc, llvm-objdump), same as every
+prior slice in this repository.
+
+Raspberry Pi target: hostname edgeaiplatform, Cortex-A76 (Raspberry Pi 5
+SoC), aarch64, Debian (trixie), gcc 14.2.0 (see
+artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/pi_device_state.txt
+for the live capture, unchanged this slice).

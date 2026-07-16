@@ -18,7 +18,8 @@ This table is a maturity assessment, not a roadmap promise and not a percentage 
 | AArch64 native codegen: generic baseline (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware | `artifacts/backend_codegen/aarch64_matmul_bias_relu/` (superseded object hashes; see vectorized artifact for current), `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/generic/` (current); `mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh --variant generic` | one op (`hir.fused_matmul_bias_relu`), three fixed shapes (8x8x8/16x16x16/32x32x32), no project-owned target-specific instruction selection/scheduling/register allocation, generated code slower than an `-O2` scalar C++ reference on the same device; not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
 | AArch64 native codegen: MLIR vectorization slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_vectorized/` (both variants' generated `.mlir`/`.ll`/`.s`/`.o`, objdump, vector-dialect intermediate, repeated-call and mixed-shape correctness logs, benchmark/metrics JSON, Pi device state); `mlir_passes/transforms/vectorize_matmul_bias_relu.mlir`; `tools/run_backend_codegen_vectorized_pi_integration.sh` | project-owned contribution is invoking upstream MLIR's `vectorize_children_and_apply_patterns` Transform op at this point in the project's own pipeline, not a project-authored instruction selector; all NEON `fmla` selection, register allocation, and scheduling remain LLVM's `llc`, unmodified; one op, three fixed static shapes, fully unrolled (object size/instruction count scale with M*N*K -- SUPERSEDED for larger shapes by the tiled slice below, kept for the three original shapes as a comparison baseline); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
 | AArch64 native codegen: tiled vector microkernel slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware, real NEON `fmla` confirmed, bounded code size confirmed | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tiled/` (full artifacts for the 32x32x32 representative shape, metrics/correctness/benchmark JSON for all 6 shapes, disassembly excerpts, register-pressure precheck) | project-owned contribution is composing stock upstream MLIR Transform ops (tile_using_for + fuse_into_containing_op + vectorize_children_and_apply_patterns) into a fixed 4x8x8 tile, not a project-authored tiling algorithm or instruction selector; the fixed 4x8x8 choice is now backed by comparative evidence (see the tile-candidate row below) rather than being the only tile evaluated; requires exact tile divisibility (no tail handling); not wired into the runtime's `OpRegistry` dispatch or the compiler's candidate/cost-model selection |
-| AArch64 native codegen: tile-candidate selection slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware across 42 candidates, artifact-backed offline selection | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/` (candidate_results.json, selected_tiles.json, scoring_policy.json, per-shape benchmarks, register-pressure summary, one full representative candidate, disassembly excerpts for two instructive losing candidates); `mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir`; `tools/generate_aarch64_matmul_tile_candidates.py`, `tools/analyze_register_pressure.py`, `tools/select_aarch64_matmul_tile_candidate.py`, `tools/reproduce_selected_tile_candidate.py` | replaces the single fixed 4x8x8 tile with 42 measured candidates (7 tiles x 6 shapes, all legal, all correct); selection is OFFLINE and shape-specific -- a new shape requires its own candidate sweep, no online/runtime autotuning, no dynamic-shape generalization, not wired into any production plan-selection pass; register-pressure evidence is assembly-derived, not exact LLVM liveness analysis; no single tile is universally best (2 tiles split the 6 shapes 3/3, both sharing TN=8/TK=8) |
+| AArch64 native codegen: tile-candidate selection slice (fused MatMul-Bias-ReLU only) | narrow real implementation + measured on real Raspberry Pi 5 hardware across 42 candidates, artifact-backed offline selection | `artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/` (candidate_results.json, selected_tiles.json, scoring_policy.json, per-shape benchmarks, register-pressure summary, one full representative candidate, disassembly excerpts for two instructive losing candidates); `mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir`; `tools/generate_aarch64_matmul_tile_candidates.py`, `tools/analyze_register_pressure.py`, `tools/select_aarch64_matmul_tile_candidate.py`, `tools/reproduce_selected_tile_candidate.py` | replaces the single fixed 4x8x8 tile with 42 measured candidates (7 tiles x 6 shapes, all legal, all correct); selection is OFFLINE and shape-specific -- a new shape requires its own candidate sweep, no online/runtime autotuning, no dynamic-shape generalization, not wired into any production plan-selection pass; the assembly-derived register-pressure evidence this row's selection was based on has since had ONE metric (8x8x8/tile-8x8x8 spill count) corrected by real LLVM MIR analysis (see the row below) -- the correction did not change which tile was selected; no single tile is universally best (2 tiles split the 6 shapes 3/3, both sharing TN=8/TK=8) |
+| AArch64 native codegen: LLVM MIR analysis slice (fused MatMul-Bias-ReLU only) | narrow real implementation, real LLVM Machine IR captured and analyzed for 8 candidates (11 candidate/allocator configurations) on real Raspberry Pi 5 hardware | `artifacts/backend_codegen/aarch64_matmul_bias_relu_mir_analysis/` (mir_analysis_results.json, register_allocator_comparison.json, performance_correlation.json, one full representative pre-RA/post-RA MIR pair, one full spill-producing MIR example, short excerpts for the rest); `tools/extract_aarch64_candidate_mir.py`, `tools/analyze_aarch64_candidate_mir.py` | LLVM owns the entire register allocator (greedy and fast, both stock/unmodified) -- the project owns MIR extraction (`--stop-after=<pass>` boundary selection), parsing, and Raspberry Pi correlation only; register pressure is reported as an explicitly labeled MIR-derived approximation (linear scan, not a dataflow analysis) since this LLVM 21.1.8 build has no debug-logging pressure-tracker output available; only 3 of 6 shapes (8x8x8, 32x32x32, 64x64x64) were deep-analyzed -- 16x16x16/32x64x32/64x32x64's assembly-derived spill counts remain unconfirmed by MIR |
 
 See `PROJECT_MATURITY.md` for the four-pillar assessment.
 
@@ -217,3 +218,53 @@ sharing TN=8/TK=8 and differing only in TM.
   `CandidateEvaluationPass` or any runtime dispatch)
 - INT8 / SDOT / UDOT dot-product lowering
 - GPU code generation of any kind
+
+## LLVM MIR analysis detail (2026-07-16)
+
+Adds real LLVM Machine IR visibility to the tile-candidate pipeline,
+replacing assembly-only spill inference for 8 deeply-analyzed candidates
+(11 candidate/allocator configurations counting the greedy-vs-fast
+experiment). Full methodology, corrections, and investigations in
+`artifacts/backend_codegen/aarch64_matmul_bias_relu_mir_analysis/README.md`;
+summary only here.
+
+**Newly implemented:** `tools/extract_aarch64_candidate_mir.py` dumps real
+MIR at four `llc --stop-after=<pass>` boundaries discovered empirically on
+this LLVM 21.1.8 build (`finalize-isel`, `machine-scheduler`,
+`virtregrewriter`, `prologepilog` -- NOT assumed from another LLVM
+version; `--stop-after=greedy` was tested and found NOT to produce
+physical registers, a real toolchain finding documented in the artifact).
+`tools/analyze_aarch64_candidate_mir.py` parses these into virtual-register/
+register-class/spill/reload/copy metrics, correctly distinguishing real
+allocator spills from ABI callee-saved slots (both share LLVM's `type:
+spill-slot` YAML tag; only an empty `callee-saved-register` field means a
+real spill -- two real parsing bugs were found and fixed getting this
+right, documented in the artifact). MIR evidence corrected one
+assembly-derived claim (8x8x8/tile-8x8x8: true spill/reload count is 1/1,
+not the previously reported 3/0) without changing the prior tile
+selection, and explained why 32x32x32 selected tile 8x8x8 (dynamic loop
+iteration count, not register-pressure avoidance -- the winner has the
+HIGHEST register pressure of the four candidates compared, with zero
+spills in all four). A `-regalloc=greedy` vs `-regalloc=fast` experiment
+on 3 candidates showed greedy matches fast exactly at the smallest shape
+and is 42-49% faster at 32x32x32, where real spill traffic starts to
+matter.
+
+**Still not implemented:**
+- Custom register allocator (LLVM's greedy/fast allocators used entirely
+  unmodified -- the project never makes an allocation decision)
+- Production LLVM MachineFunction pass (this is offline analysis tooling)
+- Exact general-purpose register-pressure model (the
+  `approx_peak_live_vector_registers` metric is an explicitly labeled
+  linear-scan approximation, not a dataflow analysis -- this LLVM
+  Release/Optimized build has no debug-logging pressure-tracker output
+  available)
+- Instruction scheduling transformation, software pipelining, prefetch
+  insertion
+- Deep MIR analysis for 16x16x16, 32x64x32, 64x32x64 (out of this slice's
+  scope; their assembly-derived spill counts remain unconfirmed)
+- Deep MIR analysis for the other 34 of 42 total tile candidates (by
+  design -- see the task brief's own Scope section)
+- Online autotuning, dynamic-shape tile selection, cost-model integration
+  into any production pass, INT8/SDOT/UDOT lowering, GPU code generation
+  (all unchanged from the prior slice)

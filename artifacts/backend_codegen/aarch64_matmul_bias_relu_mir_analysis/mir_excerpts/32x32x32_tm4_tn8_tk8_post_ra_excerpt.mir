@@ -1,0 +1,61 @@
+body:             |
+  bb.0 (%ir-block.21):
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
+  
+    renamable $x19 = COPY $x1
+    renamable $x23 = LDRXui %fixed-stack.5, 0 :: (load (s64) from %fixed-stack.5)
+    renamable $x24 = LDRXui %fixed-stack.12, 0 :: (load (s64) from %fixed-stack.12, align 16)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    dead $w0 = MOVi32imm 4160, implicit-def $x0
+    BL @malloc, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $x20 = COPY $x0
+    renamable $x8 = ADDXri renamable $x20, 63, 0
+    renamable $x25 = ANDXri killed renamable $x8, 7865
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    dead $w0 = MOVi32imm 4160, implicit-def $x0
+    BL @malloc, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $x21 = COPY $x0
+    renamable $x8 = COPY $xzr
+    renamable $x9 = COPY $xzr
+    renamable $x10 = ADDXri renamable $x21, 63, 0
+    renamable $x22 = ANDXri killed renamable $x10, 7865
+    renamable $q16 = MOVIv2d_ns 0
+  
+  bb.1 (%ir-block.69):
+    successors: %bb.2(0x7c000000), %bb.9(0x04000000)
+    liveins: $q16, $x8, $x9, $x19, $x20, $x21, $x22, $x23, $x24, $x25
+  
+    dead $xzr = SUBSXri renamable $x9, 31, 0, implicit-def $nzcv
+    Bcc 12, %bb.9, implicit killed $nzcv
+    B %bb.2
+  
+  bb.2..preheader:
+    successors: %bb.3(0x80000000)
+    liveins: $q16, $x8, $x9, $x19, $x20, $x21, $x22, $x23, $x24, $x25
+  
+    renamable $x10 = COPY $xzr
+    renamable $x11 = COPY $xzr
+    renamable $x12 = ADDXrr renamable $x19, renamable $x8
+  
+  bb.3 (%ir-block.72):
+    successors: %bb.4(0x7c000000), %bb.8(0x04000000)
+    liveins: $q16, $x8, $x9, $x10, $x11, $x12, $x19, $x20, $x21, $x22, $x23, $x24, $x25
+  
+    dead $xzr = SUBSXri renamable $x11, 31, 0, implicit-def $nzcv
+    Bcc 12, %bb.8, implicit killed $nzcv
+    B %bb.4
+  
+  bb.4 (%ir-block.75):
+    successors: %bb.5(0x80000000)
+    liveins: $q16, $x8, $x9, $x10, $x11, $x12, $x19, $x20, $x21, $x22, $x23, $x24, $x25
+  
+    renamable $x14 = COPY $xzr
+    renamable $x15 = COPY $xzr
+    renamable $x13 = ADDXrs renamable $x11, renamable $x9, 5
+    renamable $x17 = ADDXrs renamable $x25, renamable $x13, 2
+    STRQui renamable $q16, renamable $x17, 1 :: (store (s128) into %ir.90 + 16, align 4)
+    STRQui renamable $q16, renamable $x17, 0 :: (store (s128) into %ir.90, align 4)
+  ... (truncated -- full MIR reproducible via commands.txt)

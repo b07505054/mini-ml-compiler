@@ -48,3 +48,21 @@ spill/reload counters unconditionally (see tools/analyze_register_pressure.py
 classify_stack_access() docstring). Verified the fix against the raw
 assembly by hand for that specific candidate before trusting the automated
 result across all 42.
+
+CORRECTION (2026-07-16, MIR-analysis slice): the "3 hot-loop-adjacent
+vector spills" figure above for shape=8x8x8, tile=(8,8,8) was derived from
+assembly-level heuristics and has since been checked against real LLVM
+Machine IR. The true figure is 1 allocator spill store + 1 reload load,
+tied to exactly one genuine allocator-owned spill slot (LLVM's own
+`type: spill-slot` YAML annotation with an empty `callee-saved-register`
+field -- not 3). See
+artifacts/backend_codegen/aarch64_matmul_bias_relu_mir_analysis/README.md
+"8x8x8 Spill-Contrast Investigation" for the full MIR-level explanation and
+confirmation that this correction does NOT change which tile was selected
+for shape=8x8x8 (tile 4x8x8 remains selected by a wide scoring margin
+either way). The assembly-derived methodology above remains otherwise
+informative -- it correctly identified 41 of 42 candidates as having zero
+real spills, confirmed by MIR for the 8-candidate deep-analysis subset
+checked -- but its exact spill COUNT should not be treated as authoritative
+where it disagrees with MIR; prefer the MIR-derived figures in the
+aarch64_matmul_bias_relu_mir_analysis artifact wherever both exist.

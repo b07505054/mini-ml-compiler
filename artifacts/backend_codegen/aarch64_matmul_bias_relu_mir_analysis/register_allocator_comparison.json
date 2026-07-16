@@ -1,0 +1,57 @@
+{
+  "description": "Stage 8: -regalloc=greedy (LLVM's default optimized allocator for this target) vs -regalloc=fast, for the 3 mandatory comparison candidates. Both flags accepted by LLVM 21.1.8 for aarch64-linux-gnu without diagnostics. Fast-allocator objects were NOT committed as a production variant -- this is an analysis experiment only (per task instruction).",
+  "comparisons": [
+    {
+      "shape": [8, 8, 8], "tile": {"m": 8, "n": 8, "k": 8},
+      "greedy": {
+        "pre_ra_virtual_registers": 213, "pre_ra_virtual_vector_registers": 193,
+        "spill_stores": 1, "reload_loads": 1, "copies_pre_ra": 5, "copies_post_ra": 3,
+        "stack_frame_bytes": 112, "object_bytes": 2064,
+        "median_ms": 0.000092, "p95_ms": 0.000093
+      },
+      "fast": {
+        "pre_ra_virtual_registers": 213, "pre_ra_virtual_vector_registers": 193,
+        "spill_stores": 3, "reload_loads": 3, "copies_pre_ra": 5, "copies_post_ra": 1,
+        "stack_frame_bytes": 96, "object_bytes": 2064,
+        "median_ms": 0.000092, "p95_ms": 0.000093
+      },
+      "latency_delta_pct": 0.0,
+      "note": "Fast allocator produces 3x the spills/reloads of greedy (3 vs 1) but IDENTICAL measured median latency -- the shape is too small (8x8x8, single collapsed loop body per the tiled-vectorized structural analysis) for spill traffic to be visible against measurement noise/pipeline fixed costs. See README.md 8x8x8 Spill-Contrast Investigation."
+    },
+    {
+      "shape": [32, 32, 32], "tile": {"m": 8, "n": 8, "k": 8},
+      "greedy": {
+        "pre_ra_virtual_registers": 385, "pre_ra_virtual_vector_registers": 242,
+        "spill_stores": 0, "reload_loads": 0, "copies_pre_ra": 13, "copies_post_ra": 13,
+        "stack_frame_bytes": 96, "object_bytes": 2616,
+        "median_ms": 0.002574, "p95_ms": 0.002593
+      },
+      "fast": {
+        "pre_ra_virtual_registers": 385, "pre_ra_virtual_vector_registers": 242,
+        "spill_stores": 76, "reload_loads": 29, "copies_pre_ra": 13, "copies_post_ra": 7,
+        "stack_frame_bytes": 992, "object_bytes": 2864,
+        "median_ms": 0.003834, "p95_ms": 0.003871
+      },
+      "latency_delta_pct": 48.96,
+      "note": "Fast allocator: 76 spill stores / 29 reloads (vs. 0/0 for greedy) and a 10.3x larger stack frame (992 vs 96 bytes). Measured latency is 48.96% SLOWER than greedy. This is the clearest demonstration in this slice that the allocator choice materially affects real Raspberry Pi performance once the candidate is large enough for spill traffic to matter."
+    },
+    {
+      "shape": [32, 32, 32], "tile": {"m": 4, "n": 8, "k": 8},
+      "greedy": {
+        "pre_ra_virtual_registers": 262, "pre_ra_virtual_vector_registers": 130,
+        "spill_stores": 0, "reload_loads": 0, "copies_pre_ra": 0, "copies_post_ra": 0,
+        "stack_frame_bytes": 128, "object_bytes": 2136,
+        "median_ms": 0.002926, "p95_ms": 0.002944
+      },
+      "fast": {
+        "pre_ra_virtual_registers": 262, "pre_ra_virtual_vector_registers": 130,
+        "spill_stores": 44, "reload_loads": 29, "copies_pre_ra": 13, "copies_post_ra": 7,
+        "stack_frame_bytes": 528, "object_bytes": 2272,
+        "median_ms": 0.004167, "p95_ms": 0.004186
+      },
+      "latency_delta_pct": 42.41,
+      "note": "Same pattern as tile 8x8x8 at this shape, smaller magnitude (44 spills vs 76 -- fewer virtual vector registers pre-RA, 130 vs 242): fast allocator is 42.41% slower. Confirms the effect scales with register demand, not just shape size alone."
+    }
+  ],
+  "summary": "Greedy does not always win by the same margin, but never loses in this experiment: it matches fast exactly at the smallest shape (8x8x8, where allocator choice is immaterial to measured latency) and is substantially faster (42-49%) at 32x32x32, where real spill traffic starts to dominate. LLVM's greedy allocator was never observed to underperform the fast allocator among these 3 candidates."
+}

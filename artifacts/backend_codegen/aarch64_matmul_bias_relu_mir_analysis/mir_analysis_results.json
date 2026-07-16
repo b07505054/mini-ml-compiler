@@ -1,0 +1,458 @@
+{
+  "target": {
+    "architecture": "aarch64",
+    "cpu": "cortex-a76",
+    "device": "Raspberry Pi 5"
+  },
+  "allocator_default": "greedy",
+  "results": [
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "b8019b86f745418fda3c944ee5071dd35cc8344ec93cc4828ff6179ed1f4a708",
+      "object_bytes": 1704,
+      "selected_previously": true,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 142,
+          "machine_basic_blocks": 4,
+          "virtual_registers": 173,
+          "virtual_vector_registers": 105,
+          "virtual_gpr_registers": 68,
+          "register_classes": {
+            "gpr64all": 23,
+            "gpr64": 29,
+            "gpr64common": 9,
+            "gpr64sp": 4,
+            "gpr32": 3,
+            "fpr128": 105
+          },
+          "approx_peak_live_vector_registers": 41,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 19,
+          "physical_gpr_registers_referenced": 19,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 6,
+          "copies_post_ra": 3,
+          "copies_removed_by_ra": 3,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 32
+        }
+      },
+      "performance": {
+        "median_ms": 9.2e-05,
+        "p95_ms": 9.3e-05
+      }
+    },
+    {
+      "shape": [
+        8,
+        8,
+        8
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "6f40c5d0552aba0b0b55969533d3b563686470d1559734a04ed1833ffd67784b",
+      "object_bytes": 2064,
+      "selected_previously": false,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 228,
+          "machine_basic_blocks": 1,
+          "virtual_registers": 213,
+          "virtual_vector_registers": 193,
+          "virtual_gpr_registers": 20,
+          "register_classes": {
+            "gpr64": 10,
+            "gpr64common": 4,
+            "gpr32": 3,
+            "gpr64sp": 2,
+            "fpr128": 193,
+            "gpr64all": 1
+          },
+          "approx_peak_live_vector_registers": 65,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 32,
+          "physical_gpr_registers_referenced": 16,
+          "spill_stores": 1,
+          "reload_loads": 1,
+          "copies_pre_ra": 5,
+          "copies_post_ra": 3,
+          "copies_removed_by_ra": 2,
+          "frame_objects": 1,
+          "spill_slot_count": 1,
+          "spill_slot_bytes": 16,
+          "stack_frame_bytes": 112
+        }
+      },
+      "performance": {
+        "median_ms": 9.2e-05,
+        "p95_ms": 9.3e-05
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "acdf3121c4d7926d487ad92fdc25358352a8632aea61141729b454132ba740a8",
+      "object_bytes": 2136,
+      "selected_previously": false,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 227,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 262,
+          "virtual_vector_registers": 130,
+          "virtual_gpr_registers": 132,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64": 38,
+            "gpr64sp": 18,
+            "gpr64common": 33,
+            "gpr32": 7,
+            "fpr128": 130
+          },
+          "approx_peak_live_vector_registers": 65,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 32,
+          "physical_gpr_registers_referenced": 30,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 13,
+          "copies_post_ra": 13,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 128
+        }
+      },
+      "performance": {
+        "median_ms": 0.002926,
+        "p95_ms": 0.002926
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "6690f743afd1a31947f851a9fcfb8f710a834001951b36dfa0ee0ed6a942e4a7",
+      "object_bytes": 2616,
+      "selected_previously": true,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 375,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 385,
+          "virtual_vector_registers": 242,
+          "virtual_gpr_registers": 143,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64": 38,
+            "gpr64sp": 18,
+            "gpr64common": 45,
+            "gpr32": 6,
+            "fpr128": 242
+          },
+          "approx_peak_live_vector_registers": 113,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 28,
+          "physical_gpr_registers_referenced": 31,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 13,
+          "copies_post_ra": 13,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 96
+        }
+      },
+      "performance": {
+        "median_ms": 0.002593,
+        "p95_ms": 0.002611
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 4
+      },
+      "allocator": "greedy",
+      "object_sha256": "8f459ef51fffee2a6faa9e3dffdef5d1e8acb956a077dbc37cf277e7a586dc47",
+      "object_bytes": 2344,
+      "selected_previously": false,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 295,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 305,
+          "virtual_vector_registers": 162,
+          "virtual_gpr_registers": 143,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64": 38,
+            "gpr64sp": 18,
+            "gpr64common": 45,
+            "gpr32": 6,
+            "fpr128": 162
+          },
+          "approx_peak_live_vector_registers": 97,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 32,
+          "physical_gpr_registers_referenced": 31,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 13,
+          "copies_post_ra": 13,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 128
+        }
+      },
+      "performance": {
+        "median_ms": 0.002982,
+        "p95_ms": 0.003
+      }
+    },
+    {
+      "shape": [
+        32,
+        32,
+        32
+      ],
+      "tile": {
+        "m": 4,
+        "n": 4,
+        "k": 4
+      },
+      "allocator": "greedy",
+      "object_sha256": "bb9ee093759b18576f2ee56fbcdf19434cc6f23d516234177f6717e31872e49a",
+      "object_bytes": 1808,
+      "selected_previously": false,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 124,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 174,
+          "virtual_vector_registers": 46,
+          "virtual_gpr_registers": 128,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64common": 24,
+            "gpr64": 36,
+            "gpr64sp": 25,
+            "gpr32": 7,
+            "fpr128": 46
+          },
+          "approx_peak_live_vector_registers": 29,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 11,
+          "physical_gpr_registers_referenced": 31,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 13,
+          "copies_post_ra": 13,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 64
+        }
+      },
+      "performance": {
+        "median_ms": 0.00413,
+        "p95_ms": 0.004148
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 4,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "c343348b0cd88444389fc7c177639621394d5fa99ab372fdb4770d119948f2b7",
+      "object_bytes": 2112,
+      "selected_previously": true,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 229,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 268,
+          "virtual_vector_registers": 130,
+          "virtual_gpr_registers": 138,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64": 37,
+            "gpr64sp": 23,
+            "gpr64common": 34,
+            "gpr32": 8,
+            "fpr128": 130
+          },
+          "approx_peak_live_vector_registers": 65,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 21,
+          "physical_gpr_registers_referenced": 31,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 13,
+          "copies_post_ra": 13,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 64
+        }
+      },
+      "performance": {
+        "median_ms": 0.019685,
+        "p95_ms": 0.01974
+      }
+    },
+    {
+      "shape": [
+        64,
+        64,
+        64
+      ],
+      "tile": {
+        "m": 8,
+        "n": 8,
+        "k": 8
+      },
+      "allocator": "greedy",
+      "object_sha256": "dc1eeddb5b68d58097ed2aa39f4531401c569d9c8658263c96d3964b0fa8aa84",
+      "object_bytes": 2712,
+      "selected_previously": false,
+      "mir": {
+        "analysis_method": "llvm-mir",
+        "instruction_selection_boundary": "finalize-isel",
+        "pre_ra_boundary": "machine-scheduler",
+        "post_ra_boundary": "virtregrewriter",
+        "pre_ra": {
+          "machine_instructions": 375,
+          "machine_basic_blocks": 10,
+          "virtual_registers": 387,
+          "virtual_vector_registers": 242,
+          "virtual_gpr_registers": 145,
+          "register_classes": {
+            "gpr64all": 36,
+            "gpr64": 36,
+            "gpr64sp": 24,
+            "gpr64common": 43,
+            "gpr32": 6,
+            "fpr128": 242
+          },
+          "approx_peak_live_vector_registers": 113,
+          "approx_peak_live_vector_registers_note": "MIR-derived approximation via linear scan over def/kill order in program text, NOT a full dataflow liveness analysis; LLVM-reported exact peak pressure was unavailable on this Release-build toolchain (see README.md Register-Pressure Methodology)"
+        },
+        "post_ra": {
+          "physical_vector_registers_referenced": 28,
+          "physical_gpr_registers_referenced": 31,
+          "spill_stores": 0,
+          "reload_loads": 0,
+          "copies_pre_ra": 14,
+          "copies_post_ra": 14,
+          "copies_removed_by_ra": 0,
+          "frame_objects": 0,
+          "spill_slot_count": 0,
+          "spill_slot_bytes": 0,
+          "stack_frame_bytes": 96
+        }
+      },
+      "performance": {
+        "median_ms": 0.019852,
+        "p95_ms": 0.019926
+      }
+    }
+  ]
+}

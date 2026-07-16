@@ -1,0 +1,61 @@
+body:             |
+  bb.0 (%ir-block.21):
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
+  
+    renamable $x19 = COPY $x1
+    renamable $x20 = LDRXui %fixed-stack.5, 0 :: (load (s64) from %fixed-stack.5)
+    renamable $x21 = LDRXui %fixed-stack.12, 0 :: (load (s64) from %fixed-stack.12, align 16)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    dead $w0 = MOVi32imm 320, implicit-def $x0
+    BL @malloc, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $x8 = COPY $xzr
+    renamable $x9 = ADDXri renamable $x0, 63, 0
+    renamable $x1 = ANDXri killed renamable $x9, 7865
+    renamable $q0 = MOVIv2d_ns 0
+  
+  bb.1 (%ir-block.56):
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $q0, $x0, $x1, $x8, $x19, $x20, $x21
+  
+    dead $xzr = SUBSXri renamable $x8, 7, 0, implicit-def $nzcv
+    Bcc 12, %bb.3, implicit killed $nzcv
+    B %bb.2
+  
+  bb.2 (%ir-block.59):
+    successors: %bb.1(0x80000000)
+    liveins: $q0, $x0, $x1, $x8, $x19, $x20, $x21
+  
+    renamable $x9 = nuw nsw UBFMXri renamable $x8, 59, 58
+    renamable $x10 = ADDXrr renamable $x20, renamable $x9
+    renamable $q16 = LDRQui renamable $x10, 0 :: (load (s128) from %ir.scevgep13, align 4)
+    renamable $q18 = LDRQui renamable $x10, 1 :: (load (s128) from %ir.scevgep13 + 16, align 4)
+    renamable $q5 = LDRQui renamable $x10, 2 :: (load (s128) from %ir.scevgep12, align 4)
+    renamable $q6 = LDRQui renamable $x10, 3 :: (load (s128) from %ir.scevgep12 + 16, align 4)
+    renamable $q3 = LDRQui renamable $x10, 4 :: (load (s128) from %ir.scevgep10, align 4)
+    renamable $q4 = LDRQui renamable $x10, 5 :: (load (s128) from %ir.scevgep10 + 16, align 4)
+    renamable $q1 = LDRQui renamable $x10, 6 :: (load (s128) from %ir.scevgep8, align 4)
+    renamable $q2 = LDRQui killed renamable $x10, 7 :: (load (s128) from %ir.scevgep8 + 16, align 4)
+    renamable $x10 = ADDXrr renamable $x19, renamable $x9
+    renamable $q20 = LDRQui renamable $x21, 0 :: (load (s128) from %ir.73, align 4)
+    renamable $q21 = LDRQui renamable $x21, 1 :: (load (s128) from %ir.73 + 16, align 4)
+    renamable $q19 = LDRQui renamable $x10, 1 :: (load (s128) from %ir.scevgep20 + 16, align 4)
+    renamable $q22 = LDRQui renamable $x10, 0 :: (load (s128) from %ir.scevgep20, align 4)
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q21, renamable $q22, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q20, renamable $q22, 0, implicit $fpcr
+    renamable $q17 = LDRQui renamable $x10, 3 :: (load (s128) from %ir.scevgep19 + 16, align 4)
+    renamable $q23 = LDRQui renamable $x10, 2 :: (load (s128) from %ir.scevgep19, align 4)
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q21, renamable $q23, 0, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q20, renamable $q23, 0, implicit $fpcr
+    renamable $q7 = LDRQui renamable $x10, 5 :: (load (s128) from %ir.scevgep17 + 16, align 4)
+    renamable $q24 = LDRQui renamable $x10, 4 :: (load (s128) from %ir.scevgep17, align 4)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q21, renamable $q24, 0, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q20, renamable $q24, 0, implicit $fpcr
+    renamable $q25 = LDRQui renamable $x10, 6 :: (load (s128) from %ir.scevgep15, align 4)
+    renamable $q2 = nofpexcept FMLAv4i32_indexed killed renamable $q2, killed renamable $q21, renamable $q25, 0, implicit $fpcr
+    renamable $q1 = nofpexcept FMLAv4i32_indexed killed renamable $q1, killed renamable $q20, renamable $q25, 0, implicit $fpcr
+    renamable $q20 = LDRQui renamable $x21, 3 :: (load (s128) from %ir.76 + 16, align 4)
+    renamable $q21 = LDRQui renamable $x21, 2 :: (load (s128) from %ir.76, align 4)
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q21, renamable $q22, 1, implicit $fpcr
+  ... (truncated -- full MIR reproducible via commands.txt)

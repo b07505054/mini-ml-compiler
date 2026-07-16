@@ -1,0 +1,20 @@
+SHA-256 and size of objects used for this slice's MIR/allocator analysis
+that are not otherwise already recorded (the 8 greedy-allocator objects
+are byte-identical to the already-committed
+artifacts/backend_codegen/aarch64_matmul_bias_relu_tile_candidates/object_hashes.txt
+-- verified in this slice, see README.md Stage 2 -- so only the 3 NEW
+-regalloc=fast analysis-only objects are listed here. None are committed
+(.gitignore excludes *.o repo-wide).
+
+matmul_bias_relu_tiled_32x32x32_tm4_tn8_tk8_fast.o
+  sha256: 3a2b60d80b765bae48a2a34bae14bb07ac48089fb886923efab30fd7d1fa7e18
+  size:   2272 bytes
+
+matmul_bias_relu_tiled_32x32x32_tm8_tn8_tk8_fast.o
+  sha256: 67befd9a85fbe9fcb822cd1ff8b861a9bebb5dedd5ea4c184e325eaa76c3d947
+  size:   2864 bytes
+
+matmul_bias_relu_tiled_8x8x8_tm8_tn8_tk8_fast.o
+  sha256: 76a9b69b7c1751b63b15d0692ce7574b801b2a979ab8bcbc7b552d6fe5e6be8b
+  size:   2064 bytes
+

@@ -1,0 +1,42 @@
+{
+  "description": "Stage 10: correlation between real LLVM MIR metrics (virtual registers, allocator spills/reloads, approximate peak pressure, stack-frame size) and measured Raspberry Pi 5 latency, for the 8 mandatory deep-analysis candidates (allocator=greedy, LLVM's default for this pipeline unless noted).",
+  "rows": [
+    {"shape": [8,8,8], "tile": {"m":4,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 173, "virtual_vector_registers": 105, "approx_peak_live_vector_registers": 41,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 32, "object_bytes": 1704,
+     "median_ms": 0.000092, "p95_ms": 0.000093, "selected_previously": true},
+    {"shape": [8,8,8], "tile": {"m":8,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 213, "virtual_vector_registers": 193, "approx_peak_live_vector_registers": 65,
+     "spill_stores": 1, "reload_loads": 1, "stack_frame_bytes": 112, "object_bytes": 2064,
+     "median_ms": 0.000092, "p95_ms": 0.000093, "selected_previously": false},
+    {"shape": [32,32,32], "tile": {"m":4,"n":4,"k":4}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 174, "virtual_vector_registers": 46, "approx_peak_live_vector_registers": 29,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 64, "object_bytes": 1808,
+     "median_ms": 0.004130, "p95_ms": 0.004148, "selected_previously": false},
+    {"shape": [32,32,32], "tile": {"m":4,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 262, "virtual_vector_registers": 130, "approx_peak_live_vector_registers": 65,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 128, "object_bytes": 2136,
+     "median_ms": 0.002926, "p95_ms": 0.002944, "selected_previously": false},
+    {"shape": [32,32,32], "tile": {"m":8,"n":8,"k":4}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 305, "virtual_vector_registers": 162, "approx_peak_live_vector_registers": 97,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 128, "object_bytes": 2344,
+     "median_ms": 0.002982, "p95_ms": 0.003000, "selected_previously": false},
+    {"shape": [32,32,32], "tile": {"m":8,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 385, "virtual_vector_registers": 242, "approx_peak_live_vector_registers": 113,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 96, "object_bytes": 2616,
+     "median_ms": 0.002593, "p95_ms": 0.002611, "selected_previously": true},
+    {"shape": [64,64,64], "tile": {"m":4,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 268, "virtual_vector_registers": 130, "approx_peak_live_vector_registers": 65,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 64, "object_bytes": 2112,
+     "median_ms": 0.019685, "p95_ms": 0.019740, "selected_previously": true},
+    {"shape": [64,64,64], "tile": {"m":8,"n":8,"k":8}, "allocator": "greedy",
+     "pre_ra_virtual_registers": 387, "virtual_vector_registers": 242, "approx_peak_live_vector_registers": 113,
+     "spill_stores": 0, "reload_loads": 0, "stack_frame_bytes": 96, "object_bytes": 2712,
+     "median_ms": 0.019852, "p95_ms": 0.019926, "selected_previously": false}
+  ],
+  "correlation_findings": [
+    "Spills/reloads correlate with latency ONLY when the spill actually executes inside a compute-dominated hot loop with enough dynamic iterations to amortize its own overhead into a measurable signal. The single confirmed real spill+reload pair (8x8x8, tile 8x8x8) produced NO measurable latency difference from its zero-spill sibling (4x8x8) at the same shape -- see the 8x8x8 Spill-Contrast Investigation in README.md.",
+    "Virtual register count and approximate peak live pressure do NOT predict which tile wins at a given shape: 32x32x32's fastest tile (8x8x8) has the HIGHEST pre-RA virtual register count (385) and highest approximate peak pressure (113) of the four 32x32x32 candidates analyzed, yet has zero spills and the lowest latency. Loop iteration count (a function of tile volume vs. shape volume, independent of register pressure) is the dominant factor -- see the 32x32x32 Winner Investigation in README.md.",
+    "Register pressure metrics only become an actionable signal once they cross the point of causing real spills, which for LLVM's greedy allocator on this target did not happen for ANY of the 7 legal tiles at 32x32x32 or 64x64x64 in the deeply-analyzed subset -- greedy successfully allocates up to 242 virtual vector registers (113 approximate peak live) into 32 physical registers with zero spills across every analyzed 32x32x32/64x64x64 candidate."
+  ]
+}
