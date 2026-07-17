@@ -795,6 +795,7 @@ def load_kernel_profiles(paths):
     fingerprints = {}
     loaded = []
     missing = []
+    exact_candidates = []
 
     for profile_path in profile_paths:
         if not profile_path.exists():
@@ -809,6 +810,7 @@ def load_kernel_profiles(paths):
         if payload.get("artifact_type") == "profile_calibrated_cost_table":
             for fusion_candidate, by_backend in payload.get("cost_table", {}).items():
                 cost_table.setdefault(fusion_candidate, {}).update(by_backend)
+            exact_candidates.extend(payload.get("exact_candidates", []))
         for row in payload.get("kernel_benchmarks", []):
             kernels[row.get("fusion_candidate")] = row
 
@@ -831,7 +833,60 @@ def load_kernel_profiles(paths):
         "matmul_profile_documents": matmul_documents,
         "triton_profile_documents": triton_documents,
         "profile_fingerprints": fingerprints,
+        "exact_candidates": exact_candidates,
     }
+
+
+def select_exact_rmsnorm_candidate(profile, shape, target_gpu_name, target_compute_capability):
+    requested = {
+        "operator": "rmsnorm", "semantics": "weighted_rmsnorm",
+        "tokens": shape["tokens"], "hidden": shape["hidden"],
+        "dtype": {"f32": "fp32", "float32": "fp32"}.get(shape["dtype"], shape["dtype"]),
+        "target_gpu_name": target_gpu_name,
+        "target_compute_capability": target_compute_capability,
+    }
+    accepted, rejected = [], []
+    for row in profile.get("exact_candidates", []):
+        reasons = []
+        target = row.get("target") or {}
+        for key in ("operator", "semantics", "tokens", "hidden", "dtype"):
+            if row.get(key) != requested.get(key):
+                reasons.append(f"{key}_mismatch")
+        if target.get("gpu_name") != target_gpu_name:
+            reasons.append("target_gpu_name_mismatch")
+        if str(target.get("compute_capability")) != str(target_compute_capability):
+            reasons.append("target_compute_capability_mismatch")
+        if row.get("correct") is not True:
+            reasons.append("correctness_failed")
+        if row.get("selection_ready") is not True:
+            reasons.append("not_selection_ready")
+        if row.get("measurement_kind") != "measured" or not isinstance(row.get("p50_ms"), (int, float)):
+            reasons.append("not_measured")
+        (rejected if reasons else accepted).append({"candidate_id": row.get("candidate_id"), "reasons": reasons, "candidate": row})
+    if not accepted:
+        fallback = {
+            "candidate_id": "torch_rmsnorm_fp32_v1", "operator": "rmsnorm",
+            "semantics": "weighted_rmsnorm", "backend": "torch",
+            "kernel_family": "pytorch_rmsnorm_fallback", "kernel_entry_point": "torch_rmsnorm",
+            "dtype": requested["dtype"], "tokens": shape["tokens"], "hidden": shape["hidden"],
+            "epsilon": 1e-6, "block_size": None, "num_warps": None, "num_stages": None,
+            "target": {"gpu_name": target_gpu_name, "compute_capability": target_compute_capability},
+        }
+        return {"decision_kind": "rmsnorm_gpu_exact_config_selection", "requested_key": requested,
+                "selected_candidate_id": fallback["candidate_id"], "selected_candidate": fallback,
+                "selection_metric": "p50_ms", "selected_cost_ms": None, "runner_up_candidate_id": None,
+                "runner_up_cost_ms": None, "exact_match": False, "fallback_used": True,
+                "selection_reason": "fallback_no_valid_exact_measured_candidate", "rejected_candidates": rejected}
+    accepted.sort(key=lambda item: (item["candidate"]["p50_ms"], item["candidate_id"]))
+    selected = accepted[0]["candidate"]
+    runner_up = accepted[1]["candidate"] if len(accepted) > 1 else None
+    return {"decision_kind": "rmsnorm_gpu_exact_config_selection", "requested_key": requested,
+            "selected_candidate_id": selected["candidate_id"], "selected_candidate": selected,
+            "selection_metric": "p50_ms", "selected_cost_ms": selected["p50_ms"],
+            "runner_up_candidate_id": runner_up and runner_up["candidate_id"],
+            "runner_up_cost_ms": runner_up and runner_up["p50_ms"], "exact_match": True,
+            "fallback_used": False, "selection_reason": "lowest_exact_measured_p50_ms",
+            "evidence_artifact": selected.get("source_artifact"), "rejected_candidates": rejected}
 
 
 def shape_bucket_for(fusion_candidate, shape=None):
@@ -1244,14 +1299,28 @@ def build_matmul_op(index, match, profile, source_text):
     }
 
 
-def build_rmsnorm_op(index, match, profile, source_text, rmsnorm_backend):
+def build_rmsnorm_op(index, match, profile, source_text, rmsnorm_backend, target_gpu_name=None, target_compute_capability=None):
     shapes = parse_tensor_shapes(source_text, match)
     shape = {
         "tokens": shapes[0]["d0"] if shapes else 16,
         "hidden": shapes[0]["d1"] if shapes else 4096,
         "dtype": shapes[0]["dtype"] if shapes else "f32",
     }
-    if rmsnorm_backend == "Metal":
+    exact_selection = None
+    if target_gpu_name and target_compute_capability:
+        exact_selection = select_exact_rmsnorm_candidate(profile, shape, target_gpu_name, target_compute_capability)
+    if exact_selection:
+        candidate = exact_selection["selected_candidate"]
+        selection = {
+            "selected_kernel": candidate["candidate_id"], "selected_backend": candidate["backend"],
+            "candidate_kernel": candidate["candidate_id"], "candidate_backend": candidate["backend"],
+            "fallback_kernel": "torch_rmsnorm_fp32_v1", "fallback_backend": "torch",
+            "profile_status": profile.get("profile_status"), "profile_source": profile.get("profile_path"),
+            "selection_reason": exact_selection["selection_reason"], "profile_calibrated": exact_selection["exact_match"],
+            "shape_bucket": shape_bucket_for("rmsnorm", shape), "evidence": candidate,
+            "exact_config_selection": exact_selection,
+        }
+    elif rmsnorm_backend == "Metal":
         custom_kernel = "fused_rmsnorm_metal"
         fallback_kernel = "cpu_rmsnorm"
         fallback_backend = "CPU"
@@ -1259,15 +1328,8 @@ def build_rmsnorm_op(index, match, profile, source_text, rmsnorm_backend):
         custom_kernel = "fused_rmsnorm_cuda"
         fallback_kernel = "torch_rmsnorm"
         fallback_backend = "PyTorch"
-    selection = select_kernel(
-        "rmsnorm",
-        custom_kernel,
-        rmsnorm_backend,
-        fallback_kernel,
-        fallback_backend,
-        profile,
-        shape,
-    )
+    if not exact_selection:
+        selection = select_kernel("rmsnorm", custom_kernel, rmsnorm_backend, fallback_kernel, fallback_backend, profile, shape)
     result_name = match.group("result")
     hir_op_type = "hir.fused_rmsnorm"
     runtime_op_type = "FusedRMSNorm"
@@ -1298,6 +1360,7 @@ def build_rmsnorm_op(index, match, profile, source_text, rmsnorm_backend):
         ),
         "shape": shape,
         "kernel_selection": selection,
+        "exact_config_selection": exact_selection,
         "notes": [
             "Detected from MLIR llm.rmsnorm annotated by RMSNormKernelSelectionPass",
             "Lowered to HIR fused RMSNorm candidate",
@@ -1390,7 +1453,7 @@ def build_lowered_graph(
     source_path,
     profile,
     source_text,
-    rmsnorm_backend,
+    rmsnorm_backend, target_gpu_name=None, target_compute_capability=None,
 ):
     ops = []
     for match in matmul_matches:
@@ -1402,6 +1465,7 @@ def build_lowered_graph(
             profile,
             source_text,
             rmsnorm_backend,
+            target_gpu_name, target_compute_capability,
         ))
     for match in qmatmul_matches:
         ops.append(build_qmatmul_op(len(ops), match, profile, source_text))
@@ -1477,6 +1541,43 @@ def build_execution_plan(lowered_graph):
     }
 
 
+def build_canonical_rmsnorm_execution_plan(lowered_graph):
+    rmsnorm_ops = [op for op in lowered_graph["ops"] if op["fusion_candidate"] == "rmsnorm"]
+    if len(rmsnorm_ops) != 1 or not rmsnorm_ops[0].get("exact_config_selection"):
+        raise ValueError("canonical exact RMSNorm plan requires exactly one exact-selected RMSNorm op")
+    op = rmsnorm_ops[0]
+    decision = op["exact_config_selection"]
+    candidate = decision["selected_candidate"]
+    launch = {"block_size": candidate.get("block_size"), "num_warps": candidate.get("num_warps"), "num_stages": candidate.get("num_stages")}
+    kernel = {
+        "decision_type": "KernelDecision", "scope": "PerOp",
+        "selected_kernel": candidate["candidate_id"], "kernel_library": candidate["kernel_family"],
+        "lowering_path": "rmsnorm_gpu_exact_config", "kernel_exists": candidate["backend"] != "torch",
+        "decision_kind": "rmsnorm_gpu_exact_config_selection",
+        "operator": "rmsnorm", "semantics": "weighted_rmsnorm", "backend": candidate["backend"],
+        "candidate_id": candidate["candidate_id"], "kernel_family": candidate["kernel_family"],
+        "kernel_entry_point": candidate["kernel_entry_point"], "dtype": candidate["dtype"],
+        "tokens": candidate["tokens"], "hidden": candidate["hidden"], "epsilon": candidate.get("epsilon", 1e-6),
+        "launch_config": launch,
+        "artifact": {"source_hash": candidate.get("source_hash"), "compiled_artifact_hash": candidate.get("artifact_hash")},
+        "target": candidate["target"], "measurement_evidence_ref": candidate.get("source_artifact"),
+        "runtime_no_policy_redecision": True,
+    }
+    return {
+        "schema": "execution_plan", "schema_version": "2.0.0",
+        "plan_id": f"rmsnorm-exact-{candidate['candidate_id']}-{candidate['tokens']}x{candidate['hidden']}",
+        "provenance": {"compiler_tool": "tools/mlir_fusion_to_runtime_json.py",
+            "model_spec_ref": str(lowered_graph["source"]),
+            "capability_bundle": {"hardware_profile_ref": "hardware/nvidia_gtx1650_maxq.json",
+                "backend_profile_refs": [f"backend/{candidate['backend']}.json"], "kernel_profile_refs": []},
+            "truth_boundary": "operator_level_weighted_rmsnorm_exact_measured_selection_not_full_model"},
+        "model_identity": {"model_id": "operator_level_weighted_rmsnorm"}, "global_decisions": {},
+        "function_plans": [{"function_name": "weighted_rmsnorm", "serving_phase": "other",
+            "backend": {"decision_type": "BackendDecision", "scope": "Function", "selected_backend": candidate["backend"]},
+            "per_op_decisions": [{"op_name": "rmsnorm_0", "op_type": "RMSNorm", "kernel": kernel}]}],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default="trace/mlir_fused_graph.mlir")
@@ -1484,6 +1585,9 @@ def main():
     parser.add_argument("--plan-output", default="trace/mlir_execution_plan.json")
     parser.add_argument("--kernel-profile", action="append")
     parser.add_argument("--rmsnorm-backend", choices=["CUDA", "Metal"], default="CUDA")
+    parser.add_argument("--rmsnorm-target-gpu-name")
+    parser.add_argument("--rmsnorm-target-compute-capability")
+    parser.add_argument("--canonical-rmsnorm-plan-output")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -1508,6 +1612,8 @@ def main():
         profile,
         text,
         args.rmsnorm_backend,
+        args.rmsnorm_target_gpu_name,
+        args.rmsnorm_target_compute_capability,
     )
     execution_plan = build_execution_plan(lowered_graph)
 
@@ -1519,6 +1625,10 @@ def main():
 
     lowered_output.write_text(json.dumps(lowered_graph, indent=2) + "\n", encoding="utf-8")
     plan_output.write_text(json.dumps(execution_plan, indent=2) + "\n", encoding="utf-8")
+    if args.canonical_rmsnorm_plan_output:
+        canonical_path = Path(args.canonical_rmsnorm_plan_output)
+        canonical_path.parent.mkdir(parents=True, exist_ok=True)
+        canonical_path.write_text(json.dumps(build_canonical_rmsnorm_execution_plan(lowered_graph), indent=2) + "\n", encoding="utf-8")
 
     print(f"Wrote {lowered_output}")
     print(f"Wrote {plan_output}")
