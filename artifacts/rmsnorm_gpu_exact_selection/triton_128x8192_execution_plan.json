@@ -1,0 +1,73 @@
+{
+  "schema": "execution_plan",
+  "schema_version": "2.0.0",
+  "plan_id": "rmsnorm-exact-triton_rmsnorm_fp32_block8192_warps4_stages_default_v1-128x8192",
+  "provenance": {
+    "compiler_tool": "tools/mlir_fusion_to_runtime_json.py",
+    "model_spec_ref": "artifacts/rmsnorm_gpu_exact_selection/rmsnorm_128x8192_profile_request.mlir",
+    "capability_bundle": {
+      "hardware_profile_ref": "hardware/nvidia_gtx1650_maxq.json",
+      "backend_profile_refs": [
+        "backend/triton.json"
+      ],
+      "kernel_profile_refs": []
+    },
+    "truth_boundary": "operator_level_weighted_rmsnorm_exact_measured_selection_not_full_model"
+  },
+  "model_identity": {
+    "model_id": "operator_level_weighted_rmsnorm"
+  },
+  "global_decisions": {},
+  "function_plans": [
+    {
+      "function_name": "weighted_rmsnorm",
+      "serving_phase": "other",
+      "backend": {
+        "decision_type": "BackendDecision",
+        "scope": "Function",
+        "selected_backend": "triton"
+      },
+      "per_op_decisions": [
+        {
+          "op_name": "rmsnorm_0",
+          "op_type": "RMSNorm",
+          "kernel": {
+            "decision_type": "KernelDecision",
+            "scope": "PerOp",
+            "selected_kernel": "triton_rmsnorm_fp32_block8192_warps4_stages_default_v1",
+            "kernel_library": "triton_rmsnorm",
+            "lowering_path": "rmsnorm_gpu_exact_config",
+            "kernel_exists": true,
+            "decision_kind": "rmsnorm_gpu_exact_config_selection",
+            "operator": "rmsnorm",
+            "semantics": "weighted_rmsnorm",
+            "backend": "triton",
+            "candidate_id": "triton_rmsnorm_fp32_block8192_warps4_stages_default_v1",
+            "kernel_family": "triton_rmsnorm",
+            "kernel_entry_point": "rmsnorm_kernel",
+            "dtype": "fp32",
+            "tokens": 128,
+            "hidden": 8192,
+            "epsilon": 1e-06,
+            "launch_config": {
+              "block_size": 8192,
+              "num_warps": 4,
+              "num_stages": "default"
+            },
+            "artifact": {
+              "source_hash": "879621783a1117a6c3f4c58cf225db4f40620d2a27b3d10932ec60ebd669a5e6",
+              "measurement_artifact_hash": "cc7ea47678a50ed15015620739d735c85d35cee2a8a8760d36fdf42c79870e8f",
+              "compiled_artifact_hash": null
+            },
+            "target": {
+              "gpu_name": "NVIDIA GeForce GTX 1650 with Max-Q Design",
+              "compute_capability": "7.5"
+            },
+            "measurement_evidence_ref": "../heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_exact_candidate_benchmark.json",
+            "runtime_no_policy_redecision": true
+          }
+        }
+      ]
+    }
+  ]
+}

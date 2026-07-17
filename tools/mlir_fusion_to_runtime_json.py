@@ -714,8 +714,7 @@ def detect_rmsnorm(text):
         return hir_matches
 
     annotated_pattern = re.compile(
-        r"(?P<result>%[\w\d_]+)\s*=\s*\"llm\.rmsnorm\"\s*"
-        r"\([^)]*\)\s*\{[^}]*fusion\.candidate\s*=\s*\"rmsnorm\"[^}]*\}",
+        r"(?P<result>%[\w\d_]+)\s*=\s*\"llm\.rmsnorm\"\s*\([^)]*\)",
         re.MULTILINE,
     )
     return list(annotated_pattern.finditer(text))
@@ -1559,7 +1558,8 @@ def build_canonical_rmsnorm_execution_plan(lowered_graph):
         "kernel_entry_point": candidate["kernel_entry_point"], "dtype": candidate["dtype"],
         "tokens": candidate["tokens"], "hidden": candidate["hidden"], "epsilon": candidate.get("epsilon", 1e-6),
         "launch_config": launch,
-        "artifact": {"source_hash": candidate.get("source_hash"), "compiled_artifact_hash": candidate.get("artifact_hash")},
+        "artifact": {"source_hash": candidate.get("source_hash"), "measurement_artifact_hash": candidate.get("artifact_hash"),
+            "compiled_artifact_hash": candidate.get("compiled_artifact_hash")},
         "target": candidate["target"], "measurement_evidence_ref": candidate.get("source_artifact"),
         "runtime_no_policy_redecision": True,
     }

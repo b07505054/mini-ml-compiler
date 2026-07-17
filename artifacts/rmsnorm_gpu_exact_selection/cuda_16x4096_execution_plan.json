@@ -1,0 +1,73 @@
+{
+  "schema": "execution_plan",
+  "schema_version": "2.0.0",
+  "plan_id": "rmsnorm-exact-cuda_rmsnorm_fp32_bs64_v1-16x4096",
+  "provenance": {
+    "compiler_tool": "tools/mlir_fusion_to_runtime_json.py",
+    "model_spec_ref": "mlir_passes/test/rmsnorm_hir_lowering.mlir",
+    "capability_bundle": {
+      "hardware_profile_ref": "hardware/nvidia_gtx1650_maxq.json",
+      "backend_profile_refs": [
+        "backend/cuda.json"
+      ],
+      "kernel_profile_refs": []
+    },
+    "truth_boundary": "operator_level_weighted_rmsnorm_exact_measured_selection_not_full_model"
+  },
+  "model_identity": {
+    "model_id": "operator_level_weighted_rmsnorm"
+  },
+  "global_decisions": {},
+  "function_plans": [
+    {
+      "function_name": "weighted_rmsnorm",
+      "serving_phase": "other",
+      "backend": {
+        "decision_type": "BackendDecision",
+        "scope": "Function",
+        "selected_backend": "cuda"
+      },
+      "per_op_decisions": [
+        {
+          "op_name": "rmsnorm_0",
+          "op_type": "RMSNorm",
+          "kernel": {
+            "decision_type": "KernelDecision",
+            "scope": "PerOp",
+            "selected_kernel": "cuda_rmsnorm_fp32_bs64_v1",
+            "kernel_library": "custom_cuda_rmsnorm",
+            "lowering_path": "rmsnorm_gpu_exact_config",
+            "kernel_exists": true,
+            "decision_kind": "rmsnorm_gpu_exact_config_selection",
+            "operator": "rmsnorm",
+            "semantics": "weighted_rmsnorm",
+            "backend": "cuda",
+            "candidate_id": "cuda_rmsnorm_fp32_bs64_v1",
+            "kernel_family": "custom_cuda_rmsnorm",
+            "kernel_entry_point": "fused_rmsnorm_forward",
+            "dtype": "fp32",
+            "tokens": 16,
+            "hidden": 4096,
+            "epsilon": 1e-06,
+            "launch_config": {
+              "block_size": 64,
+              "num_warps": null,
+              "num_stages": null
+            },
+            "artifact": {
+              "source_hash": "4315015619923ab68d932cc203a3b26a97b20907103d0510dbeca4955551e97d",
+              "measurement_artifact_hash": "cc7ea47678a50ed15015620739d735c85d35cee2a8a8760d36fdf42c79870e8f",
+              "compiled_artifact_hash": null
+            },
+            "target": {
+              "gpu_name": "NVIDIA GeForce GTX 1650 with Max-Q Design",
+              "compute_capability": "7.5"
+            },
+            "measurement_evidence_ref": "../heterogeneous-inference-runtime/results/cuda_transformer/rmsnorm_exact_candidate_benchmark.json",
+            "runtime_no_policy_redecision": true
+          }
+        }
+      ]
+    }
+  ]
+}
