@@ -38,6 +38,7 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 - Static symmetric INT8 fused Linear/MatMul + Bias + ReLU path: compiler-owned calibration and packed-weight artifacts, explicit Q/DQ integer IR, Cortex-A76 dot-product kernel lowering, canonical ExecutionPlan execution, and Raspberry Pi validation.
 - Complete candidate search for the validated fused operator spans portable FP32, portable packed INT8, and ExecuTorch/XNNPACK FP32/INT8 implementations. Backend, runtime, delegate, quantization scheme, layout, fixed thread count, target capabilities, artifacts, and measured evidence are part of candidate identity.
 - AArch64 backend-codegen evidence path for the same fused operator: project-owned Transform-dialect tiling/vectorization/unroll choices, unmodified LLVM 21.1.8 lowering/MIR/RA/scheduling, Raspberry Pi 5 validation, and explicit truth-boundary artifacts.
+- Exact measured RMSNorm GPU candidate selection path: CUDA/Triton benchmark profiles normalize candidate identity, shape, target GPU, launch config, artifact hash, and measured p50 evidence into a canonical runtime plan with runtime redecision forbidden.
 - Measured vLLM `max_num_seqs` policy selector for one target/model/workload scope; the compiler emits the exact selected serving knob and forbids runtime redecision.
 - Triton shadow provider over real measured/predicted artifacts, with unresolved IR bridge, no production ExecutionPlan effect.
 - AWQ artifact and vLLM materialization path, with measured serving traces but no accuracy/perplexity calibration.
@@ -56,6 +57,7 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 | E3 formal comparison | live Compiler XNNPACK contract vs ExecuTorch default | 2 wins, 8 ties, 0 losses; geomean default/project ratio 1.031686x | runtime `results/executorch_e3/formal/e3_formal_analysis.json` |
 | Slice 3G complete-candidate agreement | fused Linear + Bias + ReLU, four Pi shapes | 4/4 selections agree with the constrained measured oracle; normalized regret 0.0 | external Slice 3G `selection_summary.json` |
 | AArch64 schedule-unroll validation | Pi 5 Cortex-A76, FP32 tiled fused MatMul + Bias + ReLU | `schedule-unroll-k=4` measured fastest in 6/6 tested shape/tile domains; all candidates bit-exact | `artifacts/backend_codegen/aarch64_schedule_final/summary.md` |
+| RMSNorm exact GPU selection | GTX 1650 Max-Q, weighted RMSNorm, exact shape/target/profile match | selected candidate is keyed by candidate id, backend, launch config, artifact hash, target GPU, p50 evidence; fallback used only when no valid exact measured candidate exists | `tools/mlir_fusion_to_runtime_json.py`, `tests/test_rmsnorm_exact_gpu_selection.py` |
 | vLLM max-num-seqs selector | GTX 1650 Max-Q, Qwen 0.5B, vLLM 0.24.0, one knob | 45 measured baseline sessions plus 9 proof sessions; every proof executed the compiler-selected value with runtime redecision count 0 | runtime `artifacts/vllm_max_num_seqs_evaluation/summary.md` |
 
 These are narrow, target-scoped results. They are not cross-model, cross-device, energy, NPU, or universal superiority claims.
@@ -124,5 +126,6 @@ reselection and zero temporary full-history materialization.
 - E3 compiler contract generator: `tools/e3_xnnpack_contract.py`.
 - E3 runtime harness/evidence: sibling runtime `evaluation/executorch_e3/` and `results/executorch_e3/`.
 - AArch64 backend-codegen schedule summary: `artifacts/backend_codegen/aarch64_schedule_final/summary.md`.
+- RMSNorm exact GPU selection bridge: `tools/build_profile_cost_table.py`, `tools/mlir_fusion_to_runtime_json.py`, and `tests/test_rmsnorm_exact_gpu_selection.py`.
 - vLLM `max_num_seqs` selector: `tools/select_vllm_max_num_seqs.py`; measured runtime evidence lives in sibling runtime `artifacts/vllm_max_num_seqs_evaluation/`.
 - Canonical docs: `ARCHITECTURE_CONSTITUTION.md`, `CURRENT_STATE.md`, `PUBLICATION_STATUS.md`, `PROJECT_MATURITY.md`, `WHY_THIS_PROJECT.md`.
