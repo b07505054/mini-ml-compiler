@@ -228,6 +228,7 @@ ExecutionPlan ExecutionPlanBuilder::build(
 
   plan.global_decisions = collectGlobalDecisions(module, capabilities);
   plan.cv_extension = collectCVPlanExtension(module);
+  plan.distributed = collectDistributedPlan(module);
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     // Same gate attr as V1 builder: only collect annotated functions.
@@ -478,6 +479,87 @@ ExecutionPlanBuilder::collectCVPlanExtension(mlir::ModuleOp module) {
   ext.postprocess_contract = collectPostprocessContract(selected);
 
   return ext;
+}
+
+std::optional<DistributedPlan>
+ExecutionPlanBuilder::collectDistributedPlan(mlir::ModuleOp module) {
+  mlir::Operation *op = module.getOperation();
+  // Absent entirely for TP1/legacy plans -- DistributedStrategyPlanningPass
+  // only sets this attr when world_size > 1 was selected.
+  auto worldSizeAttr = op->getAttrOfType<mlir::IntegerAttr>("distributed.world_size");
+  if (!worldSizeAttr)
+    return std::nullopt;
+
+  DistributedPlan plan;
+  plan.strategy = strOp(op, "distributed.strategy");
+  plan.world_size = worldSizeAttr.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>("distributed.tensor_parallel_size"))
+    plan.tensor_parallel_size = a.getInt();
+  if (auto a = op->getAttrOfType<mlir::IntegerAttr>("distributed.pipeline_parallel_size"))
+    plan.pipeline_parallel_size = a.getInt();
+  plan.truth_boundary = strOp(op, "distributed.truth_boundary");
+
+  if (auto ranks = op->getAttrOfType<mlir::ArrayAttr>("distributed.ranks")) {
+    for (mlir::Attribute elem : ranks) {
+      auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+      if (!dict)
+        continue;
+      DistributedRankPlacement r;
+      if (auto a = dict.getAs<mlir::IntegerAttr>("rank_id"))
+        r.rank_id = a.getInt();
+      if (auto a = dict.getAs<mlir::StringAttr>("logical_device"))
+        r.logical_device = a.getValue().str();
+      plan.ranks.push_back(std::move(r));
+    }
+  }
+
+  if (auto shards = op->getAttrOfType<mlir::ArrayAttr>("distributed.tensor_shards")) {
+    for (mlir::Attribute elem : shards) {
+      auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+      if (!dict)
+        continue;
+      DistributedTensorShard s;
+      if (auto a = dict.getAs<mlir::StringAttr>("tensor_id"))
+        s.tensor_id = a.getValue().str();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("partition_axis"))
+        s.partition_axis = a.getInt();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("partition_count"))
+        s.partition_count = a.getInt();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("shard_index"))
+        s.shard_index = a.getInt();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("range_start"))
+        s.range_start = a.getInt();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("range_end"))
+        s.range_end = a.getInt();
+      plan.tensor_shards.push_back(std::move(s));
+    }
+  }
+
+  if (auto collectives = op->getAttrOfType<mlir::ArrayAttr>("distributed.collectives")) {
+    for (mlir::Attribute elem : collectives) {
+      auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(elem);
+      if (!dict)
+        continue;
+      DistributedCollectiveStep c;
+      if (auto a = dict.getAs<mlir::StringAttr>("collective_id"))
+        c.collective_id = a.getValue().str();
+      if (auto a = dict.getAs<mlir::IntegerAttr>("sequence_id"))
+        c.sequence_id = a.getInt();
+      if (auto a = dict.getAs<mlir::StringAttr>("kind"))
+        c.kind = a.getValue().str();
+      if (auto a = dict.getAs<mlir::ArrayAttr>("participants"))
+        for (mlir::Attribute p : a)
+          if (auto pi = mlir::dyn_cast<mlir::IntegerAttr>(p))
+            c.participants.push_back(pi.getInt());
+      if (auto a = dict.getAs<mlir::StringAttr>("tensor_id"))
+        c.tensor_id = a.getValue().str();
+      if (auto a = dict.getAs<mlir::StringAttr>("reduction"))
+        c.reduction = a.getValue().str();
+      plan.collectives.push_back(std::move(c));
+    }
+  }
+
+  return plan;
 }
 
 FunctionPlan

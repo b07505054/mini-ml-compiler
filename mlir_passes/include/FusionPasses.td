@@ -1057,6 +1057,59 @@ def QuantizationCoDesign
   let dependentDialects = ["mlir::func::FuncDialect"];
 }
 
+def DistributedStrategyPlanning
+    : Pass<"distributed-strategy-planning", "mlir::ModuleOp"> {
+  let summary = "D2: generate, evaluate, and select a TP1/TP2 distributed "
+                "strategy candidate for one real Qwen operator instance";
+  let description = [{
+    Module-scoped pass (like QuantizationPlanning, not a per-func pass):
+    the distributed strategy is a single whole-model decision, not a
+    per-function one.
+
+    Reads real module/operator metadata already present in the pipeline by
+    this point: llm.model, llm.num_layers, llm.hidden_size,
+    llm.num_attention_heads, llm.num_key_value_heads, and the first
+    "llm.o_proj" op found in the module (its serving.layer_index, parent
+    function name, and static trailing tensor dimension). Reads the
+    explicit D2 opt-in flag distributed.opt_in (set by compile-for-target
+    only when the target profile JSON declares
+    "distributedStrategyOptIn": true).
+
+    Generates exactly the D1 {TP1, TP2} candidates (reusing
+    serving::generateDistributedCandidates), applies D1 structural legality
+    plus D2 Qwen-specific legality (operator support, static shape
+    availability, hidden-dimension divisibility, distributed capability/
+    opt-in availability), computes an explicit inspectable cost estimate
+    per candidate (rank-local compute bytes, communication bytes, collective
+    count, process-launch overhead calibrated from D1's local IPC
+    measurements, unsupported/fallback penalties), and deterministically
+    selects one candidate:
+
+      legal TP2 + explicit opt-in profile  -> TP2 may be selected
+      illegal TP2                          -> TP1 selected, rejection
+                                              reasons recorded
+      no distributed capability/opt-in     -> TP1 selected
+      internally inconsistent state        -> pass emits an error (fail
+                                              closed; module verification
+                                              fails, no plan is emitted)
+
+    Emits module-level attributes read by ExecutionPlanBuilder's
+    collectDistributedPlan(): distributed.candidates (evidence for every
+    candidate, always emitted), distributed.selected_candidate_id,
+    distributed.selection_reason, distributed.policy_id, and -- only when
+    the selected candidate has world_size > 1 -- distributed.strategy/
+    world_size/tensor_parallel_size/pipeline_parallel_size/ranks/
+    tensor_shards/collectives/truth_boundary (absent entirely for TP1
+    selections, preserving D1's legacy-plan backward compatibility).
+
+    This pass never claims real Qwen tensor-parallel execution, real GPU
+    tensor parallelism, NCCL, or measured distributed-serving profitability.
+    truth_boundary = "d2_qwen_pipeline_structural_planning_not_measured_gpu_"
+    "performance_not_nccl_calibrated".
+  }];
+  let constructor = "mlir::hir::createDistributedStrategyPlanningPass()";
+}
+
 def QuantizationPlanning
     : Pass<"quantization-planning", "mlir::ModuleOp"> {
   let summary = "Compiler-side precision selection for the HIR serving pipeline";

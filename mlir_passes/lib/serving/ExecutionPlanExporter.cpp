@@ -899,6 +899,58 @@ static llvm::json::Object serializeCVExtension(const CVPlanExtension &cv) {
   return obj;
 }
 
+// D1: distributed execution plan (tensor-parallel candidate materialization).
+// Planning-only, mirroring every other section of ExecutionPlan — no
+// measured performance, no claim of real GPU/NCCL execution.
+static llvm::json::Object serializeDistributedPlan(const DistributedPlan &d) {
+  llvm::json::Object obj;
+  obj["strategy"] = d.strategy;
+  obj["world_size"] = d.world_size;
+  obj["tensor_parallel_size"] = d.tensor_parallel_size;
+  obj["pipeline_parallel_size"] = d.pipeline_parallel_size;
+
+  llvm::json::Array ranks;
+  for (const auto &r : d.ranks) {
+    llvm::json::Object ro;
+    ro["rank_id"] = r.rank_id;
+    ro["logical_device"] = r.logical_device;
+    ranks.push_back(std::move(ro));
+  }
+  obj["ranks"] = std::move(ranks);
+
+  llvm::json::Array shards;
+  for (const auto &s : d.tensor_shards) {
+    llvm::json::Object so;
+    so["tensor_id"] = s.tensor_id;
+    so["partition_axis"] = s.partition_axis;
+    so["partition_count"] = s.partition_count;
+    so["shard_index"] = s.shard_index;
+    so["range_start"] = s.range_start;
+    so["range_end"] = s.range_end;
+    shards.push_back(std::move(so));
+  }
+  obj["tensor_shards"] = std::move(shards);
+
+  llvm::json::Array collectives;
+  for (const auto &c : d.collectives) {
+    llvm::json::Object co;
+    co["collective_id"] = c.collective_id;
+    co["sequence_id"] = c.sequence_id;
+    co["kind"] = c.kind;
+    llvm::json::Array participants;
+    for (int64_t p : c.participants)
+      participants.push_back(p);
+    co["participants"] = std::move(participants);
+    co["tensor_id"] = c.tensor_id;
+    co["reduction"] = c.reduction;
+    collectives.push_back(std::move(co));
+  }
+  obj["collectives"] = std::move(collectives);
+
+  obj["truth_boundary"] = d.truth_boundary;
+  return obj;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -999,6 +1051,10 @@ llvm::Error ExecutionPlanExporter::exportToFile(const ExecutionPlan &plan,
       bindings.push_back(serializeTensorBinding(binding));
     root["tensor_bindings"] = std::move(bindings);
   }
+  // D1: distributed plan — absent entirely for legacy/TP1 plans, so existing
+  // artifacts stay byte-identical.
+  if (plan.distributed)
+    root["distributed"] = serializeDistributedPlan(*plan.distributed);
 
   return writeJSON(llvm::json::Value(std::move(root)), outPath);
 }
@@ -1071,6 +1127,64 @@ ExecutionPlanExporter::exportDispatchUnitReport(const ExecutionPlan &plan,
         "cumulative_ssa_result_write_volume_not_peak_live_deprecated";
     root["memory_metric_reconciliation"] = std::move(memory);
   }
+
+  return writeJSON(llvm::json::Value(std::move(root)), outPath);
+}
+
+// ---------------------------------------------------------------------------
+// D2: generic MLIR Attribute -> llvm::json::Value converter, used only by
+// exportDistributedEvidenceReport to pass through DistributedStrategyPlanningPass's
+// raw module attrs. Handles exactly the attribute kinds that pass emits
+// (StringAttr, IntegerAttr, BoolAttr, ArrayAttr, DictionaryAttr).
+// ---------------------------------------------------------------------------
+
+static llvm::json::Value attrToJSON(mlir::Attribute attr) {
+  if (!attr)
+    return nullptr;
+  if (auto s = mlir::dyn_cast<mlir::StringAttr>(attr))
+    return s.getValue().str();
+  if (auto b = mlir::dyn_cast<mlir::BoolAttr>(attr))
+    return b.getValue();
+  if (auto i = mlir::dyn_cast<mlir::IntegerAttr>(attr))
+    return static_cast<int64_t>(i.getInt());
+  if (auto arr = mlir::dyn_cast<mlir::ArrayAttr>(attr)) {
+    llvm::json::Array out;
+    for (mlir::Attribute elem : arr)
+      out.push_back(attrToJSON(elem));
+    return out;
+  }
+  if (auto dict = mlir::dyn_cast<mlir::DictionaryAttr>(attr)) {
+    llvm::json::Object out;
+    for (const mlir::NamedAttribute &entry : dict)
+      out[entry.getName().str()] = attrToJSON(entry.getValue());
+    return out;
+  }
+  return nullptr;
+}
+
+llvm::Error
+ExecutionPlanExporter::exportDistributedEvidenceReport(mlir::ModuleOp module,
+                                                        llvm::StringRef outPath) {
+  mlir::Operation *op = module.getOperation();
+  llvm::json::Object root;
+  root["schema"] = "distributed_strategy_evidence_report";
+  root["schema_version"] = "1.0.0";
+  root["truth_boundary"] =
+      "d2_qwen_pipeline_structural_planning_not_measured_gpu_performance_"
+      "not_nccl_calibrated_not_distributed_profitability_claim";
+
+  if (auto a = op->getAttr("distributed.candidates"))
+    root["candidates"] = attrToJSON(a);
+  else
+    root["candidates"] = llvm::json::Array{};
+  if (auto a = op->getAttr("distributed.selected_candidate_id"))
+    root["selected_candidate_id"] = attrToJSON(a);
+  if (auto a = op->getAttr("distributed.selection_reason"))
+    root["selection_reason"] = attrToJSON(a);
+  if (auto a = op->getAttr("distributed.policy_id"))
+    root["policy_id"] = attrToJSON(a);
+  if (auto a = op->getAttr("distributed.policy_truth_boundary"))
+    root["policy_truth_boundary"] = attrToJSON(a);
 
   return writeJSON(llvm::json::Value(std::move(root)), outPath);
 }

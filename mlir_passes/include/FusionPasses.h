@@ -57,4 +57,9 @@ std::unique_ptr<::mlir::Pass> createCVExecutionDomainPlanningPass();
 std::unique_ptr<::mlir::Pass> createCVSemanticAnnotationPass();
 std::unique_ptr<::mlir::Pass> createCVExecutionPlanAttrsPass();
 
+// D2: DistributedStrategyPlanningPass (module-scoped, mirrors
+// QuantizationPlanningPass's Pass<..., mlir::ModuleOp> precedent). See
+// lib/serving/DistributedStrategyPlanningPass.cpp.
+std::unique_ptr<::mlir::Pass> createDistributedStrategyPlanningPass();
+
 } // namespace mlir::hir

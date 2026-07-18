@@ -52,6 +52,14 @@ private:
                                                  const CapabilityBundle& capabilities);
   static std::optional<CVPlanExtension>
   collectCVPlanExtension(mlir::ModuleOp module);
+  // D2: collector for DistributedStrategyPlanningPass output. Unconditional
+  // like collectGlobalDecisions/collectCVPlanExtension -- independent of the
+  // per-function serving.policy gate below, so it works even for functions
+  // that are excluded from plan.function_plans. Returns nullopt whenever
+  // no module attr "distributed.world_size" is present (TP1/no distributed
+  // selection), preserving byte-identical legacy plan behavior.
+  static std::optional<DistributedPlan>
+  collectDistributedPlan(mlir::ModuleOp module);
   static FunctionPlan   collectFunctionDecisions(mlir::func::FuncOp funcOp,
                                                    const CapabilityBundle& capabilities);
   static std::vector<PerOpDecisionBundle>

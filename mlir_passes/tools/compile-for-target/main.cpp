@@ -77,6 +77,12 @@ static llvm::cl::opt<std::string> DispatchUnitReportPath(
                    "report JSON to this path"),
     llvm::cl::init(""));
 
+static llvm::cl::opt<std::string> DistributedEvidenceReportPath(
+    "distributed-evidence-report",
+    llvm::cl::desc("(Optional) write D2 distributed-strategy candidate/"
+                   "legality/selection evidence report JSON to this path"),
+    llvm::cl::init(""));
+
 // ---------------------------------------------------------------------------
 // TargetDeviceProfile — tool-boundary struct
 // Only the fields consumed by TargetProfileLowering are populated.
@@ -247,6 +253,11 @@ struct TargetDeviceProfile {
   std::string forcedQuantAlgorithm;        // e.g. "awq"
   std::string forcedQuantArtifactRef;      // e.g. "artifacts/qwen_awq"
   std::string forcedQuantTruthBoundary;
+
+  // D2: explicit opt-in for DistributedStrategyPlanningPass to consider
+  // selecting TP2. Absent (false) in every pre-D2 profile; the pass then
+  // always selects TP1, exactly like before this field existed.
+  bool        distributedStrategyOptIn = false;
 };
 
 static std::string resolveProfileRelativePath(llvm::StringRef profilePath,
@@ -692,6 +703,11 @@ parseDeviceProfile(llvm::StringRef path) {
     }
   }
 
+  // D2: optional explicit distributed-strategy opt-in flag. Absent in every
+  // pre-D2 profile.
+  if (auto v = obj->getBoolean("distributedStrategyOptIn"))
+    prof.distributedStrategyOptIn = *v;
+
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
   // Absent in every existing profile; only present in profiles that opt in
   // to an experimental forced global quantization override.
@@ -1097,6 +1113,13 @@ int main(int argc, char **argv) {
                        mlir::StringAttr::get(ctxPtr, prof.forcedQuantArtifactRef));
   }
 
+  // 4c. D2: attach the explicit distributed-strategy opt-in flag, only when
+  // the profile declares it. DistributedStrategyPlanningPass reads
+  // "distributed.opt_in"; its absence means false (TP1 always selected).
+  if (prof.distributedStrategyOptIn)
+    module.get()->setAttr("distributed.opt_in",
+                          mlir::BoolAttr::get(&ctx, true));
+
   // 5. Run the serving-optimization-pipeline (16 planning passes), then
   //    boundary materialization (the first IR-transforming stage: inserts
   //    hir.cast where the selected plan requires a cast boundary, before
@@ -1166,6 +1189,14 @@ int main(int argc, char **argv) {
   // existing plans are byte-identical by default.
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createQuantizationCoDesignPass());
+  // D2: module-scoped distributed-strategy candidate generation, legality,
+  // cost evaluation, and selection -- runs after every op-level backend/
+  // dtype/kernel/weight-classification decision is settled (so it reads
+  // real, already-annotated Qwen operator metadata) and before the per-op
+  // candidate/plan-selection trio below. See
+  // mlir_passes/include/serving/DistributedPlanning.h and
+  // lib/serving/DistributedStrategyPlanningPass.cpp.
+  pm.addPass(mlir::hir::createDistributedStrategyPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
       mlir::hir::createAlternativeLoweringPlanningPass());
   pm.addNestedPass<mlir::func::FuncOp>(
@@ -1211,6 +1242,15 @@ int main(int argc, char **argv) {
   if (!DispatchUnitReportPath.empty()) {
     if (auto err = mlir::hir::ExecutionPlanExporter::exportDispatchUnitReport(
             plan, DispatchUnitReportPath)) {
+      llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
+      return 1;
+    }
+  }
+
+  // 8c. Optional D2 distributed-strategy evidence report.
+  if (!DistributedEvidenceReportPath.empty()) {
+    if (auto err = mlir::hir::ExecutionPlanExporter::exportDistributedEvidenceReport(
+            module.get(), DistributedEvidenceReportPath)) {
       llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
       return 1;
     }

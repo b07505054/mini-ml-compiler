@@ -323,6 +323,86 @@ add_test(NAME TargetConstraintsTest
          COMMAND TargetConstraintsTest)
 
 # ---------------------------------------------------------------------------
+# CTest: DistributedPlanning unit test (D1: compiler-planned TP=2
+# multi-process simulation). Pure C++ structs — no MLIR IR, no Python.
+# ---------------------------------------------------------------------------
+add_executable(DistributedPlanningTest
+  lib/serving/DistributedPlanning.cpp
+  lib/serving/ExecutionPlanExporter.cpp
+  test/serving/DistributedPlanningTest.cpp
+)
+llvm_update_compile_flags(DistributedPlanningTest)
+target_include_directories(DistributedPlanningTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(DistributedPlanningTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(DistributedPlanningTest
+  PRIVATE
+    MLIRIR
+    MLIRSupport
+    LLVMSupport
+)
+add_test(NAME DistributedPlanningTest
+         COMMAND DistributedPlanningTest)
+
+# ---------------------------------------------------------------------------
+# CTest: DistributedStrategyPlanningTest (D2 Qwen-aware legality/cost unit
+# test). Pure C++ structs -- no MLIR IR.
+# ---------------------------------------------------------------------------
+add_executable(DistributedStrategyPlanningTest
+  lib/serving/DistributedPlanning.cpp
+  test/serving/DistributedStrategyPlanningTest.cpp
+)
+llvm_update_compile_flags(DistributedStrategyPlanningTest)
+target_include_directories(DistributedStrategyPlanningTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(DistributedStrategyPlanningTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(DistributedStrategyPlanningTest
+  PRIVATE
+    MLIRIR
+    MLIRSupport
+    LLVMSupport
+)
+add_test(NAME DistributedStrategyPlanningTest
+         COMMAND DistributedStrategyPlanningTest)
+
+# ---------------------------------------------------------------------------
+# CTest: DistributedStrategyPlanningPipelineTest (D2 end-to-end integration
+# test against the real per-layer Qwen ONNX graph and the real
+# compile-for-target production pipeline).
+# ---------------------------------------------------------------------------
+set(_D2_PIPELINE_DIR "${CMAKE_CURRENT_BINARY_DIR}/distributed_strategy_planning_pipeline")
+add_test(NAME DistributedStrategyPlanningPipelineTest
+  COMMAND ${CMAKE_COMMAND}
+    -DONNX_TOOL=$<TARGET_FILE:qwen-onnx-to-serving-mlir>
+    -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
+    -DFACTS=${CMAKE_CURRENT_SOURCE_DIR}/../configs/models/qwen_0_5b_onnx_graph_facts.json
+    -DPROFILE_TP1=${CMAKE_CURRENT_SOURCE_DIR}/../configs/target_profiles/nvidia_gtx1650_maxq.json
+    -DPROFILE_TP2=${CMAKE_CURRENT_SOURCE_DIR}/../configs/target_profiles/nvidia_gtx1650_maxq_d2_distributed_opt_in.json
+    -DRAW_OUT=${_D2_PIPELINE_DIR}/raw.mlir
+    -DJSON_TP1_OUT=${_D2_PIPELINE_DIR}/real_qwen_tp1_execution_plan.json
+    -DJSON_TP2_OUT=${_D2_PIPELINE_DIR}/real_qwen_tp2_execution_plan.json
+    -DEVIDENCE_OUT=${_D2_PIPELINE_DIR}/distributed_evidence_report.json
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/test/serving/RunDistributedStrategyPlanningPipelineTest.cmake
+)
+set_tests_properties(DistributedStrategyPlanningPipelineTest PROPERTIES
+  DEPENDS "qwen-onnx-to-serving-mlir;compile-for-target"
+)
+
+# ---------------------------------------------------------------------------
 # CTest: CVExecutionPlanBuilder unit test
 # Runs the four CV planning passes, then builds an in-memory typed plan.
 # No exporter, JSON, artifact generation, or pass registration.
@@ -449,6 +529,35 @@ target_link_libraries(emit-cv-execution-plan
     LLVMSupport
 )
 
+# ---------------------------------------------------------------------------
+# emit-distributed-execution-plan: D1 distributed candidate export CLI
+#
+# Generates the fixed {TP1, TP2} distributed candidates for a synthetic
+# sharded-matmul problem, applies D1 legality filtering, and exports the
+# selected candidate as a real ExecutionPlan schema_version 2.0.0 artifact.
+# See mlir_passes/tools/emit-distributed-execution-plan/main.cpp.
+# ---------------------------------------------------------------------------
+add_executable(emit-distributed-execution-plan
+  lib/serving/DistributedPlanning.cpp
+  lib/serving/ExecutionPlanExporter.cpp
+  tools/emit-distributed-execution-plan/main.cpp
+)
+llvm_update_compile_flags(emit-distributed-execution-plan)
+target_include_directories(emit-distributed-execution-plan
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(emit-distributed-execution-plan PRIVATE ${LLVM_DEFINITIONS})
+target_link_libraries(emit-distributed-execution-plan
+  PRIVATE
+    MLIRIR
+    MLIRSupport
+    LLVMSupport
+)
+
 set(_CV_PLAN_TOOL_DIR "${CMAKE_CURRENT_BINARY_DIR}/cv_execution_plan_artifact_tool")
 set(_CV_PLAN_TOOL_OUT "${_CV_PLAN_TOOL_DIR}/cv_execution_plan.json")
 
@@ -507,6 +616,8 @@ add_executable(compile-for-target
   lib/serving/ExecutionPlanBuilder.cpp
   lib/serving/ExecutionPlanExporter.cpp
   lib/serving/TargetConstraints.cpp
+  lib/serving/DistributedPlanning.cpp
+  lib/serving/DistributedStrategyPlanningPass.cpp
   tools/compile-for-target/main.cpp
 )
 llvm_update_compile_flags(compile-for-target)

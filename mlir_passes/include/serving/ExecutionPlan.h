@@ -391,6 +391,54 @@ struct CVPlanExtension {
   std::optional<CVPostprocessContract> postprocess_contract;
 };
 
+// ---------------------------------------------------------------------------
+// Distributed execution plan (D1: compiler-planned TP=2 multi-process
+// simulation, see mlir_passes/include/serving/DistributedPlanning.h).
+//
+// Describes a tensor-parallel distributed strategy: rank placement, tensor
+// shard partitioning, and ordered collective steps. This section is
+// planning-only, mirroring the rest of ExecutionPlan: no measured
+// performance, no claim of real GPU/NCCL execution. Absent entirely on
+// legacy/TP1 plans, which stay byte-identical to pre-D1 output.
+// ---------------------------------------------------------------------------
+
+struct DistributedRankPlacement {
+  int64_t     rank_id = 0;
+  // "simulated_cpu_process_N" — never names a real GPU device.
+  std::string logical_device;
+};
+
+struct DistributedTensorShard {
+  std::string tensor_id;
+  int64_t     partition_axis  = 0;
+  int64_t     partition_count = 0;
+  int64_t     shard_index     = 0;
+  // Half-open element-index range [range_start, range_end) of tensor_id
+  // along partition_axis owned by this shard.
+  int64_t     range_start = 0;
+  int64_t     range_end   = 0;
+};
+
+struct DistributedCollectiveStep {
+  std::string           collective_id;
+  int64_t                sequence_id = 0;
+  std::string            kind;          // D1 implements only "all_reduce"
+  std::vector<int64_t>   participants;  // rank_ids
+  std::string            tensor_id;
+  std::string            reduction;     // "sum"
+};
+
+struct DistributedPlan {
+  std::string strategy              = "tensor_parallel";
+  int64_t     world_size             = 1;
+  int64_t     tensor_parallel_size   = 1;
+  int64_t     pipeline_parallel_size = 1;
+  std::vector<DistributedRankPlacement>  ranks;
+  std::vector<DistributedTensorShard>    tensor_shards;
+  std::vector<DistributedCollectiveStep> collectives;
+  std::string truth_boundary;
+};
+
 // ExecutionPlan — the canonical compiler output.
 //
 // JSON representation: docs/EXECUTION_PLAN_SCHEMA.md
@@ -405,6 +453,8 @@ struct ExecutionPlan {
   std::optional<CVPlanExtension> cv_extension;
   // Phase 26: typed tensor ABI. Empty for LLM plans (byte-stable Qwen output).
   std::vector<TensorBinding>  tensor_bindings;
+  // D1: distributed strategy. Absent for legacy/TP1 plans.
+  std::optional<DistributedPlan> distributed;
 };
 
 } // namespace mlir::hir
