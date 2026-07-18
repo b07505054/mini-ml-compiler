@@ -1,0 +1,17 @@
+{
+  "development_domains": [
+    "m16_n16_k32_tile8x8x8",
+    "m32_n32_k32_tile8x8x8",
+    "m32_n32_k64_tile8x8x8",
+    "m64_n32_k32_tile8x8x8",
+    "m32_n64_k32_tile8x8x8",
+    "m8_n64_k64_tile8x8x8",
+    "m8_n8_k32_tile8x8x8",
+    "m16_n64_k32_tile8x8x8"
+  ],
+  "held_out_domains": [
+    "m64_n64_k64_tile8x8x8",
+    "m32_n32_k128_tile8x8x8"
+  ],
+  "fixed_before_finalizing_policy": true
+}

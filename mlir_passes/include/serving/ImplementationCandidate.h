@@ -71,6 +71,19 @@ struct TileCandidateSpec {
   int64_t blockK = 0;
 };
 
+// Optional exact generated-native implementation identity.  This remains
+// empty for every non-native candidate; raw MIR and backend reports stay in
+// external artifacts referenced here rather than being embedded in MLIR.
+struct NativeArtifactCandidateSpec {
+  bool present = false;
+  int64_t scheduleUnrollK = 0;
+  int64_t vectorWidthBits = 0;
+  std::string targetTriple, targetCpu, targetFeatures;
+  std::string loweringPipelineId, loopOrderId, entryPoint, abiVersion;
+  std::string objectRef, objectSha256, backendEvidenceRef;
+  std::string correctnessEvidenceRef, measurementEvidenceRef;
+};
+
 struct ImplementationCandidate {
   std::string candidateId;
   std::string providerId;
@@ -91,6 +104,7 @@ struct ImplementationCandidate {
   std::string executorchCommit;
   std::string xnnpackCommit;
   TileCandidateSpec tile;
+  NativeArtifactCandidateSpec nativeArtifact;
   ThreadScheduleCandidateSpec threadSchedule;
   QuantizationCandidateSpec quantization;
   std::string candidateReason;
@@ -265,6 +279,11 @@ inline std::string makeFallbackCandidateId(
     id += "_bk";
     id += std::to_string(candidate.tile.blockK);
   }
+  if (candidate.nativeArtifact.present) {
+    id += ":uk=" + std::to_string(candidate.nativeArtifact.scheduleUnrollK);
+    id += ":vwbits=" + std::to_string(candidate.nativeArtifact.vectorWidthBits);
+    id += ":pipeline=" + candidate.nativeArtifact.loweringPipelineId;
+  }
   if (!candidate.dtype.empty()) {
     id += ":dtype=";
     id += candidate.dtype;
@@ -429,6 +448,37 @@ inline ImplementationCandidate decodeImplementationCandidate(
     candidate.tile.blockN = getCandidateI64(dict, "tile.block_n");
     candidate.tile.blockK = getCandidateI64(dict, "tile.block_k");
   }
+  if (hasCandidateI64(dict, "native.schedule_unroll_k")) {
+    candidate.nativeArtifact.present = true;
+    candidate.nativeArtifact.scheduleUnrollK =
+        getCandidateI64(dict, "native.schedule_unroll_k");
+    candidate.nativeArtifact.vectorWidthBits =
+        getCandidateI64(dict, "native.vector_width_bits");
+    candidate.nativeArtifact.targetTriple =
+        getCandidateString(dict, "native.target_triple");
+    candidate.nativeArtifact.targetCpu =
+        getCandidateString(dict, "native.target_cpu");
+    candidate.nativeArtifact.targetFeatures =
+        getCandidateString(dict, "native.target_features");
+    candidate.nativeArtifact.loweringPipelineId =
+        getCandidateString(dict, "native.lowering_pipeline_id");
+    candidate.nativeArtifact.loopOrderId =
+        getCandidateString(dict, "native.loop_order_id");
+    candidate.nativeArtifact.entryPoint =
+        getCandidateString(dict, "native.entry_point");
+    candidate.nativeArtifact.abiVersion =
+        getCandidateString(dict, "native.abi_version");
+    candidate.nativeArtifact.objectRef =
+        getCandidateString(dict, "native.object_ref");
+    candidate.nativeArtifact.objectSha256 =
+        getCandidateString(dict, "native.object_sha256");
+    candidate.nativeArtifact.backendEvidenceRef =
+        getCandidateString(dict, "native.backend_evidence_ref");
+    candidate.nativeArtifact.correctnessEvidenceRef =
+        getCandidateString(dict, "native.correctness_evidence_ref");
+    candidate.nativeArtifact.measurementEvidenceRef =
+        getCandidateString(dict, "native.measurement_evidence_ref");
+  }
   if (hasCandidateI64(dict, "thread_schedule.thread_count")) {
     candidate.threadSchedule.present = true;
     candidate.threadSchedule.threadCount =
@@ -569,6 +619,30 @@ inline DictionaryAttr encodeImplementationCandidate(
     upsertCandidateAttr(attrs, ctx, "tile.block_k",
                         IntegerAttr::get(IntegerType::get(ctx, 64),
                                          candidate.tile.blockK));
+  }
+  if (candidate.nativeArtifact.present) {
+    upsertCandidateAttr(attrs, ctx, "native.schedule_unroll_k",
+                        IntegerAttr::get(IntegerType::get(ctx, 64),
+                                         candidate.nativeArtifact.scheduleUnrollK));
+    upsertCandidateAttr(attrs, ctx, "native.vector_width_bits",
+                        IntegerAttr::get(IntegerType::get(ctx, 64),
+                                         candidate.nativeArtifact.vectorWidthBits));
+    auto putNative = [&](llvm::StringRef key, const std::string &value) {
+      if (!value.empty())
+        upsertCandidateAttr(attrs, ctx, key, stringAttr(value));
+    };
+    putNative("native.target_triple", candidate.nativeArtifact.targetTriple);
+    putNative("native.target_cpu", candidate.nativeArtifact.targetCpu);
+    putNative("native.target_features", candidate.nativeArtifact.targetFeatures);
+    putNative("native.lowering_pipeline_id", candidate.nativeArtifact.loweringPipelineId);
+    putNative("native.loop_order_id", candidate.nativeArtifact.loopOrderId);
+    putNative("native.entry_point", candidate.nativeArtifact.entryPoint);
+    putNative("native.abi_version", candidate.nativeArtifact.abiVersion);
+    putNative("native.object_ref", candidate.nativeArtifact.objectRef);
+    putNative("native.object_sha256", candidate.nativeArtifact.objectSha256);
+    putNative("native.backend_evidence_ref", candidate.nativeArtifact.backendEvidenceRef);
+    putNative("native.correctness_evidence_ref", candidate.nativeArtifact.correctnessEvidenceRef);
+    putNative("native.measurement_evidence_ref", candidate.nativeArtifact.measurementEvidenceRef);
   }
   if (candidate.threadSchedule.present) {
     upsertCandidateAttr(

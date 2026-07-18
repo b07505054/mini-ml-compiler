@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+  "warmup_samples": 30,
+  "measured_samples_per_session": 1000,
+  "calls_per_sample": 100,
+  "session_count": 6,
+  "total_measured_calls_per_candidate": 600000,
+  "cpu_affinity": 3,
+  "timing_mode": "batched",
+  "session_orders": [
+    [
+      1,
+      2,
+      4
+    ],
+    [
+      2,
+      4,
+      1
+    ],
+    [
+      4,
+      1,
+      2
+    ],
+    [
+      1,
+      4,
+      2
+    ],
+    [
+      2,
+      1,
+      4
+    ],
+    [
+      4,
+      2,
+      1
+    ]
+  ],
+  "equivalence_threshold_pct": 3.0,
+  "uncertainty_method": "deterministic_session_mean_bootstrap_10000_seed19"
+}

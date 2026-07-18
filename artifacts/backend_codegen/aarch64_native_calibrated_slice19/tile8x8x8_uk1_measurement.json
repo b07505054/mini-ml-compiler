@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+  "candidate_id": "tile8x8x8_uk1",
+  "target_fingerprint": {
+    "hostname": "edgeaiplatform",
+    "architecture": "aarch64",
+    "cpu": "cortex-a76",
+    "core_count": 4,
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "governor": "performance",
+    "nominal_frequency_khz": 2400000,
+    "features": []
+  },
+  "artifact_identity": {
+    "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+    "compiler_revision": "0d200c3c7463f21cda97e77f4ad0e912bbad329f",
+    "runtime_revision": "5b56607cf84d8acda2691f02762f50d30332a8d1",
+    "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+    "abi_version": "mlir_ciface_memref_f32_v1"
+  },
+  "workload_identity": {
+    "operator": "hir.fused_matmul_bias_relu",
+    "kernel_family": "aarch64_generated_fused_matmul_bias_relu",
+    "dtype": "f32",
+    "shape": [
+      32,
+      32,
+      32
+    ],
+    "tile": [
+      8,
+      8,
+      8
+    ],
+    "schedule_unroll_k": 1,
+    "vector_width_bits": 128,
+    "loop_order_id": "tiled_mnk_row_major_v1",
+    "lowering_pipeline_id": "aarch64_tiled_scheduled_v1"
+  },
+  "benchmark_protocol": {
+    "schema_version": 1,
+    "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+    "warmup_samples": 30,
+    "measured_samples_per_session": 1000,
+    "calls_per_sample": 100,
+    "session_count": 6,
+    "total_measured_calls_per_candidate": 600000,
+    "cpu_affinity": 3,
+    "timing_mode": "batched",
+    "session_orders": [
+      [
+        1,
+        2,
+        4
+      ],
+      [
+        2,
+        4,
+        1
+      ],
+      [
+        4,
+        1,
+        2
+      ],
+      [
+        1,
+        4,
+        2
+      ],
+      [
+        2,
+        1,
+        4
+      ],
+      [
+        4,
+        2,
+        1
+      ]
+    ],
+    "equivalence_threshold_pct": 3.0,
+    "uncertainty_method": "deterministic_session_mean_bootstrap_10000_seed19"
+  },
+  "correctness": {
+    "passed": true,
+    "repeated_call_correct": true,
+    "guard_buffers_intact": true,
+    "max_abs_error": 0
+  },
+  "sessions": [
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:55:51.229713+00:00",
+      "completed_at": "2026-07-17T22:55:52.393799+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 1,
+      "candidate_order_position": 1,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "49600"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437259,
+        "p95_ms": 0.00439,
+        "mean_ms": 0.0043766498,
+        "stddev_ms": 2.38475563e-05,
+        "minimum_ms": 0.00436851,
+        "maximum_ms": 0.00489574
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "50700"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:55:57.167538+00:00",
+      "completed_at": "2026-07-17T22:55:58.329741+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 2,
+      "candidate_order_position": 3,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "52350"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437388,
+        "p95_ms": 0.00439129,
+        "mean_ms": 0.00437580186,
+        "stddev_ms": 9.91979406e-06,
+        "minimum_ms": 0.00436759,
+        "maximum_ms": 0.0045787
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "51800"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:55:59.553317+00:00",
+      "completed_at": "2026-07-17T22:56:00.716362+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 3,
+      "candidate_order_position": 2,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "52900"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437648,
+        "p95_ms": 0.00439314,
+        "mean_ms": 0.00437835757,
+        "stddev_ms": 1.94885258e-05,
+        "minimum_ms": 0.00436814,
+        "maximum_ms": 0.00478815
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "53450"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:56:01.966756+00:00",
+      "completed_at": "2026-07-17T22:56:03.128957+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 4,
+      "candidate_order_position": 1,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "53450"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437592,
+        "p95_ms": 0.00439148,
+        "mean_ms": 0.00437683849,
+        "stddev_ms": 1.2187204e-05,
+        "minimum_ms": 0.00437092,
+        "maximum_ms": 0.00468777
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "53450"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:56:06.740060+00:00",
+      "completed_at": "2026-07-17T22:56:07.903143+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 5,
+      "candidate_order_position": 2,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "52900"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437259,
+        "p95_ms": 0.00439,
+        "mean_ms": 0.00437559422,
+        "stddev_ms": 1.93880176e-05,
+        "minimum_ms": 0.00437055,
+        "maximum_ms": 0.00479092
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "53450"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    },
+    {
+      "schema_version": 1,
+      "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+      "started_at": "2026-07-17T22:56:11.485953+00:00",
+      "completed_at": "2026-07-17T22:56:12.647794+00:00",
+      "plan_sha256": "90af393190b0868e5f0a082ed5e6e8e3568da64a12bf292b2cde7a7c722f00e5",
+      "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+      "session_id": 6,
+      "candidate_order_position": 3,
+      "cpu_affinity": [
+        3
+      ],
+      "environment_before": {
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "54000"
+      },
+      "executed": {
+        "candidate_id": "tile8x8x8_uk1",
+        "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      },
+      "metrics": {
+        "correct": true,
+        "repeated_call_correct": true,
+        "guard_buffers_intact": true,
+        "max_abs_error": 0,
+        "warmup_samples": 30,
+        "sample_count": 1000,
+        "calls_per_sample": 100,
+        "measured_calls": 100000,
+        "p50_ms": 0.00437296,
+        "p95_ms": 0.00438944,
+        "mean_ms": 0.00437474796,
+        "stddev_ms": 1.69311298e-05,
+        "minimum_ms": 0.00436759,
+        "maximum_ms": 0.00475944
+      },
+      "target": {
+        "hostname": "edgeaiplatform",
+        "architecture": "aarch64",
+        "cpu": null,
+        "core_count": 4,
+        "kernel": "6.18.34+rpt-rpi-2712",
+        "governor": "performance",
+        "current_frequency_khz": "2400000",
+        "temperature_millic": "53450"
+      },
+      "link_command": [
+        "g++",
+        "-O3",
+        "-std=c++17",
+        "native/aarch64_native_object_worker.cpp",
+        "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+        "-o",
+        "build_uk1/aarch64_native_object_worker"
+      ],
+      "identity_proof": {
+        "compiler_selected_candidate": "tile8x8x8_uk1",
+        "runtime_executed_candidate": "tile8x8x8_uk1",
+        "selected_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "executed_object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+        "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+        "runtime_redecision_count": 0
+      }
+    }
+  ],
+  "aggregate": {
+    "median_of_session_p50_ms": 0.00437342,
+    "median_of_session_p95_ms": 0.004390645,
+    "mean_of_session_means_ms": 0.00437633165,
+    "stddev_across_session_means_ms": 1.2486002178118887e-06,
+    "standard_error_ms": 5.097389043945106e-07,
+    "bootstrap_ci95_low_ms": 0.004375415953333333,
+    "bootstrap_ci95_high_ms": 0.0043772819533333335,
+    "session_count": 6
+  }
+}

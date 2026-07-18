@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+  "started_at": "2026-07-17T22:55:52.449244+00:00",
+  "completed_at": "2026-07-17T22:55:53.588951+00:00",
+  "plan_sha256": "3cce88670a9dd68a3ef76d0bf822cb7b7e433590a4dba8f5046eba1201f0b7f3",
+  "worker_source_sha256": "4dc3f8192b97fe60edbd4f4f39830b245f1473ccf339afb6f9f8165e1f925711",
+  "session_id": 1,
+  "candidate_order_position": 2,
+  "cpu_affinity": [
+    3
+  ],
+  "environment_before": {
+    "governor": "performance",
+    "current_frequency_khz": "2400000",
+    "temperature_millic": "51250"
+  },
+  "executed": {
+    "candidate_id": "tile8x8x8_uk2",
+    "object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+    "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+    "runtime_redecision_count": 0
+  },
+  "metrics": {
+    "correct": true,
+    "repeated_call_correct": true,
+    "guard_buffers_intact": true,
+    "max_abs_error": 0,
+    "warmup_samples": 30,
+    "sample_count": 1000,
+    "calls_per_sample": 100,
+    "measured_calls": 100000,
+    "p50_ms": 0.00414907,
+    "p95_ms": 0.00416592,
+    "mean_ms": 0.00415322928,
+    "stddev_ms": 2.80157387e-05,
+    "minimum_ms": 0.00413499,
+    "maximum_ms": 0.00472777
+  },
+  "target": {
+    "hostname": "edgeaiplatform",
+    "architecture": "aarch64",
+    "cpu": null,
+    "core_count": 4,
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "governor": "performance",
+    "current_frequency_khz": "2400000",
+    "temperature_millic": "51800"
+  },
+  "link_command": [
+    "g++",
+    "-O3",
+    "-std=c++17",
+    "native/aarch64_native_object_worker.cpp",
+    "/home/allen/aarch64_native_slice19/artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk2/32x32x32_tm8_tn8_tk8_uk2_greedy_misched-default.o",
+    "-o",
+    "build_uk2/aarch64_native_object_worker"
+  ],
+  "identity_proof": {
+    "compiler_selected_candidate": "tile8x8x8_uk2",
+    "runtime_executed_candidate": "tile8x8x8_uk2",
+    "selected_object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+    "executed_object_sha256": "5edd623a20c36b701d86bdbbb99f6b2c434883fde14352111fae9e3ac89e7317",
+    "selected_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+    "executed_entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+    "runtime_redecision_count": 0
+  }
+}

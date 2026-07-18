@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "benchmark_protocol_version": "slice19_aarch64_native_batched_v1",
+  "measurements": {
+    "tile8x8x8_uk1": "tile8x8x8_uk1_measurement.json",
+    "tile8x8x8_uk2": "tile8x8x8_uk2_measurement.json",
+    "tile8x8x8_uk4": "tile8x8x8_uk4_measurement.json"
+  }
+}

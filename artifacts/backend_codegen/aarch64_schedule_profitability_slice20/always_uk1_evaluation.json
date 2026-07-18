@@ -1,0 +1,35 @@
+{
+  "overall": {
+    "domain_count": 10,
+    "winner_agreement": 0,
+    "winner_agreement_ratio": 0.0,
+    "mean_regret_percent": 13.558992501996164,
+    "median_regret_percent": 13.305655255310555,
+    "p95_regret_percent": 16.63352950532846,
+    "maximum_regret_percent": 16.63352950532846,
+    "domains_within_1_percent": 0,
+    "domains_within_3_percent": 0
+  },
+  "development": {
+    "domain_count": 8,
+    "winner_agreement": 0,
+    "winner_agreement_ratio": 0.0,
+    "mean_regret_percent": 13.42332642328814,
+    "median_regret_percent": 13.213733983025723,
+    "p95_regret_percent": 16.63352950532846,
+    "maximum_regret_percent": 16.63352950532846,
+    "domains_within_1_percent": 0,
+    "domains_within_3_percent": 0
+  },
+  "held_out": {
+    "domain_count": 2,
+    "winner_agreement": 0,
+    "winner_agreement_ratio": 0.0,
+    "mean_regret_percent": 14.101656816828257,
+    "median_regret_percent": 14.101656816828257,
+    "p95_regret_percent": 14.985826240028,
+    "maximum_regret_percent": 14.985826240028,
+    "domains_within_1_percent": 0,
+    "domains_within_3_percent": 0
+  }
+}

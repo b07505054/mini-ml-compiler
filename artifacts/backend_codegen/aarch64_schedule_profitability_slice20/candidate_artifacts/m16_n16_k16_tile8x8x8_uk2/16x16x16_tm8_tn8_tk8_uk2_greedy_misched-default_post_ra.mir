@@ -1,0 +1,1674 @@
+--- |
+  ; ModuleID = 'artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n16_k16_tile8x8x8_uk2/m16_n16_k16_tile8x8x8_uk2.ll'
+  source_filename = "LLVMDialectModule"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  declare ptr @malloc(i64) #0
+  
+  define { ptr, ptr, i64, [2 x i64], [2 x i64] } @matmul_bias_relu_tiled_16x16x16(ptr %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, ptr %7, ptr %8, i64 %9, i64 %10, i64 %11, i64 %12, i64 %13, ptr %14, ptr %15, i64 %16, i64 %17, i64 %18, i64 %19, i64 %20) #0 {
+    %22 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %14, 0
+    %23 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %22, ptr %15, 1
+    %24 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %23, i64 %16, 2
+    %25 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %24, i64 %17, 3, 0
+    %26 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %25, i64 %19, 4, 0
+    %27 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %26, i64 %18, 3, 1
+    %28 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %27, i64 %20, 4, 1
+    %29 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %7, 0
+    %30 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %29, ptr %8, 1
+    %31 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %30, i64 %9, 2
+    %32 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, i64 %10, 3, 0
+    %33 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %32, i64 %12, 4, 0
+    %34 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %33, i64 %11, 3, 1
+    %35 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %34, i64 %13, 4, 1
+    %36 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %0, 0
+    %37 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %36, ptr %1, 1
+    %38 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %37, i64 %2, 2
+    %39 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %38, i64 %3, 3, 0
+    %40 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %39, i64 %5, 4, 0
+    %41 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %40, i64 %4, 3, 1
+    %42 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %41, i64 %6, 4, 1
+    %43 = call ptr @malloc(i64 1088)
+    %44 = ptrtoint ptr %43 to i64
+    %45 = add i64 %44, 63
+    %46 = urem i64 %45, 64
+    %47 = sub i64 %45, %46
+    %48 = inttoptr i64 %47 to ptr
+    %49 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } poison, ptr %43, 0
+    %50 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %49, ptr %48, 1
+    %51 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %50, i64 0, 2
+    %52 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %51, i64 16, 3, 0
+    %53 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %52, i64 16, 3, 1
+    %54 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %53, i64 16, 4, 0
+    %55 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %54, i64 1, 4, 1
+    br label %56
+  
+  56:                                               ; preds = %806, %21
+    %lsr.iv = phi i64 [ %lsr.iv.next, %806 ], [ 0, %21 ]
+    %57 = phi i64 [ %807, %806 ], [ 0, %21 ]
+    %58 = icmp slt i64 %57, 16
+    br i1 %58, label %.preheader, label %808
+  
+  .preheader:                                       ; preds = %56
+    br label %59
+  
+  59:                                               ; preds = %.preheader, %62
+    %lsr.iv1 = phi i64 [ 0, %.preheader ], [ %lsr.iv.next2, %62 ]
+    %60 = phi i64 [ %805, %62 ], [ 0, %.preheader ]
+    %61 = icmp slt i64 %60, 16
+    br i1 %61, label %62, label %806
+  
+  62:                                               ; preds = %59
+    %63 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %64 = mul i64 %57, 16
+    %65 = add i64 %64, 0
+    %66 = getelementptr float, ptr %63, i64 %65
+    %67 = load <8 x float>, ptr %66, align 4
+    %68 = add i64 %57, 1
+    %69 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %70 = mul i64 %68, 16
+    %71 = add i64 %70, 0
+    %72 = getelementptr float, ptr %69, i64 %71
+    %73 = load <8 x float>, ptr %72, align 4
+    %74 = add i64 %57, 2
+    %75 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %76 = mul i64 %74, 16
+    %77 = add i64 %76, 0
+    %78 = getelementptr float, ptr %75, i64 %77
+    %79 = load <8 x float>, ptr %78, align 4
+    %80 = add i64 %57, 3
+    %81 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %82 = mul i64 %80, 16
+    %83 = add i64 %82, 0
+    %84 = getelementptr float, ptr %81, i64 %83
+    %85 = load <8 x float>, ptr %84, align 4
+    %86 = add i64 %57, 4
+    %87 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %88 = mul i64 %86, 16
+    %89 = add i64 %88, 0
+    %90 = getelementptr float, ptr %87, i64 %89
+    %91 = load <8 x float>, ptr %90, align 4
+    %92 = add i64 %57, 5
+    %93 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %94 = mul i64 %92, 16
+    %95 = add i64 %94, 0
+    %96 = getelementptr float, ptr %93, i64 %95
+    %97 = load <8 x float>, ptr %96, align 4
+    %98 = add i64 %57, 6
+    %99 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %100 = mul i64 %98, 16
+    %101 = add i64 %100, 0
+    %102 = getelementptr float, ptr %99, i64 %101
+    %103 = load <8 x float>, ptr %102, align 4
+    %104 = add i64 %57, 7
+    %105 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %106 = mul i64 %104, 16
+    %107 = add i64 %106, 0
+    %108 = getelementptr float, ptr %105, i64 %107
+    %109 = load <8 x float>, ptr %108, align 4
+    %110 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep78 = getelementptr i8, ptr %110, i64 %lsr.iv1
+    %111 = load <8 x float>, ptr %scevgep78, align 4
+    %112 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep76 = getelementptr i8, ptr %112, i64 %lsr.iv1
+    %scevgep77 = getelementptr i8, ptr %scevgep76, i64 64
+    %113 = load <8 x float>, ptr %scevgep77, align 4
+    %114 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep74 = getelementptr i8, ptr %114, i64 %lsr.iv1
+    %scevgep75 = getelementptr i8, ptr %scevgep74, i64 128
+    %115 = load <8 x float>, ptr %scevgep75, align 4
+    %116 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep72 = getelementptr i8, ptr %116, i64 %lsr.iv1
+    %scevgep73 = getelementptr i8, ptr %scevgep72, i64 192
+    %117 = load <8 x float>, ptr %scevgep73, align 4
+    %118 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep70 = getelementptr i8, ptr %118, i64 %lsr.iv1
+    %scevgep71 = getelementptr i8, ptr %scevgep70, i64 256
+    %119 = load <8 x float>, ptr %scevgep71, align 4
+    %120 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep68 = getelementptr i8, ptr %120, i64 %lsr.iv1
+    %scevgep69 = getelementptr i8, ptr %scevgep68, i64 320
+    %121 = load <8 x float>, ptr %scevgep69, align 4
+    %122 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep66 = getelementptr i8, ptr %122, i64 %lsr.iv1
+    %scevgep67 = getelementptr i8, ptr %scevgep66, i64 384
+    %123 = load <8 x float>, ptr %scevgep67, align 4
+    %124 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep64 = getelementptr i8, ptr %124, i64 %lsr.iv1
+    %scevgep65 = getelementptr i8, ptr %scevgep64, i64 448
+    %125 = load <8 x float>, ptr %scevgep65, align 4
+    %126 = extractelement <8 x float> %67, i64 0
+    %127 = insertelement <8 x float> poison, float %126, i32 0
+    %128 = shufflevector <8 x float> %127, <8 x float> poison, <8 x i32> zeroinitializer
+    %129 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %128, <8 x float> %111, <8 x float> zeroinitializer)
+    %130 = extractelement <8 x float> %73, i64 0
+    %131 = insertelement <8 x float> poison, float %130, i32 0
+    %132 = shufflevector <8 x float> %131, <8 x float> poison, <8 x i32> zeroinitializer
+    %133 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %132, <8 x float> %111, <8 x float> zeroinitializer)
+    %134 = extractelement <8 x float> %79, i64 0
+    %135 = insertelement <8 x float> poison, float %134, i32 0
+    %136 = shufflevector <8 x float> %135, <8 x float> poison, <8 x i32> zeroinitializer
+    %137 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %136, <8 x float> %111, <8 x float> zeroinitializer)
+    %138 = extractelement <8 x float> %85, i64 0
+    %139 = insertelement <8 x float> poison, float %138, i32 0
+    %140 = shufflevector <8 x float> %139, <8 x float> poison, <8 x i32> zeroinitializer
+    %141 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %140, <8 x float> %111, <8 x float> zeroinitializer)
+    %142 = extractelement <8 x float> %91, i64 0
+    %143 = insertelement <8 x float> poison, float %142, i32 0
+    %144 = shufflevector <8 x float> %143, <8 x float> poison, <8 x i32> zeroinitializer
+    %145 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %144, <8 x float> %111, <8 x float> zeroinitializer)
+    %146 = extractelement <8 x float> %97, i64 0
+    %147 = insertelement <8 x float> poison, float %146, i32 0
+    %148 = shufflevector <8 x float> %147, <8 x float> poison, <8 x i32> zeroinitializer
+    %149 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %148, <8 x float> %111, <8 x float> zeroinitializer)
+    %150 = extractelement <8 x float> %103, i64 0
+    %151 = insertelement <8 x float> poison, float %150, i32 0
+    %152 = shufflevector <8 x float> %151, <8 x float> poison, <8 x i32> zeroinitializer
+    %153 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %152, <8 x float> %111, <8 x float> zeroinitializer)
+    %154 = extractelement <8 x float> %109, i64 0
+    %155 = insertelement <8 x float> poison, float %154, i32 0
+    %156 = shufflevector <8 x float> %155, <8 x float> poison, <8 x i32> zeroinitializer
+    %157 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %156, <8 x float> %111, <8 x float> zeroinitializer)
+    %158 = extractelement <8 x float> %67, i64 1
+    %159 = insertelement <8 x float> poison, float %158, i32 0
+    %160 = shufflevector <8 x float> %159, <8 x float> poison, <8 x i32> zeroinitializer
+    %161 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %160, <8 x float> %113, <8 x float> %129)
+    %162 = extractelement <8 x float> %73, i64 1
+    %163 = insertelement <8 x float> poison, float %162, i32 0
+    %164 = shufflevector <8 x float> %163, <8 x float> poison, <8 x i32> zeroinitializer
+    %165 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %164, <8 x float> %113, <8 x float> %133)
+    %166 = extractelement <8 x float> %79, i64 1
+    %167 = insertelement <8 x float> poison, float %166, i32 0
+    %168 = shufflevector <8 x float> %167, <8 x float> poison, <8 x i32> zeroinitializer
+    %169 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %168, <8 x float> %113, <8 x float> %137)
+    %170 = extractelement <8 x float> %85, i64 1
+    %171 = insertelement <8 x float> poison, float %170, i32 0
+    %172 = shufflevector <8 x float> %171, <8 x float> poison, <8 x i32> zeroinitializer
+    %173 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %172, <8 x float> %113, <8 x float> %141)
+    %174 = extractelement <8 x float> %91, i64 1
+    %175 = insertelement <8 x float> poison, float %174, i32 0
+    %176 = shufflevector <8 x float> %175, <8 x float> poison, <8 x i32> zeroinitializer
+    %177 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %176, <8 x float> %113, <8 x float> %145)
+    %178 = extractelement <8 x float> %97, i64 1
+    %179 = insertelement <8 x float> poison, float %178, i32 0
+    %180 = shufflevector <8 x float> %179, <8 x float> poison, <8 x i32> zeroinitializer
+    %181 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %180, <8 x float> %113, <8 x float> %149)
+    %182 = extractelement <8 x float> %103, i64 1
+    %183 = insertelement <8 x float> poison, float %182, i32 0
+    %184 = shufflevector <8 x float> %183, <8 x float> poison, <8 x i32> zeroinitializer
+    %185 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %184, <8 x float> %113, <8 x float> %153)
+    %186 = extractelement <8 x float> %109, i64 1
+    %187 = insertelement <8 x float> poison, float %186, i32 0
+    %188 = shufflevector <8 x float> %187, <8 x float> poison, <8 x i32> zeroinitializer
+    %189 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %188, <8 x float> %113, <8 x float> %157)
+    %190 = extractelement <8 x float> %67, i64 2
+    %191 = insertelement <8 x float> poison, float %190, i32 0
+    %192 = shufflevector <8 x float> %191, <8 x float> poison, <8 x i32> zeroinitializer
+    %193 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %192, <8 x float> %115, <8 x float> %161)
+    %194 = extractelement <8 x float> %73, i64 2
+    %195 = insertelement <8 x float> poison, float %194, i32 0
+    %196 = shufflevector <8 x float> %195, <8 x float> poison, <8 x i32> zeroinitializer
+    %197 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %196, <8 x float> %115, <8 x float> %165)
+    %198 = extractelement <8 x float> %79, i64 2
+    %199 = insertelement <8 x float> poison, float %198, i32 0
+    %200 = shufflevector <8 x float> %199, <8 x float> poison, <8 x i32> zeroinitializer
+    %201 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %200, <8 x float> %115, <8 x float> %169)
+    %202 = extractelement <8 x float> %85, i64 2
+    %203 = insertelement <8 x float> poison, float %202, i32 0
+    %204 = shufflevector <8 x float> %203, <8 x float> poison, <8 x i32> zeroinitializer
+    %205 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %204, <8 x float> %115, <8 x float> %173)
+    %206 = extractelement <8 x float> %91, i64 2
+    %207 = insertelement <8 x float> poison, float %206, i32 0
+    %208 = shufflevector <8 x float> %207, <8 x float> poison, <8 x i32> zeroinitializer
+    %209 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %208, <8 x float> %115, <8 x float> %177)
+    %210 = extractelement <8 x float> %97, i64 2
+    %211 = insertelement <8 x float> poison, float %210, i32 0
+    %212 = shufflevector <8 x float> %211, <8 x float> poison, <8 x i32> zeroinitializer
+    %213 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %212, <8 x float> %115, <8 x float> %181)
+    %214 = extractelement <8 x float> %103, i64 2
+    %215 = insertelement <8 x float> poison, float %214, i32 0
+    %216 = shufflevector <8 x float> %215, <8 x float> poison, <8 x i32> zeroinitializer
+    %217 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %216, <8 x float> %115, <8 x float> %185)
+    %218 = extractelement <8 x float> %109, i64 2
+    %219 = insertelement <8 x float> poison, float %218, i32 0
+    %220 = shufflevector <8 x float> %219, <8 x float> poison, <8 x i32> zeroinitializer
+    %221 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %220, <8 x float> %115, <8 x float> %189)
+    %222 = extractelement <8 x float> %67, i64 3
+    %223 = insertelement <8 x float> poison, float %222, i32 0
+    %224 = shufflevector <8 x float> %223, <8 x float> poison, <8 x i32> zeroinitializer
+    %225 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %224, <8 x float> %117, <8 x float> %193)
+    %226 = extractelement <8 x float> %73, i64 3
+    %227 = insertelement <8 x float> poison, float %226, i32 0
+    %228 = shufflevector <8 x float> %227, <8 x float> poison, <8 x i32> zeroinitializer
+    %229 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %228, <8 x float> %117, <8 x float> %197)
+    %230 = extractelement <8 x float> %79, i64 3
+    %231 = insertelement <8 x float> poison, float %230, i32 0
+    %232 = shufflevector <8 x float> %231, <8 x float> poison, <8 x i32> zeroinitializer
+    %233 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %232, <8 x float> %117, <8 x float> %201)
+    %234 = extractelement <8 x float> %85, i64 3
+    %235 = insertelement <8 x float> poison, float %234, i32 0
+    %236 = shufflevector <8 x float> %235, <8 x float> poison, <8 x i32> zeroinitializer
+    %237 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %236, <8 x float> %117, <8 x float> %205)
+    %238 = extractelement <8 x float> %91, i64 3
+    %239 = insertelement <8 x float> poison, float %238, i32 0
+    %240 = shufflevector <8 x float> %239, <8 x float> poison, <8 x i32> zeroinitializer
+    %241 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %240, <8 x float> %117, <8 x float> %209)
+    %242 = extractelement <8 x float> %97, i64 3
+    %243 = insertelement <8 x float> poison, float %242, i32 0
+    %244 = shufflevector <8 x float> %243, <8 x float> poison, <8 x i32> zeroinitializer
+    %245 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %244, <8 x float> %117, <8 x float> %213)
+    %246 = extractelement <8 x float> %103, i64 3
+    %247 = insertelement <8 x float> poison, float %246, i32 0
+    %248 = shufflevector <8 x float> %247, <8 x float> poison, <8 x i32> zeroinitializer
+    %249 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %248, <8 x float> %117, <8 x float> %217)
+    %250 = extractelement <8 x float> %109, i64 3
+    %251 = insertelement <8 x float> poison, float %250, i32 0
+    %252 = shufflevector <8 x float> %251, <8 x float> poison, <8 x i32> zeroinitializer
+    %253 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %252, <8 x float> %117, <8 x float> %221)
+    %254 = extractelement <8 x float> %67, i64 4
+    %255 = insertelement <8 x float> poison, float %254, i32 0
+    %256 = shufflevector <8 x float> %255, <8 x float> poison, <8 x i32> zeroinitializer
+    %257 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %256, <8 x float> %119, <8 x float> %225)
+    %258 = extractelement <8 x float> %73, i64 4
+    %259 = insertelement <8 x float> poison, float %258, i32 0
+    %260 = shufflevector <8 x float> %259, <8 x float> poison, <8 x i32> zeroinitializer
+    %261 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %260, <8 x float> %119, <8 x float> %229)
+    %262 = extractelement <8 x float> %79, i64 4
+    %263 = insertelement <8 x float> poison, float %262, i32 0
+    %264 = shufflevector <8 x float> %263, <8 x float> poison, <8 x i32> zeroinitializer
+    %265 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %264, <8 x float> %119, <8 x float> %233)
+    %266 = extractelement <8 x float> %85, i64 4
+    %267 = insertelement <8 x float> poison, float %266, i32 0
+    %268 = shufflevector <8 x float> %267, <8 x float> poison, <8 x i32> zeroinitializer
+    %269 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %268, <8 x float> %119, <8 x float> %237)
+    %270 = extractelement <8 x float> %91, i64 4
+    %271 = insertelement <8 x float> poison, float %270, i32 0
+    %272 = shufflevector <8 x float> %271, <8 x float> poison, <8 x i32> zeroinitializer
+    %273 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %272, <8 x float> %119, <8 x float> %241)
+    %274 = extractelement <8 x float> %97, i64 4
+    %275 = insertelement <8 x float> poison, float %274, i32 0
+    %276 = shufflevector <8 x float> %275, <8 x float> poison, <8 x i32> zeroinitializer
+    %277 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %276, <8 x float> %119, <8 x float> %245)
+    %278 = extractelement <8 x float> %103, i64 4
+    %279 = insertelement <8 x float> poison, float %278, i32 0
+    %280 = shufflevector <8 x float> %279, <8 x float> poison, <8 x i32> zeroinitializer
+    %281 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %280, <8 x float> %119, <8 x float> %249)
+    %282 = extractelement <8 x float> %109, i64 4
+    %283 = insertelement <8 x float> poison, float %282, i32 0
+    %284 = shufflevector <8 x float> %283, <8 x float> poison, <8 x i32> zeroinitializer
+    %285 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %284, <8 x float> %119, <8 x float> %253)
+    %286 = extractelement <8 x float> %67, i64 5
+    %287 = insertelement <8 x float> poison, float %286, i32 0
+    %288 = shufflevector <8 x float> %287, <8 x float> poison, <8 x i32> zeroinitializer
+    %289 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %288, <8 x float> %121, <8 x float> %257)
+    %290 = extractelement <8 x float> %73, i64 5
+    %291 = insertelement <8 x float> poison, float %290, i32 0
+    %292 = shufflevector <8 x float> %291, <8 x float> poison, <8 x i32> zeroinitializer
+    %293 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %292, <8 x float> %121, <8 x float> %261)
+    %294 = extractelement <8 x float> %79, i64 5
+    %295 = insertelement <8 x float> poison, float %294, i32 0
+    %296 = shufflevector <8 x float> %295, <8 x float> poison, <8 x i32> zeroinitializer
+    %297 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %296, <8 x float> %121, <8 x float> %265)
+    %298 = extractelement <8 x float> %85, i64 5
+    %299 = insertelement <8 x float> poison, float %298, i32 0
+    %300 = shufflevector <8 x float> %299, <8 x float> poison, <8 x i32> zeroinitializer
+    %301 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %300, <8 x float> %121, <8 x float> %269)
+    %302 = extractelement <8 x float> %91, i64 5
+    %303 = insertelement <8 x float> poison, float %302, i32 0
+    %304 = shufflevector <8 x float> %303, <8 x float> poison, <8 x i32> zeroinitializer
+    %305 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %304, <8 x float> %121, <8 x float> %273)
+    %306 = extractelement <8 x float> %97, i64 5
+    %307 = insertelement <8 x float> poison, float %306, i32 0
+    %308 = shufflevector <8 x float> %307, <8 x float> poison, <8 x i32> zeroinitializer
+    %309 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %308, <8 x float> %121, <8 x float> %277)
+    %310 = extractelement <8 x float> %103, i64 5
+    %311 = insertelement <8 x float> poison, float %310, i32 0
+    %312 = shufflevector <8 x float> %311, <8 x float> poison, <8 x i32> zeroinitializer
+    %313 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %312, <8 x float> %121, <8 x float> %281)
+    %314 = extractelement <8 x float> %109, i64 5
+    %315 = insertelement <8 x float> poison, float %314, i32 0
+    %316 = shufflevector <8 x float> %315, <8 x float> poison, <8 x i32> zeroinitializer
+    %317 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %316, <8 x float> %121, <8 x float> %285)
+    %318 = extractelement <8 x float> %67, i64 6
+    %319 = insertelement <8 x float> poison, float %318, i32 0
+    %320 = shufflevector <8 x float> %319, <8 x float> poison, <8 x i32> zeroinitializer
+    %321 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %320, <8 x float> %123, <8 x float> %289)
+    %322 = extractelement <8 x float> %73, i64 6
+    %323 = insertelement <8 x float> poison, float %322, i32 0
+    %324 = shufflevector <8 x float> %323, <8 x float> poison, <8 x i32> zeroinitializer
+    %325 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %324, <8 x float> %123, <8 x float> %293)
+    %326 = extractelement <8 x float> %79, i64 6
+    %327 = insertelement <8 x float> poison, float %326, i32 0
+    %328 = shufflevector <8 x float> %327, <8 x float> poison, <8 x i32> zeroinitializer
+    %329 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %328, <8 x float> %123, <8 x float> %297)
+    %330 = extractelement <8 x float> %85, i64 6
+    %331 = insertelement <8 x float> poison, float %330, i32 0
+    %332 = shufflevector <8 x float> %331, <8 x float> poison, <8 x i32> zeroinitializer
+    %333 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %332, <8 x float> %123, <8 x float> %301)
+    %334 = extractelement <8 x float> %91, i64 6
+    %335 = insertelement <8 x float> poison, float %334, i32 0
+    %336 = shufflevector <8 x float> %335, <8 x float> poison, <8 x i32> zeroinitializer
+    %337 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %336, <8 x float> %123, <8 x float> %305)
+    %338 = extractelement <8 x float> %97, i64 6
+    %339 = insertelement <8 x float> poison, float %338, i32 0
+    %340 = shufflevector <8 x float> %339, <8 x float> poison, <8 x i32> zeroinitializer
+    %341 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %340, <8 x float> %123, <8 x float> %309)
+    %342 = extractelement <8 x float> %103, i64 6
+    %343 = insertelement <8 x float> poison, float %342, i32 0
+    %344 = shufflevector <8 x float> %343, <8 x float> poison, <8 x i32> zeroinitializer
+    %345 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %344, <8 x float> %123, <8 x float> %313)
+    %346 = extractelement <8 x float> %109, i64 6
+    %347 = insertelement <8 x float> poison, float %346, i32 0
+    %348 = shufflevector <8 x float> %347, <8 x float> poison, <8 x i32> zeroinitializer
+    %349 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %348, <8 x float> %123, <8 x float> %317)
+    %350 = extractelement <8 x float> %67, i64 7
+    %351 = insertelement <8 x float> poison, float %350, i32 0
+    %352 = shufflevector <8 x float> %351, <8 x float> poison, <8 x i32> zeroinitializer
+    %353 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %352, <8 x float> %125, <8 x float> %321)
+    %354 = extractelement <8 x float> %73, i64 7
+    %355 = insertelement <8 x float> poison, float %354, i32 0
+    %356 = shufflevector <8 x float> %355, <8 x float> poison, <8 x i32> zeroinitializer
+    %357 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %356, <8 x float> %125, <8 x float> %325)
+    %358 = extractelement <8 x float> %79, i64 7
+    %359 = insertelement <8 x float> poison, float %358, i32 0
+    %360 = shufflevector <8 x float> %359, <8 x float> poison, <8 x i32> zeroinitializer
+    %361 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %360, <8 x float> %125, <8 x float> %329)
+    %362 = extractelement <8 x float> %85, i64 7
+    %363 = insertelement <8 x float> poison, float %362, i32 0
+    %364 = shufflevector <8 x float> %363, <8 x float> poison, <8 x i32> zeroinitializer
+    %365 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %364, <8 x float> %125, <8 x float> %333)
+    %366 = extractelement <8 x float> %91, i64 7
+    %367 = insertelement <8 x float> poison, float %366, i32 0
+    %368 = shufflevector <8 x float> %367, <8 x float> poison, <8 x i32> zeroinitializer
+    %369 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %368, <8 x float> %125, <8 x float> %337)
+    %370 = extractelement <8 x float> %97, i64 7
+    %371 = insertelement <8 x float> poison, float %370, i32 0
+    %372 = shufflevector <8 x float> %371, <8 x float> poison, <8 x i32> zeroinitializer
+    %373 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %372, <8 x float> %125, <8 x float> %341)
+    %374 = extractelement <8 x float> %103, i64 7
+    %375 = insertelement <8 x float> poison, float %374, i32 0
+    %376 = shufflevector <8 x float> %375, <8 x float> poison, <8 x i32> zeroinitializer
+    %377 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %376, <8 x float> %125, <8 x float> %345)
+    %378 = extractelement <8 x float> %109, i64 7
+    %379 = insertelement <8 x float> poison, float %378, i32 0
+    %380 = shufflevector <8 x float> %379, <8 x float> poison, <8 x i32> zeroinitializer
+    %381 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %380, <8 x float> %125, <8 x float> %349)
+    %382 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %383 = mul i64 %57, 16
+    %384 = add i64 %383, 8
+    %385 = getelementptr float, ptr %382, i64 %384
+    %386 = load <8 x float>, ptr %385, align 4
+    %387 = add i64 %57, 1
+    %388 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %389 = mul i64 %387, 16
+    %390 = add i64 %389, 8
+    %391 = getelementptr float, ptr %388, i64 %390
+    %392 = load <8 x float>, ptr %391, align 4
+    %393 = add i64 %57, 2
+    %394 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %395 = mul i64 %393, 16
+    %396 = add i64 %395, 8
+    %397 = getelementptr float, ptr %394, i64 %396
+    %398 = load <8 x float>, ptr %397, align 4
+    %399 = add i64 %57, 3
+    %400 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %401 = mul i64 %399, 16
+    %402 = add i64 %401, 8
+    %403 = getelementptr float, ptr %400, i64 %402
+    %404 = load <8 x float>, ptr %403, align 4
+    %405 = add i64 %57, 4
+    %406 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %407 = mul i64 %405, 16
+    %408 = add i64 %407, 8
+    %409 = getelementptr float, ptr %406, i64 %408
+    %410 = load <8 x float>, ptr %409, align 4
+    %411 = add i64 %57, 5
+    %412 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %413 = mul i64 %411, 16
+    %414 = add i64 %413, 8
+    %415 = getelementptr float, ptr %412, i64 %414
+    %416 = load <8 x float>, ptr %415, align 4
+    %417 = add i64 %57, 6
+    %418 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %419 = mul i64 %417, 16
+    %420 = add i64 %419, 8
+    %421 = getelementptr float, ptr %418, i64 %420
+    %422 = load <8 x float>, ptr %421, align 4
+    %423 = add i64 %57, 7
+    %424 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, 1
+    %425 = mul i64 %423, 16
+    %426 = add i64 %425, 8
+    %427 = getelementptr float, ptr %424, i64 %426
+    %428 = load <8 x float>, ptr %427, align 4
+    %429 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep62 = getelementptr i8, ptr %429, i64 %lsr.iv1
+    %scevgep63 = getelementptr i8, ptr %scevgep62, i64 512
+    %430 = load <8 x float>, ptr %scevgep63, align 4
+    %431 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep60 = getelementptr i8, ptr %431, i64 %lsr.iv1
+    %scevgep61 = getelementptr i8, ptr %scevgep60, i64 576
+    %432 = load <8 x float>, ptr %scevgep61, align 4
+    %433 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep58 = getelementptr i8, ptr %433, i64 %lsr.iv1
+    %scevgep59 = getelementptr i8, ptr %scevgep58, i64 640
+    %434 = load <8 x float>, ptr %scevgep59, align 4
+    %435 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep56 = getelementptr i8, ptr %435, i64 %lsr.iv1
+    %scevgep57 = getelementptr i8, ptr %scevgep56, i64 704
+    %436 = load <8 x float>, ptr %scevgep57, align 4
+    %437 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep54 = getelementptr i8, ptr %437, i64 %lsr.iv1
+    %scevgep55 = getelementptr i8, ptr %scevgep54, i64 768
+    %438 = load <8 x float>, ptr %scevgep55, align 4
+    %439 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep52 = getelementptr i8, ptr %439, i64 %lsr.iv1
+    %scevgep53 = getelementptr i8, ptr %scevgep52, i64 832
+    %440 = load <8 x float>, ptr %scevgep53, align 4
+    %441 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep50 = getelementptr i8, ptr %441, i64 %lsr.iv1
+    %scevgep51 = getelementptr i8, ptr %scevgep50, i64 896
+    %442 = load <8 x float>, ptr %scevgep51, align 4
+    %443 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %35, 1
+    %scevgep48 = getelementptr i8, ptr %443, i64 %lsr.iv1
+    %scevgep49 = getelementptr i8, ptr %scevgep48, i64 960
+    %444 = load <8 x float>, ptr %scevgep49, align 4
+    %445 = extractelement <8 x float> %386, i64 0
+    %446 = insertelement <8 x float> poison, float %445, i32 0
+    %447 = shufflevector <8 x float> %446, <8 x float> poison, <8 x i32> zeroinitializer
+    %448 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %447, <8 x float> %430, <8 x float> %353)
+    %449 = extractelement <8 x float> %392, i64 0
+    %450 = insertelement <8 x float> poison, float %449, i32 0
+    %451 = shufflevector <8 x float> %450, <8 x float> poison, <8 x i32> zeroinitializer
+    %452 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %451, <8 x float> %430, <8 x float> %357)
+    %453 = extractelement <8 x float> %398, i64 0
+    %454 = insertelement <8 x float> poison, float %453, i32 0
+    %455 = shufflevector <8 x float> %454, <8 x float> poison, <8 x i32> zeroinitializer
+    %456 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %455, <8 x float> %430, <8 x float> %361)
+    %457 = extractelement <8 x float> %404, i64 0
+    %458 = insertelement <8 x float> poison, float %457, i32 0
+    %459 = shufflevector <8 x float> %458, <8 x float> poison, <8 x i32> zeroinitializer
+    %460 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %459, <8 x float> %430, <8 x float> %365)
+    %461 = extractelement <8 x float> %410, i64 0
+    %462 = insertelement <8 x float> poison, float %461, i32 0
+    %463 = shufflevector <8 x float> %462, <8 x float> poison, <8 x i32> zeroinitializer
+    %464 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %463, <8 x float> %430, <8 x float> %369)
+    %465 = extractelement <8 x float> %416, i64 0
+    %466 = insertelement <8 x float> poison, float %465, i32 0
+    %467 = shufflevector <8 x float> %466, <8 x float> poison, <8 x i32> zeroinitializer
+    %468 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %467, <8 x float> %430, <8 x float> %373)
+    %469 = extractelement <8 x float> %422, i64 0
+    %470 = insertelement <8 x float> poison, float %469, i32 0
+    %471 = shufflevector <8 x float> %470, <8 x float> poison, <8 x i32> zeroinitializer
+    %472 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %471, <8 x float> %430, <8 x float> %377)
+    %473 = extractelement <8 x float> %428, i64 0
+    %474 = insertelement <8 x float> poison, float %473, i32 0
+    %475 = shufflevector <8 x float> %474, <8 x float> poison, <8 x i32> zeroinitializer
+    %476 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %475, <8 x float> %430, <8 x float> %381)
+    %477 = extractelement <8 x float> %386, i64 1
+    %478 = insertelement <8 x float> poison, float %477, i32 0
+    %479 = shufflevector <8 x float> %478, <8 x float> poison, <8 x i32> zeroinitializer
+    %480 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %479, <8 x float> %432, <8 x float> %448)
+    %481 = extractelement <8 x float> %392, i64 1
+    %482 = insertelement <8 x float> poison, float %481, i32 0
+    %483 = shufflevector <8 x float> %482, <8 x float> poison, <8 x i32> zeroinitializer
+    %484 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %483, <8 x float> %432, <8 x float> %452)
+    %485 = extractelement <8 x float> %398, i64 1
+    %486 = insertelement <8 x float> poison, float %485, i32 0
+    %487 = shufflevector <8 x float> %486, <8 x float> poison, <8 x i32> zeroinitializer
+    %488 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %487, <8 x float> %432, <8 x float> %456)
+    %489 = extractelement <8 x float> %404, i64 1
+    %490 = insertelement <8 x float> poison, float %489, i32 0
+    %491 = shufflevector <8 x float> %490, <8 x float> poison, <8 x i32> zeroinitializer
+    %492 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %491, <8 x float> %432, <8 x float> %460)
+    %493 = extractelement <8 x float> %410, i64 1
+    %494 = insertelement <8 x float> poison, float %493, i32 0
+    %495 = shufflevector <8 x float> %494, <8 x float> poison, <8 x i32> zeroinitializer
+    %496 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %495, <8 x float> %432, <8 x float> %464)
+    %497 = extractelement <8 x float> %416, i64 1
+    %498 = insertelement <8 x float> poison, float %497, i32 0
+    %499 = shufflevector <8 x float> %498, <8 x float> poison, <8 x i32> zeroinitializer
+    %500 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %499, <8 x float> %432, <8 x float> %468)
+    %501 = extractelement <8 x float> %422, i64 1
+    %502 = insertelement <8 x float> poison, float %501, i32 0
+    %503 = shufflevector <8 x float> %502, <8 x float> poison, <8 x i32> zeroinitializer
+    %504 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %503, <8 x float> %432, <8 x float> %472)
+    %505 = extractelement <8 x float> %428, i64 1
+    %506 = insertelement <8 x float> poison, float %505, i32 0
+    %507 = shufflevector <8 x float> %506, <8 x float> poison, <8 x i32> zeroinitializer
+    %508 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %507, <8 x float> %432, <8 x float> %476)
+    %509 = extractelement <8 x float> %386, i64 2
+    %510 = insertelement <8 x float> poison, float %509, i32 0
+    %511 = shufflevector <8 x float> %510, <8 x float> poison, <8 x i32> zeroinitializer
+    %512 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %511, <8 x float> %434, <8 x float> %480)
+    %513 = extractelement <8 x float> %392, i64 2
+    %514 = insertelement <8 x float> poison, float %513, i32 0
+    %515 = shufflevector <8 x float> %514, <8 x float> poison, <8 x i32> zeroinitializer
+    %516 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %515, <8 x float> %434, <8 x float> %484)
+    %517 = extractelement <8 x float> %398, i64 2
+    %518 = insertelement <8 x float> poison, float %517, i32 0
+    %519 = shufflevector <8 x float> %518, <8 x float> poison, <8 x i32> zeroinitializer
+    %520 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %519, <8 x float> %434, <8 x float> %488)
+    %521 = extractelement <8 x float> %404, i64 2
+    %522 = insertelement <8 x float> poison, float %521, i32 0
+    %523 = shufflevector <8 x float> %522, <8 x float> poison, <8 x i32> zeroinitializer
+    %524 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %523, <8 x float> %434, <8 x float> %492)
+    %525 = extractelement <8 x float> %410, i64 2
+    %526 = insertelement <8 x float> poison, float %525, i32 0
+    %527 = shufflevector <8 x float> %526, <8 x float> poison, <8 x i32> zeroinitializer
+    %528 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %527, <8 x float> %434, <8 x float> %496)
+    %529 = extractelement <8 x float> %416, i64 2
+    %530 = insertelement <8 x float> poison, float %529, i32 0
+    %531 = shufflevector <8 x float> %530, <8 x float> poison, <8 x i32> zeroinitializer
+    %532 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %531, <8 x float> %434, <8 x float> %500)
+    %533 = extractelement <8 x float> %422, i64 2
+    %534 = insertelement <8 x float> poison, float %533, i32 0
+    %535 = shufflevector <8 x float> %534, <8 x float> poison, <8 x i32> zeroinitializer
+    %536 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %535, <8 x float> %434, <8 x float> %504)
+    %537 = extractelement <8 x float> %428, i64 2
+    %538 = insertelement <8 x float> poison, float %537, i32 0
+    %539 = shufflevector <8 x float> %538, <8 x float> poison, <8 x i32> zeroinitializer
+    %540 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %539, <8 x float> %434, <8 x float> %508)
+    %541 = extractelement <8 x float> %386, i64 3
+    %542 = insertelement <8 x float> poison, float %541, i32 0
+    %543 = shufflevector <8 x float> %542, <8 x float> poison, <8 x i32> zeroinitializer
+    %544 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %543, <8 x float> %436, <8 x float> %512)
+    %545 = extractelement <8 x float> %392, i64 3
+    %546 = insertelement <8 x float> poison, float %545, i32 0
+    %547 = shufflevector <8 x float> %546, <8 x float> poison, <8 x i32> zeroinitializer
+    %548 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %547, <8 x float> %436, <8 x float> %516)
+    %549 = extractelement <8 x float> %398, i64 3
+    %550 = insertelement <8 x float> poison, float %549, i32 0
+    %551 = shufflevector <8 x float> %550, <8 x float> poison, <8 x i32> zeroinitializer
+    %552 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %551, <8 x float> %436, <8 x float> %520)
+    %553 = extractelement <8 x float> %404, i64 3
+    %554 = insertelement <8 x float> poison, float %553, i32 0
+    %555 = shufflevector <8 x float> %554, <8 x float> poison, <8 x i32> zeroinitializer
+    %556 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %555, <8 x float> %436, <8 x float> %524)
+    %557 = extractelement <8 x float> %410, i64 3
+    %558 = insertelement <8 x float> poison, float %557, i32 0
+    %559 = shufflevector <8 x float> %558, <8 x float> poison, <8 x i32> zeroinitializer
+    %560 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %559, <8 x float> %436, <8 x float> %528)
+    %561 = extractelement <8 x float> %416, i64 3
+    %562 = insertelement <8 x float> poison, float %561, i32 0
+    %563 = shufflevector <8 x float> %562, <8 x float> poison, <8 x i32> zeroinitializer
+    %564 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %563, <8 x float> %436, <8 x float> %532)
+    %565 = extractelement <8 x float> %422, i64 3
+    %566 = insertelement <8 x float> poison, float %565, i32 0
+    %567 = shufflevector <8 x float> %566, <8 x float> poison, <8 x i32> zeroinitializer
+    %568 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %567, <8 x float> %436, <8 x float> %536)
+    %569 = extractelement <8 x float> %428, i64 3
+    %570 = insertelement <8 x float> poison, float %569, i32 0
+    %571 = shufflevector <8 x float> %570, <8 x float> poison, <8 x i32> zeroinitializer
+    %572 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %571, <8 x float> %436, <8 x float> %540)
+    %573 = extractelement <8 x float> %386, i64 4
+    %574 = insertelement <8 x float> poison, float %573, i32 0
+    %575 = shufflevector <8 x float> %574, <8 x float> poison, <8 x i32> zeroinitializer
+    %576 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %575, <8 x float> %438, <8 x float> %544)
+    %577 = extractelement <8 x float> %392, i64 4
+    %578 = insertelement <8 x float> poison, float %577, i32 0
+    %579 = shufflevector <8 x float> %578, <8 x float> poison, <8 x i32> zeroinitializer
+    %580 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %579, <8 x float> %438, <8 x float> %548)
+    %581 = extractelement <8 x float> %398, i64 4
+    %582 = insertelement <8 x float> poison, float %581, i32 0
+    %583 = shufflevector <8 x float> %582, <8 x float> poison, <8 x i32> zeroinitializer
+    %584 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %583, <8 x float> %438, <8 x float> %552)
+    %585 = extractelement <8 x float> %404, i64 4
+    %586 = insertelement <8 x float> poison, float %585, i32 0
+    %587 = shufflevector <8 x float> %586, <8 x float> poison, <8 x i32> zeroinitializer
+    %588 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %587, <8 x float> %438, <8 x float> %556)
+    %589 = extractelement <8 x float> %410, i64 4
+    %590 = insertelement <8 x float> poison, float %589, i32 0
+    %591 = shufflevector <8 x float> %590, <8 x float> poison, <8 x i32> zeroinitializer
+    %592 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %591, <8 x float> %438, <8 x float> %560)
+    %593 = extractelement <8 x float> %416, i64 4
+    %594 = insertelement <8 x float> poison, float %593, i32 0
+    %595 = shufflevector <8 x float> %594, <8 x float> poison, <8 x i32> zeroinitializer
+    %596 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %595, <8 x float> %438, <8 x float> %564)
+    %597 = extractelement <8 x float> %422, i64 4
+    %598 = insertelement <8 x float> poison, float %597, i32 0
+    %599 = shufflevector <8 x float> %598, <8 x float> poison, <8 x i32> zeroinitializer
+    %600 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %599, <8 x float> %438, <8 x float> %568)
+    %601 = extractelement <8 x float> %428, i64 4
+    %602 = insertelement <8 x float> poison, float %601, i32 0
+    %603 = shufflevector <8 x float> %602, <8 x float> poison, <8 x i32> zeroinitializer
+    %604 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %603, <8 x float> %438, <8 x float> %572)
+    %605 = extractelement <8 x float> %386, i64 5
+    %606 = insertelement <8 x float> poison, float %605, i32 0
+    %607 = shufflevector <8 x float> %606, <8 x float> poison, <8 x i32> zeroinitializer
+    %608 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %607, <8 x float> %440, <8 x float> %576)
+    %609 = extractelement <8 x float> %392, i64 5
+    %610 = insertelement <8 x float> poison, float %609, i32 0
+    %611 = shufflevector <8 x float> %610, <8 x float> poison, <8 x i32> zeroinitializer
+    %612 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %611, <8 x float> %440, <8 x float> %580)
+    %613 = extractelement <8 x float> %398, i64 5
+    %614 = insertelement <8 x float> poison, float %613, i32 0
+    %615 = shufflevector <8 x float> %614, <8 x float> poison, <8 x i32> zeroinitializer
+    %616 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %615, <8 x float> %440, <8 x float> %584)
+    %617 = extractelement <8 x float> %404, i64 5
+    %618 = insertelement <8 x float> poison, float %617, i32 0
+    %619 = shufflevector <8 x float> %618, <8 x float> poison, <8 x i32> zeroinitializer
+    %620 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %619, <8 x float> %440, <8 x float> %588)
+    %621 = extractelement <8 x float> %410, i64 5
+    %622 = insertelement <8 x float> poison, float %621, i32 0
+    %623 = shufflevector <8 x float> %622, <8 x float> poison, <8 x i32> zeroinitializer
+    %624 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %623, <8 x float> %440, <8 x float> %592)
+    %625 = extractelement <8 x float> %416, i64 5
+    %626 = insertelement <8 x float> poison, float %625, i32 0
+    %627 = shufflevector <8 x float> %626, <8 x float> poison, <8 x i32> zeroinitializer
+    %628 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %627, <8 x float> %440, <8 x float> %596)
+    %629 = extractelement <8 x float> %422, i64 5
+    %630 = insertelement <8 x float> poison, float %629, i32 0
+    %631 = shufflevector <8 x float> %630, <8 x float> poison, <8 x i32> zeroinitializer
+    %632 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %631, <8 x float> %440, <8 x float> %600)
+    %633 = extractelement <8 x float> %428, i64 5
+    %634 = insertelement <8 x float> poison, float %633, i32 0
+    %635 = shufflevector <8 x float> %634, <8 x float> poison, <8 x i32> zeroinitializer
+    %636 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %635, <8 x float> %440, <8 x float> %604)
+    %637 = extractelement <8 x float> %386, i64 6
+    %638 = insertelement <8 x float> poison, float %637, i32 0
+    %639 = shufflevector <8 x float> %638, <8 x float> poison, <8 x i32> zeroinitializer
+    %640 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %639, <8 x float> %442, <8 x float> %608)
+    %641 = extractelement <8 x float> %392, i64 6
+    %642 = insertelement <8 x float> poison, float %641, i32 0
+    %643 = shufflevector <8 x float> %642, <8 x float> poison, <8 x i32> zeroinitializer
+    %644 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %643, <8 x float> %442, <8 x float> %612)
+    %645 = extractelement <8 x float> %398, i64 6
+    %646 = insertelement <8 x float> poison, float %645, i32 0
+    %647 = shufflevector <8 x float> %646, <8 x float> poison, <8 x i32> zeroinitializer
+    %648 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %647, <8 x float> %442, <8 x float> %616)
+    %649 = extractelement <8 x float> %404, i64 6
+    %650 = insertelement <8 x float> poison, float %649, i32 0
+    %651 = shufflevector <8 x float> %650, <8 x float> poison, <8 x i32> zeroinitializer
+    %652 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %651, <8 x float> %442, <8 x float> %620)
+    %653 = extractelement <8 x float> %410, i64 6
+    %654 = insertelement <8 x float> poison, float %653, i32 0
+    %655 = shufflevector <8 x float> %654, <8 x float> poison, <8 x i32> zeroinitializer
+    %656 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %655, <8 x float> %442, <8 x float> %624)
+    %657 = extractelement <8 x float> %416, i64 6
+    %658 = insertelement <8 x float> poison, float %657, i32 0
+    %659 = shufflevector <8 x float> %658, <8 x float> poison, <8 x i32> zeroinitializer
+    %660 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %659, <8 x float> %442, <8 x float> %628)
+    %661 = extractelement <8 x float> %422, i64 6
+    %662 = insertelement <8 x float> poison, float %661, i32 0
+    %663 = shufflevector <8 x float> %662, <8 x float> poison, <8 x i32> zeroinitializer
+    %664 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %663, <8 x float> %442, <8 x float> %632)
+    %665 = extractelement <8 x float> %428, i64 6
+    %666 = insertelement <8 x float> poison, float %665, i32 0
+    %667 = shufflevector <8 x float> %666, <8 x float> poison, <8 x i32> zeroinitializer
+    %668 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %667, <8 x float> %442, <8 x float> %636)
+    %669 = extractelement <8 x float> %386, i64 7
+    %670 = insertelement <8 x float> poison, float %669, i32 0
+    %671 = shufflevector <8 x float> %670, <8 x float> poison, <8 x i32> zeroinitializer
+    %672 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %671, <8 x float> %444, <8 x float> %640)
+    %673 = insertvalue [8 x <8 x float>] zeroinitializer, <8 x float> %672, 0
+    %674 = extractelement <8 x float> %392, i64 7
+    %675 = insertelement <8 x float> poison, float %674, i32 0
+    %676 = shufflevector <8 x float> %675, <8 x float> poison, <8 x i32> zeroinitializer
+    %677 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %676, <8 x float> %444, <8 x float> %644)
+    %678 = insertvalue [8 x <8 x float>] %673, <8 x float> %677, 1
+    %679 = extractelement <8 x float> %398, i64 7
+    %680 = insertelement <8 x float> poison, float %679, i32 0
+    %681 = shufflevector <8 x float> %680, <8 x float> poison, <8 x i32> zeroinitializer
+    %682 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %681, <8 x float> %444, <8 x float> %648)
+    %683 = insertvalue [8 x <8 x float>] %678, <8 x float> %682, 2
+    %684 = extractelement <8 x float> %404, i64 7
+    %685 = insertelement <8 x float> poison, float %684, i32 0
+    %686 = shufflevector <8 x float> %685, <8 x float> poison, <8 x i32> zeroinitializer
+    %687 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %686, <8 x float> %444, <8 x float> %652)
+    %688 = insertvalue [8 x <8 x float>] %683, <8 x float> %687, 3
+    %689 = extractelement <8 x float> %410, i64 7
+    %690 = insertelement <8 x float> poison, float %689, i32 0
+    %691 = shufflevector <8 x float> %690, <8 x float> poison, <8 x i32> zeroinitializer
+    %692 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %691, <8 x float> %444, <8 x float> %656)
+    %693 = insertvalue [8 x <8 x float>] %688, <8 x float> %692, 4
+    %694 = extractelement <8 x float> %416, i64 7
+    %695 = insertelement <8 x float> poison, float %694, i32 0
+    %696 = shufflevector <8 x float> %695, <8 x float> poison, <8 x i32> zeroinitializer
+    %697 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %696, <8 x float> %444, <8 x float> %660)
+    %698 = insertvalue [8 x <8 x float>] %693, <8 x float> %697, 5
+    %699 = extractelement <8 x float> %422, i64 7
+    %700 = insertelement <8 x float> poison, float %699, i32 0
+    %701 = shufflevector <8 x float> %700, <8 x float> poison, <8 x i32> zeroinitializer
+    %702 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %701, <8 x float> %444, <8 x float> %664)
+    %703 = insertvalue [8 x <8 x float>] %698, <8 x float> %702, 6
+    %704 = extractelement <8 x float> %428, i64 7
+    %705 = insertelement <8 x float> poison, float %704, i32 0
+    %706 = shufflevector <8 x float> %705, <8 x float> poison, <8 x i32> zeroinitializer
+    %707 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %706, <8 x float> %444, <8 x float> %668)
+    %708 = insertvalue [8 x <8 x float>] %703, <8 x float> %707, 7
+    %709 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep46 = getelementptr i8, ptr %709, i64 %lsr.iv
+    %scevgep47 = getelementptr i8, ptr %scevgep46, i64 %lsr.iv1
+    %710 = load <8 x float>, ptr %scevgep47, align 4
+    %711 = insertvalue [8 x <8 x float>] poison, <8 x float> %710, 0
+    %712 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep43 = getelementptr i8, ptr %712, i64 %lsr.iv
+    %scevgep44 = getelementptr i8, ptr %scevgep43, i64 %lsr.iv1
+    %scevgep45 = getelementptr i8, ptr %scevgep44, i64 64
+    %713 = load <8 x float>, ptr %scevgep45, align 4
+    %714 = insertvalue [8 x <8 x float>] %711, <8 x float> %713, 1
+    %715 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep40 = getelementptr i8, ptr %715, i64 %lsr.iv
+    %scevgep41 = getelementptr i8, ptr %scevgep40, i64 %lsr.iv1
+    %scevgep42 = getelementptr i8, ptr %scevgep41, i64 128
+    %716 = load <8 x float>, ptr %scevgep42, align 4
+    %717 = insertvalue [8 x <8 x float>] %714, <8 x float> %716, 2
+    %718 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep37 = getelementptr i8, ptr %718, i64 %lsr.iv
+    %scevgep38 = getelementptr i8, ptr %scevgep37, i64 %lsr.iv1
+    %scevgep39 = getelementptr i8, ptr %scevgep38, i64 192
+    %719 = load <8 x float>, ptr %scevgep39, align 4
+    %720 = insertvalue [8 x <8 x float>] %717, <8 x float> %719, 3
+    %721 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep34 = getelementptr i8, ptr %721, i64 %lsr.iv
+    %scevgep35 = getelementptr i8, ptr %scevgep34, i64 %lsr.iv1
+    %scevgep36 = getelementptr i8, ptr %scevgep35, i64 256
+    %722 = load <8 x float>, ptr %scevgep36, align 4
+    %723 = insertvalue [8 x <8 x float>] %720, <8 x float> %722, 4
+    %724 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep31 = getelementptr i8, ptr %724, i64 %lsr.iv
+    %scevgep32 = getelementptr i8, ptr %scevgep31, i64 %lsr.iv1
+    %scevgep33 = getelementptr i8, ptr %scevgep32, i64 320
+    %725 = load <8 x float>, ptr %scevgep33, align 4
+    %726 = insertvalue [8 x <8 x float>] %723, <8 x float> %725, 5
+    %727 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep28 = getelementptr i8, ptr %727, i64 %lsr.iv
+    %scevgep29 = getelementptr i8, ptr %scevgep28, i64 %lsr.iv1
+    %scevgep30 = getelementptr i8, ptr %scevgep29, i64 384
+    %728 = load <8 x float>, ptr %scevgep30, align 4
+    %729 = insertvalue [8 x <8 x float>] %726, <8 x float> %728, 6
+    %730 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %28, 1
+    %scevgep25 = getelementptr i8, ptr %730, i64 %lsr.iv
+    %scevgep26 = getelementptr i8, ptr %scevgep25, i64 %lsr.iv1
+    %scevgep27 = getelementptr i8, ptr %scevgep26, i64 448
+    %731 = load <8 x float>, ptr %scevgep27, align 4
+    %732 = insertvalue [8 x <8 x float>] %729, <8 x float> %731, 7
+    %733 = extractvalue [8 x <8 x float>] %708, 0
+    %734 = extractvalue [8 x <8 x float>] %732, 0
+    %735 = fadd <8 x float> %733, %734
+    %736 = insertvalue [8 x <8 x float>] poison, <8 x float> %735, 0
+    %737 = extractvalue [8 x <8 x float>] %708, 1
+    %738 = extractvalue [8 x <8 x float>] %732, 1
+    %739 = fadd <8 x float> %737, %738
+    %740 = insertvalue [8 x <8 x float>] %736, <8 x float> %739, 1
+    %741 = extractvalue [8 x <8 x float>] %708, 2
+    %742 = extractvalue [8 x <8 x float>] %732, 2
+    %743 = fadd <8 x float> %741, %742
+    %744 = insertvalue [8 x <8 x float>] %740, <8 x float> %743, 2
+    %745 = extractvalue [8 x <8 x float>] %708, 3
+    %746 = extractvalue [8 x <8 x float>] %732, 3
+    %747 = fadd <8 x float> %745, %746
+    %748 = insertvalue [8 x <8 x float>] %744, <8 x float> %747, 3
+    %749 = extractvalue [8 x <8 x float>] %708, 4
+    %750 = extractvalue [8 x <8 x float>] %732, 4
+    %751 = fadd <8 x float> %749, %750
+    %752 = insertvalue [8 x <8 x float>] %748, <8 x float> %751, 4
+    %753 = extractvalue [8 x <8 x float>] %708, 5
+    %754 = extractvalue [8 x <8 x float>] %732, 5
+    %755 = fadd <8 x float> %753, %754
+    %756 = insertvalue [8 x <8 x float>] %752, <8 x float> %755, 5
+    %757 = extractvalue [8 x <8 x float>] %708, 6
+    %758 = extractvalue [8 x <8 x float>] %732, 6
+    %759 = fadd <8 x float> %757, %758
+    %760 = insertvalue [8 x <8 x float>] %756, <8 x float> %759, 6
+    %761 = extractvalue [8 x <8 x float>] %708, 7
+    %762 = extractvalue [8 x <8 x float>] %732, 7
+    %763 = fadd <8 x float> %761, %762
+    %764 = insertvalue [8 x <8 x float>] %760, <8 x float> %763, 7
+    %765 = extractvalue [8 x <8 x float>] %764, 0
+    %766 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %765, <8 x float> zeroinitializer)
+    %767 = insertvalue [8 x <8 x float>] poison, <8 x float> %766, 0
+    %768 = extractvalue [8 x <8 x float>] %764, 1
+    %769 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %768, <8 x float> zeroinitializer)
+    %770 = insertvalue [8 x <8 x float>] %767, <8 x float> %769, 1
+    %771 = extractvalue [8 x <8 x float>] %764, 2
+    %772 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %771, <8 x float> zeroinitializer)
+    %773 = insertvalue [8 x <8 x float>] %770, <8 x float> %772, 2
+    %774 = extractvalue [8 x <8 x float>] %764, 3
+    %775 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %774, <8 x float> zeroinitializer)
+    %776 = insertvalue [8 x <8 x float>] %773, <8 x float> %775, 3
+    %777 = extractvalue [8 x <8 x float>] %764, 4
+    %778 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %777, <8 x float> zeroinitializer)
+    %779 = insertvalue [8 x <8 x float>] %776, <8 x float> %778, 4
+    %780 = extractvalue [8 x <8 x float>] %764, 5
+    %781 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %780, <8 x float> zeroinitializer)
+    %782 = insertvalue [8 x <8 x float>] %779, <8 x float> %781, 5
+    %783 = extractvalue [8 x <8 x float>] %764, 6
+    %784 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %783, <8 x float> zeroinitializer)
+    %785 = insertvalue [8 x <8 x float>] %782, <8 x float> %784, 6
+    %786 = extractvalue [8 x <8 x float>] %764, 7
+    %787 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %786, <8 x float> zeroinitializer)
+    %788 = insertvalue [8 x <8 x float>] %785, <8 x float> %787, 7
+    %789 = extractvalue [8 x <8 x float>] %788, 0
+    %790 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep23 = getelementptr i8, ptr %790, i64 %lsr.iv
+    %scevgep24 = getelementptr i8, ptr %scevgep23, i64 %lsr.iv1
+    store <8 x float> %789, ptr %scevgep24, align 4
+    %791 = extractvalue [8 x <8 x float>] %788, 1
+    %792 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep20 = getelementptr i8, ptr %792, i64 %lsr.iv
+    %scevgep21 = getelementptr i8, ptr %scevgep20, i64 %lsr.iv1
+    %scevgep22 = getelementptr i8, ptr %scevgep21, i64 64
+    store <8 x float> %791, ptr %scevgep22, align 4
+    %793 = extractvalue [8 x <8 x float>] %788, 2
+    %794 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep17 = getelementptr i8, ptr %794, i64 %lsr.iv
+    %scevgep18 = getelementptr i8, ptr %scevgep17, i64 %lsr.iv1
+    %scevgep19 = getelementptr i8, ptr %scevgep18, i64 128
+    store <8 x float> %793, ptr %scevgep19, align 4
+    %795 = extractvalue [8 x <8 x float>] %788, 3
+    %796 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep14 = getelementptr i8, ptr %796, i64 %lsr.iv
+    %scevgep15 = getelementptr i8, ptr %scevgep14, i64 %lsr.iv1
+    %scevgep16 = getelementptr i8, ptr %scevgep15, i64 192
+    store <8 x float> %795, ptr %scevgep16, align 4
+    %797 = extractvalue [8 x <8 x float>] %788, 4
+    %798 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep11 = getelementptr i8, ptr %798, i64 %lsr.iv
+    %scevgep12 = getelementptr i8, ptr %scevgep11, i64 %lsr.iv1
+    %scevgep13 = getelementptr i8, ptr %scevgep12, i64 256
+    store <8 x float> %797, ptr %scevgep13, align 4
+    %799 = extractvalue [8 x <8 x float>] %788, 5
+    %800 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep8 = getelementptr i8, ptr %800, i64 %lsr.iv
+    %scevgep9 = getelementptr i8, ptr %scevgep8, i64 %lsr.iv1
+    %scevgep10 = getelementptr i8, ptr %scevgep9, i64 320
+    store <8 x float> %799, ptr %scevgep10, align 4
+    %801 = extractvalue [8 x <8 x float>] %788, 6
+    %802 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep5 = getelementptr i8, ptr %802, i64 %lsr.iv
+    %scevgep6 = getelementptr i8, ptr %scevgep5, i64 %lsr.iv1
+    %scevgep7 = getelementptr i8, ptr %scevgep6, i64 384
+    store <8 x float> %801, ptr %scevgep7, align 4
+    %803 = extractvalue [8 x <8 x float>] %788, 7
+    %804 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %55, 1
+    %scevgep = getelementptr i8, ptr %804, i64 %lsr.iv
+    %scevgep3 = getelementptr i8, ptr %scevgep, i64 %lsr.iv1
+    %scevgep4 = getelementptr i8, ptr %scevgep3, i64 448
+    store <8 x float> %803, ptr %scevgep4, align 4
+    %805 = add i64 %60, 8
+    %lsr.iv.next2 = add nuw nsw i64 %lsr.iv1, 32
+    br label %59
+  
+  806:                                              ; preds = %59
+    %807 = add i64 %57, 8
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 512
+    br label %56
+  
+  808:                                              ; preds = %56
+    ret { ptr, ptr, i64, [2 x i64], [2 x i64] } %55
+  }
+  
+  define void @_mlir_ciface_matmul_bias_relu_tiled_16x16x16(ptr %0, ptr %1, ptr %2, ptr %3) #0 {
+    %5 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %1, align 8
+    %6 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 0
+    %7 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 1
+    %8 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 2
+    %9 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 3, 0
+    %10 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 3, 1
+    %11 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 4, 0
+    %12 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, 4, 1
+    %13 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %2, align 8
+    %14 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 0
+    %15 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 1
+    %16 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 2
+    %17 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 3, 0
+    %18 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 3, 1
+    %19 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 4, 0
+    %20 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, 4, 1
+    %21 = load { ptr, ptr, i64, [2 x i64], [2 x i64] }, ptr %3, align 8
+    %22 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 0
+    %23 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 1
+    %24 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 2
+    %25 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 3, 0
+    %26 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 3, 1
+    %27 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 4, 0
+    %28 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %21, 4, 1
+    %29 = call { ptr, ptr, i64, [2 x i64], [2 x i64] } @matmul_bias_relu_tiled_16x16x16(ptr %6, ptr %7, i64 %8, i64 %9, i64 %10, i64 %11, i64 %12, ptr %14, ptr %15, i64 %16, i64 %17, i64 %18, i64 %19, i64 %20, ptr %22, ptr %23, i64 %24, i64 %25, i64 %26, i64 %27, i64 %28)
+    store { ptr, ptr, i64, [2 x i64], [2 x i64] } %29, ptr %0, align 8
+    ret void
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>) #1
+  
+  attributes #0 = { "target-cpu"="cortex-a76" }
+  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="cortex-a76" }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+...
+---
+name:            matmul_bias_relu_tiled_16x16x16
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+  - { reg: '$x2', virtual-reg: '' }
+  - { reg: '$x3', virtual-reg: '' }
+  - { reg: '$x4', virtual-reg: '' }
+  - { reg: '$x5', virtual-reg: '' }
+  - { reg: '$x6', virtual-reg: '' }
+  - { reg: '$x7', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 96, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: 88, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: 80, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: default, offset: 72, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: default, offset: 64, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: default, offset: 56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, type: default, offset: 48, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, type: default, offset: 40, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, type: default, offset: 32, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 10, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 11, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 12, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.21):
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
+  
+    renamable $x19 = COPY $x1
+    renamable $x20 = LDRXui %fixed-stack.5, 0 :: (load (s64) from %fixed-stack.5)
+    renamable $x21 = LDRXui %fixed-stack.12, 0 :: (load (s64) from %fixed-stack.12, align 16)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    dead $w0 = MOVi32imm 1088, implicit-def $x0
+    BL @malloc, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $x8 = COPY $xzr
+    renamable $x9 = COPY $xzr
+    renamable $x10 = ADDXri renamable $x0, 63, 0
+    renamable $x1 = ANDXri killed renamable $x10, 7865
+  
+  bb.1 (%ir-block.56):
+    successors: %bb.2(0x7c000000), %bb.6(0x04000000)
+    liveins: $x0, $x1, $x8, $x9, $x19, $x20, $x21
+  
+    dead $xzr = SUBSXri renamable $x9, 15, 0, implicit-def $nzcv
+    Bcc 12, %bb.6, implicit killed $nzcv
+    B %bb.2
+  
+  bb.2..preheader:
+    successors: %bb.3(0x80000000)
+    liveins: $x0, $x1, $x8, $x9, $x19, $x20, $x21
+  
+    renamable $x10 = COPY $xzr
+    renamable $x11 = COPY $xzr
+    renamable $x12 = ADDXrs renamable $x19, renamable $x9, 6
+    renamable $x13 = ADDXrr renamable $x20, renamable $x8
+  
+  bb.3 (%ir-block.59):
+    successors: %bb.4(0x7c000000), %bb.5(0x04000000)
+    liveins: $x0, $x1, $x8, $x9, $x10, $x11, $x12, $x13, $x19, $x20, $x21
+  
+    dead $xzr = SUBSXri renamable $x11, 15, 0, implicit-def $nzcv
+    Bcc 12, %bb.5, implicit killed $nzcv
+    B %bb.4
+  
+  bb.4 (%ir-block.62):
+    successors: %bb.3(0x80000000)
+    liveins: $x0, $x1, $x8, $x9, $x10, $x11, $x12, $x13, $x19, $x20, $x21
+  
+    renamable $q3 = MOVIv2d_ns 0
+    renamable $q0 = LDRQui renamable $x12, 1 :: (load (s128) from %ir.66 + 16, align 4)
+    STRQui killed renamable $q0, %stack.7, 0 :: (store (s128) into %stack.7)
+    renamable $q25 = LDRQui renamable $x12, 0 :: (load (s128) from %ir.66, align 4)
+    renamable $x14 = ADDXrr renamable $x21, renamable $x10
+    renamable $q14 = LDRQui renamable $x14, 0 :: (load (s128) from %ir.scevgep78, align 4)
+    renamable $q1 = LDRQui renamable $x14, 1 :: (load (s128) from %ir.scevgep78 + 16, align 4)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q1, renamable $q25, 0, implicit $fpcr
+    renamable $q4 = MOVIv2d_ns 0
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q14, renamable $q25, 0, implicit $fpcr
+    renamable $q5 = MOVIv2d_ns 0
+    renamable $q0 = LDRQui renamable $x12, 5 :: (load (s128) from %ir.72 + 16, align 4)
+    STRQui killed renamable $q0, %stack.8, 0 :: (store (s128) into %stack.8)
+    renamable $q8 = LDRQui renamable $x12, 4 :: (load (s128) from %ir.72, align 4)
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q1, renamable $q8, 0, implicit $fpcr
+    renamable $q6 = MOVIv2d_ns 0
+    renamable $q7 = MOVIv2d_ns 0
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q14, renamable $q8, 0, implicit $fpcr
+    renamable $q27 = LDRQui renamable $x12, 9 :: (load (s128) from %ir.78 + 16, align 4)
+    renamable $q10 = LDRQui renamable $x12, 8 :: (load (s128) from %ir.78, align 4)
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q1, renamable $q10, 0, implicit $fpcr
+    renamable $q16 = MOVIv2d_ns 0
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q14, renamable $q10, 0, implicit $fpcr
+    renamable $q17 = MOVIv2d_ns 0
+    renamable $q2 = LDRQui renamable $x12, 13 :: (load (s128) from %ir.84 + 16, align 4)
+    renamable $q12 = LDRQui renamable $x12, 12 :: (load (s128) from %ir.84, align 4)
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q1, renamable $q12, 0, implicit $fpcr
+    renamable $q18 = MOVIv2d_ns 0
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q14, renamable $q12, 0, implicit $fpcr
+    renamable $q30 = LDRQui renamable $x12, 17 :: (load (s128) from %ir.90 + 16, align 4)
+    renamable $q11 = LDRQui renamable $x12, 16 :: (load (s128) from %ir.90, align 4)
+    renamable $q20 = MOVIv2d_ns 0
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q1, renamable $q11, 0, implicit $fpcr
+    renamable $q19 = MOVIv2d_ns 0
+    renamable $q31 = LDRQui renamable $x12, 21 :: (load (s128) from %ir.96 + 16, align 4)
+    renamable $q13 = LDRQui renamable $x12, 20 :: (load (s128) from %ir.96, align 4)
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q14, renamable $q11, 0, implicit $fpcr
+    renamable $q9 = LDRQui renamable $x12, 24 :: (load (s128) from %ir.102, align 4)
+    renamable $q21 = MOVIv2d_ns 0
+    renamable $q26 = LDRQui renamable $x12, 28 :: (load (s128) from %ir.108, align 4)
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q1, renamable $q13, 0, implicit $fpcr
+    renamable $q22 = MOVIv2d_ns 0
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q14, renamable $q13, 0, implicit $fpcr
+    renamable $q24 = MOVIv2d_ns 0
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q1, renamable $q9, 0, implicit $fpcr
+    renamable $q23 = MOVIv2d_ns 0
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q14, renamable $q9, 0, implicit $fpcr
+    renamable $q29 = MOVIv2d_ns 0
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q1, renamable $q26, 0, implicit $fpcr
+    renamable $q0 = MOVIv2d_ns 0
+    renamable $q0 = nofpexcept FMLAv4i32_indexed killed renamable $q0, killed renamable $q14, renamable $q26, 0, implicit $fpcr
+    renamable $q28 = COPY killed renamable $q0
+    renamable $q14 = LDRQui renamable $x14, 5 :: (load (s128) from %ir.scevgep77 + 16, align 4)
+    renamable $q15 = LDRQui renamable $x14, 4 :: (load (s128) from %ir.scevgep77, align 4)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q15, renamable $q25, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q14, renamable $q25, 1, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q15, renamable $q8, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q14, renamable $q8, 1, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q15, renamable $q10, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q14, renamable $q10, 1, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q15, renamable $q12, 1, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q14, renamable $q12, 1, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q15, renamable $q11, 1, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q14, renamable $q11, 1, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q15, renamable $q9, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q14, renamable $q9, 1, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q15, renamable $q26, 1, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q14, renamable $q26, 1, implicit $fpcr
+    renamable $q14 = LDRQui renamable $x14, 8 :: (load (s128) from %ir.scevgep75, align 4)
+    renamable $q15 = LDRQui renamable $x14, 9 :: (load (s128) from %ir.scevgep75 + 16, align 4)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q15, renamable $q25, 2, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q14, renamable $q25, 2, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q15, renamable $q8, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q14, renamable $q8, 2, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q15, renamable $q10, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q14, renamable $q10, 2, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q15, renamable $q12, 2, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q14, renamable $q12, 2, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q15, renamable $q11, 2, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q14, renamable $q11, 2, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q15, renamable $q13, 2, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q14, renamable $q13, 2, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q15, renamable $q9, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q14, renamable $q9, 2, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q15, renamable $q26, 2, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q14, renamable $q26, 2, implicit $fpcr
+    renamable $q14 = LDRQui renamable $x14, 13 :: (load (s128) from %ir.scevgep73 + 16, align 4)
+    renamable $q15 = LDRQui renamable $x14, 12 :: (load (s128) from %ir.scevgep73, align 4)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q15, renamable $q25, 3, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q14, killed renamable $q25, 3, implicit $fpcr
+    renamable $q25 = LDRQui renamable $x12, 25 :: (load (s128) from %ir.102 + 16, align 4)
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q15, renamable $q8, 3, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q14, killed renamable $q8, 3, implicit $fpcr
+    renamable $q1 = LDRQui renamable $x12, 29 :: (load (s128) from %ir.108 + 16, align 4)
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q15, renamable $q10, 3, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q14, killed renamable $q10, 3, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q15, renamable $q12, 3, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q14, killed renamable $q12, 3, implicit $fpcr
+    renamable $q12 = LDRQui renamable $x14, 16 :: (load (s128) from %ir.scevgep71, align 4)
+    renamable $q0 = LDRQui renamable $x14, 17 :: (load (s128) from %ir.scevgep71 + 16, align 4)
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q15, renamable $q11, 3, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q14, killed renamable $q11, 3, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q15, renamable $q13, 3, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q14, killed renamable $q13, 3, implicit $fpcr
+    renamable $q10 = LDRQui renamable $x14, 21 :: (load (s128) from %ir.scevgep69 + 16, align 4)
+    renamable $q11 = LDRQui renamable $x14, 20 :: (load (s128) from %ir.scevgep69, align 4)
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q15, renamable $q9, 3, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q14, killed renamable $q9, 3, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q15, renamable $q26, 3, implicit $fpcr
+    renamable $q8 = LDRQui renamable $x14, 24 :: (load (s128) from %ir.scevgep67, align 4)
+    renamable $q9 = LDRQui renamable $x14, 25 :: (load (s128) from %ir.scevgep67 + 16, align 4)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q14, killed renamable $q26, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 29 :: (load (s128) from %ir.scevgep65 + 16, align 4)
+    renamable $q26 = LDRQui renamable $x14, 28 :: (load (s128) from %ir.scevgep65, align 4)
+    renamable $q14 = LDRQui %stack.7, 0 :: (load (s128) from %stack.7)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q0, renamable $q14, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q12, renamable $q14, 0, implicit $fpcr
+    renamable $q15 = LDRQui %stack.8, 0 :: (load (s128) from %stack.8)
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q0, renamable $q15, 0, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q12, renamable $q15, 0, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q0, renamable $q27, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q12, renamable $q27, 0, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q0, renamable $q2, 0, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q12, renamable $q2, 0, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q0, renamable $q30, 0, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q12, renamable $q30, 0, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q0, renamable $q31, 0, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q12, renamable $q31, 0, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q0, renamable $q25, 0, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q12, renamable $q25, 0, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q0, renamable $q1, 0, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q12, renamable $q1, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q11, renamable $q14, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q10, renamable $q14, 1, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q11, renamable $q15, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q10, renamable $q15, 1, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q11, renamable $q27, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q10, renamable $q27, 1, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q11, renamable $q2, 1, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q10, renamable $q2, 1, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q11, renamable $q30, 1, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q10, renamable $q30, 1, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q11, renamable $q31, 1, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q10, renamable $q31, 1, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q11, renamable $q25, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q10, renamable $q25, 1, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q11, renamable $q1, 1, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q10, renamable $q1, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q9, renamable $q14, 2, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q8, renamable $q14, 2, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q9, renamable $q15, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q8, renamable $q15, 2, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q9, renamable $q27, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q8, renamable $q27, 2, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q9, renamable $q2, 2, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q8, renamable $q2, 2, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q9, renamable $q30, 2, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q8, renamable $q30, 2, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q9, renamable $q31, 2, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q8, renamable $q31, 2, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q9, renamable $q25, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q8, renamable $q25, 2, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q9, renamable $q1, 2, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q8, renamable $q1, 2, implicit $fpcr
+    STRQui renamable $q1, %stack.1, 0 :: (store (s128) into %stack.1)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q26, renamable $q14, 3, implicit $fpcr
+    STRQui renamable $q13, %stack.0, 0 :: (store (s128) into %stack.0)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q13, killed renamable $q14, 3, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q26, renamable $q15, 3, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q13, killed renamable $q15, 3, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q26, renamable $q27, 3, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q13, killed renamable $q27, 3, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q26, renamable $q2, 3, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q13, killed renamable $q2, 3, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q26, renamable $q30, 3, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q13, killed renamable $q30, 3, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q26, renamable $q31, 3, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q13, killed renamable $q31, 3, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q26, renamable $q25, 3, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, killed renamable $q13, killed renamable $q25, 3, implicit $fpcr
+    renamable $q28 = nofpexcept FMLAv4i32_indexed killed renamable $q28, killed renamable $q26, killed renamable $q1, 3, implicit $fpcr
+    STRQui killed renamable $q28, %stack.2, 0 :: (store (s128) into %stack.2)
+    renamable $q13 = LDRQui renamable $x12, 3 :: (load (s128) from %ir.385 + 16, align 4)
+    renamable $q11 = LDRQui renamable $x12, 2 :: (load (s128) from %ir.385, align 4)
+    renamable $q27 = LDRQui renamable $x12, 6 :: (load (s128) from %ir.391, align 4)
+    renamable $q26 = LDRQui renamable $x12, 10 :: (load (s128) from %ir.397, align 4)
+    renamable $q25 = LDRQui renamable $x12, 14 :: (load (s128) from %ir.403, align 4)
+    renamable $q28 = LDRQui renamable $x12, 18 :: (load (s128) from %ir.409, align 4)
+    renamable $q8 = LDRQui renamable $x14, 32 :: (load (s128) from %ir.scevgep63, align 4)
+    renamable $q31 = LDRQui renamable $x14, 33 :: (load (s128) from %ir.scevgep63 + 16, align 4)
+    renamable $q10 = LDRQui renamable $x14, 37 :: (load (s128) from %ir.scevgep61 + 16, align 4)
+    renamable $q9 = LDRQui renamable $x14, 36 :: (load (s128) from %ir.scevgep61, align 4)
+    renamable $q2 = LDRQui renamable $x14, 40 :: (load (s128) from %ir.scevgep59, align 4)
+    renamable $q15 = LDRQui renamable $x14, 41 :: (load (s128) from %ir.scevgep59 + 16, align 4)
+    renamable $q0 = LDRQui renamable $x14, 45 :: (load (s128) from %ir.scevgep57 + 16, align 4)
+    renamable $q30 = LDRQui renamable $x14, 44 :: (load (s128) from %ir.scevgep57, align 4)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q31, renamable $q11, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q8, renamable $q11, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q9, renamable $q11, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q10, renamable $q11, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q15, renamable $q11, 2, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q2, renamable $q11, 2, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q30, renamable $q11, 3, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q0, killed renamable $q11, 3, implicit $fpcr
+    renamable $q14 = LDRQui renamable $x12, 22 :: (load (s128) from %ir.415, align 4)
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q31, renamable $q27, 0, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q8, renamable $q27, 0, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q9, renamable $q27, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q10, renamable $q27, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q15, renamable $q27, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q2, renamable $q27, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q30, renamable $q27, 3, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q0, killed renamable $q27, 3, implicit $fpcr
+    renamable $q27 = LDRQui renamable $x12, 26 :: (load (s128) from %ir.421, align 4)
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q31, renamable $q26, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q8, renamable $q26, 0, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q31, renamable $q25, 0, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q8, renamable $q25, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q9, renamable $q26, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q10, renamable $q26, 1, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q9, renamable $q25, 1, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q10, renamable $q25, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q15, renamable $q26, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q2, renamable $q26, 2, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q15, renamable $q25, 2, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q2, renamable $q25, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q30, renamable $q26, 3, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q0, killed renamable $q26, 3, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q30, renamable $q25, 3, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q0, killed renamable $q25, 3, implicit $fpcr
+    renamable $q11 = LDRQui renamable $x14, 48 :: (load (s128) from %ir.scevgep55, align 4)
+    renamable $q12 = LDRQui renamable $x14, 49 :: (load (s128) from %ir.scevgep55 + 16, align 4)
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q31, renamable $q28, 0, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q8, renamable $q28, 0, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q31, renamable $q14, 0, implicit $fpcr
+    renamable $q26 = COPY killed renamable $q31
+    STRQui renamable $q26, %stack.6, 0 :: (store (s128) into %stack.6)
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q8, renamable $q14, 0, implicit $fpcr
+    renamable $q25 = COPY killed renamable $q8
+    STRQui renamable $q25, %stack.5, 0 :: (store (s128) into %stack.5)
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q9, renamable $q28, 1, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q10, renamable $q28, 1, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q9, renamable $q14, 1, implicit $fpcr
+    renamable $q8 = COPY killed renamable $q9
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q10, renamable $q14, 1, implicit $fpcr
+    renamable $q31 = COPY killed renamable $q10
+    STRQui renamable $q31, %stack.4, 0 :: (store (s128) into %stack.4)
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q15, renamable $q28, 2, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q2, renamable $q28, 2, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q15, renamable $q14, 2, implicit $fpcr
+    renamable $q1 = COPY killed renamable $q15
+    STRQui renamable $q1, %stack.3, 0 :: (store (s128) into %stack.3)
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q2, renamable $q14, 2, implicit $fpcr
+    renamable $q10 = COPY killed renamable $q2
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q30, renamable $q28, 3, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q0, killed renamable $q28, 3, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q30, renamable $q14, 3, implicit $fpcr
+    renamable $q28 = COPY killed renamable $q30
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q0, killed renamable $q14, 3, implicit $fpcr
+    renamable $q9 = COPY killed renamable $q0
+    renamable $q14 = LDRQui renamable $x14, 53 :: (load (s128) from %ir.scevgep53 + 16, align 4)
+    renamable $q15 = LDRQui renamable $x14, 52 :: (load (s128) from %ir.scevgep53, align 4)
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, killed renamable $q26, renamable $q27, 0, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, killed renamable $q25, renamable $q27, 0, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q8, renamable $q27, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, killed renamable $q31, renamable $q27, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, killed renamable $q1, renamable $q27, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q10, renamable $q27, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q28, renamable $q27, 3, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q9, killed renamable $q27, 3, implicit $fpcr
+    renamable $q30 = LDRQui renamable $x14, 57 :: (load (s128) from %ir.scevgep51 + 16, align 4)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q26 = LDRQui renamable $x14, 56 :: (load (s128) from %ir.scevgep51, align 4)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q27 = LDRQui renamable $x14, 60 :: (load (s128) from %ir.scevgep49, align 4)
+    renamable $q4 = nofpexcept FMLAv4i32_indexed killed renamable $q4, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q25 = LDRQui killed renamable $x14, 61 :: (load (s128) from %ir.scevgep49 + 16, align 4)
+    renamable $q3 = nofpexcept FMLAv4i32_indexed killed renamable $q3, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 7 :: (load (s128) from %ir.391 + 16, align 4)
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q5 = nofpexcept FMLAv4i32_indexed killed renamable $q5, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 11 :: (load (s128) from %ir.397 + 16, align 4)
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q16 = nofpexcept FMLAv4i32_indexed killed renamable $q16, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q7 = nofpexcept FMLAv4i32_indexed killed renamable $q7, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 15 :: (load (s128) from %ir.403 + 16, align 4)
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q18 = nofpexcept FMLAv4i32_indexed killed renamable $q18, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q17 = nofpexcept FMLAv4i32_indexed killed renamable $q17, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 19 :: (load (s128) from %ir.409 + 16, align 4)
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q19 = nofpexcept FMLAv4i32_indexed killed renamable $q19, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q20 = nofpexcept FMLAv4i32_indexed killed renamable $q20, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 23 :: (load (s128) from %ir.415 + 16, align 4)
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q22 = nofpexcept FMLAv4i32_indexed killed renamable $q22, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q21 = nofpexcept FMLAv4i32_indexed killed renamable $q21, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x12, 27 :: (load (s128) from %ir.421 + 16, align 4)
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q12, renamable $q13, 0, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q11, renamable $q13, 0, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q15, renamable $q13, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q14, renamable $q13, 1, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q30, renamable $q13, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q26, renamable $q13, 2, implicit $fpcr
+    renamable $q23 = nofpexcept FMLAv4i32_indexed killed renamable $q23, renamable $q27, renamable $q13, 3, implicit $fpcr
+    renamable $q24 = nofpexcept FMLAv4i32_indexed killed renamable $q24, renamable $q25, killed renamable $q13, 3, implicit $fpcr
+    renamable $x14 = ADDXrr renamable $x13, renamable $x10
+    renamable $q13 = LDRQui renamable $x14, 1 :: (load (s128) from %ir.scevgep47 + 16, align 4)
+    renamable $q3 = nofpexcept FADDv4f32 killed renamable $q3, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 0 :: (load (s128) from %ir.scevgep47, align 4)
+    renamable $q4 = nofpexcept FADDv4f32 killed renamable $q4, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 5 :: (load (s128) from %ir.scevgep45 + 16, align 4)
+    renamable $q31 = nofpexcept FADDv4f32 killed renamable $q5, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 4 :: (load (s128) from %ir.scevgep45, align 4)
+    renamable $q6 = nofpexcept FADDv4f32 killed renamable $q6, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 9 :: (load (s128) from %ir.scevgep42 + 16, align 4)
+    renamable $q7 = nofpexcept FADDv4f32 killed renamable $q7, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 8 :: (load (s128) from %ir.scevgep42, align 4)
+    renamable $q16 = nofpexcept FADDv4f32 killed renamable $q16, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 13 :: (load (s128) from %ir.scevgep39 + 16, align 4)
+    renamable $q17 = nofpexcept FADDv4f32 killed renamable $q17, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 12 :: (load (s128) from %ir.scevgep39, align 4)
+    renamable $q18 = nofpexcept FADDv4f32 killed renamable $q18, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 17 :: (load (s128) from %ir.scevgep36 + 16, align 4)
+    renamable $q20 = nofpexcept FADDv4f32 killed renamable $q20, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 16 :: (load (s128) from %ir.scevgep36, align 4)
+    renamable $q19 = nofpexcept FADDv4f32 killed renamable $q19, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 21 :: (load (s128) from %ir.scevgep33 + 16, align 4)
+    renamable $q21 = nofpexcept FADDv4f32 killed renamable $q21, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 20 :: (load (s128) from %ir.scevgep33, align 4)
+    renamable $q22 = nofpexcept FADDv4f32 killed renamable $q22, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 25 :: (load (s128) from %ir.scevgep30 + 16, align 4)
+    renamable $q24 = nofpexcept FADDv4f32 killed renamable $q24, killed renamable $q13, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 24 :: (load (s128) from %ir.scevgep30, align 4)
+    renamable $q23 = nofpexcept FADDv4f32 killed renamable $q23, killed renamable $q13, implicit $fpcr
+    renamable $x15 = ADDXrr renamable $x1, renamable $x8
+    renamable $x15 = ADDXrr killed renamable $x15, renamable $x10
+    renamable $q2 = MOVIv2d_ns 0
+    renamable $q4 = nofpexcept FMAXv4f32 killed renamable $q4, renamable $q2, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q3, renamable $q2, implicit $fpcr
+    renamable $q13 = LDRQui renamable $x14, 28 :: (load (s128) from %ir.scevgep27, align 4)
+    renamable $q5 = LDRQui killed renamable $x14, 29 :: (load (s128) from %ir.scevgep27 + 16, align 4)
+    renamable $q1 = LDRQui renamable $x12, 31 :: (load (s128) from %ir.427 + 16, align 4)
+    renamable $q0 = LDRQui renamable $x12, 30 :: (load (s128) from %ir.427, align 4)
+    STRQui killed renamable $q3, renamable $x15, 1 :: (store (s128) into %ir.scevgep24 + 16, align 4)
+    STRQui killed renamable $q4, renamable $x15, 0 :: (store (s128) into %ir.scevgep24, align 4)
+    renamable $q3 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
+    renamable $q4 = LDRQui %stack.1, 0 :: (load (s128) from %stack.1)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q3, killed renamable $q4, 3, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q6, renamable $q2, implicit $fpcr
+    renamable $q4 = LDRQui %stack.6, 0 :: (load (s128) from %stack.6)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q4, renamable $q0, 0, implicit $fpcr
+    renamable $q4 = nofpexcept FMAXv4f32 killed renamable $q31, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q4, renamable $x15, 5 :: (store (s128) into %ir.scevgep22 + 16, align 4)
+    STRQui killed renamable $q3, renamable $x15, 4 :: (store (s128) into %ir.scevgep22, align 4)
+    renamable $q6 = LDRQui %stack.2, 0 :: (load (s128) from %stack.2)
+    renamable $q3 = LDRQui %stack.5, 0 :: (load (s128) from %stack.5)
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q3, renamable $q0, 0, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q16, renamable $q2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q8, renamable $q0, 1, implicit $fpcr
+    renamable $q4 = nofpexcept FMAXv4f32 killed renamable $q7, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q4, renamable $x15, 9 :: (store (s128) into %ir.scevgep19 + 16, align 4)
+    STRQui killed renamable $q3, renamable $x15, 8 :: (store (s128) into %ir.scevgep19, align 4)
+    renamable $q3 = LDRQui %stack.4, 0 :: (load (s128) from %stack.4)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q3, renamable $q0, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q18, renamable $q2, implicit $fpcr
+    renamable $q4 = LDRQui %stack.3, 0 :: (load (s128) from %stack.3)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q4, renamable $q0, 2, implicit $fpcr
+    renamable $q4 = nofpexcept FMAXv4f32 killed renamable $q17, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q4, renamable $x15, 13 :: (store (s128) into %ir.scevgep16 + 16, align 4)
+    STRQui killed renamable $q3, renamable $x15, 12 :: (store (s128) into %ir.scevgep16, align 4)
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q10, renamable $q0, 2, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q19, renamable $q2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q28, renamable $q0, 3, implicit $fpcr
+    renamable $q4 = nofpexcept FMAXv4f32 killed renamable $q20, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q4, renamable $x15, 17 :: (store (s128) into %ir.scevgep13 + 16, align 4)
+    STRQui killed renamable $q3, renamable $x15, 16 :: (store (s128) into %ir.scevgep13, align 4)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q9, killed renamable $q0, 3, implicit $fpcr
+    renamable $q0 = nofpexcept FMAXv4f32 killed renamable $q22, renamable $q2, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q12, renamable $q1, 0, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q21, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q3, renamable $x15, 21 :: (store (s128) into %ir.scevgep10 + 16, align 4)
+    STRQui killed renamable $q0, renamable $x15, 20 :: (store (s128) into %ir.scevgep10, align 4)
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q11, renamable $q1, 0, implicit $fpcr
+    renamable $q0 = nofpexcept FMAXv4f32 killed renamable $q23, renamable $q2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q15, renamable $q1, 1, implicit $fpcr
+    renamable $q3 = nofpexcept FMAXv4f32 killed renamable $q24, renamable $q2, implicit $fpcr
+    STRQui killed renamable $q3, renamable $x15, 25 :: (store (s128) into %ir.scevgep7 + 16, align 4)
+    STRQui killed renamable $q0, renamable $x15, 24 :: (store (s128) into %ir.scevgep7, align 4)
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q14, renamable $q1, 1, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q30, renamable $q1, 2, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q26, renamable $q1, 2, implicit $fpcr
+    renamable $q29 = nofpexcept FMLAv4i32_indexed killed renamable $q29, killed renamable $q25, renamable $q1, 3, implicit $fpcr
+    renamable $q0 = nofpexcept FADDv4f32 killed renamable $q29, killed renamable $q5, implicit $fpcr
+    renamable $q6 = nofpexcept FMLAv4i32_indexed killed renamable $q6, killed renamable $q27, killed renamable $q1, 3, implicit $fpcr
+    renamable $q1 = nofpexcept FADDv4f32 killed renamable $q6, killed renamable $q13, implicit $fpcr
+    renamable $q1 = nofpexcept FMAXv4f32 killed renamable $q1, renamable $q2, implicit $fpcr
+    renamable $q0 = nofpexcept FMAXv4f32 killed renamable $q0, killed renamable $q2, implicit $fpcr
+    STRQui killed renamable $q0, renamable $x15, 29 :: (store (s128) into %ir.scevgep4 + 16, align 4)
+    STRQui killed renamable $q1, killed renamable $x15, 28 :: (store (s128) into %ir.scevgep4, align 4)
+    renamable $x11 = ADDXri killed renamable $x11, 8, 0
+    renamable $x10 = nuw nsw ADDXri killed renamable $x10, 32, 0
+    B %bb.3
+  
+  bb.5 (%ir-block.806):
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x8, $x9, $x19, $x20, $x21
+  
+    renamable $x9 = ADDXri killed renamable $x9, 8, 0
+    renamable $x8 = nuw nsw ADDXri killed renamable $x8, 512, 0
+    B %bb.1
+  
+  bb.6 (%ir-block.808):
+    liveins: $x0, $x1
+  
+    $x2 = COPY $xzr
+    dead $w3 = MOVi32imm 16, implicit-def $x3
+    dead $w4 = MOVi32imm 16, implicit-def $x4
+    dead $w5 = MOVi32imm 16, implicit-def $x5
+    dead $w6 = MOVi32imm 1, implicit-def $x6
+    RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6
+...
+---
+name:            _mlir_ciface_matmul_bias_relu_tiled_16x16x16
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+  - { reg: '$x2', virtual-reg: '' }
+  - { reg: '$x3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 104
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.4):
+    liveins: $x0, $x1, $x2, $x3
+  
+    renamable $x19 = COPY $x0
+    renamable $x6 = LDRXui renamable $x1, 6 :: (load (s64) from %ir.1 + 48)
+    renamable $x5 = LDRXui renamable $x1, 5 :: (load (s64) from %ir.1 + 40)
+    renamable $x4 = LDRXui renamable $x1, 4 :: (load (s64) from %ir.1 + 32)
+    renamable $x8 = LDRXui renamable $x1, 3 :: (load (s64) from %ir.1 + 24)
+    renamable $x9 = LDRXui renamable $x1, 2 :: (load (s64) from %ir.1 + 16)
+    renamable $x10 = LDRXui renamable $x1, 1 :: (load (s64) from %ir.1 + 8)
+    renamable $x0 = LDRXui killed renamable $x1, 0 :: (load (s64) from %ir.1)
+    renamable $x7 = LDRXui renamable $x2, 0 :: (load (s64) from %ir.2)
+    renamable $q0 = LDURQi renamable $x2, 8 :: (load (s128) from %ir.2 + 8, align 8)
+    renamable $q1 = LDURQi renamable $x2, 24 :: (load (s128) from %ir.2 + 24, align 8)
+    renamable $x11 = LDRXui renamable $x2, 5 :: (load (s64) from %ir.2 + 40)
+    renamable $x12 = LDRXui killed renamable $x2, 6 :: (load (s64) from %ir.2 + 48)
+    renamable $q2 = LDRQui renamable $x3, 0 :: (load (s128) from %ir.3, align 8)
+    renamable $q3 = LDRQui renamable $x3, 1 :: (load (s128) from %ir.3 + 16, align 8)
+    renamable $q4 = LDRQui renamable $x3, 2 :: (load (s128) from %ir.3 + 32, align 8)
+    renamable $x13 = LDRXui killed renamable $x3, 6 :: (load (s64) from %ir.3 + 48)
+    ADJCALLSTACKDOWN 104, 0, implicit-def dead $sp, implicit $sp
+    STRQui killed renamable $q4, $sp, 5 :: (store (s128), align 8)
+    STRQui killed renamable $q3, $sp, 4 :: (store (s128), align 8)
+    STRQui killed renamable $q2, $sp, 3 :: (store (s128), align 8)
+    STRQui killed renamable $q1, $sp, 1 :: (store (s128), align 8)
+    STRQui killed renamable $q0, $sp, 0 :: (store (s128), align 8)
+    STRXui killed renamable $x13, $sp, 12 :: (store (s64) into stack + 96)
+    STRXui killed renamable $x12, $sp, 5 :: (store (s64) into stack + 40)
+    STRXui killed renamable $x11, $sp, 4 :: (store (s64) into stack + 32)
+    $x1 = COPY killed renamable $x10
+    $x2 = COPY killed renamable $x9
+    $x3 = COPY killed renamable $x8
+    BL @matmul_bias_relu_tiled_16x16x16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $sp, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x4, implicit-def $x5, implicit-def $x6
+    ADJCALLSTACKUP 104, 0, implicit-def dead $sp, implicit $sp
+    STRXui killed renamable $x0, renamable $x19, 0 :: (store (s64) into %ir.0)
+    STRXui killed renamable $x1, renamable $x19, 1 :: (store (s64) into %ir.0 + 8)
+    STRXui killed renamable $x2, renamable $x19, 2 :: (store (s64) into %ir.0 + 16)
+    STRXui killed renamable $x3, renamable $x19, 3 :: (store (s64) into %ir.0 + 24)
+    STRXui killed renamable $x4, renamable $x19, 4 :: (store (s64) into %ir.0 + 32)
+    STRXui killed renamable $x5, renamable $x19, 5 :: (store (s64) into %ir.0 + 40)
+    STRXui killed renamable $x6, killed renamable $x19, 6 :: (store (s64) into %ir.0 + 48)
+    RET_ReallyLR
+...

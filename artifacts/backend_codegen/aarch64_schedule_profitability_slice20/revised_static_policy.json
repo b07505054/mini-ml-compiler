@@ -1,0 +1,7 @@
+{
+  "policy_id": "slice20_short_static_k_full_unroll_v1",
+  "kind": "deterministic_bounded_rule",
+  "rule": "prefer highest legal schedule_unroll_k (4) for this measured fixed-tile domain",
+  "exact_calibration_has_priority": true,
+  "truth_boundary": "Cortex-A76 measured domains only; no cross-shape universality claim"
+}

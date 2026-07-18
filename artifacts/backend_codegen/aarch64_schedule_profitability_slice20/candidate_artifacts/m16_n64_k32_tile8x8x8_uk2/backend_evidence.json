@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "candidate_id": "m16_n64_k32_tile8x8x8_uk2",
+  "operator": "hir.fused_matmul_bias_relu",
+  "kernel_family": "aarch64_generated_fused_matmul_bias_relu",
+  "dtype": "f32",
+  "shape": {
+    "m": 16,
+    "n": 64,
+    "k": 32
+  },
+  "target": {
+    "triple": "aarch64-linux-gnu",
+    "cpu": "cortex-a76",
+    "features": [],
+    "target_profile_id": "raspberry-pi5-cortex-a76-cpu"
+  },
+  "lowering": {
+    "pipeline_id": "aarch64_tiled_scheduled_v1",
+    "tile_m": 8,
+    "tile_n": 8,
+    "tile_k": 8,
+    "schedule_unroll_k": 2,
+    "vector_width_bits": 128,
+    "loop_order_id": "tiled_mnk_row_major_v1"
+  },
+  "microkernel_id": "hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+  "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_16x64x32",
+  "abi_version": "mlir_ciface_memref_f32_v1",
+  "artifacts": {
+    "llvm_dialect_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/m16_n64_k32_tile8x8x8_uk2_llvm.mlir",
+    "llvm_ir_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/m16_n64_k32_tile8x8x8_uk2.ll",
+    "mir_post_isel_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default_post_isel.mir",
+    "mir_pre_scheduler_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default_pre_scheduler.mir",
+    "mir_pre_ra_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default_pre_ra.mir",
+    "mir_post_ra_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default_post_ra.mir",
+    "mir_post_prologue_epilogue_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default_post_prologue_epilogue.mir",
+    "assembly_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default.s",
+    "object_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/16x64x32_tm8_tn8_tk8_uk2_greedy_misched-default.o",
+    "llvm_dialect_sha256": "1d5a6c961d43485cf52164d9a03871a26a298863c7b739d6679c55ccc4f68dc4",
+    "llvm_ir_sha256": "3102f94f10deadca6e9c206c8b9d0b68a195138939a37db5a8b916c2a046f916",
+    "mir_post_isel_sha256": "d381f37e2c9f503693636d973194bc5d775e492af4bc8123186f7892c50d8596",
+    "mir_pre_scheduler_sha256": "948ef3eccd705f4e2718f977603a92387cff0eed3853abe05a61cdc40ab97cbd",
+    "mir_pre_ra_sha256": "a53441ba0d3d3e2385130d2a997e7355f10275bd7fb5de1dadccfef2c9cdc0aa",
+    "mir_post_ra_sha256": "c5a42b0746dfcab34afa38a3f07b824164fe1b3c0bb7870608738383c1f07f09",
+    "mir_post_prologue_epilogue_sha256": "311d4ad998b8c8824d360bfee354e414f88300e2bde9485ec9cbcef8851e9ab8",
+    "assembly_sha256": "f33a98d7fb0e6a9514488df56ff47228eb2290d3584ba20ffeb01aed3b4f2122",
+    "object_sha256": "c821d7778dca23eaa7182b63b0aca9d20257b458389f8ed4a224a279ba85c8d3",
+    "register_metrics_sha256": "154d46e6a9cce7c680ec2f7eba985be0f2e6b78e4326cfc32104bb79230d80e6",
+    "backend_evidence_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m16_n64_k32_tile8x8x8_uk2/backend_evidence.json"
+  },
+  "static_backend_evidence": {
+    "static_instruction_count": 535,
+    "fmla_count": 256,
+    "branch_count": 7,
+    "load_count": 110,
+    "store_count": 48,
+    "basic_block_count": 6,
+    "object_size_bytes": 3344,
+    "text_size_bytes": 2168,
+    "spill_store_count": 0,
+    "reload_load_count": 0,
+    "spill_slot_bytes": 0,
+    "physical_vector_registers_referenced": 28,
+    "approximate_peak_live_vector_registers": 145,
+    "stack_frame_size_bytes": null
+  },
+  "validation": {
+    "codegen_succeeded": true,
+    "llvm_ir_verified": true,
+    "correctness_passed": null,
+    "measured_on_target": false
+  },
+  "provenance": {
+    "compiler_revision": "0d200c3c7463f21cda97e77f4ad0e912bbad329f",
+    "working_tree_clean": false
+  }
+}

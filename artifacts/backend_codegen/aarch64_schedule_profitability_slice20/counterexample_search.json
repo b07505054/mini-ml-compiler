@@ -1,0 +1,19 @@
+{
+  "initial_domains": [
+    "m16_n16_k32_tile8x8x8",
+    "m32_n32_k32_tile8x8x8",
+    "m64_n64_k64_tile8x8x8",
+    "m32_n32_k128_tile8x8x8",
+    "m32_n32_k64_tile8x8x8",
+    "m64_n32_k32_tile8x8x8",
+    "m32_n64_k32_tile8x8x8",
+    "m8_n64_k64_tile8x8x8"
+  ],
+  "adaptive_stress_domains": [
+    "m8_n8_k32_tile8x8x8",
+    "m16_n64_k32_tile8x8x8"
+  ],
+  "hypothesis": "low work, low K, and limited M expose uk4 code/spill overhead",
+  "uk4_counterexamples": [],
+  "result": "uk4 won every tested domain, but no universality claim is made"
+}

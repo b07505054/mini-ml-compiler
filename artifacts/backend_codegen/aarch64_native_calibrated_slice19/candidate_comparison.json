@@ -1,0 +1,32 @@
+{
+  "tile8x8x8_uk4": {
+    "median_of_session_p50_ms": 0.00385666,
+    "median_of_session_p95_ms": 0.00387231,
+    "mean_of_session_means_ms": 0.0038583945599999997,
+    "stddev_across_session_means_ms": 2.621186147796422e-06,
+    "standard_error_ms": 1.070094763825448e-06,
+    "bootstrap_ci95_low_ms": 0.00385652794,
+    "bootstrap_ci95_high_ms": 0.00386026118,
+    "session_count": 6
+  },
+  "tile8x8x8_uk2": {
+    "median_of_session_p50_ms": 0.004148885,
+    "median_of_session_p95_ms": 0.004166665,
+    "mean_of_session_means_ms": 0.004151494396666667,
+    "stddev_across_session_means_ms": 4.068068226200945e-06,
+    "standard_error_ms": 1.6607818988368955e-06,
+    "bootstrap_ci95_low_ms": 0.004148125336666667,
+    "bootstrap_ci95_high_ms": 0.004153772306666667,
+    "session_count": 6
+  },
+  "tile8x8x8_uk1": {
+    "median_of_session_p50_ms": 0.00437342,
+    "median_of_session_p95_ms": 0.004390645,
+    "mean_of_session_means_ms": 0.00437633165,
+    "stddev_across_session_means_ms": 1.2486002178118887e-06,
+    "standard_error_ms": 5.097389043945106e-07,
+    "bootstrap_ci95_low_ms": 0.004375415953333333,
+    "bootstrap_ci95_high_ms": 0.0043772819533333335,
+    "session_count": 6
+  }
+}

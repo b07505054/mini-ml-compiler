@@ -206,6 +206,35 @@ int main() {
   assert(decodedSchedule.threadSchedule.partitionStrategy ==
          "contiguous_chunks");
 
+  ImplementationCandidate nativeScheduled = serialSchedule;
+  nativeScheduled.nativeArtifact.present = true;
+  nativeScheduled.nativeArtifact.scheduleUnrollK = 2;
+  nativeScheduled.nativeArtifact.vectorWidthBits = 128;
+  nativeScheduled.nativeArtifact.targetTriple = "aarch64-linux-gnu";
+  nativeScheduled.nativeArtifact.targetCpu = "cortex-a76";
+  nativeScheduled.nativeArtifact.loweringPipelineId =
+      "aarch64_tiled_scheduled_v1";
+  nativeScheduled.nativeArtifact.loopOrderId = "tiled_mnk_row_major_v1";
+  nativeScheduled.nativeArtifact.entryPoint =
+      "_mlir_ciface_matmul_bias_relu_tiled_32x32x32";
+  nativeScheduled.nativeArtifact.abiVersion = "mlir_ciface_memref_f32_v1";
+  nativeScheduled.nativeArtifact.objectRef = "candidate.o";
+  nativeScheduled.nativeArtifact.objectSha256 = std::string(64, 'a');
+  nativeScheduled.nativeArtifact.backendEvidenceRef = "evidence.json";
+  nativeScheduled.candidateId = makeFallbackCandidateId(nativeScheduled);
+  DictionaryAttr encodedNative =
+      encodeImplementationCandidate(&ctx, nativeScheduled);
+  ImplementationCandidate decodedNative =
+      decodeImplementationCandidate(encodedNative, "test_provider");
+  assert(decodedNative.nativeArtifact.present);
+  assert(decodedNative.nativeArtifact.scheduleUnrollK == 2);
+  assert(decodedNative.nativeArtifact.vectorWidthBits == 128);
+  assert(decodedNative.nativeArtifact.targetTriple == "aarch64-linux-gnu");
+  assert(decodedNative.nativeArtifact.entryPoint ==
+         nativeScheduled.nativeArtifact.entryPoint);
+  assert(decodedNative.nativeArtifact.objectSha256 ==
+         nativeScheduled.nativeArtifact.objectSha256);
+
   ImplementationCandidate duplicateSchedule = parallelSchedule;
   duplicateSchedule.feasibility.reason = "different_state_must_not_change_id";
   assert(duplicateSchedule.candidateId == parallelSchedule.candidateId);

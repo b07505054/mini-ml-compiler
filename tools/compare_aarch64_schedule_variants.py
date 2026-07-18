@@ -153,15 +153,16 @@ def compile_variant(shape, tile_m, tile_n, tile_k, unroll_k, out_dir, name):
     }
 
 
-def extract_mir(llvm_ir, shape, tile_m, tile_n, tile_k, out_dir):
+def extract_mir(llvm_ir, shape, tile_m, tile_n, tile_k, unroll_k, out_dir):
     cmd = [
         "python3", EXTRACT_TOOL,
         "--llvm-ir", llvm_ir, "--cpu", TARGET_CPU, "--shape", shape,
         "--tile-m", str(tile_m), "--tile-n", str(tile_n), "--tile-k", str(tile_k),
+        "--schedule-unroll-k", str(unroll_k),
         "--output-dir", out_dir,
     ]
     sh(cmd)
-    prefix = f"{shape}_tm{tile_m}_tn{tile_n}_tk{tile_k}_greedy_misched-default"
+    prefix = f"{shape}_tm{tile_m}_tn{tile_n}_tk{tile_k}_uk{unroll_k}_greedy_misched-default"
     return {
         "command": " ".join(cmd),
         "post_isel": os.path.join(out_dir, f"{prefix}_post_isel.mir"),
@@ -372,7 +373,7 @@ def run_candidate(shape, tile_m, tile_n, tile_k, unroll_k, base_dir):
     os.makedirs(cand_dir, exist_ok=True)
 
     compiled = compile_variant(shape, tile_m, tile_n, tile_k, unroll_k, cand_dir, name)
-    mir_paths = extract_mir(compiled["llvm_ir"], shape, tile_m, tile_n, tile_k, cand_dir)
+    mir_paths = extract_mir(compiled["llvm_ir"], shape, tile_m, tile_n, tile_k, unroll_k, cand_dir)
 
     reg_metrics, reg_cmd = analyze_registers(mir_paths, os.path.join(cand_dir, "register_metrics.json"))
     sched_pre, sched_pre_cmd = analyze_schedule(mir_paths["pre_scheduler"], mir_paths["final_asm"], os.path.join(cand_dir, "schedule_pre_scheduler_metrics.json"))

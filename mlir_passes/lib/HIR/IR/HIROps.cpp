@@ -670,8 +670,9 @@ static LogicalResult verifyAttentionContract(Operation *op, Value q, Value k,
     return op->emitOpError("requires phase prefill/decode and causal=true");
   if (!ql || !cl || !qh || !kh || !hd || !alignment || *ql <= 0 || *cl <= 0 ||
       *qh <= 0 || *kh <= 0 || *hd <= 0 || *alignment != alignof(float) ||
-      *qh != *kh)
-    return op->emitOpError("requires positive static dimensions and equal Q/KV heads");
+      *qh % *kh != 0)
+    return op->emitOpError(
+        "requires positive static dimensions and query heads divisible by KV heads");
   if ((phase == "prefill" && (*ql <= 1 || *ql != *cl)) ||
       (phase == "decode" && *ql != 1))
     return op->emitOpError("query/context dimensions violate phase contract");
@@ -685,7 +686,10 @@ static LogicalResult verifyAttentionContract(Operation *op, Value q, Value k,
   if (qt.getDimSize(0) != *integerAttrValue(op, "batch") ||
       qt.getDimSize(1) != *qh || qt.getDimSize(2) != *ql ||
       qt.getDimSize(3) != *hd ||
+      kt.getDimSize(0) != *integerAttrValue(op, "batch") ||
+      kt.getDimSize(1) != *kh ||
       kt.getDimSize(2) != (runtimeOwnedDecode ? 1 : *cl) ||
+      kt.getDimSize(3) != *hd ||
       vt.getShape() != kt.getShape() || ot.getShape() != qt.getShape())
     return op->emitOpError("tensor types do not match declared attention dimensions");
   if (lowered) {

@@ -1,0 +1,67 @@
+{
+  "schema": "execution_plan",
+  "schema_version": "2.0.0",
+  "plan_id": "slice20-m64_n32_k32_tile8x8x8_uk2",
+  "provenance": {
+    "truth_boundary": "exact generated static-shape object"
+  },
+  "model_identity": {
+    "model_id": "m64_n32_k32_tile8x8x8"
+  },
+  "global_decisions": {
+    "quantization": {},
+    "memory": {},
+    "serving": {}
+  },
+  "function_plans": [
+    {
+      "function_name": "matmul_bias_relu_tiled_64x32x32",
+      "serving_phase": "other",
+      "backend": {
+        "selected_backend": "aarch64_native_object"
+      },
+      "per_op_decisions": [
+        {
+          "op_name": "fused_matmul_bias_relu",
+          "op_type": "hir.fused_matmul_bias_relu",
+          "native_execution": {
+            "candidate_id": "m64_n32_k32_tile8x8x8_uk2",
+            "operator": "hir.fused_matmul_bias_relu",
+            "kernel_family": "aarch64_generated_fused_matmul_bias_relu",
+            "dtype": "f32",
+            "shape": {
+              "m": 64,
+              "n": 32,
+              "k": 32
+            },
+            "target": {
+              "triple": "aarch64-linux-gnu",
+              "cpu": "cortex-a76",
+              "features": [],
+              "target_profile_id": "raspberry-pi5-cortex-a76-cpu"
+            },
+            "lowering": {
+              "pipeline_id": "aarch64_tiled_scheduled_v1",
+              "tile_m": 8,
+              "tile_n": 8,
+              "tile_k": 8,
+              "schedule_unroll_k": 2,
+              "vector_width_bits": 128,
+              "loop_order_id": "tiled_mnk_row_major_v1"
+            },
+            "microkernel_id": "hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+            "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_64x32x32",
+            "abi_version": "mlir_ciface_memref_f32_v1",
+            "object_ref": "../objects/64x32x32_tm8_tn8_tk8_uk2_greedy_misched-default.o",
+            "object_sha256": "4966e12bd48dc3e075c89ac260795a7d8bae28f91f3bb697b4dec990e62b49a8",
+            "backend_evidence_ref": "artifacts/backend_codegen/aarch64_schedule_profitability_slice20/candidate_artifacts/m64_n32_k32_tile8x8x8_uk2/backend_evidence.json",
+            "selection_mode": "measurement_candidate",
+            "selection_trace_ref": "measurement_protocol.json",
+            "runtime_no_redecision": true,
+            "benchmark_protocol_version": "slice20_aarch64_profitability_v1"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "schema": "execution_plan",
+  "schema_version": "2.0.0",
+  "plan_id": "aarch64-native-32x32x32-tile8x8x8_uk1",
+  "provenance": {
+    "compiler_tool": "aarch64_backend_evidence.py",
+    "model_spec_ref": "mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_32x32x32.mlir",
+    "capability_bundle": {
+      "hardware_profile_ref": "hardware/raspberry_pi5_cortex_a76.json",
+      "backend_profile_refs": [],
+      "kernel_profile_refs": []
+    },
+    "truth_boundary": "exact generated operator object; fixed shape and target only"
+  },
+  "model_identity": {
+    "model_id": "fused_matmul_bias_relu_32x32x32"
+  },
+  "global_decisions": {
+    "quantization": {},
+    "memory": {},
+    "serving": {}
+  },
+  "function_plans": [
+    {
+      "function_name": "matmul_bias_relu_tiled_32x32x32",
+      "serving_phase": "other",
+      "backend": {
+        "selected_backend": "aarch64_native_object"
+      },
+      "per_op_decisions": [
+        {
+          "op_name": "fused_matmul_bias_relu",
+          "op_type": "hir.fused_matmul_bias_relu",
+          "native_execution": {
+            "decision_kind": "aarch64_native_exact_candidate_selection",
+            "candidate_id": "tile8x8x8_uk1",
+            "operator": "hir.fused_matmul_bias_relu",
+            "kernel_family": "aarch64_generated_fused_matmul_bias_relu",
+            "dtype": "f32",
+            "shape": {
+              "m": 32,
+              "n": 32,
+              "k": 32
+            },
+            "target": {
+              "triple": "aarch64-linux-gnu",
+              "cpu": "cortex-a76",
+              "features": [],
+              "target_profile_id": "raspberry-pi5-cortex-a76-cpu"
+            },
+            "lowering": {
+              "pipeline_id": "aarch64_tiled_scheduled_v1",
+              "tile_m": 8,
+              "tile_n": 8,
+              "tile_k": 8,
+              "schedule_unroll_k": 1,
+              "vector_width_bits": 128,
+              "loop_order_id": "tiled_mnk_row_major_v1"
+            },
+            "microkernel_id": "hir_fused_matmul_bias_relu_tiled_scheduled_v1",
+            "entry_point": "_mlir_ciface_matmul_bias_relu_tiled_32x32x32",
+            "abi_version": "mlir_ciface_memref_f32_v1",
+            "object_ref": "artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/32x32x32_tm8_tn8_tk8_uk1_greedy_misched-default.o",
+            "object_sha256": "dbbeb28bebaf25c6bbd43443d55528c650225cae19d323f15505612a69e9e147",
+            "backend_evidence_ref": "artifacts/backend_codegen/aarch64_native_exact_slice18/tile8x8x8_uk1/backend_evidence.json",
+            "correctness_evidence_ref": null,
+            "measurement_evidence_ref": null,
+            "selection_mode": "measurement_candidate",
+            "selection_trace_ref": "measurement_protocol.json",
+            "runtime_no_redecision": true
+          }
+        }
+      ]
+    }
+  ]
+}

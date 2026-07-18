@@ -114,6 +114,8 @@ def main():
     ap.add_argument("--tile-m", type=int, required=True)
     ap.add_argument("--tile-n", type=int, required=True)
     ap.add_argument("--tile-k", type=int, required=True)
+    ap.add_argument("--schedule-unroll-k", type=int, required=True,
+                    help="Exact scheduled candidate identity; retained in every MIR/assembly/object filename.")
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--regalloc", default="greedy", choices=["greedy", "fast"],
                      help="Register allocator to use (prior MIR-analysis slice's greedy-vs-fast experiment). Default: greedy (LLVM's normal optimized default for this target).")
@@ -126,7 +128,8 @@ def main():
         return 1
 
     os.makedirs(args.output_dir, exist_ok=True)
-    prefix = f"{args.shape}_tm{args.tile_m}_tn{args.tile_n}_tk{args.tile_k}_{args.regalloc}_misched-{args.misched}"
+    prefix = (f"{args.shape}_tm{args.tile_m}_tn{args.tile_n}_tk{args.tile_k}"
+              f"_uk{args.schedule_unroll_k}_{args.regalloc}_misched-{args.misched}")
 
     regalloc_flag = [] if args.regalloc == "greedy" else [f"-regalloc={args.regalloc}"]
     misched_flag = [] if args.misched == "default" else ["-enable-misched=false"]

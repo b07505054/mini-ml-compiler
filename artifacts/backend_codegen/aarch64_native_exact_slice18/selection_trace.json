@@ -1,0 +1,27 @@
+{
+  "selection_mode": "deterministic_static_lexicographic_estimate",
+  "selected_candidate_id": "tile8x8x8_uk1",
+  "selector_trace": [
+    {
+      "candidate_id": "tile8x8x8_uk1",
+      "accepted": true,
+      "reasons": []
+    },
+    {
+      "candidate_id": "tile8x8x8_uk2",
+      "accepted": true,
+      "reasons": []
+    },
+    {
+      "candidate_id": "tile8x8x8_uk4",
+      "accepted": true,
+      "reasons": []
+    }
+  ],
+  "ranked_candidate_ids": [
+    "tile8x8x8_uk1",
+    "tile8x8x8_uk2",
+    "tile8x8x8_uk4"
+  ],
+  "truth_boundary": "static_backend_evidence_estimate_not_performance_calibrated"
+}

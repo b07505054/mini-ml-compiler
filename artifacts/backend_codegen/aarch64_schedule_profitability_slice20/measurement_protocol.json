@@ -1,0 +1,46 @@
+{
+  "benchmark_protocol_version": "slice20_aarch64_profitability_v1",
+  "warmup_samples": 30,
+  "measured_samples_per_session": 500,
+  "independent_sessions": 3,
+  "cpu_affinity": 3,
+  "governor": "performance",
+  "timing_mode": "batched",
+  "session_orders": [
+    [
+      1,
+      2,
+      4
+    ],
+    [
+      2,
+      4,
+      1
+    ],
+    [
+      4,
+      1,
+      2
+    ]
+  ],
+  "calls_per_sample_by_domain": {
+    "m16_n16_k32_tile8x8x8": 200,
+    "m32_n32_k32_tile8x8x8": 61,
+    "m64_n64_k64_tile8x8x8": 7,
+    "m32_n32_k128_tile8x8x8": 15,
+    "m32_n32_k64_tile8x8x8": 30,
+    "m64_n32_k32_tile8x8x8": 30,
+    "m32_n64_k32_tile8x8x8": 30,
+    "m8_n64_k64_tile8x8x8": 61,
+    "m8_n8_k32_tile8x8x8": 200,
+    "m16_n64_k32_tile8x8x8": 61
+  },
+  "equivalence_threshold_percent": 3.0,
+  "feature_thresholds": {
+    "small_problem_flops_lte": 65536,
+    "high_K_gte": 128,
+    "low_K_lte": 16,
+    "M_limited_lte": 8,
+    "N_limited_lte": 8
+  }
+}
