@@ -129,4 +129,4 @@ reselection and zero temporary full-history materialization.
 - AArch64 backend-codegen schedule summary: `artifacts/backend_codegen/aarch64_schedule_final/summary.md`.
 - RMSNorm exact GPU selection bridge: `tools/build_profile_cost_table.py`, `tools/mlir_fusion_to_runtime_json.py`, and `tests/test_rmsnorm_exact_gpu_selection.py`.
 - vLLM `max_num_seqs` selector: `tools/select_vllm_max_num_seqs.py`; measured runtime evidence lives in sibling runtime `artifacts/vllm_max_num_seqs_evaluation/`.
-- Canonical docs: `ARCHITECTURE_CONSTITUTION.md`, `CURRENT_STATE.md`, `PUBLICATION_STATUS.md`, `PROJECT_MATURITY.md`, `WHY_THIS_PROJECT.md`.
+- Canonical docs: `docs/project/ARCHITECTURE_CONSTITUTION.md`, `docs/project/CURRENT_STATE.md`, `docs/project/PUBLICATION_STATUS.md`, `docs/project/PROJECT_MATURITY.md`, `docs/project/WHY_THIS_PROJECT.md`.

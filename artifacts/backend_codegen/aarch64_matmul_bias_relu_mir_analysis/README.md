@@ -302,8 +302,9 @@ so the loop nest canonicalizes away entirely, leaving one straight-line
    where a real loop repeats the spill traffic every iteration and the
    cost becomes clearly visible (+48.96%).
 
-**Correction applied**: the artifact and documentation (`ARCHITECTURE_STATUS.md`,
-`KNOWN_GAPS.md`, and this directory) now state the true figure (1 spill, 1
+**Correction applied**: the artifact and documentation
+(`docs/project/ARCHITECTURE_STATUS.md`, `docs/project/KNOWN_GAPS.md`, and this
+directory) now state the true figure (1 spill, 1
 reload) rather than repeating the prior assembly-derived "3 spills, 0
 reloads" claim. See Selection-Policy Impact below for whether this changes
 the prior tile selection (it does not).

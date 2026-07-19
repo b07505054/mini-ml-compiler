@@ -5,15 +5,15 @@ Last verified: 2026-07-14.
 ## Current Canonical
 
 - `README.md`
-- `ARCHITECTURE_CONSTITUTION.md`
-- `CURRENT_STATE.md`
-- `ARCHITECTURE_STATUS.md`
-- `KNOWN_GAPS.md`
-- `ARCHITECTURE_PATHS.md`
-- `PROJECT_STATUS_2026.md`
-- `PUBLICATION_STATUS.md`
-- `PROJECT_MATURITY.md`
-- `WHY_THIS_PROJECT.md`
+- `docs/project/ARCHITECTURE_CONSTITUTION.md`
+- `docs/project/CURRENT_STATE.md`
+- `docs/project/ARCHITECTURE_STATUS.md`
+- `docs/project/KNOWN_GAPS.md`
+- `docs/project/ARCHITECTURE_PATHS.md`
+- `docs/project/PROJECT_STATUS_2026.md`
+- `docs/project/PUBLICATION_STATUS.md`
+- `docs/project/PROJECT_MATURITY.md`
+- `docs/project/WHY_THIS_PROJECT.md`
 - `publication_claims.json`
 - `docs/QUANTIZATION_CODESIGN.md`
 - `docs/EXECUTION_PLAN_SCHEMA.md`
@@ -47,6 +47,10 @@ Last verified: 2026-07-14.
 ## Historical / Superseded
 
 Older docs under `docs/`, `trace/`, `reports/`, `integration_bundle/`, and phase reports preserve their original phase evidence unless explicitly listed as canonical above. Do not rewrite raw evidence or historical measurements to match newer interpretation; add boundary notes instead.
+
+Root-level slice diaries, finalization audits, changelogs, and stage-by-stage
+writeups are intentionally not canonical. Keep public entry points
+achievement-oriented and place detailed result reports in `DOC/result/`.
 
 ## Pre-Edit Contradiction Table
 

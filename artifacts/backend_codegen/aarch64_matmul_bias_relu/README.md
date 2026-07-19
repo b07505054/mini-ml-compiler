@@ -29,8 +29,9 @@ Everything through "LLVM dialect" already existed and was FileCheck-verified
 before this slice (`mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir`).
 This slice's new contribution is closing the remaining path: LLVM dialect ->
 textual LLVM IR -> AArch64 object -> linked executable -> real device
-execution -> measured evidence. See `ARCHITECTURE_STATUS.md` and
-`KNOWN_GAPS.md` for how this is now described at the repository level.
+execution -> measured evidence. See `docs/project/ARCHITECTURE_STATUS.md` and
+`docs/project/KNOWN_GAPS.md` for how this is now described at the repository
+level.
 
 ## Files
 

@@ -1,6 +1,7 @@
 DOCUMENT STATUS: HISTORICAL
 
-Superseded by: CURRENT_STATE.md and PROJECT_STATUS_2026.md.
+Superseded by: `docs/project/CURRENT_STATE.md` and
+`docs/project/PROJECT_STATUS_2026.md`.
 
 Truth boundary: This report reflects the P1A Raspberry Pi target-profile phase and older compiler/runtime commit heads. It remains evidence/history and must not be read as the current repository state.
 
