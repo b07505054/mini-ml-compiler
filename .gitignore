@@ -54,15 +54,6 @@ trace/*
 !trace/async_runtime_trace.json
 !trace/parallel_runtime_trace.json
 !trace/runtime_trace.json
-!trace/cv_lowered_graph.json
-!trace/cv_execution_plan_v2.json
-!trace/cv_static_schedule.json
-!trace/cv_memory_plan.json
-!trace/cv_runtime_timeline.json
-!trace/cv_subgraph_partition.json
-!trace/cv_cost_report.json
-!trace/cv_cost_based_planner.json
-!trace/cv_runtime_replan.json
 !trace/kv_cache_trace.json
 !trace/paged_kv_runtime.json
 !trace/serving_trace.json
