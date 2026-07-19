@@ -313,4 +313,84 @@ estimateDistributedCost(const DistributedCandidate &candidate,
   return est;
 }
 
+// ---------------------------------------------------------------------------
+// D6: distributed_profitability_contract_v1
+// ---------------------------------------------------------------------------
+
+namespace {
+constexpr double kKvCacheDtypeBytes = 2.0;  // fp16, matches tp_cost_model.BYTES_PER_PARAM_FP16
+constexpr double kBytesPerMb = 1024.0 * 1024.0;
+}  // namespace
+
+double distributedKvCacheBytesPerTokenPerGpu(const DistributedModelProfile &model,
+                                             int64_t tensor_parallel_size) {
+  if (tensor_parallel_size <= 0 || model.num_attention_heads <= 0)
+    return 0.0;
+  const double headDim =
+      static_cast<double>(model.hidden_size) / static_cast<double>(model.num_attention_heads);
+  const double kvHeadsPerGpu =
+      static_cast<double>(model.num_kv_heads) / static_cast<double>(tensor_parallel_size);
+  // 2 (K & V) * num_layers * kv_heads_per_gpu * head_dim * dtype_bytes.
+  return 2.0 * static_cast<double>(model.num_layers) * kvHeadsPerGpu * headDim * kKvCacheDtypeBytes;
+}
+
+double distributedPerGpuWeightMb(const DistributedModelProfile &model,
+                                 int64_t tensor_parallel_size) {
+  if (tensor_parallel_size <= 0)
+    return model.weight_footprint_mb;
+  return model.weight_footprint_mb / static_cast<double>(tensor_parallel_size);
+}
+
+DistributedProfitabilityEstimate
+estimateDistributedProfitability(const DistributedCandidate &candidate,
+                                 const DistributedModelProfile &model,
+                                 const DistributedWorkloadProfile &workload,
+                                 const DistributedProfitabilityCalibration &calibration) {
+  DistributedProfitabilityEstimate est;
+  est.truth_boundary =
+      "linear_regression_calibrated_from_real_d5_measured_throughput_on_2x_"
+      "rtx4090_pcie_no_nvlink_not_a_full_systems_simulator_not_valid_off_"
+      "calibration_hardware";
+
+  if (!model.available || !calibration.valid) {
+    est.computed = false;
+    est.infeasibility_reason = !model.available
+        ? "model_profile_unavailable"
+        : "calibration_unavailable_or_invalid_version";
+    return est;
+  }
+  est.computed = true;
+
+  const int64_t tp = candidate.tensor_parallel_size > 0 ? candidate.tensor_parallel_size : 1;
+  const double kvCacheBytesPerTokenPerGpu = distributedKvCacheBytesPerTokenPerGpu(model, tp);
+  const double perGpuWeightMb = distributedPerGpuWeightMb(model, tp);
+
+  // Hard memory-feasibility gate: worst-case max_num_seqs x max_model_len
+  // KV reservation plus the per-GPU weight shard must fit within the
+  // declared per-GPU memory budget. Matches tp_cost_model.is_feasible
+  // exactly. This is independent of, and takes priority over, the
+  // throughput objective below.
+  est.memory_budget_mb = calibration.gpu_memory_mb_per_device * calibration.gpu_memory_utilization;
+  const double worstCaseKvMb =
+      (static_cast<double>(workload.max_num_seqs) * static_cast<double>(workload.max_model_len) *
+       kvCacheBytesPerTokenPerGpu) / kBytesPerMb;
+  est.required_memory_mb = perGpuWeightMb + worstCaseKvMb;
+  est.feasible = est.required_memory_mb <= est.memory_budget_mb;
+  if (!est.feasible) {
+    est.infeasibility_reason = "required_memory_mb_exceeds_budget";
+    return est;
+  }
+
+  const auto &c = (tp == 1) ? calibration.tp1_coefficients : calibration.tp2_coefficients;
+  const double kvCacheKbPerTokenPerGpu = kvCacheBytesPerTokenPerGpu / 1024.0;
+  est.predicted_throughput_tokens_per_s =
+      c.intercept + c.per_gpu_weight_mb * perGpuWeightMb +
+      c.kv_cache_kb_per_token_per_gpu * kvCacheKbPerTokenPerGpu +
+      c.gpu_count * static_cast<double>(tp) +
+      c.input_length * static_cast<double>(workload.input_tokens) +
+      c.output_length * static_cast<double>(workload.output_tokens) +
+      c.concurrency * static_cast<double>(workload.concurrency);
+  return est;
+}
+
 } // namespace mlir::hir

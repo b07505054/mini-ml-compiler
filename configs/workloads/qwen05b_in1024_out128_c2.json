@@ -1,0 +1,8 @@
+{
+  "inputTokens": 1024,
+  "outputTokens": 128,
+  "concurrency": 2,
+  "maxModelLen": 2048,
+  "maxNumSeqs": 4,
+  "split": "held_out"
+}

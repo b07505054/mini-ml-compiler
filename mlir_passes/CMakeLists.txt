@@ -380,18 +380,65 @@ add_test(NAME DistributedStrategyPlanningTest
          COMMAND DistributedStrategyPlanningTest)
 
 # ---------------------------------------------------------------------------
+# CTest: DistributedProfitabilityTest (D6 distributed_profitability_
+# contract_v1 unit test). Pure C++ structs -- no MLIR IR.
+# ---------------------------------------------------------------------------
+add_executable(DistributedProfitabilityTest
+  lib/serving/DistributedPlanning.cpp
+  test/serving/DistributedProfitabilityTest.cpp
+)
+llvm_update_compile_flags(DistributedProfitabilityTest)
+target_include_directories(DistributedProfitabilityTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(DistributedProfitabilityTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_link_libraries(DistributedProfitabilityTest
+  PRIVATE
+    MLIRIR
+    MLIRSupport
+    LLVMSupport
+)
+add_test(NAME DistributedProfitabilityTest
+         COMMAND DistributedProfitabilityTest)
+
+# ---------------------------------------------------------------------------
 # CTest: DistributedStrategyPlanningPipelineTest (D2 end-to-end integration
 # test against the real per-layer Qwen ONNX graph and the real
 # compile-for-target production pipeline).
 # ---------------------------------------------------------------------------
 set(_D2_PIPELINE_DIR "${CMAKE_CURRENT_BINARY_DIR}/distributed_strategy_planning_pipeline")
+# D6 rationale for the FACTS/PROFILE_TP2/MODEL_PROFILE/WORKLOAD_PROFILE
+# changes below: this test used to prove "opt_in=true legally forces TP2"
+# against the 0.5B model on the (single, laptop-GPU) GTX1650 opt-in
+# profile. D6 replaces that mechanism with a real profitability
+# comparison, and the real, measured D5 result is that the 0.5B model
+# never profitably selects TP2 in the calibrated workload range (TP1
+# wins 35/36 measured cells -- see
+# heterogeneous-inference-runtime/results/runtime_paths/
+# distributed_d5_compiler_tp_policy/). Forcing a TP2 assertion for 0.5B
+# here would require either an artificial workload/calibration input or
+# reverting to the old opt-in-forces-TP2 mechanism -- both dishonest.
+# This test now uses the 7B model against the real, D5-calibrated RTX4090
+# profile, where TP2 genuinely and profitably wins (12/12 measured D5
+# cells) -- the same real crossover the D6 held-out reproduction found.
+# The TP1 (non-opt-in) backward-compatibility assertion is unaffected by
+# this change: opt_in=false still means no "distributed" key regardless
+# of model or calibration.
 add_test(NAME DistributedStrategyPlanningPipelineTest
   COMMAND ${CMAKE_COMMAND}
     -DONNX_TOOL=$<TARGET_FILE:qwen-onnx-to-serving-mlir>
     -DCFT_TOOL=$<TARGET_FILE:compile-for-target>
-    -DFACTS=${CMAKE_CURRENT_SOURCE_DIR}/../configs/models/qwen_0_5b_onnx_graph_facts.json
+    -DFACTS=${CMAKE_CURRENT_SOURCE_DIR}/../configs/models/qwen_7b_onnx_graph_facts.json
     -DPROFILE_TP1=${CMAKE_CURRENT_SOURCE_DIR}/../configs/target_profiles/nvidia_gtx1650_maxq.json
-    -DPROFILE_TP2=${CMAKE_CURRENT_SOURCE_DIR}/../configs/target_profiles/nvidia_gtx1650_maxq_d2_distributed_opt_in.json
+    -DPROFILE_TP2=${CMAKE_CURRENT_SOURCE_DIR}/../configs/target_profiles/nvidia_rtx4090_d6_distributed_profitability.json
+    -DMODEL_PROFILE=${CMAKE_CURRENT_SOURCE_DIR}/../configs/models/qwen_7b_model_profile.json
+    -DWORKLOAD_PROFILE=${CMAKE_CURRENT_SOURCE_DIR}/../configs/workloads/qwen7b_in32_out32_c1.json
     -DRAW_OUT=${_D2_PIPELINE_DIR}/raw.mlir
     -DJSON_TP1_OUT=${_D2_PIPELINE_DIR}/real_qwen_tp1_execution_plan.json
     -DJSON_TP2_OUT=${_D2_PIPELINE_DIR}/real_qwen_tp2_execution_plan.json

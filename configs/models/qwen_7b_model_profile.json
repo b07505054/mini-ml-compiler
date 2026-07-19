@@ -1,0 +1,6 @@
+{
+  "modelId": "qwen2.5-7b",
+  "realHfCheckpoint": "Qwen/Qwen2.5-7B-Instruct",
+  "weightFootprintMb": 15048.673803329468,
+  "truthBoundary": "real_hf_hub_api_blob_size_query_2026_07_19_plus_kv_cache_headroom_matches_d5_tp_cost_model_exactly"
+}

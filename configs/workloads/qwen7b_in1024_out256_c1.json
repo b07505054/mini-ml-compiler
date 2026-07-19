@@ -1,0 +1,8 @@
+{
+  "inputTokens": 1024,
+  "outputTokens": 256,
+  "concurrency": 1,
+  "maxModelLen": 2048,
+  "maxNumSeqs": 4,
+  "split": "calibration"
+}

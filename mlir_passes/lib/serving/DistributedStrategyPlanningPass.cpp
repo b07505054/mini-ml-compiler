@@ -1,4 +1,4 @@
-// DistributedStrategyPlanningPass — D2: generate, evaluate, and select a
+// DistributedStrategyPlanningPass — D2/D6: generate, evaluate, and select a
 // TP1/TP2 distributed strategy candidate for one real Qwen operator
 // instance, as part of the normal compile-for-target pipeline.
 //
@@ -7,7 +7,23 @@
 // decision, not a per-function one. See include/FusionPasses.td for the
 // full design description and mlir_passes/include/serving/
 // DistributedPlanning.h for the reused D1 candidate/legality/build
-// functions and the D2 Qwen-aware legality/cost extensions.
+// functions, the D2 Qwen-aware legality/cost extensions, and the D6
+// distributed_profitability_contract_v1 whole-model profitability
+// estimator.
+//
+// D6 selection mechanism (replaces D2's "legal && distributed.opt_in =>
+// TP2"): distributed.opt_in now only widens the *candidate space* under
+// consideration -- when unset, TP2 is excluded from consideration
+// entirely and this is recorded explicitly as
+// "tp2_excluded_opt_in_not_set" (never silently, never conflated with
+// TP2 being illegal). When set, both legal candidates are evaluated with
+// estimateDistributedProfitability (calibrated, real-D5-measured,
+// whole-model throughput prediction) and the higher-predicted-throughput,
+// memory-feasible candidate wins; a deterministic tie-break prefers the
+// lower TP degree. Missing or version-mismatched calibration is a
+// conservative fallback to TP1, never a silent TP2 selection and never a
+// pipeline crash. See docs/DISTRIBUTED_D6_COMPILER_OWNED_TP_SELECTION.md
+// for the full contract.
 
 #include "FusionPasses.h"
 #include "serving/DistributedPlanning.h"
@@ -19,6 +35,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -50,11 +67,129 @@ static ArrayAttr int64ArrayAttr(MLIRContext *ctx,
   return ArrayAttr::get(ctx, attrs);
 }
 
+// ---------------------------------------------------------------------------
+// D6: model/workload/calibration module-attr readers
+//
+// These read the real per-model, per-workload, and per-target-profile
+// facts DistributedStrategyPlanningPass needs for
+// estimateDistributedProfitability. All three are additive: absent in any
+// pre-D6 module (no --model-profile/--workload-profile passed, no
+// distributedProfitability block in the target profile), and their
+// absence degrades to the documented conservative fallback (see
+// runOnOperation), never a crash and never a silent TP2 selection.
+// ---------------------------------------------------------------------------
+
+static DistributedModelProfile readModelProfile(ModuleOp module) {
+  DistributedModelProfile mp;
+  auto layers = module->getAttrOfType<IntegerAttr>("llm.num_layers");
+  auto hidden = module->getAttrOfType<IntegerAttr>("llm.hidden_size");
+  auto heads = module->getAttrOfType<IntegerAttr>("llm.num_attention_heads");
+  auto kvHeads = module->getAttrOfType<IntegerAttr>("llm.num_key_value_heads");
+  auto weightMb = module->getAttrOfType<FloatAttr>("distributed.model.weight_footprint_mb");
+  if (layers) mp.num_layers = layers.getInt();
+  if (hidden) mp.hidden_size = hidden.getInt();
+  if (heads) mp.num_attention_heads = heads.getInt();
+  if (kvHeads) mp.num_kv_heads = kvHeads.getInt();
+  if (weightMb) mp.weight_footprint_mb = weightMb.getValueAsDouble();
+  mp.available = layers && hidden && heads && kvHeads && weightMb;
+  return mp;
+}
+
+static DistributedWorkloadProfile readWorkloadProfile(ModuleOp module) {
+  DistributedWorkloadProfile wp;
+  auto inTok = module->getAttrOfType<IntegerAttr>("distributed.workload.input_tokens");
+  auto outTok = module->getAttrOfType<IntegerAttr>("distributed.workload.output_tokens");
+  auto conc = module->getAttrOfType<IntegerAttr>("distributed.workload.concurrency");
+  auto maxLen = module->getAttrOfType<IntegerAttr>("distributed.workload.max_model_len");
+  auto maxSeqs = module->getAttrOfType<IntegerAttr>("distributed.workload.max_num_seqs");
+  if (inTok) wp.input_tokens = inTok.getInt();
+  if (outTok) wp.output_tokens = outTok.getInt();
+  if (conc) wp.concurrency = conc.getInt();
+  if (maxLen) wp.max_model_len = maxLen.getInt();
+  if (maxSeqs) wp.max_num_seqs = maxSeqs.getInt();
+  wp.declared = inTok && outTok && conc;
+  return wp;
+}
+
+static DistributedThroughputCoefficients readCoefficients(DictionaryAttr d) {
+  DistributedThroughputCoefficients c;
+  if (!d) return c;
+  auto get = [&](StringRef key) -> double {
+    if (auto a = d.getAs<FloatAttr>(key)) return a.getValueAsDouble();
+    return 0.0;
+  };
+  c.intercept = get("intercept");
+  c.per_gpu_weight_mb = get("per_gpu_weight_mb");
+  c.kv_cache_kb_per_token_per_gpu = get("kv_cache_kb_per_token_per_gpu");
+  c.gpu_count = get("gpu_count");
+  c.input_length = get("input_length");
+  c.output_length = get("output_length");
+  c.concurrency = get("concurrency");
+  return c;
+}
+
+static DistributedProfitabilityCalibration readCalibration(ModuleOp module) {
+  DistributedProfitabilityCalibration cal;
+  auto version = module->getAttrOfType<StringAttr>("distributed.profitability.contract_version");
+  auto gpuMemMb = module->getAttrOfType<FloatAttr>("distributed.profitability.gpu_memory_mb_per_device");
+  auto gpuUtil = module->getAttrOfType<FloatAttr>("distributed.profitability.gpu_memory_utilization");
+  auto tp1Coef = module->getAttrOfType<DictionaryAttr>("distributed.profitability.tp1_coefficients");
+  auto tp2Coef = module->getAttrOfType<DictionaryAttr>("distributed.profitability.tp2_coefficients");
+
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_dataset_hash"))
+    cal.calibration_dataset_hash = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_hardware_identity"))
+    cal.calibration_hardware_identity = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_generated_at"))
+    cal.calibration_generated_at = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_compiler_commit"))
+    cal.calibration_compiler_commit = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_runtime_commit"))
+    cal.calibration_runtime_commit = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.tie_break_rule"))
+    cal.tie_break_rule = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.truth_boundary"))
+    cal.truth_boundary = v.getValue().str();
+
+  if (version) cal.contract_version = version.getValue().str();
+  if (gpuMemMb) cal.gpu_memory_mb_per_device = gpuMemMb.getValueAsDouble();
+  if (gpuUtil) cal.gpu_memory_utilization = gpuUtil.getValueAsDouble();
+  if (tp1Coef) cal.tp1_coefficients = readCoefficients(tp1Coef);
+  if (tp2Coef) cal.tp2_coefficients = readCoefficients(tp2Coef);
+
+  // Fail-closed: valid only if the contract version matches exactly and
+  // every required numeric block was present. A missing block or a
+  // version mismatch (e.g. a stale v0 profile) must never be silently
+  // treated as valid calibration.
+  cal.valid = version && gpuMemMb && gpuUtil && tp1Coef && tp2Coef &&
+      cal.contract_version == kDistributedProfitabilityContractVersion;
+  return cal;
+}
+
+static DictionaryAttr
+encodeProfitabilityEvidence(MLIRContext *ctx, const DistributedProfitabilityEstimate &p) {
+  SmallVector<NamedAttribute> fields;
+  auto add = [&](StringRef key, Attribute value) {
+    fields.push_back({StringAttr::get(ctx, key), value});
+  };
+  add("computed", BoolAttr::get(ctx, p.computed));
+  add("feasible", BoolAttr::get(ctx, p.feasible));
+  add("predicted_throughput_tokens_per_s",
+      FloatAttr::get(Float64Type::get(ctx), p.predicted_throughput_tokens_per_s));
+  add("required_memory_mb", FloatAttr::get(Float64Type::get(ctx), p.required_memory_mb));
+  add("memory_budget_mb", FloatAttr::get(Float64Type::get(ctx), p.memory_budget_mb));
+  add("infeasibility_reason", StringAttr::get(ctx, p.infeasibility_reason));
+  add("truth_boundary", StringAttr::get(ctx, p.truth_boundary));
+  return DictionaryAttr::get(ctx, fields);
+}
+
 static DictionaryAttr
 encodeCandidateEvidence(MLIRContext *ctx, const DistributedCandidate &c,
                         const QwenDistributedLegalityResult &legality,
                         const DistributedCostEstimate &cost,
-                        const QwenOperatorContext &opCtx) {
+                        const QwenOperatorContext &opCtx,
+                        const DistributedProfitabilityEstimate &profitability,
+                        bool excludedFromConsideration) {
   SmallVector<NamedAttribute> fields;
   auto add = [&](StringRef key, Attribute value) {
     fields.push_back({StringAttr::get(ctx, key), value});
@@ -87,6 +222,8 @@ encodeCandidateEvidence(MLIRContext *ctx, const DistributedCandidate &c,
   add("rejection_reasons", stringArrayAttr(ctx, legality.rejection_reasons));
   add("selection_score", IntegerAttr::get(IntegerType::get(ctx, 64), cost.total_score));
   add("truth_boundary", StringAttr::get(ctx, cost.truth_boundary));
+  add("excluded_from_consideration", BoolAttr::get(ctx, excludedFromConsideration));
+  add("profitability", encodeProfitabilityEvidence(ctx, profitability));
 
   SmallVector<Attribute> ruleAttrs;
   for (const auto &r : legality.rule_results) {
@@ -223,11 +360,17 @@ struct DistributedStrategyPlanningPass
     }
 
     auto candidates = generateDistributedCandidates();
+    const DistributedModelProfile modelProfile = readModelProfile(module);
+    const DistributedWorkloadProfile workloadProfile = readWorkloadProfile(module);
+    const DistributedProfitabilityCalibration calibration = readCalibration(module);
+    const bool optIn = opCtx.distributed_capability_available;
+
     SmallVector<Attribute> candidateEvidence;
     const DistributedCandidate *tp1 = nullptr;
     const DistributedCandidate *tp2 = nullptr;
     QwenDistributedLegalityResult tp1Legality, tp2Legality;
     DistributedCostEstimate tp1Cost, tp2Cost;
+    DistributedProfitabilityEstimate tp1Profit, tp2Profit;
 
     for (const auto &c : candidates) {
       QwenDistributedLegalityResult legality;
@@ -243,10 +386,28 @@ struct DistributedStrategyPlanningPass
         legality = checkQwenCandidateLegality(c, opCtx);
       }
       DistributedCostEstimate cost = estimateDistributedCost(c, opCtx);
-      candidateEvidence.push_back(encodeCandidateEvidence(ctx, c, legality, cost, opCtx));
+      // D6: only candidates the compiler is actually considering (opt_in
+      // widens the space to include TP2; a legality failure never widens
+      // it) get a real profitability estimate computed -- an excluded or
+      // illegal TP2 still gets legality/cost evidence (transparency), but
+      // never a throughput prediction that could be mistaken for having
+      // influenced the decision.
+      const bool consideredForProfitability =
+          c.world_size <= 1 || (optIn && legality.legal);
+      DistributedProfitabilityEstimate profit;
+      if (consideredForProfitability) {
+        profit = estimateDistributedProfitability(c, modelProfile, workloadProfile, calibration);
+      } else {
+        profit.computed = false;
+        profit.infeasibility_reason =
+            !optIn ? "excluded_opt_in_not_set" : "excluded_illegal_candidate";
+      }
+      const bool excluded = c.world_size > 1 && !optIn;
+      candidateEvidence.push_back(
+          encodeCandidateEvidence(ctx, c, legality, cost, opCtx, profit, excluded));
 
-      if (c.candidate_id == "tp1") { tp1 = &c; tp1Legality = legality; tp1Cost = cost; }
-      if (c.candidate_id == "tp2") { tp2 = &c; tp2Legality = legality; tp2Cost = cost; }
+      if (c.candidate_id == "tp1") { tp1 = &c; tp1Legality = legality; tp1Cost = cost; tp1Profit = profit; }
+      if (c.candidate_id == "tp2") { tp2 = &c; tp2Legality = legality; tp2Cost = cost; tp2Profit = profit; }
     }
     module->setAttr("distributed.candidates", ArrayAttr::get(ctx, candidateEvidence));
 
@@ -257,23 +418,66 @@ struct DistributedStrategyPlanningPass
       return;
     }
 
+    // ------------------------------------------------------------------
+    // D6 profitability_contract_v1 selection.
+    //
+    // distributed.opt_in widens the *candidate space* (whether TP2 is
+    // considered at all); it never itself picks the winner. Once TP2 is
+    // both legal and under consideration, the candidate with the higher
+    // calibrated predicted throughput wins, subject to a hard memory-
+    // feasibility gate that takes priority over the throughput objective.
+    // ------------------------------------------------------------------
+    constexpr double kTieBreakEpsilonTokensPerSec = 1e-6;
     const DistributedCandidate *selected = tp1;
     std::string selectionReason;
-    const std::string kPolicyId = "d2_explicit_opt_in_v1";
+    const std::string kPolicyId = "d6_profitability_selector_v1";
 
-    if (tp2Legality.legal && opCtx.distributed_capability_available) {
-      selected = tp2;
-      selectionReason = "legal_tp2_explicit_opt_in_profile";
-    } else if (tp2Legality.legal && !opCtx.distributed_capability_available) {
+    if (!optIn) {
       selected = tp1;
-      selectionReason = "tp2_legal_but_opt_in_not_set";
-    } else {
+      selectionReason = tp2Legality.legal ? "tp2_excluded_opt_in_not_set"
+                                          : "tp2_illegal_candidate_rejected";
+    } else if (!tp2Legality.legal) {
       selected = tp1;
       const bool onlyCapabilityMissing =
           tp2Legality.rejection_reasons.size() == 1 &&
           tp2Legality.rejection_reasons[0].find("opt in") != std::string::npos;
       selectionReason = onlyCapabilityMissing ? "no_distributed_capability"
                                               : "tp2_illegal_candidate_rejected";
+    } else if (!tp1Profit.computed || !tp2Profit.computed) {
+      // Calibration or model/workload inputs unavailable -- conservative,
+      // explicit fallback. Never a pipeline crash, never a silent TP2
+      // pick: the reason is recorded and is distinguishable from every
+      // profitability-based reason below.
+      selected = tp1;
+      selectionReason = "conservative_fallback_missing_or_invalid_calibration";
+    } else if (!tp1Profit.feasible && !tp2Profit.feasible) {
+      // Neither candidate fits the declared memory budget: fail closed
+      // rather than silently emitting an unserviceable plan.
+      module.emitError("DistributedStrategyPlanningPass: neither TP1 nor TP2 "
+                       "fits the declared memory budget for this model/"
+                       "workload; failing closed rather than emitting an "
+                       "unserviceable plan");
+      signalPassFailure();
+      return;
+    } else if (!tp1Profit.feasible && tp2Profit.feasible) {
+      selected = tp2;
+      selectionReason = "capacity_forced_tp1_infeasible";
+    } else if (tp1Profit.feasible && !tp2Profit.feasible) {
+      selected = tp1;
+      selectionReason = "capacity_forced_tp2_infeasible";
+    } else {
+      const double delta =
+          tp2Profit.predicted_throughput_tokens_per_s - tp1Profit.predicted_throughput_tokens_per_s;
+      if (std::abs(delta) <= kTieBreakEpsilonTokensPerSec) {
+        selected = tp1;
+        selectionReason = "tie_break_prefer_lower_tp_degree";
+      } else if (delta > 0) {
+        selected = tp2;
+        selectionReason = "profitable_tp2_selected_predicted_throughput_higher";
+      } else {
+        selected = tp1;
+        selectionReason = "profitable_tp1_selected_predicted_throughput_higher";
+      }
     }
 
     module->setAttr("distributed.selected_candidate_id",
@@ -283,9 +487,11 @@ struct DistributedStrategyPlanningPass
     module->setAttr(
         "distributed.policy_truth_boundary",
         StringAttr::get(ctx,
-                        "d2_qwen_pipeline_structural_planning_not_measured_gpu_"
-                        "performance_not_nccl_calibrated_not_distributed_"
-                        "profitability_claim"));
+                        "d6_qwen_pipeline_whole_model_profitability_selection_"
+                        "calibrated_from_real_d5_measured_2x_rtx4090_throughput_"
+                        "linear_regression_not_nccl_calibrated_by_the_compiler_"
+                        "itself_not_a_runtime_measured_guarantee_for_this_"
+                        "specific_compile"));
 
     if (selected->world_size > 1) {
       // Fail-closed consistency check: never emit a distributed plan for an

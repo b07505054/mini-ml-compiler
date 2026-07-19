@@ -1147,6 +1147,8 @@ static llvm::json::Value attrToJSON(mlir::Attribute attr) {
     return b.getValue();
   if (auto i = mlir::dyn_cast<mlir::IntegerAttr>(attr))
     return static_cast<int64_t>(i.getInt());
+  if (auto f = mlir::dyn_cast<mlir::FloatAttr>(attr))
+    return f.getValueAsDouble();
   if (auto arr = mlir::dyn_cast<mlir::ArrayAttr>(attr)) {
     llvm::json::Array out;
     for (mlir::Attribute elem : arr)
@@ -1170,8 +1172,13 @@ ExecutionPlanExporter::exportDistributedEvidenceReport(mlir::ModuleOp module,
   root["schema"] = "distributed_strategy_evidence_report";
   root["schema_version"] = "1.0.0";
   root["truth_boundary"] =
-      "d2_qwen_pipeline_structural_planning_not_measured_gpu_performance_"
-      "not_nccl_calibrated_not_distributed_profitability_claim";
+      "d6_qwen_pipeline_whole_model_profitability_selection_calibrated_"
+      "from_real_d5_measured_2x_rtx4090_throughput_linear_regression_not_"
+      "nccl_calibrated_by_the_compiler_itself_not_a_runtime_measured_"
+      "guarantee_for_this_specific_compile_see_per_candidate_"
+      "profitability_field_for_the_actual_predicted_values_and_"
+      "distributed_profitability_contract_version_for_the_calibration_"
+      "in_effect";
 
   if (auto a = op->getAttr("distributed.candidates"))
     root["candidates"] = attrToJSON(a);

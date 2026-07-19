@@ -1,0 +1,134 @@
+{
+  "profileId": "nvidia-rtx4090-d6-distributed-profitability",
+  "configuredComputeUnits": "CUDA",
+  "staticShapeSupport": true,
+  "supportedPrecisions": [
+    "fp16"
+  ],
+  "pagedKVCompatibleBackends": [
+    "cuda"
+  ],
+  "truthBoundary": "real_2x_rtx4090_host_confirmed_via_nvidia_smi_during_d4b_d5_d6_real_hardware_runs",
+  "distributedStrategyOptIn": true,
+  "distributedStrategyOptInNote": "D6: real profitability selection is enabled for this profile. Unlike the D2 nvidia_gtx1650_maxq_d2_distributed_opt_in.json profile (a single laptop GPU, structural-opt-in-only, no real calibration), this profile targets the real 2x RTX 4090 host used for D4B/D5/D6 real execution and carries a real distributedProfitability calibration block below.",
+  "hardwareExecutionProfile": {
+    "physicalComputeUnits": 2,
+    "effectiveComputeUnits": 2,
+    "maxConcurrentWorkItemsPerUnit": 1,
+    "supportsLatencyHiding": true,
+    "localMemoryKind": "device_hbm",
+    "truthBoundary": "declared_execution_profile_from_real_nvidia_smi_query_2x_rtx4090_pcie_no_nvlink"
+  },
+  "staticCostProfile": {
+    "peakFlopsFp32": 82600000000000.0,
+    "peakFlopsFp16": 165200000000000.0,
+    "memoryBandwidthBytesPerSec": 1008000000000.0,
+    "localMemoryBytes": 102400,
+    "cacheLineBytes": 128,
+    "supportsAsyncCopy": true,
+    "truthBoundary": "public_docs_theoretical_peak_not_measured",
+    "source": "NVIDIA GeForce RTX 4090 (Ada Lovelace, AD102) public specs: ~82.6 TFLOPS FP32, FP16 at 2:1 rate, 1008 GB/s GDDR6X, per-SM shared memory up to 100KB."
+  },
+  "sourceNotes": {
+    "device": "2x NVIDIA GeForce RTX 4090, Ada Lovelace, 24564 MiB GDDR6X each (real nvidia-smi query, D4B/D5/D6)",
+    "interconnect": "PCIe Gen4 only -- no NVLink between the two GPUs (confirmed via real NCCL logs: P2P disabled between connected GPUs, D4B evidence)",
+    "distributed": "This is the real-hardware D6 profile: distributedStrategyOptIn=true AND a real distributedProfitability calibration block, calibrated from real D5 measured throughput on this exact host."
+  },
+  "backendCapabilities": [
+    {
+      "backendName": "cuda_vllm",
+      "backendApi": "cuda",
+      "supportedOps": [
+        "matmul",
+        "attention",
+        "rmsnorm",
+        "layernorm",
+        "mlp",
+        "embed",
+        "add",
+        "gelu",
+        "softmax",
+        "reshape",
+        "gather"
+      ],
+      "supportedDtypes": [
+        "fp16"
+      ],
+      "accumulationDtypes": [
+        "fp32"
+      ],
+      "supportedQuantModes": [
+        "none"
+      ],
+      "preferredActivationLayouts": [
+        "NCHW"
+      ],
+      "preferredWeightLayouts": [
+        "KN"
+      ],
+      "layoutAgnosticOps": [
+        "relu",
+        "add",
+        "gelu",
+        "reshape",
+        "gather",
+        "softmax"
+      ],
+      "supportsLayoutTransform": true,
+      "supportsCast": true,
+      "supportsDequantBoundary": false,
+      "supportsRequantize": false,
+      "supportsFusionPatterns": [
+        "matmul_bias",
+        "matmul_bias_relu",
+        "matmul_bias_gelu"
+      ],
+      "requiredWeightQuantMode": "",
+      "requiredActivationQuantMode": "",
+      "allowedQuantGranularity": [],
+      "sourceLevel": "declared_profile",
+      "truthBoundary": "declared_device_profile_ada_lovelace_fp16_no_mandatory_quant_not_measured"
+    }
+  ],
+  "kernelLibraries": [],
+  "distributedProfitability": {
+    "contractVersion": "distributed_profitability_contract_v1",
+    "calibrationDatasetHash": "363247c1fcd4dc6e84902f40c54e71265ab8a98a32cf2a8b02fea4df7bfeef49",
+    "calibrationHardwareIdentity": "2x NVIDIA GeForce RTX 4090, PCIe Gen4 (no NVLink), rented Vast.ai host, confirmed via nvidia-smi during the D4B/D5 real-hardware runs",
+    "calibrationGeneratedAt": "2026-07-19T00:00:00Z",
+    "calibrationCompilerCommit": "59854b892629bc0bc7f43ca0bad3eab17464c030",
+    "calibrationRuntimeCommit": "f89adabf85c747ae99fc50dafa9a3f4a326593bb",
+    "gpuMemoryMbPerDevice": 24564.0,
+    "gpuMemoryUtilization": 0.9,
+    "tieBreakRule": "prefer_lower_tp_degree_within_epsilon",
+    "truthBoundary": "linear_regression_calibrated_from_real_d5_measured_throughput_on_2x_rtx4090_pcie_no_nvlink_54_calibration_rows_both_qwen2.5_0.5b_and_7b_not_a_full_systems_simulator_not_valid_off_this_calibration_hardware_never_encodes_held_out_labels",
+    "tp1Coefficients": {
+      "intercept": 7.962344761464902,
+      "per_gpu_weight_mb": -0.24772518079214728,
+      "kv_cache_kb_per_token_per_gpu": 58.06762504638019,
+      "gpu_count": 7.962344761464541,
+      "input_length": 0.06688598116920906,
+      "output_length": 0.8093129304993703,
+      "concurrency": 177.66563688419586
+    },
+    "tp2Coefficients": {
+      "intercept": 20.38139140395511,
+      "per_gpu_weight_mb": -0.33955255109345256,
+      "kv_cache_kb_per_token_per_gpu": 74.31842439533375,
+      "gpu_count": 40.762782807910725,
+      "input_length": 0.059169929961928894,
+      "output_length": 0.9658812851196273,
+      "concurrency": 166.02350203699726
+    },
+    "fitQuality": {
+      "tp1": {
+        "r_squared": 0.8537222193670004,
+        "n_samples": 27
+      },
+      "tp2": {
+        "r_squared": 0.8312363752700205,
+        "n_samples": 27
+      }
+    }
+  }
+}

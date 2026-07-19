@@ -43,6 +43,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -79,8 +80,29 @@ static llvm::cl::opt<std::string> DispatchUnitReportPath(
 
 static llvm::cl::opt<std::string> DistributedEvidenceReportPath(
     "distributed-evidence-report",
-    llvm::cl::desc("(Optional) write D2 distributed-strategy candidate/"
-                   "legality/selection evidence report JSON to this path"),
+    llvm::cl::desc("(Optional) write D2/D6 distributed-strategy candidate/"
+                   "legality/profitability/selection evidence report JSON "
+                   "to this path"),
+    llvm::cl::init(""));
+
+static llvm::cl::opt<std::string> ModelProfilePath(
+    "model-profile",
+    llvm::cl::desc("(Optional, D6) path to a real per-model profile JSON "
+                   "(weightFootprintMb -- deployment-time checkpoint size, "
+                   "not derivable from the graph) consumed by "
+                   "DistributedStrategyPlanningPass's whole-model "
+                   "profitability estimator. Absent: distributed "
+                   "profitability falls back conservatively to TP1."),
+    llvm::cl::init(""));
+
+static llvm::cl::opt<std::string> WorkloadProfilePath(
+    "workload-profile",
+    llvm::cl::desc("(Optional, D6) path to a real workload-shape profile "
+                   "JSON (inputTokens/outputTokens/concurrency) consumed "
+                   "by DistributedStrategyPlanningPass's whole-model "
+                   "profitability estimator. Absent: a conservative "
+                   "declared default (32/32/1) is used and recorded as "
+                   "undeclared in evidence."),
     llvm::cl::init(""));
 
 // ---------------------------------------------------------------------------
@@ -258,6 +280,25 @@ struct TargetDeviceProfile {
   // selecting TP2. Absent (false) in every pre-D2 profile; the pass then
   // always selects TP1, exactly like before this field existed.
   bool        distributedStrategyOptIn = false;
+
+  // D6: distributed_profitability_contract_v1 calibration block. Absent in
+  // every pre-D6 profile (including the pre-D6 D2 opt-in profile) --
+  // DistributedStrategyPlanningPass then falls back conservatively to TP1
+  // whenever opt_in is set but no calibration is present, exactly the
+  // documented "missing calibration" behavior, never a crash.
+  bool        hasDistributedProfitability = false;
+  std::string profitContractVersion;
+  std::string profitCalibrationDatasetHash;
+  std::string profitCalibrationHardwareIdentity;
+  std::string profitCalibrationGeneratedAt;
+  std::string profitCalibrationCompilerCommit;
+  std::string profitCalibrationRuntimeCommit;
+  std::string profitTieBreakRule;
+  std::string profitTruthBoundary;
+  double      profitGpuMemoryMbPerDevice = 0.0;
+  double      profitGpuMemoryUtilization = 0.0;
+  std::map<std::string, double> profitTp1Coefficients;
+  std::map<std::string, double> profitTp2Coefficients;
 };
 
 static std::string resolveProfileRelativePath(llvm::StringRef profilePath,
@@ -708,6 +749,35 @@ parseDeviceProfile(llvm::StringRef path) {
   if (auto v = obj->getBoolean("distributedStrategyOptIn"))
     prof.distributedStrategyOptIn = *v;
 
+  // D6: optional distributed_profitability_contract_v1 calibration block.
+  // Absent in every pre-D6 profile (including the pre-D6 D2 opt-in
+  // profile, left unmodified). A present-but-incomplete block still
+  // leaves hasDistributedProfitability false's individual sub-checks to
+  // the pass's own fail-closed contract-version comparison -- this parser
+  // only transports whatever is present, it does not itself validate.
+  if (auto *dp = obj->getObject("distributedProfitability")) {
+    prof.hasDistributedProfitability = true;
+    if (auto v = dp->getString("contractVersion")) prof.profitContractVersion = v->str();
+    if (auto v = dp->getString("calibrationDatasetHash")) prof.profitCalibrationDatasetHash = v->str();
+    if (auto v = dp->getString("calibrationHardwareIdentity")) prof.profitCalibrationHardwareIdentity = v->str();
+    if (auto v = dp->getString("calibrationGeneratedAt")) prof.profitCalibrationGeneratedAt = v->str();
+    if (auto v = dp->getString("calibrationCompilerCommit")) prof.profitCalibrationCompilerCommit = v->str();
+    if (auto v = dp->getString("calibrationRuntimeCommit")) prof.profitCalibrationRuntimeCommit = v->str();
+    if (auto v = dp->getString("tieBreakRule")) prof.profitTieBreakRule = v->str();
+    if (auto v = dp->getString("truthBoundary")) prof.profitTruthBoundary = v->str();
+    if (auto v = dp->getNumber("gpuMemoryMbPerDevice")) prof.profitGpuMemoryMbPerDevice = *v;
+    if (auto v = dp->getNumber("gpuMemoryUtilization")) prof.profitGpuMemoryUtilization = *v;
+    auto readCoeffs = [](const llvm::json::Object *o, std::map<std::string, double> &out) {
+      if (!o) return;
+      for (const auto &kv : *o) {
+        if (auto num = kv.second.getAsNumber())
+          out[kv.first.str()] = *num;
+      }
+    };
+    readCoeffs(dp->getObject("tp1Coefficients"), prof.profitTp1Coefficients);
+    readCoeffs(dp->getObject("tp2Coefficients"), prof.profitTp2Coefficients);
+  }
+
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
   // Absent in every existing profile; only present in profiles that opt in
   // to an experimental forced global quantization override.
@@ -1119,6 +1189,106 @@ int main(int argc, char **argv) {
   if (prof.distributedStrategyOptIn)
     module.get()->setAttr("distributed.opt_in",
                           mlir::BoolAttr::get(&ctx, true));
+
+  // 4d. D6: attach the distributed_profitability_contract_v1 calibration
+  // block, only when the profile declares one. Absent: the pass's own
+  // fail-closed check (contract_version match) leaves calibration invalid
+  // and it falls back conservatively to TP1 -- this driver never decides
+  // validity itself, it only transports whatever the profile declares.
+  if (prof.hasDistributedProfitability) {
+    mlir::Operation *m = module.get();
+    m->setAttr("distributed.profitability.contract_version",
+               mlir::StringAttr::get(&ctx, prof.profitContractVersion));
+    m->setAttr("distributed.profitability.calibration_dataset_hash",
+               mlir::StringAttr::get(&ctx, prof.profitCalibrationDatasetHash));
+    m->setAttr("distributed.profitability.calibration_hardware_identity",
+               mlir::StringAttr::get(&ctx, prof.profitCalibrationHardwareIdentity));
+    m->setAttr("distributed.profitability.calibration_generated_at",
+               mlir::StringAttr::get(&ctx, prof.profitCalibrationGeneratedAt));
+    m->setAttr("distributed.profitability.calibration_compiler_commit",
+               mlir::StringAttr::get(&ctx, prof.profitCalibrationCompilerCommit));
+    m->setAttr("distributed.profitability.calibration_runtime_commit",
+               mlir::StringAttr::get(&ctx, prof.profitCalibrationRuntimeCommit));
+    m->setAttr("distributed.profitability.tie_break_rule",
+               mlir::StringAttr::get(&ctx, prof.profitTieBreakRule));
+    m->setAttr("distributed.profitability.truth_boundary",
+               mlir::StringAttr::get(&ctx, prof.profitTruthBoundary));
+    m->setAttr("distributed.profitability.gpu_memory_mb_per_device",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitGpuMemoryMbPerDevice));
+    m->setAttr("distributed.profitability.gpu_memory_utilization",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitGpuMemoryUtilization));
+    auto coeffAttr = [&](const std::map<std::string, double> &c) {
+      llvm::SmallVector<mlir::NamedAttribute> fields;
+      for (const auto &kv : c)
+        fields.push_back({mlir::StringAttr::get(&ctx, kv.first),
+                          mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), kv.second)});
+      return mlir::DictionaryAttr::get(&ctx, fields);
+    };
+    m->setAttr("distributed.profitability.tp1_coefficients", coeffAttr(prof.profitTp1Coefficients));
+    m->setAttr("distributed.profitability.tp2_coefficients", coeffAttr(prof.profitTp2Coefficients));
+  }
+
+  // 4e. D6: attach the real per-model weight-footprint fact from
+  // --model-profile, only when supplied. Absent: whole-model profitability
+  // estimation reports model.available=false and falls back conservatively.
+  if (!ModelProfilePath.empty()) {
+    auto buf = llvm::MemoryBuffer::getFile(ModelProfilePath);
+    if (!buf) {
+      llvm::errs() << "error: cannot read --model-profile '" << ModelProfilePath
+                   << "': " << buf.getError().message() << "\n";
+      return 1;
+    }
+    auto json = llvm::json::parse((*buf)->getBuffer());
+    if (!json) {
+      llvm::errs() << "error: JSON parse error in --model-profile '" << ModelProfilePath
+                   << "': " << llvm::toString(json.takeError()) << "\n";
+      return 1;
+    }
+    const llvm::json::Object *obj = json->getAsObject();
+    if (!obj || !obj->getNumber("weightFootprintMb")) {
+      llvm::errs() << "error: --model-profile '" << ModelProfilePath
+                   << "' must be a JSON object with a numeric weightFootprintMb field\n";
+      return 1;
+    }
+    module.get()->setAttr(
+        "distributed.model.weight_footprint_mb",
+        mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), *obj->getNumber("weightFootprintMb")));
+  }
+
+  // 4f. D6: attach the real workload-shape facts from --workload-profile,
+  // only when supplied. Absent: profitability estimation uses the
+  // conservative declared default (32/32/1) and records
+  // workload.declared=false in evidence.
+  if (!WorkloadProfilePath.empty()) {
+    auto buf = llvm::MemoryBuffer::getFile(WorkloadProfilePath);
+    if (!buf) {
+      llvm::errs() << "error: cannot read --workload-profile '" << WorkloadProfilePath
+                   << "': " << buf.getError().message() << "\n";
+      return 1;
+    }
+    auto json = llvm::json::parse((*buf)->getBuffer());
+    if (!json) {
+      llvm::errs() << "error: JSON parse error in --workload-profile '" << WorkloadProfilePath
+                   << "': " << llvm::toString(json.takeError()) << "\n";
+      return 1;
+    }
+    const llvm::json::Object *obj = json->getAsObject();
+    if (!obj || !obj->getNumber("inputTokens") || !obj->getNumber("outputTokens") ||
+        !obj->getNumber("concurrency")) {
+      llvm::errs() << "error: --workload-profile '" << WorkloadProfilePath
+                   << "' must declare inputTokens, outputTokens, and concurrency\n";
+      return 1;
+    }
+    mlir::Operation *m = module.get();
+    auto i64 = [&](int64_t v) { return mlir::IntegerAttr::get(mlir::IntegerType::get(&ctx, 64), v); };
+    m->setAttr("distributed.workload.input_tokens", i64(static_cast<int64_t>(*obj->getNumber("inputTokens"))));
+    m->setAttr("distributed.workload.output_tokens", i64(static_cast<int64_t>(*obj->getNumber("outputTokens"))));
+    m->setAttr("distributed.workload.concurrency", i64(static_cast<int64_t>(*obj->getNumber("concurrency"))));
+    if (auto v = obj->getNumber("maxModelLen"))
+      m->setAttr("distributed.workload.max_model_len", i64(static_cast<int64_t>(*v)));
+    if (auto v = obj->getNumber("maxNumSeqs"))
+      m->setAttr("distributed.workload.max_num_seqs", i64(static_cast<int64_t>(*v)));
+  }
 
   // 5. Run the serving-optimization-pipeline (16 planning passes), then
   //    boundary materialization (the first IR-transforming stage: inserts

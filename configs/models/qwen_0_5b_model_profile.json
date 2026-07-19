@@ -1,0 +1,6 @@
+{
+  "modelId": "qwen2.5-0.5b",
+  "realHfCheckpoint": "Qwen/Qwen2.5-0.5B-Instruct",
+  "weightFootprintMb": 1454.3235168457031,
+  "truthBoundary": "real_measured_checkpoint_size_from_distributed_materializer_estimate_model_footprint_mb_matches_d5_tp_cost_model_exactly"
+}
