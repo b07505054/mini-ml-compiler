@@ -22,12 +22,8 @@ Last verified: 2026-07-14.
 
 ## Current Supporting
 
-- `DOC/result/P1B_RASPBERRY_PI_ARM_CPU_KERNEL_REPORT.md`
-- `DOC/result/P1C_RASPBERRY_PI_MULTI_CANDIDATE_REPORT.md`
-- `DOC/result/P1C1_LOW_REGRET_STATIC_DEFAULT_REVIEW.md`
-- `DOC/result/P1D_RASPBERRY_PI_THREAD_DECOMPOSITION_REPORT.md`
 - `DOC/result/P1D1_OFFLINE_CALIBRATED_THREAD_POLICY_REPORT.md`
-- `DOC/result/A1_MINIMAL_UNIFIED_IMPLEMENTATION_CANDIDATE_FOUNDATION.md` through `DOC/result/A6_IR_ROOTED_TRITON_PROVIDER_SHADOW_INTEGRATION.md`
+- `DOC/result/AARCH64_SCHEDULE_UNROLL_FINAL_REPORT.md`
 - `docs/VLLM_SERVING_CODESIGN.md` as supporting serving material, bounded by the canonical truth boundary.
 
 ## Runtime-Owned Evidence Documents
@@ -49,8 +45,9 @@ Last verified: 2026-07-14.
 Older docs under `docs/`, `trace/`, `reports/`, `integration_bundle/`, and phase reports preserve their original phase evidence unless explicitly listed as canonical above. Do not rewrite raw evidence or historical measurements to match newer interpretation; add boundary notes instead.
 
 Root-level slice diaries, finalization audits, changelogs, and stage-by-stage
-writeups are intentionally not canonical. Keep public entry points
-achievement-oriented and place detailed result reports in `DOC/result/`.
+writeups are intentionally not canonical. `DOC/result/` should contain only
+final achievement/result reports for current main lines, not intermediate phase
+logs or superseded analysis snapshots.
 
 ## Pre-Edit Contradiction Table
 
