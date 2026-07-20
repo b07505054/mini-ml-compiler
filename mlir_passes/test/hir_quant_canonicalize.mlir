@@ -10,7 +10,9 @@ func.func @remove_dequantize_quantize(%x: tensor<4x4xf32>) -> tensor<4x4xf32> {
     quantization.mode = "per_tensor",
     quantized_dtype = "i8",
     scale = 2.500000e-01 : f32,
-    zero_point = 3 : i32
+    zero_point = 3 : i32,
+    clamp_min = -127 : i32,
+    clamp_max = 127 : i32
   } : (tensor<4x4xf32>) -> tensor<4x4xi8>
   %dq = hir.dequantize %q {
     quantization.mode = "per_tensor",
@@ -39,7 +41,9 @@ func.func @remove_quantize_dequantize(%x: tensor<4x4xi8>) -> tensor<4x4xi8> {
     quantization.mode = "per_channel",
     quantized_dtype = "i8",
     scale = 1.000000e-02 : f32,
-    zero_point = 0 : i32
+    zero_point = 0 : i32,
+    clamp_min = -127 : i32,
+    clamp_max = 127 : i32
   } : (tensor<4x4xf32>) -> tensor<4x4xi8>
   return %q : tensor<4x4xi8>
 }
@@ -54,7 +58,9 @@ func.func @keep_mismatched_scale(%x: tensor<4x4xf32>) -> tensor<4x4xf32> {
     quantization.mode = "per_tensor",
     quantized_dtype = "i8",
     scale = 2.500000e-01 : f32,
-    zero_point = 3 : i32
+    zero_point = 3 : i32,
+    clamp_min = -127 : i32,
+    clamp_max = 127 : i32
   } : (tensor<4x4xf32>) -> tensor<4x4xi8>
   %dq = hir.dequantize %q {
     quantization.mode = "per_tensor",
@@ -75,7 +81,9 @@ func.func @keep_mismatched_zero_point(%x: tensor<4x4xf32>) -> tensor<4x4xf32> {
     quantization.mode = "per_tensor",
     quantized_dtype = "i8",
     scale = 2.500000e-01 : f32,
-    zero_point = 3 : i32
+    zero_point = 3 : i32,
+    clamp_min = -127 : i32,
+    clamp_max = 127 : i32
   } : (tensor<4x4xf32>) -> tensor<4x4xi8>
   %dq = hir.dequantize %q {
     quantization.mode = "per_tensor",
@@ -94,7 +102,9 @@ func.func @keep_mismatched_mode(%x: tensor<4x4xf32>) -> tensor<4x4xf32> {
     quantization.mode = "per_tensor",
     quantized_dtype = "i8",
     scale = 2.500000e-01 : f32,
-    zero_point = 3 : i32
+    zero_point = 3 : i32,
+    clamp_min = -127 : i32,
+    clamp_max = 127 : i32
   } : (tensor<4x4xf32>) -> tensor<4x4xi8>
   %dq = hir.dequantize %q {
     quantization.mode = "per_channel",

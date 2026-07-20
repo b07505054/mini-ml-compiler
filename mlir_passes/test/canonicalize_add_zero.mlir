@@ -7,7 +7,7 @@ func.func @main(%input: tensor<1x64xf32>) -> tensor<1x64xf32> {
   %add_zero = linalg.map
       ins(%input : tensor<1x64xf32>)
       outs(%empty : tensor<1x64xf32>)
-      (%x: f32, %out: f32) {
+      (%x: f32) {
     %y = arith.addf %x, %zero : f32
     linalg.yield %y : f32
   }

@@ -17,6 +17,7 @@
 
 #include "FusionPasses.h"
 #include "HIR/IR/HIRDialect.h"
+#include "NativeCodegenPipeline.h"
 #include "serving/ExecutionPlan.h"
 #include "serving/ExecutionPlanBuilder.h"
 #include "serving/ExecutionPlanExporter.h"
@@ -29,7 +30,10 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/InitAllPasses.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 
@@ -66,6 +70,12 @@ static llvm::cl::opt<std::string> OutPath(
     "out",
     llvm::cl::desc("Output path for canonical serving_execution_plan artifact"),
     llvm::cl::Required);
+
+static llvm::cl::opt<bool> HIRNativeCodegen(
+    "hir-native-codegen",
+    llvm::cl::desc("Run the canonical scalar HIR/Linalg-to-LLVM-dialect "
+                   "pipeline and write LLVM-dialect MLIR to --out"),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<std::string> DumpAnnotatedMlir(
     "dump-annotated-mlir",
@@ -257,6 +267,11 @@ struct TargetDeviceProfile {
   std::optional<bool> staticCostSupportsAsyncCopy;
   std::optional<bool> staticCostSupportsDma;
   std::string staticCostTruthBoundary;
+  std::optional<double> nativeCostEffectiveScalarOpsPerNs;
+  std::optional<double> nativeCostEffectiveVectorOpsPerNs;
+  std::optional<double> nativeCostEffectiveBandwidthBytesPerNs;
+  std::optional<double> nativeCostVectorUtilization;
+  std::optional<bool> nativeCostSupportsVector;
   std::optional<int64_t> hardwarePhysicalComputeUnits;
   std::optional<int64_t> hardwareEffectiveComputeUnits;
   std::optional<int64_t> hardwareMaxConcurrentWorkItemsPerUnit;
@@ -700,6 +715,19 @@ parseDeviceProfile(llvm::StringRef path) {
       prof.staticCostTruthBoundary = v->str();
   }
 
+  if (auto *native = obj->getObject("nativeLoweringCostModelV2")) {
+    if (auto v = native->getNumber("effectiveScalarOpsPerNs"))
+      prof.nativeCostEffectiveScalarOpsPerNs = *v;
+    if (auto v = native->getNumber("effectiveVectorOpsPerNs"))
+      prof.nativeCostEffectiveVectorOpsPerNs = *v;
+    if (auto v = native->getNumber("effectiveBandwidthBytesPerNs"))
+      prof.nativeCostEffectiveBandwidthBytesPerNs = *v;
+    if (auto v = native->getNumber("vectorUtilization"))
+      prof.nativeCostVectorUtilization = *v;
+    if (auto v = native->getBoolean("supportsVector"))
+      prof.nativeCostSupportsVector = *v;
+  }
+
   if (auto *hep = obj->getObject("hardwareExecutionProfile")) {
     if (auto v = hep->getInteger("physicalComputeUnits"))
       prof.hardwarePhysicalComputeUnits = static_cast<int64_t>(*v);
@@ -1136,7 +1164,9 @@ int main(int argc, char **argv) {
   mlir::hir::CapabilityBundle   capabilities = lowerToCapabilityBundle(prof);
 
   // 3. Parse MLIR module.
-  mlir::MLIRContext ctx;
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::MLIRContext ctx(registry);
   ctx.allowUnregisteredDialects(true);
   ctx.loadDialect<mlir::func::FuncDialect, mlir::hir::HIRDialect,
                   mlir::tensor::TensorDialect,
@@ -1151,6 +1181,52 @@ int main(int argc, char **argv) {
 
   // 4. Attach TargetConstraints as module attrs.
   constraints.attachToModule(module.get(), &ctx);
+  mlir::OpBuilder profileBuilder(&ctx);
+  if (prof.nativeCostEffectiveScalarOpsPerNs)
+    module.get()->setAttr(
+        "target.native_cost_v2.effective_scalar_ops_per_ns",
+        profileBuilder.getF64FloatAttr(*prof.nativeCostEffectiveScalarOpsPerNs));
+  if (prof.nativeCostEffectiveVectorOpsPerNs)
+    module.get()->setAttr(
+        "target.native_cost_v2.effective_vector_ops_per_ns",
+        profileBuilder.getF64FloatAttr(*prof.nativeCostEffectiveVectorOpsPerNs));
+  if (prof.nativeCostEffectiveBandwidthBytesPerNs)
+    module.get()->setAttr("target.native_cost_v2.effective_bandwidth_bytes_per_ns",
+                    profileBuilder.getF64FloatAttr(
+                        *prof.nativeCostEffectiveBandwidthBytesPerNs));
+  if (prof.nativeCostVectorUtilization)
+    module.get()->setAttr(
+        "target.native_cost_v2.vector_utilization",
+        profileBuilder.getF64FloatAttr(*prof.nativeCostVectorUtilization));
+  if (prof.nativeCostSupportsVector)
+    module.get()->setAttr("target.native_cost_v2.supports_vector",
+                    profileBuilder.getBoolAttr(*prof.nativeCostSupportsVector));
+
+  if (HIRNativeCodegen) {
+    // This public mode is the canonical scalar endpoint. Hardware NEON
+    // capability remains recorded separately; vector candidates are legal
+    // only in the explicit Transform-dialect vector pipeline.
+    module.get()->setAttr(
+        "target.native_cost_v2.vector_lowering_available",
+        profileBuilder.getBoolAttr(false));
+    mlir::registerAllPasses();
+    mlir::hir::registerFusionPasses();
+    mlir::PassManager nativePM(&ctx);
+    mlir::hir::buildNativeCodegenPipeline(nativePM);
+    if (nativePM.run(module.get()).failed()) {
+      llvm::errs() << "error: hir-native-codegen pipeline failed\n";
+      return 1;
+    }
+    std::error_code ec;
+    llvm::raw_fd_ostream os(OutPath, ec, llvm::sys::fs::OF_Text);
+    if (ec) {
+      llvm::errs() << "error: cannot write LLVM-dialect MLIR to '" << OutPath
+                   << "': " << ec.message() << "\n";
+      return 1;
+    }
+    module->print(os);
+    return 0;
+  }
 
   // 4a. Optional quantization co-design policy: attach only when the
   // profile declares one; the co-design pass is inert otherwise.

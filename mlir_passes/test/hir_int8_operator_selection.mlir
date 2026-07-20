@@ -130,7 +130,7 @@ func.func @relu_and_reshape_capability(
   %relu = linalg.map
       ins(%mm : tensor<128x128xf32>)
       outs(%empty : tensor<128x128xf32>)
-      (%x: f32, %out: f32) {
+      (%x: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }

@@ -1,5 +1,9 @@
-// RUN: mlir-opt %s --load-pass-plugin=%plugin --pass-pipeline='builtin.module(matmul-bias-relu-fusion)' | FileCheck %s
+// RUN: mlir-opt %s --load-pass-plugin=%plugin --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)' | FileCheck %s
 
+module attributes {
+  llm.dtype = "fp32",
+  target.supported_precisions = ["fp32"]
+} {
 func.func @main(
   %A: tensor<17x65xf32>,
   %B: tensor<65x33xf32>,
@@ -14,7 +18,7 @@ func.func @main(
   %add = linalg.map
       ins(%mm, %bias : tensor<17x33xf32>, tensor<17x33xf32>)
       outs(%empty : tensor<17x33xf32>)
-      (%x: f32, %b: f32, %out: f32) {
+      (%x: f32, %b: f32) {
     %y = arith.addf %x, %b : f32
     linalg.yield %y : f32
   }
@@ -23,14 +27,17 @@ func.func @main(
   %relu = linalg.map
       ins(%add : tensor<17x33xf32>)
       outs(%empty : tensor<17x33xf32>)
-      (%x: f32, %out: f32) {
+      (%x: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }
 
   return %relu : tensor<17x33xf32>
 }
+}
 
 // CHECK: linalg.matmul
-// CHECK-SAME: fusion.reject_reason = "padding_compute_overhead_too_high"
+// CHECK-SAME: candidate_id = "fused_scalar"
+// CHECK-SAME: requires_padding = true
+// CHECK-SAME: native.cost_model.selected_candidate = "unfused_scalar"
 // CHECK-NOT: fusion.candidate

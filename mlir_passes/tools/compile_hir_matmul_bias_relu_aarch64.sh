@@ -317,7 +317,7 @@ KERNEL_O="$OUTPUT_DIR/${NAME}.o"
 #      That wrapper is a stock MLIR mechanism, self-contained in the emitted
 #      IR -- it requires no external MLIR runtime library (e.g.
 #      mlir_c_runner_utils) to link or run.
-GENERIC_PIPELINE='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},buffer-deallocation-pipeline,convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
+GENERIC_PIPELINE='builtin.module(hir-native-codegen)'
 
 # Vectorized variant: same hir-matmul-bias-relu-to-linalg pass, then the
 # project-owned Transform-dialect vectorization script (see
@@ -345,7 +345,7 @@ GENERIC_PIPELINE='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferi
 #     disassembly) instead of separate fmul/fadd.
 #   - convert-ub-to-llvm: lowers the `ub.poison` padding-value placeholder
 #     that vector.transfer_read's padding operand introduces.
-VECTORIZED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+VECTORIZED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 
 # Tiled-vectorized variant: a concrete Transform-dialect script is
 # generated on demand from mlir_passes/transforms/
@@ -365,7 +365,7 @@ if [[ "$VARIANT" == "tiled-vectorized" ]]; then
   TEMPLATE="$TILE_TRANSFORM_TEMPLATE" bash "$GENERATE_TILED_TRANSFORM" \
     --tile-m "$TILE_M" --tile-n "$TILE_N" --tile-k "$TILE_K" \
     --output "$GENERATED_TRANSFORM_SCRIPT" >/dev/null
-  TILED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$GENERATED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+  TILED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$GENERATED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 fi
 
 # Tiled-scheduled variant: same tile-and-fuse structure as tiled-vectorized,
@@ -383,7 +383,7 @@ if [[ "$VARIANT" == "tiled-scheduled" ]]; then
     --tile-m "$TILE_M" --tile-n "$TILE_N" --tile-k "$TILE_K" \
     --schedule-unroll-k "$SCHEDULE_UNROLL_K" \
     --output "$GENERATED_SCHEDULE_TRANSFORM_SCRIPT" >/dev/null
-  TILED_SCHEDULED_PIPELINE="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$GENERATED_SCHEDULE_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+  TILED_SCHEDULED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$GENERATED_SCHEDULE_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 fi
 
 if [[ "$VARIANT" == "generic" ]]; then

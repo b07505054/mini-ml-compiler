@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -22,6 +22,32 @@ for candidate in "${PLUGIN_CANDIDATES[@]}"; do
 done
 PLUGIN="${PLUGIN:-$DEFAULT_PLUGIN}"
 DIALECT_PLUGIN="${DIALECT_PLUGIN:-$PLUGIN}"
+
+PASSED=0
+FAILED=0
+FAILED_FILES=()
+
+record_result() {
+  local status="$1"
+  local file="$2"
+  if [[ "$status" -eq 0 ]]; then
+    echo "PASS: $file"
+    PASSED=$((PASSED + 1))
+  else
+    echo "FAIL: $file"
+    FAILED=$((FAILED + 1))
+    FAILED_FILES+=("$file")
+  fi
+}
+
+run_tracked() {
+  local file="$1"
+  shift
+  ( "$@" )
+  local status=$?
+  record_result "$status" "$file"
+  return 0
+}
 
 if [[ -z "$MLIR_OPT" ]]; then
   echo "error: mlir-opt not found; set MLIR_OPT or add it to PATH" >&2
@@ -52,9 +78,13 @@ run_filecheck() {
 
   echo "[MLIR test] $name"
 
-  "$MLIR_OPT" "$input" "$@" \
-    --load-dialect-plugin="$DIALECT_PLUGIN" \
-    | "$FILECHECK" "$input"
+  if "$MLIR_OPT" "$input" "$@" \
+       --load-dialect-plugin="$DIALECT_PLUGIN" \
+       | "$FILECHECK" "$input"; then
+    record_result 0 "$input"
+  else
+    record_result 1 "$input"
+  fi
 }
 
 run_stablehlo_subset_filecheck() {
@@ -67,13 +97,15 @@ run_stablehlo_subset_filecheck() {
 
   echo "[MLIR test] $name"
 
-  python3 "$REPO_ROOT/tools/import_stablehlo_subset.py" "$input" --output "$tmp" >/dev/null
-  "$MLIR_OPT" "$tmp" \
-    --load-pass-plugin="$PLUGIN" \
-    --load-dialect-plugin="$DIALECT_PLUGIN" \
-    --pass-pipeline="$pipeline" \
-    | "$FILECHECK" "$check_file"
+  local status=0
+  python3 "$REPO_ROOT/tools/import_stablehlo_subset.py" "$input" --output "$tmp" >/dev/null &&
+    "$MLIR_OPT" "$tmp" \
+      --load-pass-plugin="$PLUGIN" \
+      --load-dialect-plugin="$DIALECT_PLUGIN" \
+      --pass-pipeline="$pipeline" \
+      | "$FILECHECK" "$check_file" || status=$?
   rm -f "$tmp"
+  record_result "$status" "$input"
 }
 
 run_stablehlo_import_reject() {
@@ -88,23 +120,22 @@ run_stablehlo_import_reject() {
 
   echo "[MLIR test] $name"
 
+  local status=0
   if python3 "$REPO_ROOT/tools/import_stablehlo_subset.py" "$input" --output "$tmp" 2>"$err"; then
     echo "error: StableHLO importer unexpectedly accepted $input" >&2
-    rm -f "$tmp" "$err"
-    exit 1
+    status=1
   fi
   if [[ -f "$tmp" ]]; then
     echo "error: StableHLO importer emitted output for rejected input $input" >&2
-    rm -f "$tmp" "$err"
-    exit 1
+    status=1
   fi
   if ! grep -q "$expected_reason" "$err"; then
     echo "error: StableHLO importer rejection did not contain '$expected_reason'" >&2
     cat "$err" >&2
-    rm -f "$tmp" "$err"
-    exit 1
+    status=1
   fi
   rm -f "$tmp" "$err"
+  record_result "$status" "$input"
 }
 
 run_verify_diagnostics() {
@@ -113,10 +144,13 @@ run_verify_diagnostics() {
 
   echo "[MLIR test] $name"
 
-  "$MLIR_OPT" "$input" \
-    --load-dialect-plugin="$DIALECT_PLUGIN" \
-    --verify-diagnostics \
-    >/dev/null
+  if "$MLIR_OPT" "$input" \
+       --load-dialect-plugin="$DIALECT_PLUGIN" \
+       --verify-diagnostics >/dev/null; then
+    record_result 0 "$input"
+  else
+    record_result 1 "$input"
+  fi
 }
 
 # Ranking-invariance check for QuantizationCoDesignPass: compiles the input
@@ -146,17 +180,17 @@ run_quant_codesign_ranking_invariant() {
     --pass-pipeline='builtin.module(quant-codesign-pipeline,candidate-evaluation-pipeline,plan-selection-pipeline)' \
     | grep -oE '(evaluation|selected_plan)\.[a-z_.0-9]+ = [^,}]+' > "$b"
 
+  local status=0
   if [[ ! -s "$a" ]]; then
     echo "error: no ranking signals extracted — invariant test input is broken" >&2
-    rm -f "$a" "$b"
-    exit 1
+    status=1
   fi
   if ! diff -u "$a" "$b"; then
     echo "error: ranking signals differ with quant-codesign enabled" >&2
-    rm -f "$a" "$b"
-    exit 1
+    status=1
   fi
   rm -f "$a" "$b"
+  record_result "$status" "$input"
 }
 
 # Like run_verify_diagnostics, but runs a pass pipeline so pass-emitted
@@ -169,10 +203,13 @@ run_pass_verify_diagnostics() {
 
   echo "[MLIR test] $name"
 
-  "$MLIR_OPT" "$input" "$@" \
-    --load-dialect-plugin="$DIALECT_PLUGIN" \
-    --verify-diagnostics \
-    >/dev/null
+  if "$MLIR_OPT" "$input" "$@" \
+       --load-dialect-plugin="$DIALECT_PLUGIN" \
+       --verify-diagnostics >/dev/null; then
+    record_result 0 "$input"
+  else
+    record_result 1 "$input"
+  fi
 }
 
 run_filecheck \
@@ -280,7 +317,7 @@ run_filecheck \
   "no fusion when tile padding overhead is too high" \
   "$REPO_ROOT/mlir_passes/test/no_fusion_padding_overhead.mlir" \
   --load-pass-plugin="$PLUGIN" \
-  --pass-pipeline='builtin.module(matmul-bias-relu-fusion)'
+  --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
 
 run_filecheck \
   "rmsnorm kernel selection annotation" \
@@ -359,6 +396,48 @@ run_filecheck \
   "$REPO_ROOT/mlir_passes/test/hir_matmul_bias_relu_to_llvm.mlir" \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(hir-matmul-bias-relu-to-linalg,one-shot-bufferize{bufferize-function-boundaries},convert-linalg-to-loops,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)'
+
+run_filecheck \
+  "planned f32 Linalg MatMul-Bias-ReLU reaches LLVM with owned temporary deallocation" \
+  "$REPO_ROOT/mlir_passes/test/hir_native_codegen.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-native-codegen)'
+
+run_filecheck \
+  "native precision planning selects structurally distinct fused and unfused LLVM paths" \
+  "$REPO_ROOT/mlir_passes/test/hir_native_codegen_planning_choices.mlir" \
+  --split-input-file \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-native-codegen)'
+
+run_filecheck \
+  "planning-guided padded native path reaches pure LLVM dialect" \
+  "$REPO_ROOT/mlir_passes/test/hir_native_codegen_padding.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(hir-native-codegen)'
+
+run_filecheck \
+  "planning-disabled MatMul vectorizes without fusing Bias/ReLU" \
+  "$REPO_ROOT/mlir_passes/test/hir_unfused_vectorization.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$REPO_ROOT/mlir_passes/transforms/vectorize_unfused_matmul_only.mlir},transform-interpreter{entry-point=__transform_main})"
+
+run_filecheck \
+  "native Static Cost Model V2 emits explainable A/B/C/D evidence" \
+  "$REPO_ROOT/mlir_passes/test/native_cost_model_v2.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
+
+echo "[MLIR test] native codegen rejects unsupported f16 at HIR legality boundary"
+if "$MLIR_OPT" "$REPO_ROOT/mlir_passes/test/hir_native_codegen_unsupported_f16.mlir" \
+     --load-pass-plugin="$PLUGIN" \
+     --load-dialect-plugin="$DIALECT_PLUGIN" \
+     --pass-pipeline='builtin.module(hir-native-codegen)' \
+     --verify-diagnostics >/dev/null; then
+  record_result 0 "$REPO_ROOT/mlir_passes/test/hir_native_codegen_unsupported_f16.mlir"
+else
+  record_result 1 "$REPO_ROOT/mlir_passes/test/hir_native_codegen_unsupported_f16.mlir"
+fi
 
 run_filecheck \
   "StableHLO-compatible MatMul decomposition lowers to HIR" \
@@ -762,7 +841,8 @@ run_backend_codegen_static_checks() {
 }
 
 for shape in 8x8x8 16x16x16 32x32x32; do
-  run_backend_codegen_static_checks "$shape"
+  run_tracked "backend_codegen/scalar_${shape}" \
+    run_backend_codegen_static_checks "$shape"
 done
 
 # ---------------------------------------------------------------------------
@@ -793,7 +873,7 @@ run_backend_codegen_vectorized_static_checks() {
   "$MLIR_OPT" "$input" \
     --load-dialect-plugin="$PLUGIN" \
     --load-pass-plugin="$PLUGIN" \
-    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
+    --pass-pipeline="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
     -o "$out_dir/${name}_vector.mlir"
   if ! grep -qE "vector\.(contract|fma|transfer_read|transfer_write)" "$out_dir/${name}_vector.mlir"; then
     echo "error: expected at least one of vector.contract/vector.fma/vector.transfer_read/vector.transfer_write in ${name}_vector.mlir" >&2
@@ -839,7 +919,8 @@ run_backend_codegen_vectorized_static_checks() {
 }
 
 for shape in 8x8x8 16x16x16 32x32x32; do
-  run_backend_codegen_vectorized_static_checks "$shape"
+  run_tracked "backend_codegen/vectorized_${shape}" \
+    run_backend_codegen_vectorized_static_checks "$shape"
 done
 
 # ---------------------------------------------------------------------------
@@ -887,7 +968,7 @@ run_backend_codegen_tiled_static_checks() {
   "$MLIR_OPT" "$input" \
     --load-dialect-plugin="$PLUGIN" \
     --load-pass-plugin="$PLUGIN" \
-    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
+    --pass-pipeline="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$transform_script},transform-interpreter{entry-point=__transform_main})" \
     -o "$out_dir/${name}_vector.mlir"
   if ! grep -q "scf.for" "$out_dir/${name}_vector.mlir"; then
     echo "error: expected scf.for (outer tiling loops) in ${name}_vector.mlir -- tiling did not produce real loops" >&2
@@ -976,7 +1057,8 @@ run_backend_codegen_tiled_static_checks() {
 }
 
 for shape in 8x8x8 16x16x16 32x32x32 64x64x64 32x64x32 64x32x64; do
-  run_backend_codegen_tiled_static_checks "$shape"
+  run_tracked "backend_codegen/tiled_${shape}" \
+    run_backend_codegen_tiled_static_checks "$shape"
 done
 
 # ---------------------------------------------------------------------------
@@ -1010,7 +1092,7 @@ run_backend_codegen_tile_candidate_static_checks() {
   "$MLIR_OPT" "$input" \
     --load-dialect-plugin="$PLUGIN" \
     --load-pass-plugin="$PLUGIN" \
-    --pass-pipeline="builtin.module(hir-matmul-bias-relu-to-linalg,transform-preload-library{transform-library-paths=$transform_instance},transform-interpreter{entry-point=__transform_main})" \
+    --pass-pipeline="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$transform_instance},transform-interpreter{entry-point=__transform_main})" \
     -o "$out_dir/${name}_vector.mlir"
   if ! grep -q "scf.for" "$out_dir/${name}_vector.mlir"; then
     echo "error: expected scf.for in ${name}_vector.mlir" >&2
@@ -1062,8 +1144,19 @@ run_backend_codegen_tile_candidate_static_checks() {
 # never-selected candidate (4x4x4), each on a distinct shape, to keep this
 # host-suite addition fast while still exercising the parameterized path
 # beyond the already-covered fixed 4x8x8 default.
-run_backend_codegen_tile_candidate_static_checks "32x32x32" 8 8 8
-run_backend_codegen_tile_candidate_static_checks "64x64x64" 4 8 8
-run_backend_codegen_tile_candidate_static_checks "16x16x16" 4 4 4
+run_tracked "backend_codegen/tile_candidate_32x32x32_8x8x8" \
+  run_backend_codegen_tile_candidate_static_checks "32x32x32" 8 8 8
+run_tracked "backend_codegen/tile_candidate_64x64x64_4x8x8" \
+  run_backend_codegen_tile_candidate_static_checks "64x64x64" 4 8 8
+run_tracked "backend_codegen/tile_candidate_16x16x16_4x4x4" \
+  run_backend_codegen_tile_candidate_static_checks "16x16x16" 4 4 4
 
-echo "[MLIR test] all passed"
+echo
+echo "Passed: $PASSED"
+echo "Failed: $FAILED"
+echo "Total: $((PASSED + FAILED))"
+if [[ "$FAILED" -gt 0 ]]; then
+  echo "Failed files:"
+  printf '  %s\n' "${FAILED_FILES[@]}"
+  exit 1
+fi

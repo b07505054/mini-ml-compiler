@@ -23,7 +23,7 @@ func.func @matmul_relu_matmul_one_island(
   %relu = linalg.map
       ins(%mm0 : tensor<128x128xf32>)
       outs(%empty : tensor<128x128xf32>)
-      (%x: f32, %out: f32) {
+      (%x: f32) {
     %y = arith.maximumf %x, %zero : f32
     linalg.yield %y : f32
   }
@@ -86,7 +86,7 @@ func.func @unsupported_add_breaks_island(
   %add = linalg.map
       ins(%mm0, %C : tensor<128x128xf32>, tensor<128x128xf32>)
       outs(%empty : tensor<128x128xf32>)
-      (%x: f32, %y: f32, %out: f32) {
+      (%x: f32, %y: f32) {
     %z = arith.addf %x, %y : f32
     linalg.yield %z : f32
   }
@@ -114,7 +114,7 @@ func.func @add_relu_order_not_rewritten(
   %add = linalg.map
       ins(%x, %bias : tensor<4x4xf32>, tensor<4x4xf32>)
       outs(%empty : tensor<4x4xf32>)
-      (%a: f32, %b: f32, %out: f32) {
+      (%a: f32, %b: f32) {
     %sum = arith.addf %a, %b : f32
     linalg.yield %sum : f32
   }
@@ -122,7 +122,7 @@ func.func @add_relu_order_not_rewritten(
   %relu = linalg.map
       ins(%add : tensor<4x4xf32>)
       outs(%empty : tensor<4x4xf32>)
-      (%a: f32, %init: f32) {
+      (%a: f32) {
     %out = arith.maximumf %a, %zero : f32
     linalg.yield %out : f32
   }

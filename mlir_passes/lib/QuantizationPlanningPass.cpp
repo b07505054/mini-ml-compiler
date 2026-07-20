@@ -66,15 +66,21 @@ struct QuantizationPlanningPass
     module->setAttr("quantization.truth_boundary",
                     StringAttr::get(context,
                         "precision_selection_from_target_profile_not_calibrated"));
+    module->setAttr("quantization.planning_complete",
+                    BoolAttr::get(context, true));
 
-    // Optional: when plan_dtype == "int8", annotate eligible linalg.matmul ops
-    // so that shouldUseQuantizedMatMul() in MatMulBiasReluFusionPass fires
-    // without any modification to that pass.
-    if (planDtype == "int8") {
+    // The native codegen bridge accepts canonical Linalg input. Record the
+    // selected precision on those operations at the stage where they exist;
+    // MatMulBiasReluFusionPass consumes this exact attribute before replacing
+    // the Linalg pattern with its HIR fused operation.
+    if (planDtype == "int8" || planDtype == "fp32") {
       module.walk([&](Operation *op) {
         if (op->getName().getStringRef() == "linalg.matmul") {
-          op->setAttr("quantization.candidate", StringAttr::get(context, "int8"));
-          op->setAttr("profile.quantized_path", StringAttr::get(context, "faster"));
+          op->setAttr("quantization.candidate",
+                      StringAttr::get(context, planDtype));
+          if (planDtype == "int8")
+            op->setAttr("profile.quantized_path",
+                        StringAttr::get(context, "faster"));
         }
       });
     }

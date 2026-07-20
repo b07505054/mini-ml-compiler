@@ -10,6 +10,16 @@
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
   },
+  "nativeLoweringCostModelV2": {
+    "effectiveScalarOpsPerNs": 0.52,
+    "effectiveVectorOpsPerNs": 14.5,
+    "effectiveBandwidthBytesPerNs": 12.0,
+    "supportsVector": true,
+    "vectorUtilization": 0.82,
+    "vectorWidthBits": 128,
+    "calibrationScope": "raspberry-pi5-cortex-a76-f32-single-core-static-shape-matmul-bias-relu",
+    "truthBoundary": "calibrated_from_current_repository_A_B_C_D_raspberry_pi5_measurements_not_cross_target_constants"
+  },
   "executorchRuntimeCapabilities": {
     "schemaVersion": "slice3g.executorch_runtime_capabilities.v1",
     "supportsExecuTorchRuntime": true,

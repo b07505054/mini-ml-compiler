@@ -47,12 +47,13 @@ add_public_tablegen_target(HIRFusionPassIncGen)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-add_library(HIRMatMulBiasReluFusionPass MODULE
+set(ML_GRAPH_COMPILER_PASS_SOURCES
   lib/CV/IR/CVDialect.cpp
   lib/CV/IR/CVOps.cpp
   lib/HIR/IR/HIRDialect.cpp
   lib/HIR/IR/HIROps.cpp
   lib/MatMulBiasReluFusionPass.cpp
+  lib/NativeCodegenPipeline.cpp
   lib/QuantizationCompilerPasses.cpp
   lib/QuantizationPlanningPass.cpp
   lib/ServingPhaseAnalysisPass.cpp
@@ -85,15 +86,64 @@ add_library(HIRMatMulBiasReluFusionPass MODULE
   lib/serving/CVMemoryPlanningPass.cpp
   lib/serving/CVExecutionDomainPlanningPass.cpp
   lib/serving/CVSemanticAnnotationPass.cpp
-  lib/serving/CVExecutionPlanAttrsPass.cpp
   lib/serving/CVExecutionPlanBuilder.cpp
+  lib/serving/DistributedPlanning.cpp
+  lib/serving/DistributedStrategyPlanningPass.cpp
+)
+
+add_library(MLGraphCompilerPasses STATIC
+  ${ML_GRAPH_COMPILER_PASS_SOURCES}
+)
+set_target_properties(MLGraphCompilerPasses PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+)
+llvm_update_compile_flags(MLGraphCompilerPasses)
+
+add_dependencies(MLGraphCompilerPasses
+  CVDialectIncGen
+  HIRDialectIncGen
+  HIRFusionPassIncGen
+)
+
+target_include_directories(MLGraphCompilerPasses
+  PUBLIC
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+target_compile_definitions(MLGraphCompilerPasses
+  PRIVATE
+  ${LLVM_DEFINITIONS}
+)
+
+target_link_libraries(MLGraphCompilerPasses
+  PUBLIC
+    MLIRIR
+    MLIRParser
+    MLIRPass
+    MLIRFuncDialect
+    MLIRTensorDialect
+    MLIRLinalgDialect
+    MLIRArithDialect
+    MLIRMathDialect
+    MLIRTransforms
+    MLIRSupport
+    LLVMSupport
+)
+
+add_library(HIRMatMulBiasReluFusionPass MODULE
+  lib/PluginRegistration.cpp
 )
 llvm_update_compile_flags(HIRMatMulBiasReluFusionPass)
-
 add_dependencies(HIRMatMulBiasReluFusionPass
   CVDialectIncGen
   HIRDialectIncGen
   HIRFusionPassIncGen
+)
+target_link_libraries(HIRMatMulBiasReluFusionPass
+  PRIVATE MLGraphCompilerPasses
 )
 
 if(APPLE)
@@ -125,6 +175,16 @@ if(APPLE)
 endif()
 
 enable_testing()
+
+add_executable(MatMulLoweringCostModelV2Test
+  test/MatMulLoweringCostModelV2Test.cpp
+)
+target_include_directories(MatMulLoweringCostModelV2Test PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+add_test(NAME MatMulLoweringCostModelV2Test
+  COMMAND MatMulLoweringCostModelV2Test
+)
 
 # ---------------------------------------------------------------------------
 # CTest: ExecutionPlanBuilder collector test (Qwen 2.5-0.5B)
@@ -627,44 +687,16 @@ set_tests_properties(CVExecutionPlanArtifactToolTest PROPERTIES
 #        ExecutionPlanBuilder → ExecutionPlanExporter →
 #        canonical artifact (execution_plan.json).
 #
-# No HIRServingCore static library to avoid MODULE duplicate-symbol issues.
+# Pass and pipeline implementations come from MLGraphCompilerPasses, shared
+# with the plugin; plugin entry points remain isolated in PluginRegistration.
 # JSON construction is entirely owned by ExecutionPlanExporter; main.cpp
 # never constructs llvm::json types directly.
 # ---------------------------------------------------------------------------
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 add_executable(compile-for-target
-  lib/HIR/IR/HIRDialect.cpp
-  lib/HIR/IR/HIROps.cpp
-  lib/QuantizationCompilerPasses.cpp
-  lib/ServingPhaseAnalysisPass.cpp
-  lib/serving/LLMFrontendNormalizationPass.cpp
-  lib/serving/AttentionImplementationPasses.cpp
-  lib/serving/KVLayoutPlanningPass.cpp
-  lib/serving/ReplayEligibilityPass.cpp
-  lib/serving/ExecutionProviderPlanningPass.cpp
-  lib/serving/RepresentationPlanningPass.cpp
-  lib/serving/LayoutPlanningPass.cpp
-  lib/serving/BoundaryPlanningPass.cpp
-  lib/serving/BoundaryMaterializationPass.cpp
-  lib/serving/TilePlanningPass.cpp
-  lib/serving/KernelSelectionPass.cpp
-  lib/serving/QuantizationCoDesignPass.cpp
-  lib/serving/WeightClassificationPlanningPass.cpp
-  lib/serving/QuantizationStrategyPlanningPass.cpp
-  lib/serving/CVExecutionPlanAttrsPass.cpp
-  lib/serving/KernelAvailabilityPlanningPass.cpp
-  lib/serving/LoweringDecisionPlanningPass.cpp
-  lib/serving/QuantizedBoundaryRefinementPass.cpp
-  lib/serving/AlternativeLoweringPlanningPass.cpp
-  lib/serving/CandidateGenerationPass.cpp
-  lib/serving/ServingCostModelPass.cpp
-  lib/serving/PlanSelectionPass.cpp
   lib/serving/ExecutionPlanBuilder.cpp
   lib/serving/ExecutionPlanExporter.cpp
-  lib/serving/TargetConstraints.cpp
-  lib/serving/DistributedPlanning.cpp
-  lib/serving/DistributedStrategyPlanningPass.cpp
   tools/compile-for-target/main.cpp
 )
 llvm_update_compile_flags(compile-for-target)
@@ -679,6 +711,8 @@ target_include_directories(compile-for-target
 target_compile_definitions(compile-for-target PRIVATE ${LLVM_DEFINITIONS})
 target_link_libraries(compile-for-target
   PRIVATE
+    MLGraphCompilerPasses
+    MLIR
     MLIRIR
     MLIRParser
     MLIRPass

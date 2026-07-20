@@ -2,6 +2,7 @@
 #include "CV/IR/CVDialect.h"
 #include "HIR/IR/HIRDialect.h"
 #include "HIR/IR/HIROps.h"
+#include "MatMulLoweringCostModelV2.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -105,8 +106,6 @@ constexpr int64_t kTargetTileN = 16;
 constexpr int64_t kTargetTileK = 32;
 constexpr int64_t kTargetAlignmentBytes = 128;
 constexpr int64_t kTargetSramKb = 256;
-constexpr double kMaxPaddingComputeOverhead = 1.25;
-constexpr double kMaxPaddingOutputOverhead = 1.25;
 
 bool isStaticMultiple(int64_t dim, int64_t multiple) {
   return dim != ShapedType::kDynamic && dim % multiple == 0;
@@ -215,15 +214,6 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
   double outputOverhead =
       static_cast<double>(paddedM) * static_cast<double>(paddedN) /
       (static_cast<double>(m) * static_cast<double>(n));
-  if (requiresPaddingCrop &&
-      computeOverhead > kMaxPaddingComputeOverhead) {
-    return {false, "padding_compute_overhead_too_high", bias};
-  }
-  if (requiresPaddingCrop &&
-      outputOverhead > kMaxPaddingOutputOverhead) {
-    return {false, "padding_output_overhead_too_high", bias};
-  }
-
   return {true,
           requiresPaddingCrop ? "target_legal_with_padding_crop"
                               : "target_legal",
@@ -237,6 +227,95 @@ MatMulBiasReluLegality checkMatMulBiasReluLegality(linalg::MatmulOp matmul,
           paddedK,
           computeOverhead,
           outputOverhead};
+}
+
+NativeCostCalibration calibrationFor(ModuleOp module) {
+  NativeCostCalibration calibration;
+  if (auto profile =
+          module->getAttrOfType<StringAttr>("target.profile_id");
+      profile && profile.getValue() == "raspberry-pi5-cortex-a76-cpu")
+    calibration = raspberryPi5CortexA76F32Calibration();
+  if (auto value = module->getAttrOfType<FloatAttr>(
+          "target.native_cost_v2.effective_scalar_ops_per_ns"))
+    calibration.effectiveScalarOpsPerNs = value.getValueAsDouble();
+  if (auto value = module->getAttrOfType<FloatAttr>(
+          "target.native_cost_v2.effective_vector_ops_per_ns"))
+    calibration.effectiveVectorOpsPerNs = value.getValueAsDouble();
+  if (auto value = module->getAttrOfType<FloatAttr>(
+          "target.native_cost_v2.effective_bandwidth_bytes_per_ns"))
+    calibration.effectiveBandwidthBytesPerNs = value.getValueAsDouble();
+  if (auto value = module->getAttrOfType<FloatAttr>(
+          "target.native_cost_v2.vector_utilization"))
+    calibration.vectorUtilization = value.getValueAsDouble();
+  if (auto value = module->getAttrOfType<BoolAttr>(
+          "target.native_cost_v2.supports_vector"))
+    calibration.supportsVector = value.getValue();
+  if (auto value = module->getAttrOfType<BoolAttr>(
+          "target.native_cost_v2.vector_lowering_available"))
+    calibration.supportsVector =
+        calibration.supportsVector && value.getValue();
+  return calibration;
+}
+
+DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
+                                 const MatMulLoweringCandidate &candidate,
+                                 bool selected) {
+  auto i64 = [&](int64_t value) { return builder.getI64IntegerAttr(value); };
+  auto f64 = [&](double value) { return builder.getF64FloatAttr(value); };
+  SmallVector<NamedAttribute> attrs;
+  attrs.emplace_back(builder.getStringAttr("candidate_id"),
+                     builder.getStringAttr(candidate.id));
+  attrs.emplace_back(builder.getStringAttr("fusion_mode"),
+                     builder.getStringAttr(fusionName(candidate.fusion)));
+  attrs.emplace_back(builder.getStringAttr("schedule_mode"),
+                     builder.getStringAttr(scheduleName(candidate.schedule)));
+  attrs.emplace_back(builder.getStringAttr("original_shape"),
+                     builder.getArrayAttr({i64(candidate.originalM),
+                                           i64(candidate.originalN),
+                                           i64(candidate.originalK)}));
+  attrs.emplace_back(builder.getStringAttr("executed_shape"),
+                     builder.getArrayAttr({i64(candidate.executedM),
+                                           i64(candidate.executedN),
+                                           i64(candidate.executedK)}));
+  attrs.emplace_back(builder.getStringAttr("requires_padding"),
+                     builder.getBoolAttr(candidate.requiresPadding));
+  attrs.emplace_back(builder.getStringAttr("requires_crop"),
+                     builder.getBoolAttr(candidate.requiresCrop));
+  attrs.emplace_back(builder.getStringAttr("lowering_complete"),
+                     builder.getBoolAttr(candidate.loweringComplete));
+  attrs.emplace_back(builder.getStringAttr("temporary_allocation_count"),
+                     i64(candidate.temporaryAllocationCount));
+  attrs.emplace_back(builder.getStringAttr("temporary_allocated_bytes"),
+                     i64(candidate.temporaryAllocatedBytes));
+  attrs.emplace_back(builder.getStringAttr("intermediate_read_count"),
+                     i64(candidate.intermediateReadCount));
+  attrs.emplace_back(builder.getStringAttr("intermediate_write_count"),
+                     i64(candidate.intermediateWriteCount));
+  attrs.emplace_back(builder.getStringAttr("compute_operations"),
+                     i64(candidate.computeOperations));
+  attrs.emplace_back(builder.getStringAttr("compute_ns"),
+                     f64(candidate.cost.computeNs));
+  attrs.emplace_back(builder.getStringAttr("memory_traffic_ns"),
+                     f64(candidate.cost.memoryTrafficNs));
+  attrs.emplace_back(builder.getStringAttr("allocation_ns"),
+                     f64(candidate.cost.allocationNs));
+  attrs.emplace_back(builder.getStringAttr("padding_compute_ns"),
+                     f64(candidate.cost.paddingComputeNs));
+  attrs.emplace_back(builder.getStringAttr("padding_copy_ns"),
+                     f64(candidate.cost.paddingCopyNs));
+  attrs.emplace_back(builder.getStringAttr("crop_copy_ns"),
+                     f64(candidate.cost.cropCopyNs));
+  attrs.emplace_back(builder.getStringAttr("control_overhead_ns"),
+                     f64(candidate.cost.controlOverheadNs));
+  attrs.emplace_back(builder.getStringAttr("interaction_correction_ns"),
+                     f64(candidate.cost.interactionCorrectionNs));
+  attrs.emplace_back(builder.getStringAttr("total_ns"),
+                     f64(candidate.cost.totalNs));
+  attrs.emplace_back(builder.getStringAttr("selected"),
+                     builder.getBoolAttr(selected));
+  attrs.emplace_back(builder.getStringAttr("rejection_reason"),
+                     builder.getStringAttr(candidate.rejectionReason));
+  return DictionaryAttr::get(context, attrs);
 }
 
 void attachTargetProfileAttrs(Operation *op, OpBuilder &builder) {
@@ -359,6 +438,31 @@ struct MatMulBiasReluFusionPass
         return;
       }
 
+      // A completed native precision plan is causal: only a type-compatible
+      // selected candidate is eligible for this fused lowering. Pipelines
+      // that do not run quantization planning retain the historical
+      // standalone fusion behavior.
+      if (auto module = func->getParentOfType<ModuleOp>();
+          module && module->getAttrOfType<BoolAttr>(
+                        "quantization.planning_complete")) {
+        auto selected =
+            matmul->getAttrOfType<StringAttr>("quantization.candidate");
+        auto lhsType =
+            dyn_cast<RankedTensorType>(matmul.getInputs()[0].getType());
+        auto rhsType =
+            dyn_cast<RankedTensorType>(matmul.getInputs()[1].getType());
+        bool selectedF32 =
+            selected && selected.getValue() == "fp32" && lhsType && rhsType &&
+            lhsType.getElementType().isF32() &&
+            rhsType.getElementType().isF32();
+        bool selectedI8 =
+            selected && selected.getValue() == "int8" && lhsType && rhsType &&
+            lhsType.getElementType().isInteger(8) &&
+            rhsType.getElementType().isInteger(8);
+        if (!selectedF32 && !selectedI8)
+          return;
+      }
+
       Value matmulResult = matmul->getResult(0);
       if (!matmulResult.hasOneUse()) {
         return;
@@ -388,6 +492,62 @@ struct MatMulBiasReluFusionPass
           }
 
           auto *context = matmul.getContext();
+          OpBuilder builder(context);
+          ModuleOp module = func->getParentOfType<ModuleOp>();
+          bool useCostModel =
+              module &&
+              (module->hasAttr("quantization.planning_complete") ||
+               module->hasAttr("target.native_cost_v2.supports_vector"));
+          if (useCostModel) {
+            MatMulLoweringProblem problem;
+            problem.m = legality.m;
+            problem.n = legality.n;
+            problem.k = legality.k;
+            problem.dtype =
+                cast<RankedTensorType>(matmul.getInputs()[0].getType())
+                        .getElementType()
+                        .isF16()
+                    ? "f16"
+                    : "f32";
+            problem.fusionLegal = true;
+            problem.tileM = kTargetTileM;
+            problem.tileN = kTargetTileN;
+            problem.tileK = kTargetTileK;
+            problem.paddedFusedVectorLoweringComplete = false;
+            NativeCostCalibration calibration = calibrationFor(module);
+            MatMulLoweringSelection selection =
+                selectMatMulLowering(problem, calibration);
+            SmallVector<Attribute> evidence;
+            for (int i = 0,
+                     e = static_cast<int>(selection.candidates.size());
+                 i < e; ++i)
+              evidence.push_back(candidateEvidence(
+                  context, builder, selection.candidates[i],
+                  i == selection.selectedIndex));
+            matmul->setAttr("native.cost_model.version",
+                            builder.getStringAttr("static_cost_model_v2"));
+            matmul->setAttr("native.cost_model.target",
+                            builder.getStringAttr(calibration.target));
+            matmul->setAttr("native.cost_model.candidates",
+                            builder.getArrayAttr(evidence));
+            const MatMulLoweringCandidate *winner = selection.winner();
+            if (!winner) {
+              matmul->setAttr(
+                  "fusion.reject_reason",
+                  builder.getStringAttr("no_legal_native_lowering_candidate"));
+              continue;
+            }
+            matmul->setAttr("native.cost_model.selected_candidate",
+                            builder.getStringAttr(winner->id));
+            matmul->setAttr(
+                "native.cost_model.selected_schedule",
+                builder.getStringAttr(scheduleName(winner->schedule)));
+            matmul->setAttr("native.cost_model.selected_total_ns",
+                            builder.getF64FloatAttr(winner->cost.totalNs));
+            if (winner->fusion != FusionMode::Fused)
+              continue;
+          }
+
           auto group = StringAttr::get(context, "matmul_bias_relu_0");
 
           matmul->setAttr(
@@ -443,8 +603,26 @@ bool shouldUseQuantizedMatMul(linalg::MatmulOp matmul) {
       matmul->getAttrOfType<StringAttr>("quantization.candidate");
   auto profileDecision =
       matmul->getAttrOfType<StringAttr>("profile.quantized_path");
-  return quantizationCandidate && quantizationCandidate.getValue() == "int8" &&
-         profileDecision && profileDecision.getValue() == "faster";
+  if (!quantizationCandidate || quantizationCandidate.getValue() != "int8" ||
+      !profileDecision || profileDecision.getValue() != "faster") {
+    return false;
+  }
+  // hir.fused_qmatmul_bias_relu requires i8 lhs/rhs operands (its own
+  // verifier enforces this). The quantization.candidate/profile.quantized_path
+  // attrs are only a planning-time *hint* that int8 execution would be
+  // profitable -- they do not themselves quantize the operands. Real
+  // quantization (inserting hir.quantize) is a separate, later stage
+  // (QuantizationMaterializationPass). If this matmul's operands are not
+  // already i8-typed, honoring the hint here would construct a
+  // hir.fused_qmatmul_bias_relu whose own verifier immediately rejects it
+  // (a real bug found while validating this pipeline: the hint was trusted
+  // without checking operand types, producing IR that failed its own op
+  // verifier). Fall back to the fp32 fused op instead -- a safe, explicit
+  // choice, not a silent miscompile.
+  auto lhsType = dyn_cast<RankedTensorType>(matmul.getInputs()[0].getType());
+  auto rhsType = dyn_cast<RankedTensorType>(matmul.getInputs()[1].getType());
+  return lhsType && rhsType && lhsType.getElementType().isInteger(8) &&
+         rhsType.getElementType().isInteger(8);
 }
 
 struct MatMulBiasReluToHIRConversionPattern
@@ -543,6 +721,9 @@ struct MatMulBiasReluToHIRConversionPattern
                     StringAttr::get(matmul.getContext(), "runtime_profile"));
       fp32->setAttr("lowering.source",
                     StringAttr::get(matmul.getContext(), "linalg.matmul_add_relu"));
+      if (auto planned =
+              matmul->getAttrOfType<StringAttr>("quantization.candidate"))
+        fp32->setAttr("quantization.candidate", planned);
       attachTargetProfileAttrs(fp32.getOperation(), rewriter);
       attachPaddingAttrs(fp32.getOperation(), rewriter, legality);
       fused = fp32.getOperation();
@@ -998,7 +1179,41 @@ struct HIRMatMulBiasReluToLinalgPass
 
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       signalPassFailure();
+      return;
     }
+
+    WalkResult result =
+        getOperation().walk([&](FusedMatMulBiasReluOp op) -> WalkResult {
+          auto outputType = dyn_cast<RankedTensorType>(op.getOutput().getType());
+          if (!outputType)
+            return op.emitError()
+                       << "hir-native-codegen cannot lower '" << op->getName()
+                       << "': result is not a ranked tensor",
+                   WalkResult::interrupt();
+          if (!outputType.getElementType().isF32())
+            return op.emitError()
+                       << "hir-native-codegen cannot lower '" << op->getName()
+                       << "': element type " << outputType.getElementType()
+                       << " is unsupported by HIRMatMulBiasReluToLinalg "
+                          "lowering; supported element type: f32; shape: "
+                       << outputType,
+                   WalkResult::interrupt();
+          if (!outputType.hasStaticShape())
+            return op.emitError()
+                       << "hir-native-codegen cannot lower '" << op->getName()
+                       << "': dynamic shape is unsupported by "
+                          "HIRMatMulBiasReluToLinalg lowering; shape: "
+                       << outputType,
+                   WalkResult::interrupt();
+          return op.emitError()
+                     << "hir-native-codegen cannot lower '" << op->getName()
+                     << "': operands do not satisfy the rank-2 "
+                        "MatMul/Bias/ReLU shape contract; result: "
+                     << outputType,
+                 WalkResult::interrupt();
+        });
+    if (result.wasInterrupted())
+      signalPassFailure();
   }
 };
 
@@ -1293,25 +1508,3 @@ void registerFusionPasses() {
 }
 
 } // namespace mlir::hir
-extern "C" ::mlir::PassPluginLibraryInfo
-mlirGetPassPluginInfo() {
-  return {
-      MLIR_PLUGIN_API_VERSION,
-      "MatMulBiasReluFusionPass",
-      LLVM_VERSION_STRING,
-      []() {
-        mlir::hir::registerFusionPasses();
-      }};
-}
-
-extern "C" ::mlir::DialectPluginLibraryInfo
-mlirGetDialectPluginInfo() {
-  return {
-      MLIR_PLUGIN_API_VERSION,
-      "HIRDialect",
-      LLVM_VERSION_STRING,
-      [](mlir::DialectRegistry *registry) {
-        registry->insert<mlir::cv::CVDialect>();
-        registry->insert<mlir::hir::HIRDialect>();
-      }};
-}
