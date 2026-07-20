@@ -513,7 +513,6 @@ struct MatMulBiasReluFusionPass
             problem.tileM = kTargetTileM;
             problem.tileN = kTargetTileN;
             problem.tileK = kTargetTileK;
-            problem.paddedFusedVectorLoweringComplete = false;
             NativeCostCalibration calibration = calibrationFor(module);
             MatMulLoweringSelection selection =
                 selectMatMulLowering(problem, calibration);

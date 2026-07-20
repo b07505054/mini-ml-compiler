@@ -46,8 +46,16 @@ int main() {
   assert(paddedScalar.valid() && paddedScalar.requiresPadding);
   assert(paddedScalar.executedM == 16 && paddedScalar.executedN == 16 &&
          paddedScalar.executedK == 32);
-  assert(!find(pad, "fused_vectorized").valid());
-  assert(pad.winner() && !pad.winner()->requiresPadding);
+  const auto &paddedVector = find(pad, "fused_vectorized");
+  assert(paddedVector.valid() && paddedVector.requiresPadding);
+  assert(paddedVector.requiresCrop && paddedVector.loweringComplete);
+
+  MatMulLoweringProblem unsupportedPaddingCleanup = padded;
+  unsupportedPaddingCleanup.paddedFusedVectorLoweringComplete = false;
+  auto unsupported = selectMatMulLowering(unsupportedPaddingCleanup, pi);
+  assert(!find(unsupported, "fused_vectorized").valid());
+  assert(find(unsupported, "fused_vectorized").rejectionReason ==
+         "padded_fused_vector_padding_fill_lowering_unavailable");
 
   const auto &b = find(all, "fused_scalar");
   const double explicitSum =

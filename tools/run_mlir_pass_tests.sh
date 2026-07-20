@@ -879,6 +879,12 @@ run_backend_codegen_vectorized_static_checks() {
     echo "error: expected at least one of vector.contract/vector.fma/vector.transfer_read/vector.transfer_write in ${name}_vector.mlir" >&2
     exit 1
   fi
+  if [[ "$shape" == "15x31x15" ]]; then
+    grep -q "vector<16x32xf32>" "$out_dir/${name}_vector.mlir" ||
+      { echo "error: padded D did not vectorize the 16x32 compute input" >&2; exit 1; }
+    grep -q "tensor.extract_slice.*\\[15, 15\\]" "$out_dir/${name}_vector.mlir" ||
+      { echo "error: padded D lost the 15x15 output crop" >&2; exit 1; }
+  fi
 
   # 2. Full pipeline (reuses the exact reproducible script).
   MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
@@ -889,6 +895,10 @@ run_backend_codegen_vectorized_static_checks() {
   #    real LLVM vector type (e.g. "<16 x float>"), not scalarized fallback.
   if ! grep -qE "<[0-9]+ x float>" "$out_dir/${name}.ll"; then
     echo "error: expected an LLVM vector type (e.g. '<N x float>') in ${name}.ll -- vectorization silently scalarized" >&2
+    exit 1
+  fi
+  if grep -qE '(^|[[:space:]])(linalg|tensor|vector)\\.' "$out_dir/${name}_llvm.mlir"; then
+    echo "error: unsupported structured/vector op survived the LLVM boundary" >&2
     exit 1
   fi
 
@@ -918,7 +928,7 @@ run_backend_codegen_vectorized_static_checks() {
   rm -rf "$out_dir"
 }
 
-for shape in 8x8x8 16x16x16 32x32x32; do
+for shape in 8x8x8 16x16x16 32x32x32 15x31x15; do
   run_tracked "backend_codegen/vectorized_${shape}" \
     run_backend_codegen_vectorized_static_checks "$shape"
 done

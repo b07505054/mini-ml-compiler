@@ -97,7 +97,10 @@ struct MatMulLoweringProblem {
   std::string fusionRejectionReason;
   bool fusedScalarRequiresTile = true;
   bool fusedVectorRequiresTile = true;
-  bool paddedFusedVectorLoweringComplete = false;
+  // The AArch64 vector pipeline lowers tensor.pad's post-bufferization
+  // zero-fill linalg maps to loops before the LLVM conversion boundary.
+  // Targets/pipelines without that cleanup can still override this capability.
+  bool paddedFusedVectorLoweringComplete = true;
   int64_t tileM = 16, tileN = 16, tileK = 32;
 };
 
@@ -247,7 +250,8 @@ selectMatMulLowering(const MatMulLoweringProblem &p,
           schedule == ScheduleMode::Vectorized &&
           !p.paddedFusedVectorLoweringComplete) {
         c.loweringComplete = false;
-        c.rejectionReason = "padded_fused_vector_residual_linalg_map";
+        c.rejectionReason =
+            "padded_fused_vector_padding_fill_lowering_unavailable";
       }
       estimateCandidate(c, cal);
       result.candidates.push_back(std::move(c));

@@ -345,7 +345,7 @@ GENERIC_PIPELINE='builtin.module(hir-native-codegen)'
 #     disassembly) instead of separate fmul/fadd.
 #   - convert-ub-to-llvm: lowers the `ub.poison` padding-value placeholder
 #     that vector.transfer_read's padding operand introduces.
-VECTORIZED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+VECTORIZED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},convert-linalg-to-loops,buffer-deallocation-pipeline,func.func(test-vector-transfer-flatten-patterns),expand-strided-metadata,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 
 # Tiled-vectorized variant: a concrete Transform-dialect script is
 # generated on demand from mlir_passes/transforms/
