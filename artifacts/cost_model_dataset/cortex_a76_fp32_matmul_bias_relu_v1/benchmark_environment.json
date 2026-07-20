@@ -1,0 +1,20 @@
+{
+  "target_id": "raspberry-pi5-cortex-a76",
+  "model": "Raspberry Pi 5 Model B Rev 1.1",
+  "kernel": "Linux edgeaiplatform 6.18.34+rpt-rpi-2712 aarch64",
+  "target_cpu": "cortex-a76",
+  "target_features": "+neon,+fp-armv8",
+  "cpu_affinity": "3",
+  "governor": "ondemand",
+  "observed_frequency_khz": [1500000, 1600000],
+  "pi_compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+  "mlir_opt": "Ubuntu LLVM version 21.1.8",
+  "mlir_translate": "Ubuntu LLVM version 21.1.8",
+  "llc": "Ubuntu LLVM version 21.1.8",
+  "clang": "Ubuntu clang version 21.1.8 (6ubuntu1)",
+  "target_flags": "-O3 -mtriple=aarch64-linux-gnu -mcpu=cortex-a76",
+  "warmup_calls": 100,
+  "repeated_correctness_calls": 1000,
+  "benchmark_commit": "06a7b5b55d66dfe4da6d01adf7982ab662c8a8e2",
+  "source_state": "benchmark executed from the uncommitted source state that became this dataset commit; per-row object and linked-binary SHA-256 hashes are authoritative"
+}

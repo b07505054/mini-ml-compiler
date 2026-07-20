@@ -1,0 +1,426 @@
+{
+  "fields": [
+    {
+      "name": "dataset_version",
+      "nullable": false
+    },
+    {
+      "name": "benchmark_commit",
+      "nullable": false
+    },
+    {
+      "name": "target_id",
+      "nullable": false
+    },
+    {
+      "name": "target_cpu",
+      "nullable": false
+    },
+    {
+      "name": "target_features",
+      "nullable": false
+    },
+    {
+      "name": "dtype",
+      "nullable": false
+    },
+    {
+      "name": "operator_kind",
+      "nullable": false
+    },
+    {
+      "name": "shape_group_id",
+      "nullable": false
+    },
+    {
+      "name": "candidate_id",
+      "nullable": false
+    },
+    {
+      "name": "candidate_kind",
+      "nullable": false
+    },
+    {
+      "name": "split",
+      "nullable": false
+    },
+    {
+      "name": "M",
+      "nullable": false
+    },
+    {
+      "name": "N",
+      "nullable": false
+    },
+    {
+      "name": "K",
+      "nullable": false
+    },
+    {
+      "name": "output_elements",
+      "nullable": false
+    },
+    {
+      "name": "reduction_elements",
+      "nullable": false
+    },
+    {
+      "name": "total_flops",
+      "nullable": false
+    },
+    {
+      "name": "input_bytes",
+      "nullable": false
+    },
+    {
+      "name": "output_bytes",
+      "nullable": false
+    },
+    {
+      "name": "arithmetic_intensity",
+      "nullable": false
+    },
+    {
+      "name": "fused",
+      "nullable": false
+    },
+    {
+      "name": "bias_enabled",
+      "nullable": false
+    },
+    {
+      "name": "relu_enabled",
+      "nullable": false
+    },
+    {
+      "name": "intermediate_tensor_count",
+      "nullable": false
+    },
+    {
+      "name": "estimated_intermediate_bytes",
+      "nullable": false
+    },
+    {
+      "name": "avoided_intermediate_bytes",
+      "nullable": false
+    },
+    {
+      "name": "schedule_kind",
+      "nullable": false
+    },
+    {
+      "name": "scalar",
+      "nullable": false
+    },
+    {
+      "name": "vectorized",
+      "nullable": false
+    },
+    {
+      "name": "whole_shape_vectorized",
+      "nullable": false
+    },
+    {
+      "name": "tiled",
+      "nullable": false
+    },
+    {
+      "name": "tile_m",
+      "nullable": false
+    },
+    {
+      "name": "tile_n",
+      "nullable": false
+    },
+    {
+      "name": "tile_k",
+      "nullable": false
+    },
+    {
+      "name": "vector_width",
+      "nullable": false
+    },
+    {
+      "name": "full_tile_count",
+      "nullable": false
+    },
+    {
+      "name": "padding_policy",
+      "nullable": false
+    },
+    {
+      "name": "padded_m",
+      "nullable": false
+    },
+    {
+      "name": "padded_n",
+      "nullable": false
+    },
+    {
+      "name": "padded_k",
+      "nullable": false
+    },
+    {
+      "name": "padded_elements",
+      "nullable": false
+    },
+    {
+      "name": "padded_flops",
+      "nullable": false
+    },
+    {
+      "name": "padded_flop_ratio",
+      "nullable": false
+    },
+    {
+      "name": "temporary_bytes",
+      "nullable": false
+    },
+    {
+      "name": "zero_fill_bytes",
+      "nullable": false
+    },
+    {
+      "name": "copy_bytes",
+      "nullable": false
+    },
+    {
+      "name": "m_remainder",
+      "nullable": false
+    },
+    {
+      "name": "n_remainder",
+      "nullable": false
+    },
+    {
+      "name": "k_remainder",
+      "nullable": false
+    },
+    {
+      "name": "m_tail_strategy",
+      "nullable": false
+    },
+    {
+      "name": "n_tail_strategy",
+      "nullable": false
+    },
+    {
+      "name": "k_tail_strategy",
+      "nullable": false
+    },
+    {
+      "name": "m_tail_invocations",
+      "nullable": false
+    },
+    {
+      "name": "n_tail_invocations",
+      "nullable": false
+    },
+    {
+      "name": "k_tail_invocations",
+      "nullable": false
+    },
+    {
+      "name": "direct_vector_ops",
+      "nullable": false
+    },
+    {
+      "name": "masked_lane_waste",
+      "nullable": false
+    },
+    {
+      "name": "estimated_llvm_ir_bytes",
+      "nullable": false
+    },
+    {
+      "name": "estimated_object_text_bytes",
+      "nullable": false
+    },
+    {
+      "name": "estimated_static_instruction_count",
+      "nullable": false
+    },
+    {
+      "name": "branch_cost_feature",
+      "nullable": false
+    },
+    {
+      "name": "register_pressure_estimate",
+      "nullable": false
+    },
+    {
+      "name": "spill_risk",
+      "nullable": false
+    },
+    {
+      "name": "lowering_stage_count",
+      "nullable": false
+    },
+    {
+      "name": "target_legal",
+      "nullable": false
+    },
+    {
+      "name": "lowering_complete",
+      "nullable": false
+    },
+    {
+      "name": "native_executable",
+      "nullable": false
+    },
+    {
+      "name": "legality_reason",
+      "nullable": false
+    },
+    {
+      "name": "unsupported_reason",
+      "nullable": false
+    },
+    {
+      "name": "execution_status",
+      "nullable": true
+    },
+    {
+      "name": "correctness_pass",
+      "nullable": true
+    },
+    {
+      "name": "sentinel_pass",
+      "nullable": true
+    },
+    {
+      "name": "sanitizer_pass",
+      "nullable": true
+    },
+    {
+      "name": "label_valid",
+      "nullable": true
+    },
+    {
+      "name": "warmup_calls",
+      "nullable": true
+    },
+    {
+      "name": "measured_calls",
+      "nullable": true
+    },
+    {
+      "name": "median_ns",
+      "nullable": true
+    },
+    {
+      "name": "p95_ns",
+      "nullable": true
+    },
+    {
+      "name": "mad_ns",
+      "nullable": true
+    },
+    {
+      "name": "min_ns",
+      "nullable": true
+    },
+    {
+      "name": "max_ns",
+      "nullable": true
+    },
+    {
+      "name": "checksum",
+      "nullable": true
+    },
+    {
+      "name": "max_absolute_error",
+      "nullable": true
+    },
+    {
+      "name": "max_relative_error",
+      "nullable": true
+    },
+    {
+      "name": "cpu_affinity",
+      "nullable": true
+    },
+    {
+      "name": "governor",
+      "nullable": true
+    },
+    {
+      "name": "current_frequency_khz",
+      "nullable": true
+    },
+    {
+      "name": "compiler_flags",
+      "nullable": true
+    },
+    {
+      "name": "compiler_version",
+      "nullable": true
+    },
+    {
+      "name": "mlir_version",
+      "nullable": true
+    },
+    {
+      "name": "binary_hash",
+      "nullable": true
+    },
+    {
+      "name": "object_hash",
+      "nullable": true
+    },
+    {
+      "name": "actual_llvm_mlir_bytes",
+      "nullable": true
+    },
+    {
+      "name": "actual_llvm_ir_bytes",
+      "nullable": true
+    },
+    {
+      "name": "actual_object_text_bytes",
+      "nullable": true
+    },
+    {
+      "name": "actual_static_instruction_count",
+      "nullable": true
+    },
+    {
+      "name": "actual_fmla_count",
+      "nullable": true
+    },
+    {
+      "name": "actual_branch_count",
+      "nullable": true
+    },
+    {
+      "name": "actual_stack_frame_bytes",
+      "nullable": true
+    },
+    {
+      "name": "actual_spills",
+      "nullable": true
+    },
+    {
+      "name": "compile_time_ms",
+      "nullable": true
+    },
+    {
+      "name": "compiler_peak_rss_kib",
+      "nullable": true
+    },
+    {
+      "name": "log_median_ns",
+      "nullable": true
+    }
+  ],
+  "label": "log_median_ns",
+  "label_validity": "execution_status=success AND correctness_pass AND sentinel_pass",
+  "primary_key": [
+    "target_id",
+    "dtype",
+    "operator_kind",
+    "shape_group_id",
+    "candidate_id"
+  ],
+  "schema_version": "matmul_bias_relu_latency_row_v1"
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "candidate_id": "whole_shape_vector_no_padding",
+    "correctness_pass": false,
+    "execution_status": "compile_failed",
+    "shape_group_id": "m1_n1_k1_f32"
+  }
+]

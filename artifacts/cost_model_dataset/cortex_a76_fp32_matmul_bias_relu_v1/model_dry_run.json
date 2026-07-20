@@ -1,0 +1,18 @@
+{
+  "model": "candidate_kind_mean_dependency_free_readability_baseline",
+  "production_deployment": false,
+  "heldout_used_for_tuning": false,
+  "fitted_candidate_kinds": [
+    "scalar_baseline",
+    "tiled_vector_direct_cleanup",
+    "tiled_vector_full_tiles",
+    "tiled_vector_materialized_tail",
+    "whole_shape_vector_materialized_padding",
+    "whole_shape_vector_no_padding"
+  ],
+  "metrics": {
+    "train": {"rows": 96, "log_mae": 1.6429643945699928},
+    "validation": {"rows": 31, "log_mae": 1.4653579540117998},
+    "heldout": {"rows": 34, "log_mae": 1.3210746456890665}
+  }
+}

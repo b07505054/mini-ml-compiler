@@ -177,6 +177,7 @@ if(APPLE)
 endif()
 
 enable_testing()
+find_program(CANDIDATE_DATASET_PYTHON NAMES python3 REQUIRED)
 
 add_executable(MatMulLoweringCostModelV2Test
   test/MatMulLoweringCostModelV2Test.cpp
@@ -186,6 +187,10 @@ target_include_directories(MatMulLoweringCostModelV2Test PRIVATE
 )
 add_test(NAME MatMulLoweringCostModelV2Test
   COMMAND MatMulLoweringCostModelV2Test
+)
+add_test(NAME CandidateLatencyDatasetTest
+  COMMAND ${CANDIDATE_DATASET_PYTHON}
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_candidate_latency_dataset.py
 )
 
 # ---------------------------------------------------------------------------

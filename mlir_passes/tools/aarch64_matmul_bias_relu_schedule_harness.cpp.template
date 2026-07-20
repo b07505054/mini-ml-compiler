@@ -67,6 +67,28 @@ struct MemRef2D {
   int64_t sizes[2];
   int64_t strides[2];
 };
+struct UnrankedMemRef {
+  int64_t rank;
+  void* descriptor;
+};
+// Tile-materialized candidates call the standard runner ABI helper. Keeping
+// the rank-2 f32 implementation in this shared per-candidate harness makes
+// scalar, whole-shape, full-tile, and tail candidates use the same runner.
+void memrefCopy(int64_t elementSize, const UnrankedMemRef* source,
+                UnrankedMemRef* target) {
+  if (source->rank != 2 || target->rank != 2 || elementSize != 4)
+    std::abort();
+  const auto* src = static_cast<const MemRef2D*>(source->descriptor);
+  auto* dst = static_cast<MemRef2D*>(target->descriptor);
+  if (src->sizes[0] != dst->sizes[0] || src->sizes[1] != dst->sizes[1])
+    std::abort();
+  for (int64_t i = 0; i < src->sizes[0]; ++i)
+    for (int64_t j = 0; j < src->sizes[1]; ++j)
+      dst->aligned[dst->offset + i * dst->strides[0] +
+                   j * dst->strides[1]] =
+          src->aligned[src->offset + i * src->strides[0] +
+                       j * src->strides[1]];
+}
 void _mlir_ciface_matmul_bias_relu_tiled_SHAPE_TOKEN(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
 }
 
@@ -156,14 +178,20 @@ double percentile(std::vector<double> v, double p) {
 }
 
 struct BenchStats {
-  double minMs = 0, medianMs = 0, meanMs = 0, p95Ms = 0, stddevMs = 0, cv = 0;
+  double minMs = 0, medianMs = 0, meanMs = 0, p95Ms = 0, maxMs = 0;
+  double madMs = 0, stddevMs = 0, cv = 0;
 };
 
 BenchStats summarize(const std::vector<double>& v) {
   BenchStats s;
   s.minMs = *std::min_element(v.begin(), v.end());
+  s.maxMs = *std::max_element(v.begin(), v.end());
   s.medianMs = percentile(v, 0.5);
   s.p95Ms = percentile(v, 0.95);
+  std::vector<double> deviations;
+  deviations.reserve(v.size());
+  for (double x : v) deviations.push_back(std::fabs(x - s.medianMs));
+  s.madMs = percentile(deviations, 0.5);
   double sum = 0;
   for (double x : v) sum += x;
   s.meanMs = sum / static_cast<double>(v.size());
@@ -373,8 +401,9 @@ int main(int argc, char** argv) {
   std::printf("  \"benchmark\": {\n");
   std::printf("    \"warmup\": %lld, \"iterations\": %lld, \"unit\": \"ms\",\n",
               static_cast<long long>(warmup), static_cast<long long>(iterations));
-  std::printf("    \"min_ms\": %.9g, \"median_ms\": %.9g, \"mean_ms\": %.9g, \"p95_ms\": %.9g, \"stddev_ms\": %.9g, \"cv\": %.9g\n",
-              stats.minMs, stats.medianMs, stats.meanMs, stats.p95Ms, stats.stddevMs, stats.cv);
+  std::printf("    \"min_ms\": %.9g, \"median_ms\": %.9g, \"mean_ms\": %.9g, \"p95_ms\": %.9g, \"max_ms\": %.9g, \"mad_ms\": %.9g, \"stddev_ms\": %.9g, \"cv\": %.9g\n",
+              stats.minMs, stats.medianMs, stats.meanMs, stats.p95Ms,
+              stats.maxMs, stats.madMs, stats.stddevMs, stats.cv);
   std::printf("  },\n");
   std::printf("  \"output_dump_path\": \"%s\"\n", dumpOutputPath.c_str());
   std::printf("}\n");

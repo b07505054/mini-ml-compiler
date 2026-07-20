@@ -1,0 +1,10 @@
+{
+  "dataset_rows": 162,
+  "label_valid_rows": 161,
+  "guard_method": "64-element bit-pattern sentinels before and after lhs, rhs, bias, and returned output validation",
+  "guarded_candidate_rows": 161,
+  "guard_failures": 0,
+  "repeated_calls_per_row": 1000,
+  "asan_ubsan_executed_for_this_collection": false,
+  "interpretation": "Every valid label has native sentinel and repeated-call OOB-write evidence. This collection does not claim per-kind ASan/UBSan coverage; sanitizer_pass remains null."
+}
