@@ -199,8 +199,8 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]] || {
-  echo "error: --variant must be 'generic', 'vectorized', 'tiled-vectorized', or 'tiled-scheduled' (got '$VARIANT')" >&2
+[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-scheduled" ]] || {
+  echo "error: unsupported --variant '$VARIANT'" >&2
   exit 1
 }
 
@@ -217,6 +217,7 @@ MLIR_BIN="${MLIR_BIN:-/home/allen/Desktop/Project/.deps/mlir21-root/usr/lib/llvm
 PLUGIN="${PLUGIN:-$REPO_ROOT/build-mlir/libHIRMatMulBiasReluFusionPass.so}"
 TRANSFORM_SCRIPT="${TRANSFORM_SCRIPT:-$REPO_ROOT/mlir_passes/transforms/vectorize_matmul_bias_relu.mlir}"
 TILE_TRANSFORM_TEMPLATE="${TILE_TRANSFORM_TEMPLATE:-$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu.template.mlir}"
+TAIL_TRANSFORM_TEMPLATE="${TAIL_TRANSFORM_TEMPLATE:-$REPO_ROOT/mlir_passes/transforms/tile_vectorize_matmul_bias_relu_materialized_tail.template.mlir}"
 GENERATE_TILED_TRANSFORM="$REPO_ROOT/mlir_passes/tools/generate_tiled_transform.sh"
 SCHEDULE_TRANSFORM_TEMPLATE="${SCHEDULE_TRANSFORM_TEMPLATE:-$REPO_ROOT/mlir_passes/transforms/tile_schedule_matmul_bias_relu.template.mlir}"
 GENERATE_SCHEDULED_TRANSFORM="$REPO_ROOT/mlir_passes/tools/generate_scheduled_transform.sh"
@@ -250,7 +251,7 @@ command -v "$LLC" >/dev/null 2>&1 || { echo "error: llc not found on PATH" >&2; 
 if [[ "$VARIANT" == "vectorized" ]]; then
   [[ -f "$TRANSFORM_SCRIPT" ]] || { echo "error: vectorization transform script not found at $TRANSFORM_SCRIPT" >&2; exit 1; }
 fi
-if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]]; then
+if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-scheduled" ]]; then
   [[ -f "$TILE_TRANSFORM_TEMPLATE" ]] || { echo "error: tiled transform template not found at $TILE_TRANSFORM_TEMPLATE" >&2; exit 1; }
   [[ -x "$GENERATE_TILED_TRANSFORM" ]] || { echo "error: $GENERATE_TILED_TRANSFORM not found/executable" >&2; exit 1; }
   for name_val in "TILE_M:$TILE_M" "TILE_N:$TILE_N" "TILE_K:$TILE_K"; do
@@ -263,6 +264,8 @@ if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]]; th
     [[ "$SCHEDULE_UNROLL_K" =~ ^[0-9]+$ && "$SCHEDULE_UNROLL_K" -ge 1 ]] || { echo "error: --schedule-unroll-k must be a positive integer (got '$SCHEDULE_UNROLL_K')" >&2; exit 1; }
   fi
 
+  [[ "$VARIANT" != "tiled-vectorized-materialized-tail" || -f "$TAIL_TRANSFORM_TEMPLATE" ]] ||
+    { echo "error: tail transform template not found: $TAIL_TRANSFORM_TEMPLATE" >&2; exit 1; }
   # Legality check: reject shapes that do not divide evenly by the
   # requested tile size (no tail handling -- see the header comment).
   # Parses M/K from the lhs arg's tensor<MxKxf32> and N from the rhs arg's
@@ -272,7 +275,8 @@ if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]]; th
   SHAPE_M="${DIMS[0]%%x*}"
   SHAPE_K="${DIMS[0]##*x}"
   SHAPE_N="${DIMS[1]##*x}"
-  if (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 || SHAPE_K % TILE_K != 0 )); then
+  if [[ "$VARIANT" != "tiled-vectorized-materialized-tail" ]] &&
+     (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 || SHAPE_K % TILE_K != 0 )); then
     echo "error: --variant $VARIANT requires M%${TILE_M}==0, N%${TILE_N}==0, K%${TILE_K}==0" >&2
     echo "       got M=$SHAPE_M N=$SHAPE_N K=$SHAPE_K (from $INPUT_MLIR) -- no tail handling in this version" >&2
     echo "       use --variant generic or --variant vectorized for this shape instead" >&2
@@ -290,6 +294,20 @@ if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-scheduled" ]]; th
       exit 1
     fi
   fi
+fi
+
+# Tiled-vector tail variant: the same bounded microkernel body is reused for
+# every tile. Partial tiles are padded locally and copied back only over their
+# valid dynamic extent; no full-shape padded tensor or final crop is created.
+TILED_TAIL_PIPELINE=""
+GENERATED_TAIL_TRANSFORM_SCRIPT=""
+if [[ "$VARIANT" == "tiled-vectorized-materialized-tail" ]]; then
+  GENERATED_TAIL_TRANSFORM_SCRIPT="$(mktemp -t tile_tail_transform_XXXXXX.mlir)"
+  trap 'rm -f "$GENERATED_TAIL_TRANSFORM_SCRIPT"' EXIT
+  TEMPLATE="$TAIL_TRANSFORM_TEMPLATE" bash "$GENERATE_TILED_TRANSFORM" \
+    --tile-m "$TILE_M" --tile-n "$TILE_N" --tile-k "$TILE_K" \
+    --output "$GENERATED_TAIL_TRANSFORM_SCRIPT" >/dev/null
+  TILED_TAIL_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$GENERATED_TAIL_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},convert-linalg-to-loops,func.func(buffer-loop-hoisting,promote-buffers-to-stack{max-alloc-size-in-bytes=4096}),buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
 fi
 
 mkdir -p "$OUTPUT_DIR"
@@ -393,6 +411,9 @@ elif [[ "$VARIANT" == "vectorized" ]]; then
 elif [[ "$VARIANT" == "tiled-scheduled" ]]; then
   PASS_PIPELINE="$TILED_SCHEDULED_PIPELINE"
   echo "[tile] TM=$TILE_M TN=$TILE_N TK=$TILE_K SCHEDULE_UNROLL_K=$SCHEDULE_UNROLL_K (transform script: $GENERATED_SCHEDULE_TRANSFORM_SCRIPT)"
+elif [[ "$VARIANT" == "tiled-vectorized-materialized-tail" ]]; then
+  PASS_PIPELINE="$TILED_TAIL_PIPELINE"
+  echo "[tile-tail] TM=$TILE_M TN=$TILE_N TK=$TILE_K (transform script: $GENERATED_TAIL_TRANSFORM_SCRIPT)"
 else
   PASS_PIPELINE="$TILED_PIPELINE"
   echo "[tile] TM=$TILE_M TN=$TILE_N TK=$TILE_K (transform script: $GENERATED_TRANSFORM_SCRIPT)"

@@ -2,15 +2,18 @@
 // CHECK-SAME: native.cost_model.candidates = [
 // CHECK-SAME: candidate_id = "unfused_scalar"
 // CHECK-SAME: intermediate_read_count = 2
-// CHECK-SAME: candidate_id = "unfused_vectorized"
-// CHECK-SAME: schedule_mode = "vectorized"
+// CHECK-SAME: candidate_id = "unfused_whole_shape_vector"
+// CHECK-SAME: schedule_mode = "whole_shape_vector"
 // CHECK-SAME: candidate_id = "fused_scalar"
 // CHECK-SAME: intermediate_read_count = 0
-// CHECK-SAME: candidate_id = "fused_vectorized"
+// CHECK-SAME: candidate_id = "fused_whole_shape_vector"
 // CHECK-SAME: interaction_correction_ns
 // CHECK-SAME: selected = true
 // CHECK-SAME: total_ns
-// CHECK-SAME: native.cost_model.selected_candidate = "fused_vectorized"
+// CHECK-SAME: candidate_id = "fused_tiled_vector"
+// CHECK-SAME: edge_tile_count = 0
+// CHECK-SAME: estimated_code_size_bytes = 4096
+// CHECK-SAME: native.cost_model.selected_candidate = "fused_whole_shape_vector"
 // CHECK-SAME: native.cost_model.version = "static_cost_model_v2"
 
 module attributes {

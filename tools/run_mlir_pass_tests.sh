@@ -428,6 +428,10 @@ run_filecheck \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
 
+run_filecheck \
+  "K-tail transfer keeps the dynamic source dimension out of bounds" \
+  "$REPO_ROOT/mlir_passes/test/k_tail_transfer_read_bounds.mlir"
+
 echo "[MLIR test] native codegen rejects unsupported f16 at HIR legality boundary"
 if "$MLIR_OPT" "$REPO_ROOT/mlir_passes/test/hir_native_codegen_unsupported_f16.mlir" \
      --load-pass-plugin="$PLUGIN" \
@@ -897,7 +901,7 @@ run_backend_codegen_vectorized_static_checks() {
     echo "error: expected an LLVM vector type (e.g. '<N x float>') in ${name}.ll -- vectorization silently scalarized" >&2
     exit 1
   fi
-  if grep -qE '(^|[[:space:]])(linalg|tensor|vector)\\.' "$out_dir/${name}_llvm.mlir"; then
+  if grep -qE '(^|[[:space:]])(linalg|tensor|vector)\.' "$out_dir/${name}_llvm.mlir"; then
     echo "error: unsupported structured/vector op survived the LLVM boundary" >&2
     exit 1
   fi
@@ -932,6 +936,42 @@ for shape in 8x8x8 16x16x16 32x32x32 15x31x15; do
   run_tracked "backend_codegen/vectorized_${shape}" \
     run_backend_codegen_vectorized_static_checks "$shape"
 done
+
+run_backend_codegen_tiled_tail_static_checks() {
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_tiled_tail_15x31x15.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_tiled_tail_15x31x15"
+  echo "[MLIR test] bounded tiled-vector tail static checks (15x31x15)"
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+      --variant tiled-vectorized-materialized-tail --tile-m 8 --tile-n 8 --tile-k 8 \
+      "$input" "$out_dir" "$name"
+  grep -qE '<(4|8|16|32|64) x float>' "$out_dir/${name}.ll" ||
+    { echo "error: tiled tail LLVM IR has no bounded vector compute" >&2; return 1; }
+  if grep -qE '<(225|465|512) x float>' "$out_dir/${name}.ll"; then
+    echo "error: whole-shape giant vector survived tiled tail lowering" >&2
+    return 1
+  fi
+  if grep -qE '(^|[[:space:]])(linalg|tensor|vector)\.' "$out_dir/${name}_llvm.mlir"; then
+    echo "error: tiled tail LLVM boundary contains unsupported dialect ops" >&2
+    return 1
+  fi
+  local malloc_calls
+  malloc_calls="$(grep -c 'call.*@malloc' "$out_dir/${name}.ll")"
+  [[ "$malloc_calls" -eq 1 ]] ||
+    { echo "error: tiled tail path materialized full padded heap buffers" >&2; return 1; }
+  grep -qE '^\s+fmla\s+v[0-9]+\.4s' "$out_dir/${name}.s" ||
+    { echo "error: tiled tail object has no NEON FMLA" >&2; return 1; }
+  local text_size
+  text_size="$(llvm-size "$out_dir/${name}.o" | tail -1 | awk '{print $1}')"
+  [[ "$text_size" -lt 10000 ]] ||
+    { echo "error: tiled tail text size $text_size exceeds 10000 bytes" >&2; return 1; }
+  rm -rf "$out_dir"
+}
+
+run_tracked "backend_codegen/tiled_tail_15x31x15" \
+  run_backend_codegen_tiled_tail_static_checks
 
 # ---------------------------------------------------------------------------
 # Host-side static checks for the tiled-vectorized AArch64 backend variant

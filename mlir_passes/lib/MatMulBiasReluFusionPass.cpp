@@ -269,6 +269,12 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      builder.getStringAttr(fusionName(candidate.fusion)));
   attrs.emplace_back(builder.getStringAttr("schedule_mode"),
                      builder.getStringAttr(scheduleName(candidate.schedule)));
+  attrs.emplace_back(builder.getStringAttr("m_tail_strategy"),
+                     builder.getStringAttr(tailName(candidate.mTailStrategy)));
+  attrs.emplace_back(builder.getStringAttr("n_tail_strategy"),
+                     builder.getStringAttr(tailName(candidate.nTailStrategy)));
+  attrs.emplace_back(builder.getStringAttr("k_tail_strategy"),
+                     builder.getStringAttr(tailName(candidate.kTailStrategy)));
   attrs.emplace_back(builder.getStringAttr("original_shape"),
                      builder.getArrayAttr({i64(candidate.originalM),
                                            i64(candidate.originalN),
@@ -281,6 +287,56 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      builder.getBoolAttr(candidate.requiresPadding));
   attrs.emplace_back(builder.getStringAttr("requires_crop"),
                      builder.getBoolAttr(candidate.requiresCrop));
+  attrs.emplace_back(builder.getStringAttr("uses_materialized_padding"),
+                     builder.getBoolAttr(candidate.usesMaterializedPadding));
+  attrs.emplace_back(builder.getStringAttr("uses_masked_loads"),
+                     builder.getBoolAttr(candidate.usesMaskedLoads));
+  attrs.emplace_back(builder.getStringAttr("uses_masked_stores"),
+                     builder.getBoolAttr(candidate.usesMaskedStores));
+  attrs.emplace_back(builder.getStringAttr("uses_scalar_cleanup"),
+                     builder.getBoolAttr(candidate.usesScalarCleanup));
+  attrs.emplace_back(builder.getStringAttr("vector_width"),
+                     i64(candidate.vectorWidth));
+  attrs.emplace_back(builder.getStringAttr("m_remainder"),
+                     i64(candidate.mRemainder));
+  attrs.emplace_back(builder.getStringAttr("n_remainder"),
+                     i64(candidate.nRemainder));
+  attrs.emplace_back(builder.getStringAttr("k_remainder"),
+                     i64(candidate.kRemainder));
+  attrs.emplace_back(builder.getStringAttr("m_tile_count"),
+                     i64(candidate.mTileCount));
+  attrs.emplace_back(builder.getStringAttr("n_tile_count"),
+                     i64(candidate.nTileCount));
+  attrs.emplace_back(builder.getStringAttr("k_tile_count"),
+                     i64(candidate.kTileCount));
+  attrs.emplace_back(builder.getStringAttr("tail_invocation_count"),
+                     i64(candidate.estimatedTailInvocationCount));
+  attrs.emplace_back(builder.getStringAttr("full_tile_count"),
+                     i64(candidate.fullTileCount));
+  attrs.emplace_back(builder.getStringAttr("edge_tile_count"),
+                     i64(candidate.edgeTileCount));
+  attrs.emplace_back(builder.getStringAttr("tail_elements"),
+                     i64(candidate.tailElementCount));
+  attrs.emplace_back(builder.getStringAttr("materialized_padding_bytes"),
+                     i64(candidate.materializedPaddingBytes));
+  attrs.emplace_back(builder.getStringAttr("zero_fill_bytes"),
+                     i64(candidate.zeroFillBytes));
+  attrs.emplace_back(builder.getStringAttr("copy_bytes"),
+                     i64(candidate.copyBytes));
+  attrs.emplace_back(builder.getStringAttr("masked_lane_count"),
+                     i64(candidate.maskedLaneCount));
+  attrs.emplace_back(builder.getStringAttr("scalar_cleanup_ops"),
+                     i64(candidate.scalarCleanupOperations));
+  attrs.emplace_back(builder.getStringAttr("direct_vector_cleanup_ops"),
+                     i64(candidate.directVectorCleanupOperations));
+  attrs.emplace_back(builder.getStringAttr("estimated_code_size_bytes"),
+                     i64(candidate.estimatedCodeSizeBytes));
+  attrs.emplace_back(builder.getStringAttr("code_size_penalty_ns"),
+                     f64(candidate.codeSizePenaltyNs));
+  attrs.emplace_back(builder.getStringAttr("register_pressure_risk"),
+                     f64(candidate.registerPressureRisk));
+  attrs.emplace_back(builder.getStringAttr("spill_risk_penalty_ns"),
+                     f64(candidate.spillRiskPenaltyNs));
   attrs.emplace_back(builder.getStringAttr("lowering_complete"),
                      builder.getBoolAttr(candidate.loweringComplete));
   attrs.emplace_back(builder.getStringAttr("temporary_allocation_count"),
