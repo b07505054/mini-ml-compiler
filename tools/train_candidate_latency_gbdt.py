@@ -18,6 +18,8 @@ from pathlib import Path
 SEED = 1729
 SCHEMA_VERSION = "matmul_bias_relu_gbdt_features_v1"
 MODEL_VERSION = "cortex_a76_fp32_matmul_bias_relu_gbdt_v1"
+MODEL_NAMESPACE = "gbdt_v1"
+REPOSITORY_COMMIT = "907b29eea29e392cc014d738376ea04720cfba07"
 CATEGORICAL = {
     "candidate_kind": ["scalar_baseline", "tiled_vector_direct_cleanup",
                        "tiled_vector_full_tiles", "tiled_vector_materialized_tail",
@@ -296,6 +298,7 @@ def regression_metrics(rows, predictions):
     for row, error in zip(rows, errors):
         bias[row["candidate_kind"]].append(error)
     return {
+        "mae_log_latency": statistics.mean(abs(e) for e in log_errors),
         "mae_ns": statistics.mean(abs_errors),
         "median_absolute_error_ns": statistics.median(abs_errors),
         "median_absolute_percentage_error": statistics.median(apes),
@@ -378,7 +381,7 @@ def export_header(model, uncertainty_margin, path):
 #include <array>
 #include <cmath>
 #include <cstddef>
-namespace mlir::hir::gbdt_v1 {{
+namespace mlir::hir::{MODEL_NAMESPACE} {{
 inline constexpr const char *kModelVersion = "{MODEL_VERSION}";
 inline constexpr const char *kSchemaVersion = "{SCHEMA_VERSION}";
 inline constexpr size_t kFeatureCount = {len(FEATURE_NAMES)};
@@ -406,7 +409,7 @@ inline bool evaluate(const std::array<double, kFeatureCount> &features,
   }}
   return std::isfinite(predictedLogNs);
 }}
-}} // namespace mlir::hir::gbdt_v1
+}} // namespace mlir::hir::{MODEL_NAMESPACE}
 """
     path.write_text(text)
 
@@ -417,7 +420,7 @@ def export_test_vectors(model, rows, path):
     flat = [value for vector in vectors for value in vector]
     path.write_text(f"""#pragma once
 #include <array>
-namespace mlir::hir::gbdt_v1::test {{
+namespace mlir::hir::{MODEL_NAMESPACE}::test {{
 inline constexpr size_t kRowCount = {len(rows)};
 inline constexpr std::array<double, {len(flat)}> kFeatures = {{{{
   {", ".join(f"{v:.17g}" for v in flat)}
@@ -425,15 +428,24 @@ inline constexpr std::array<double, {len(flat)}> kFeatures = {{{{
 inline constexpr std::array<double, {len(predictions)}> kPredictions = {{{{
   {", ".join(f"{v:.17g}" for v in predictions)}
 }}}};
-}} // namespace mlir::hir::gbdt_v1::test
+}} // namespace mlir::hir::{MODEL_NAMESPACE}::test
 """)
 
 
 def main():
+    global MODEL_VERSION, SCHEMA_VERSION, MODEL_NAMESPACE, REPOSITORY_COMMIT
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset-dir", required=True)
     ap.add_argument("--output-dir", required=True)
+    ap.add_argument("--model-version", default=MODEL_VERSION)
+    ap.add_argument("--schema-version", default=SCHEMA_VERSION)
+    ap.add_argument("--model-namespace", default=MODEL_NAMESPACE)
+    ap.add_argument("--repository-commit", default=REPOSITORY_COMMIT)
     args = ap.parse_args()
+    MODEL_VERSION = args.model_version
+    SCHEMA_VERSION = args.schema_version
+    MODEL_NAMESPACE = args.model_namespace
+    REPOSITORY_COMMIT = args.repository_commit
     data = Path(args.dataset_dir)
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -662,8 +674,8 @@ def main():
         "supported_candidate_kinds": CATEGORICAL["candidate_kind"],
         "unsupported_candidate_kinds": ["unfused_vector",
             "direct_scalar_cleanup", "specialized_microkernel", "masked_transfer"],
-        "repository_commit": "907b29eea29e392cc014d738376ea04720cfba07",
-        "dataset_commit": "907b29eea29e392cc014d738376ea04720cfba07",
+        "repository_commit": REPOSITORY_COMMIT,
+        "dataset_commit": REPOSITORY_COMMIT,
         "dataset_hash": expected_hash, "training_library": "python_stdlib_gbdt_v1",
         "python_version": platform.python_version(), "fixed_seed": SEED,
         "hyperparameters": frozen_config, "weighting_method": frozen_config["weighting"],
@@ -678,6 +690,34 @@ def main():
         writer.writeheader()
         writer.writerows([{**r, "split": "validation"} for r in validation_details])
         writer.writerows([{**r, "split": "heldout"} for r in heldout_details])
+    with (out / "prediction_scatter.csv").open("w", newline="") as stream:
+        fields = [
+            "split", "shape_group_id", "candidate_id", "measured_ns",
+            "analytical_predicted_ns", "ridge_predicted_ns",
+            "single_tree_predicted_ns", "gbdt_predicted_ns",
+            "hybrid_predicted_ns",
+        ]
+        writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
+        writer.writeheader()
+        for split, split_rows, learned_predictions in (
+                ("validation", validation, validation_predictions),
+                ("heldout", heldout, heldout_predictions)):
+            hybrid_values = hybrid_predictions(
+                split_rows, learned_predictions, selected_margin)
+            for row, learned, hybrid in zip(
+                    split_rows, learned_predictions, hybrid_values):
+                writer.writerow({
+                    "split": split,
+                    "shape_group_id": row["shape_group_id"],
+                    "candidate_id": row["candidate_id"],
+                    "measured_ns": row["median_ns"],
+                    "analytical_predicted_ns": math.exp(analytical_log(row)),
+                    "ridge_predicted_ns": math.exp(ridge_predict(ridge, row)),
+                    "single_tree_predicted_ns": math.exp(
+                        predict(tree_model, row)),
+                    "gbdt_predicted_ns": math.exp(learned),
+                    "hybrid_predicted_ns": math.exp(hybrid),
+                })
     (out / "dataset_hash.txt").write_text(expected_hash + "\n")
     model_hash = hashlib.sha256(
         (out / "model.json").read_bytes() +

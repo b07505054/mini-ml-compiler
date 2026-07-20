@@ -1,0 +1,20 @@
+{
+  "affinity": "cpu3",
+  "benchmark_commit": "a7190332cb38049430d2305aef5fb26ff5251971",
+  "compiler_flags": "-O3 -mtriple=aarch64-linux-gnu -mcpu=cortex-a76",
+  "cpu": "Raspberry Pi 5 Cortex-A76",
+  "dataset_version": "cortex_a76_fp32_matmul_bias_relu_v2",
+  "governor": "ondemand",
+  "measured_frequency_khz_at_start": 1500000,
+  "protocol": {
+    "candidate_enumeration": "all production-legal native-executable candidates",
+    "iteration_policy": "unchanged estimate-based buckets from run_candidate_latency_dataset_pi.py",
+    "repeated_correctness_calls": 1000,
+    "warmup_calls": 100
+  },
+  "target": "raspberry-pi5-cortex-a76",
+  "toolchain": {
+    "host_mlir_llvm": "21",
+    "pi_gxx": "Debian 14.2.0-19"
+  }
+}

@@ -1,5 +1,5 @@
 #include "MatMulLatencyGBDT.h"
-#include "../../configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v1/generated_model_test_vectors.h"
+#include "../../configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v2/generated_model_test_vectors.h"
 
 #include <array>
 #include <cassert>
@@ -9,7 +9,7 @@
 #include <limits>
 
 int main() {
-  using namespace mlir::hir::gbdt_v1;
+  using namespace mlir::hir::gbdt_v2;
   for (size_t row = 0; row < test::kRowCount; ++row) {
     std::array<double, kFeatureCount> feature{};
     for (size_t column = 0; column < kFeatureCount; ++column)
@@ -96,7 +96,7 @@ int main() {
   assert(mlir::hir::predictGBDTLatency(candidate, calibration).reason ==
          "dtype_mismatch");
   candidate.dtype = "f32";
-  candidate.originalM = candidate.executedM = 129;
+  candidate.originalM = candidate.executedM = 1025;
   assert(mlir::hir::predictGBDTLatency(candidate, calibration).reason ==
          "shape_out_of_training_domain");
   candidate.originalM = candidate.executedM = 8;
@@ -104,8 +104,8 @@ int main() {
              candidate, calibration, "wrong-schema").reason ==
          "schema_version_mismatch");
   assert(mlir::hir::predictGBDTLatency(
-             candidate, calibration, mlir::hir::gbdt_v1::kSchemaVersion,
-             mlir::hir::gbdt_v1::kModelVersion, "other_operator").reason ==
+             candidate, calibration, mlir::hir::gbdt_v2::kSchemaVersion,
+             mlir::hir::gbdt_v2::kModelVersion, "other_operator").reason ==
          "operator_mismatch");
   return 0;
 }

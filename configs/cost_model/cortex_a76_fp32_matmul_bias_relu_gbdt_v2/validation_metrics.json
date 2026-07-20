@@ -1,0 +1,30 @@
+{
+  "regression": {
+    "bias_ns_by_candidate": {
+      "scalar_baseline": -1019028.984333106,
+      "tiled_vector_direct_cleanup": -9064.884927368856,
+      "tiled_vector_full_tiles": -951.2692633379086,
+      "tiled_vector_materialized_tail": -131011.5233780927,
+      "whole_shape_vector_materialized_padding": 60.252637431797005,
+      "whole_shape_vector_no_padding": 87.88983351839452
+    },
+    "log_rmse": 0.8043245865894327,
+    "mae_log_latency": 0.6808853376500495,
+    "mae_ns": 389529.5037277245,
+    "median_absolute_error_ns": 4090.7400250999713,
+    "median_absolute_percentage_error": 0.5506026311780112,
+    "p90_absolute_percentage_error": 0.9212940948102146,
+    "r2_log": 0.9350365747206639
+  },
+  "selection": {
+    "exact_match_rate": 0.88,
+    "mean_normalized_regret": 0.023364866692534986,
+    "mean_spearman": 0.928,
+    "median_normalized_regret": 0.0,
+    "p90_normalized_regret": 0.0,
+    "p95_normalized_regret": 0.005327573794096541,
+    "shape_count": 25,
+    "top2_recall": 1.0,
+    "worst_normalized_regret": 0.5679245283018868
+  }
+}

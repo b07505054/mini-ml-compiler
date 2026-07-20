@@ -66,6 +66,22 @@ class CandidateDatasetTest(unittest.TestCase):
                     candidate, *shape)[0])
         self.assertGreaterEqual(executable_rows, 100)
 
+    def test_v2_shape_matrix_is_curated_and_expanded(self):
+        config = json.loads((ROOT / (
+            "configs/cost_model_dataset/"
+            "cortex_a76_fp32_matmul_bias_relu_v2_shapes.json")).read_text())
+        self.assertEqual(config["shape_order"], "M,K,N")
+        shapes = [tuple(v) for v in config["shapes"]]
+        self.assertGreaterEqual(len(shapes), 120)
+        self.assertEqual(len(shapes), len(set(shapes)))
+        self.assertEqual(config["design"]["method"],
+                         "deterministic_curated_workload_families")
+        for boundary in (31, 32, 33, 63, 64, 65, 95, 96, 97,
+                         127, 128, 129, 255, 256, 257):
+            self.assertTrue(any(boundary in shape for shape in shapes))
+        self.assertIn((8, 512, 16), shapes)
+        self.assertIn((512, 16, 1024), shapes)
+
     def test_schema_vocabulary_and_feature_boundary(self):
         self.assertEqual(len(dataset.FIELDS), len(set(dataset.FIELDS)))
         self.assertIn("log_median_ns", dataset.MEASUREMENT)

@@ -704,7 +704,7 @@ struct MatMulBiasReluFusionPass
                   selection.costGapFraction = gap;
                   const bool lowConfidence =
                       requestedMode == MatMulCostModelMode::Hybrid &&
-                      gap < gbdt_v1::kUncertaintyMargin;
+                      gap < gbdt_v2::kUncertaintyMargin;
                   if (!lowConfidence) {
                     selection.selectedIndex = learnedOrder.front();
                     selection.runnerUpIndex =
@@ -767,7 +767,7 @@ struct MatMulBiasReluFusionPass
                             builder.getStringAttr(
                                 selection.effectiveCostModel == "analytical"
                                     ? "static_cost_model_v2"
-                                    : "candidate_latency_gbdt_v1"));
+                                    : "candidate_latency_gbdt_v2"));
             matmul->setAttr("native.cost_model.mode",
                             builder.getStringAttr(
                                 selection.effectiveCostModel));

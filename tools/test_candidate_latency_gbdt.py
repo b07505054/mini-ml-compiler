@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL = ROOT / "configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v1"
-DATASET = ROOT / "artifacts/cost_model_dataset/cortex_a76_fp32_matmul_bias_relu_v1"
+MODEL = ROOT / "configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v2"
+DATASET = ROOT / "artifacts/cost_model_dataset/cortex_a76_fp32_matmul_bias_relu_v2"
 REGISTRY = ROOT / "configs/candidate_registry/cortex_a76_fp32_matmul_bias_relu_v1.json"
 
 
@@ -18,7 +18,7 @@ def main():
     expected_hash = (MODEL / "dataset_hash.txt").read_text().strip()
     assert expected_hash == (DATASET / "dataset_hash.txt").read_text().strip()
     assert expected_hash == (
-        "bdb2a835c752426c57ec7499b992f8f7370d5b04886f3dce062348f19e51f3bc")
+        "b9f7e103e9d8b5da261f6a7a9aa49861f1e16814fa0a5438e2a201772f46031f")
 
     schema = load(MODEL / "feature_schema.json")
     order = schema["feature_order"]

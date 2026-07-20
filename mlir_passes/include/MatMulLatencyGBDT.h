@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MatMulLoweringCostModelV2.h"
-#include "../../configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v1/generated_model.h"
+#include "../../configs/cost_model/cortex_a76_fp32_matmul_bias_relu_gbdt_v2/generated_model.h"
 
 #include <array>
 #include <cmath>
@@ -51,16 +51,16 @@ inline GBDTPrediction
 predictGBDTLatency(const MatMulLoweringCandidate &c,
                    const NativeCostCalibration &cal,
                    const char *schemaVersion =
-                       gbdt_v1::kSchemaVersion,
+                       gbdt_v2::kSchemaVersion,
                    const char *modelVersion =
-                       gbdt_v1::kModelVersion,
+                       gbdt_v2::kModelVersion,
                    const char *operatorKind = "matmul_bias_relu") {
   GBDTPrediction result;
-  if (std::string(schemaVersion) != gbdt_v1::kSchemaVersion) {
+  if (std::string(schemaVersion) != gbdt_v2::kSchemaVersion) {
     result.reason = "schema_version_mismatch";
     return result;
   }
-  if (std::string(modelVersion) != gbdt_v1::kModelVersion) {
+  if (std::string(modelVersion) != gbdt_v2::kModelVersion) {
     result.reason = "model_version_mismatch";
     return result;
   }
@@ -80,8 +80,8 @@ predictGBDTLatency(const MatMulLoweringCandidate &c,
     result.reason = "unfused_candidate_absent_from_training_data";
     return result;
   }
-  if (c.originalM < 1 || c.originalM > 128 || c.originalN < 1 ||
-      c.originalN > 128 || c.originalK < 1 || c.originalK > 255) {
+  if (c.originalM < 1 || c.originalM > 1024 || c.originalN < 1 ||
+      c.originalN > 512 || c.originalK < 1 || c.originalK > 2048) {
     result.reason = "shape_out_of_training_domain";
     return result;
   }
@@ -99,7 +99,7 @@ predictGBDTLatency(const MatMulLoweringCandidate &c,
   constexpr double elementBytes = 4.0;
   const double m = c.originalM, n = c.originalN, k = c.originalK;
   const double totalFlops = 2.0 * m * n * k + 2.0 * m * n;
-  if (totalFlops > 2129920.0) {
+  if (totalFlops > 33949186.0) {
     result.reason = "flops_out_of_training_domain";
     return result;
   }
@@ -130,12 +130,12 @@ predictGBDTLatency(const MatMulLoweringCandidate &c,
   const double vectorElements = vector ? paddedM * paddedN * paddedK : 0.0;
   const double registerRisk =
       std::min(3.0, (tiled ? 64.0 : std::max(m * n, 1.0)) / 64.0);
-  if (c.temporaryAllocatedBytes > 2304) {
+  if (c.temporaryAllocatedBytes > 2816) {
     result.reason = "temporary_bytes_out_of_training_domain";
     return result;
   }
 
-  std::array<double, gbdt_v1::kFeatureCount> f{};
+  std::array<double, gbdt_v2::kFeatureCount> f{};
   size_t i = 0;
   auto add = [&](double value) { f[i++] = value; };
   add(m); add(n); add(k);
@@ -191,11 +191,11 @@ predictGBDTLatency(const MatMulLoweringCandidate &c,
   addTail(c.mTailStrategy, c.mRemainder);
   addTail(c.nTailStrategy, c.nRemainder);
   addTail(c.kTailStrategy, c.kRemainder);
-  if (i != gbdt_v1::kFeatureCount) {
+  if (i != gbdt_v2::kFeatureCount) {
     result.reason = "feature_count_mismatch";
     return result;
   }
-  if (!gbdt_v1::evaluate(f, result.logNs)) {
+  if (!gbdt_v2::evaluate(f, result.logNs)) {
     result.reason = "missing_or_nonfinite_feature";
     return result;
   }

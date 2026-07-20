@@ -1,0 +1,65 @@
+{
+  "K_range": [
+    1,
+    2048
+  ],
+  "M_range": [
+    1,
+    1024
+  ],
+  "N_range": [
+    1,
+    1024
+  ],
+  "average_valid_candidates_per_shape": 2.9224806201550386,
+  "candidate_rows": {
+    "fused_scalar": 129,
+    "tiled_vector_direct_k": 67,
+    "tiled_vector_full_tiles": 32,
+    "tiled_vector_materialized_tail": 97,
+    "whole_shape_vector_materialized_padding": 22,
+    "whole_shape_vector_no_padding": 31
+  },
+  "compile_failures": 1,
+  "correctness_failures": 0,
+  "coverage_status": {
+    "compile_failed": 1,
+    "illegal": 396,
+    "lowering_incomplete": 516,
+    "measured": 377
+  },
+  "executable_candidate_kinds": [
+    "scalar_baseline",
+    "tiled_vector_direct_cleanup",
+    "tiled_vector_full_tiles",
+    "tiled_vector_materialized_tail",
+    "whole_shape_vector_materialized_padding",
+    "whole_shape_vector_no_padding"
+  ],
+  "label_valid_rows": 377,
+  "latency_ns_range": [
+    55.0,
+    63979322.0
+  ],
+  "object_text_bytes_range": [],
+  "rows": 378,
+  "runtime_failures": 0,
+  "sanitizer_failures": 0,
+  "shape_groups": 129,
+  "split_row_counts": {
+    "heldout": 75,
+    "train": 231,
+    "validation": 72
+  },
+  "split_shape_counts": {
+    "heldout": 25,
+    "train": 79,
+    "validation": 25
+  },
+  "unsupported_candidate_ids": [
+    "tiled_vector_direct_scalar",
+    "tiled_vector_masked_transfer",
+    "tiled_vector_specialized_tail",
+    "unfused_vector"
+  ]
+}

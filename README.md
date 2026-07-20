@@ -124,6 +124,9 @@ reselection and zero temporary full-history materialization.
 
 ## Reproduction Pointers
 
+- Cortex-A76 FP32 MatMul-Bias-ReLU Dataset V2 and learned cost-model results:
+  `docs/cost_model/CORTEX_A76_FP32_MATMUL_BIAS_RELU_COST_MODEL.md`.
+  The production default remains Analytical; GBDT and Hybrid are opt-in.
 - P1D.1 policy artifact: `configs/thread_schedule_policies/raspberry_pi5_cortex_a76_p1d1_thread_policy.json`.
 - P1D.1 raw evidence: sibling runtime `results/p1d_raspberry_pi_thread_decomposition/p1d_raw_measurements.json`.
 - E3 compiler contract generator: `tools/e3_xnnpack_contract.py`.

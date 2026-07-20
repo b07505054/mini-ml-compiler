@@ -1,0 +1,44 @@
+{
+  "configuration_freeze_hash": "56ed4adb0475c3adc75fb08550bd6c16390efd4f9206173ddbdc5b53714d65b6",
+  "dataset_commit": "a7190332cb38049430d2305aef5fb26ff5251971",
+  "dataset_hash": "b9f7e103e9d8b5da261f6a7a9aa49861f1e16814fa0a5438e2a201772f46031f",
+  "dtype": "f32",
+  "expected_feature_count": 98,
+  "fixed_seed": 1729,
+  "hyperparameters": {
+    "learning_rate": 0.1,
+    "max_depth": 2,
+    "max_features": 0.9,
+    "min_samples_leaf": 4,
+    "n_estimators": 25,
+    "weighting": "candidate_balanced"
+  },
+  "model_version": "cortex_a76_fp32_matmul_bias_relu_gbdt_v2",
+  "operator": "matmul_bias_relu",
+  "python_version": "3.14.4",
+  "repository_commit": "a7190332cb38049430d2305aef5fb26ff5251971",
+  "schema_version": "matmul_bias_relu_gbdt_features_v1",
+  "supported_candidate_kinds": [
+    "scalar_baseline",
+    "tiled_vector_direct_cleanup",
+    "tiled_vector_full_tiles",
+    "tiled_vector_materialized_tail",
+    "whole_shape_vector_materialized_padding",
+    "whole_shape_vector_no_padding"
+  ],
+  "target": "raspberry-pi5-cortex-a76",
+  "tile_family": [
+    8,
+    8,
+    8
+  ],
+  "training_library": "python_stdlib_gbdt_v1",
+  "uncertainty_margin": 0.05,
+  "unsupported_candidate_kinds": [
+    "unfused_vector",
+    "direct_scalar_cleanup",
+    "specialized_microkernel",
+    "masked_transfer"
+  ],
+  "weighting_method": "candidate_balanced"
+}

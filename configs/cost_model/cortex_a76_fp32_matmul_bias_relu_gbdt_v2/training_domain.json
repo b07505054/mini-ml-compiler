@@ -1,0 +1,107 @@
+{
+  "K": [
+    1,
+    2048
+  ],
+  "M": [
+    1,
+    1024
+  ],
+  "N": [
+    1,
+    512
+  ],
+  "categorical_vocabulary": {
+    "candidate_kind": [
+      "scalar_baseline",
+      "tiled_vector_direct_cleanup",
+      "tiled_vector_full_tiles",
+      "tiled_vector_materialized_tail",
+      "whole_shape_vector_materialized_padding",
+      "whole_shape_vector_no_padding"
+    ],
+    "k_tail_strategy": [
+      "none",
+      "materialized_tail",
+      "direct_scalar_cleanup",
+      "direct_vector_cleanup",
+      "specialized_microkernel",
+      "masked_transfer"
+    ],
+    "m_tail_strategy": [
+      "none",
+      "materialized_tail",
+      "direct_scalar_cleanup",
+      "direct_vector_cleanup",
+      "specialized_microkernel",
+      "masked_transfer"
+    ],
+    "n_tail_strategy": [
+      "none",
+      "materialized_tail",
+      "direct_scalar_cleanup",
+      "direct_vector_cleanup",
+      "specialized_microkernel",
+      "masked_transfer"
+    ],
+    "padding_policy": [
+      "none",
+      "tile_materialized",
+      "whole_shape_materialized"
+    ],
+    "schedule_kind": [
+      "scalar",
+      "tiled_vector",
+      "whole_shape_vector"
+    ],
+    "tiling_kind": [
+      "none",
+      "whole_shape",
+      "tiled"
+    ],
+    "vectorization_kind": [
+      "none",
+      "whole_shape_vector",
+      "tiled_vector"
+    ],
+    "vectorized_dimension": [
+      "none",
+      "m",
+      "n",
+      "k",
+      "multiple"
+    ]
+  },
+  "dtype": "f32",
+  "k_tile_count": [
+    0,
+    256
+  ],
+  "m_tile_count": [
+    0,
+    128
+  ],
+  "n_tile_count": [
+    0,
+    64
+  ],
+  "operator": "matmul_bias_relu",
+  "padded_flop_ratio": [
+    1.0,
+    288.0
+  ],
+  "target": "raspberry-pi5-cortex-a76",
+  "temporary_bytes": [
+    0,
+    2816
+  ],
+  "tile_family": [
+    8,
+    8,
+    8
+  ],
+  "total_flops": [
+    4,
+    33949186
+  ]
+}

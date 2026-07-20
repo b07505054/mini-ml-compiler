@@ -1,7 +1,7 @@
 // ANALYTICAL: native.cost_model.mode = "analytical"
 // ANALYTICAL: native.cost_model.version = "static_cost_model_v2"
 // GBDT: native.cost_model.mode = "gbdt"
-// GBDT: native.cost_model.version = "candidate_latency_gbdt_v1"
+// GBDT: native.cost_model.version = "candidate_latency_gbdt_v2"
 // HYBRID: candidate_id = "fused_tiled_vector_full_tiles"
 // HYBRID-SAME: requires_full_k_tile = true
 // HYBRID-SAME: requires_full_m_tile = true
@@ -11,7 +11,7 @@
 // HYBRID-SAME: vectorized_dimension = "multiple"
 // HYBRID-SAME: zero_fill_bytes = 0
 // HYBRID: native.cost_model.mode = "hybrid_
-// HYBRID-SAME: native.cost_model.version = "candidate_latency_gbdt_v1"
+// HYBRID-SAME: native.cost_model.version = "candidate_latency_gbdt_v2"
 
 module attributes {
   target.profile_id = "raspberry-pi5-cortex-a76-cpu",
