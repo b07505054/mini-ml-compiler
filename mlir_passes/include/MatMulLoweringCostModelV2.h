@@ -18,6 +18,9 @@ enum class ScheduleKind {
 };
 using ScheduleMode = ScheduleKind;
 enum class PaddingPolicy { None, WholeShapeMaterialized, TileMaterialized };
+enum class TilingKind { None, WholeShape, Tiled };
+enum class VectorizationKind { None, WholeShapeVector, TiledVector };
+enum class VectorizedDimension { None, M, N, K, Multiple };
 enum class CandidateKind {
   ScalarBaseline,
   WholeShapeVectorNoPadding,
@@ -180,6 +183,9 @@ struct MatMulLoweringCandidate {
   CandidateKind kind = CandidateKind::ScalarBaseline;
   FusionMode fusion = FusionMode::Unfused;
   ScheduleKind schedule = ScheduleKind::Scalar;
+  TilingKind tiling = TilingKind::None;
+  VectorizationKind vectorization = VectorizationKind::None;
+  VectorizedDimension vectorizedDimension = VectorizedDimension::None;
   PaddingPolicy paddingPolicy = PaddingPolicy::None;
   TailStrategy mTailStrategy = TailStrategy::None;
   TailStrategy nTailStrategy = TailStrategy::None;
@@ -205,6 +211,9 @@ struct MatMulLoweringCandidate {
   bool loweringComplete = true;
   bool targetLegal = true;
   bool requiresRuntimeShapeCheck = false;
+  bool requiresFullMTile = false;
+  bool requiresFullNTile = false;
+  bool requiresFullKTile = false;
   int64_t temporaryAllocationCount = 0;
   int64_t temporaryAllocatedBytes = 0;
   int64_t intermediateReadCount = 0;
@@ -222,6 +231,12 @@ struct MatMulLoweringCandidate {
   int64_t estimatedCodeSizeBytes = 0;
   double codeSizePenaltyNs = 0.0;
   double registerPressureRisk = 0.0, spillRiskPenaltyNs = 0.0;
+  double analyticalPredictedNs = 0.0;
+  double gbdtPredictedNs = 0.0;
+  double effectiveHybridNs = 0.0;
+  bool gbdtOOD = true;
+  std::string gbdtOODReason;
+  int64_t finalRank = -1;
   std::string rejectionReason;
   NativeCostBreakdown cost;
 
@@ -253,6 +268,8 @@ struct MatMulLoweringSelection {
   double uncertaintyMargin = 0.0;
   bool usedCalibratedFastRule = false;
   bool usedFullComparison = true;
+  std::string effectiveCostModel = "analytical";
+  std::string learnedFallbackReason;
   const MatMulLoweringCandidate *winner() const {
     return selectedIndex < 0 ? nullptr : &candidates[selectedIndex];
   }
@@ -279,6 +296,32 @@ inline const char *paddingPolicyName(PaddingPolicy p) {
   case PaddingPolicy::WholeShapeMaterialized:
     return "whole_shape_materialized";
   case PaddingPolicy::TileMaterialized: return "tile_materialized";
+  }
+  return "unknown";
+}
+inline const char *tilingKindName(TilingKind kind) {
+  switch (kind) {
+  case TilingKind::None: return "none";
+  case TilingKind::WholeShape: return "whole_shape";
+  case TilingKind::Tiled: return "tiled";
+  }
+  return "unknown";
+}
+inline const char *vectorizationKindName(VectorizationKind kind) {
+  switch (kind) {
+  case VectorizationKind::None: return "none";
+  case VectorizationKind::WholeShapeVector: return "whole_shape_vector";
+  case VectorizationKind::TiledVector: return "tiled_vector";
+  }
+  return "unknown";
+}
+inline const char *vectorizedDimensionName(VectorizedDimension dimension) {
+  switch (dimension) {
+  case VectorizedDimension::None: return "none";
+  case VectorizedDimension::M: return "m";
+  case VectorizedDimension::N: return "n";
+  case VectorizedDimension::K: return "k";
+  case VectorizedDimension::Multiple: return "multiple";
   }
   return "unknown";
 }
@@ -478,6 +521,20 @@ selectMatMulLowering(const MatMulLoweringProblem &p,
         c.kind = choice.kind;
         c.fusion = fusion;
         c.schedule = schedule;
+        c.tiling = schedule == ScheduleMode::Scalar
+                       ? TilingKind::None
+                       : schedule == ScheduleMode::WholeShapeVector
+                             ? TilingKind::WholeShape
+                             : TilingKind::Tiled;
+        c.vectorization =
+            schedule == ScheduleMode::Scalar
+                ? VectorizationKind::None
+                : schedule == ScheduleMode::WholeShapeVector
+                      ? VectorizationKind::WholeShapeVector
+                      : VectorizationKind::TiledVector;
+        c.vectorizedDimension =
+            schedule == ScheduleMode::Scalar ? VectorizedDimension::None
+                                             : VectorizedDimension::Multiple;
         c.paddingPolicy = choice.padding;
         TailStrategy tail = choice.tail;
         c.id = std::string(fusionName(fusion)) + "_" +
@@ -531,6 +588,12 @@ selectMatMulLowering(const MatMulLoweringProblem &p,
           c.tileN = p.vectorTileN;
           c.tileK = p.vectorTileK;
           c.vectorWidth = 4;
+          c.requiresFullMTile =
+              choice.kind == CandidateKind::TiledVectorFullTiles ||
+              choice.kind == CandidateKind::TiledVectorDirectCleanup;
+          c.requiresFullNTile = c.requiresFullMTile;
+          c.requiresFullKTile =
+              choice.kind == CandidateKind::TiledVectorFullTiles;
           c.mRemainder = p.m % c.tileM;
           c.nRemainder = p.n % c.tileN;
           c.kRemainder = p.k % c.tileK;
@@ -608,6 +671,19 @@ selectMatMulLowering(const MatMulLoweringProblem &p,
               "padded_fused_vector_padding_fill_lowering_unavailable";
         }
         estimateCandidate(c, cal);
+        c.analyticalPredictedNs = c.cost.totalNs;
+        c.effectiveHybridNs = c.cost.totalNs;
+        // The current whole-shape lowering emits one fixed vector contract.
+        // A contract smaller than the target vector width survives the
+        // vector-to-LLVM boundary (for example vector<1x1xf32>). Reject that
+        // structural backend case instead of learning an artificial latency.
+        if (c.valid() &&
+            c.kind == CandidateKind::WholeShapeVectorNoPadding &&
+            p.m * p.n * p.k < c.vectorWidth) {
+          c.targetLegal = false;
+          c.rejectionReason =
+              "whole_shape_vector_smaller_than_target_vector_width";
+        }
         if (c.valid() && c.schedule == ScheduleMode::WholeShapeVector &&
             (c.estimatedCodeSizeBytes >
                  cal.wholeShapeCodeSizeThresholdBytes ||

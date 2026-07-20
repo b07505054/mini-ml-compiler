@@ -82,6 +82,19 @@ int main() {
   assert(!find(directK, "fused_tiled_vector_specialized_tail").valid());
   assert(paddedVector.edgeTileCount > 0);
   assert(paddedVector.materializedPaddingBytes < 4096);
+  assert(paddedVector.tiling == TilingKind::Tiled);
+  assert(paddedVector.vectorization == VectorizationKind::TiledVector);
+  assert(direct.paddingPolicy == PaddingPolicy::None);
+  assert(!direct.requiresFullKTile && direct.requiresFullMTile &&
+         direct.requiresFullNTile);
+
+  MatMulLoweringProblem tiny{1, 1, 1};
+  auto tinySelection = selectMatMulLowering(tiny, pi);
+  const auto &tinyWhole =
+      find(tinySelection, "fused_whole_shape_vector_no_padding");
+  assert(!tinyWhole.valid());
+  assert(tinyWhole.rejectionReason ==
+         "whole_shape_vector_smaller_than_target_vector_width");
 
   MatMulLoweringProblem unsupportedPaddingCleanup = padded;
   unsupportedPaddingCleanup.paddedFusedVectorLoweringComplete = false;

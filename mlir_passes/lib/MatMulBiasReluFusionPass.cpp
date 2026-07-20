@@ -3,6 +3,7 @@
 #include "HIR/IR/HIRDialect.h"
 #include "HIR/IR/HIROps.h"
 #include "MatMulLoweringCostModelV2.h"
+#include "MatMulLatencyGBDT.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -30,6 +31,7 @@
 
 #include <cstdint>
 #include <string>
+#include <tuple>
 
 namespace mlir::hir {
 namespace {
@@ -283,6 +285,15 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      builder.getStringAttr(fusionName(candidate.fusion)));
   attrs.emplace_back(builder.getStringAttr("schedule_mode"),
                      builder.getStringAttr(scheduleName(candidate.schedule)));
+  attrs.emplace_back(builder.getStringAttr("tiling_kind"),
+                     builder.getStringAttr(tilingKindName(candidate.tiling)));
+  attrs.emplace_back(
+      builder.getStringAttr("vectorization_kind"),
+      builder.getStringAttr(vectorizationKindName(candidate.vectorization)));
+  attrs.emplace_back(
+      builder.getStringAttr("vectorized_dimension"),
+      builder.getStringAttr(
+          vectorizedDimensionName(candidate.vectorizedDimension)));
   attrs.emplace_back(
       builder.getStringAttr("padding_policy"),
       builder.getStringAttr(paddingPolicyName(candidate.paddingPolicy)));
@@ -314,6 +325,16 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      builder.getBoolAttr(candidate.usesScalarCleanup));
   attrs.emplace_back(builder.getStringAttr("vector_width"),
                      i64(candidate.vectorWidth));
+  attrs.emplace_back(builder.getStringAttr("tile_shape"),
+                     builder.getArrayAttr({i64(candidate.tileM),
+                                           i64(candidate.tileN),
+                                           i64(candidate.tileK)}));
+  attrs.emplace_back(builder.getStringAttr("requires_full_m_tile"),
+                     builder.getBoolAttr(candidate.requiresFullMTile));
+  attrs.emplace_back(builder.getStringAttr("requires_full_n_tile"),
+                     builder.getBoolAttr(candidate.requiresFullNTile));
+  attrs.emplace_back(builder.getStringAttr("requires_full_k_tile"),
+                     builder.getBoolAttr(candidate.requiresFullKTile));
   attrs.emplace_back(builder.getStringAttr("m_remainder"),
                      i64(candidate.mRemainder));
   attrs.emplace_back(builder.getStringAttr("n_remainder"),
@@ -336,6 +357,8 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      i64(candidate.tailElementCount));
   attrs.emplace_back(builder.getStringAttr("materialized_padding_bytes"),
                      i64(candidate.materializedPaddingBytes));
+  attrs.emplace_back(builder.getStringAttr("temporary_allocated_bytes"),
+                     i64(candidate.temporaryAllocatedBytes));
   attrs.emplace_back(builder.getStringAttr("zero_fill_bytes"),
                      i64(candidate.zeroFillBytes));
   attrs.emplace_back(builder.getStringAttr("copy_bytes"),
@@ -354,6 +377,18 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      f64(candidate.registerPressureRisk));
   attrs.emplace_back(builder.getStringAttr("spill_risk_penalty_ns"),
                      f64(candidate.spillRiskPenaltyNs));
+  attrs.emplace_back(builder.getStringAttr("analytical_predicted_ns"),
+                     f64(candidate.analyticalPredictedNs));
+  attrs.emplace_back(builder.getStringAttr("gbdt_predicted_ns"),
+                     f64(candidate.gbdtPredictedNs));
+  attrs.emplace_back(builder.getStringAttr("effective_hybrid_ns"),
+                     f64(candidate.effectiveHybridNs));
+  attrs.emplace_back(builder.getStringAttr("gbdt_ood"),
+                     builder.getBoolAttr(candidate.gbdtOOD));
+  attrs.emplace_back(builder.getStringAttr("gbdt_ood_reason"),
+                     builder.getStringAttr(candidate.gbdtOODReason));
+  attrs.emplace_back(builder.getStringAttr("final_rank"),
+                     i64(candidate.finalRank));
   attrs.emplace_back(builder.getStringAttr("lowering_complete"),
                      builder.getBoolAttr(candidate.loweringComplete));
   attrs.emplace_back(builder.getStringAttr("target_legal"),
@@ -362,8 +397,6 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      builder.getBoolAttr(candidate.requiresRuntimeShapeCheck));
   attrs.emplace_back(builder.getStringAttr("temporary_allocation_count"),
                      i64(candidate.temporaryAllocationCount));
-  attrs.emplace_back(builder.getStringAttr("temporary_allocated_bytes"),
-                     i64(candidate.temporaryAllocatedBytes));
   attrs.emplace_back(builder.getStringAttr("intermediate_read_count"),
                      i64(candidate.intermediateReadCount));
   attrs.emplace_back(builder.getStringAttr("intermediate_write_count"),
@@ -515,6 +548,8 @@ struct HIRCanonicalizationPass
 
 struct MatMulBiasReluFusionPass
     : impl::MatMulBiasReluFusionBase<MatMulBiasReluFusionPass> {
+  using Base::Base;
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<HIRDialect>();
   }
@@ -605,6 +640,122 @@ struct MatMulBiasReluFusionPass
             NativeCostCalibration calibration = calibrationFor(module);
             MatMulLoweringSelection selection =
                 selectMatMulLowering(problem, calibration);
+            MatMulCostModelMode requestedMode =
+                parseCostModelMode(matmulCostModel);
+            if (requestedMode != MatMulCostModelMode::Analytical) {
+              bool fallback = false;
+              int supportedCandidateCount = 0;
+              for (auto &candidate : selection.candidates) {
+                if (!candidate.valid())
+                  continue;
+                // Model support is narrower than compiler legality. The v1
+                // dataset contains only the six fused production identities;
+                // legal unfused/experimental candidates remain visible in
+                // diagnostics but are not assigned invented learned labels.
+                if (candidate.fusion != FusionMode::Fused ||
+                    candidateOneHotIndex(candidate.kind) < 0) {
+                  candidate.gbdtOOD = true;
+                  candidate.gbdtOODReason =
+                      "candidate_absent_from_model_support";
+                  continue;
+                }
+                ++supportedCandidateCount;
+                GBDTPrediction prediction =
+                    predictGBDTLatency(candidate, calibration);
+                candidate.gbdtOOD = prediction.ood;
+                candidate.gbdtOODReason = prediction.reason;
+                if (!prediction.available) {
+                  fallback = true;
+                  if (selection.learnedFallbackReason.empty())
+                    selection.learnedFallbackReason = prediction.reason;
+                  continue;
+                }
+                candidate.gbdtPredictedNs = prediction.ns;
+                candidate.effectiveHybridNs = prediction.ns;
+              }
+              if (supportedCandidateCount == 0) {
+                fallback = true;
+                selection.learnedFallbackReason =
+                    "no_model_supported_candidate";
+              }
+              if (!fallback) {
+                SmallVector<int> learnedOrder;
+                for (int i = 0,
+                         e = static_cast<int>(selection.candidates.size());
+                     i < e; ++i)
+                  if (selection.candidates[i].valid() &&
+                      selection.candidates[i].gbdtPredictedNs > 0.0)
+                    learnedOrder.push_back(i);
+                llvm::sort(learnedOrder, [&](int lhs, int rhs) {
+                  const auto &a = selection.candidates[lhs];
+                  const auto &b = selection.candidates[rhs];
+                  return std::tie(a.gbdtPredictedNs, a.id) <
+                         std::tie(b.gbdtPredictedNs, b.id);
+                });
+                if (!learnedOrder.empty()) {
+                  const double gap =
+                      learnedOrder.size() < 2
+                          ? 1.0
+                          : (selection.candidates[learnedOrder[1]]
+                                     .gbdtPredictedNs /
+                                 selection.candidates[learnedOrder[0]]
+                                     .gbdtPredictedNs -
+                             1.0);
+                  selection.costGapFraction = gap;
+                  const bool lowConfidence =
+                      requestedMode == MatMulCostModelMode::Hybrid &&
+                      gap < gbdt_v1::kUncertaintyMargin;
+                  if (!lowConfidence) {
+                    selection.selectedIndex = learnedOrder.front();
+                    selection.runnerUpIndex =
+                        learnedOrder.size() > 1 ? learnedOrder[1] : -1;
+                    selection.effectiveCostModel =
+                        requestedMode == MatMulCostModelMode::GBDT
+                            ? "gbdt"
+                            : "hybrid_gbdt";
+                  } else {
+                    selection.effectiveCostModel =
+                        "hybrid_analytical_low_confidence";
+                    selection.learnedFallbackReason =
+                        "top_two_prediction_gap_below_model_uncertainty_margin";
+                  }
+                }
+              } else {
+                selection.effectiveCostModel =
+                    requestedMode == MatMulCostModelMode::GBDT
+                        ? "gbdt_fallback_analytical"
+                        : "hybrid_fallback_analytical";
+              }
+            }
+            SmallVector<int> finalOrder;
+            const bool learnedRanking =
+                selection.effectiveCostModel == "gbdt" ||
+                selection.effectiveCostModel == "hybrid_gbdt";
+            for (int i = 0,
+                     e = static_cast<int>(selection.candidates.size());
+                 i < e; ++i)
+              if (selection.candidates[i].valid() &&
+                  (!learnedRanking ||
+                   selection.candidates[i].gbdtPredictedNs > 0.0))
+                finalOrder.push_back(i);
+            llvm::sort(finalOrder, [&](int lhs, int rhs) {
+              const auto &a = selection.candidates[lhs];
+              const auto &b = selection.candidates[rhs];
+              const double as = selection.effectiveCostModel == "gbdt" ||
+                                        selection.effectiveCostModel ==
+                                            "hybrid_gbdt"
+                                    ? a.gbdtPredictedNs
+                                    : a.analyticalPredictedNs;
+              const double bs = selection.effectiveCostModel == "gbdt" ||
+                                        selection.effectiveCostModel ==
+                                            "hybrid_gbdt"
+                                    ? b.gbdtPredictedNs
+                                    : b.analyticalPredictedNs;
+              return std::tie(as, a.id) < std::tie(bs, b.id);
+            });
+            for (int rank = 0, e = static_cast<int>(finalOrder.size());
+                 rank < e; ++rank)
+              selection.candidates[finalOrder[rank]].finalRank = rank;
             SmallVector<Attribute> evidence;
             for (int i = 0,
                      e = static_cast<int>(selection.candidates.size());
@@ -613,7 +764,16 @@ struct MatMulBiasReluFusionPass
                   context, builder, selection.candidates[i],
                   i == selection.selectedIndex));
             matmul->setAttr("native.cost_model.version",
-                            builder.getStringAttr("static_cost_model_v2"));
+                            builder.getStringAttr(
+                                selection.effectiveCostModel == "analytical"
+                                    ? "static_cost_model_v2"
+                                    : "candidate_latency_gbdt_v1"));
+            matmul->setAttr("native.cost_model.mode",
+                            builder.getStringAttr(
+                                selection.effectiveCostModel));
+            matmul->setAttr(
+                "native.cost_model.learned_fallback_reason",
+                builder.getStringAttr(selection.learnedFallbackReason));
             matmul->setAttr("native.cost_model.target",
                             builder.getStringAttr(calibration.target));
             matmul->setAttr("native.cost_model.candidates",
@@ -1643,11 +1803,23 @@ void registerFusionPasses() {
   PassRegistration<HIRDirectKTailVectorLoweringPass>();
   PassRegistration<StableHLOCompatibleRMSNormImportPass>();
 
-  static PassPipelineRegistration<> pipeline(
+  struct FusionPipelineOptions
+      : public PassPipelineOptions<FusionPipelineOptions> {
+    Option<std::string> matmulCostModel{
+        *this, "matmul-cost-model",
+        llvm::cl::desc("Candidate cost model: analytical, gbdt, or hybrid"),
+        llvm::cl::init("analytical")};
+  };
+
+  static PassPipelineRegistration<FusionPipelineOptions> pipeline(
       "matmul-bias-relu-fusion",
       "Detect MatMul + bias add + ReLU fusion candidates",
-      [](OpPassManager &pm) {
-        pm.addNestedPass<func::FuncOp>(createMatMulBiasReluFusionPass());
+      [](OpPassManager &pm, const FusionPipelineOptions &pipelineOptions) {
+        MatMulBiasReluFusionOptions passOptions;
+        passOptions.matmulCostModel = pipelineOptions.matmulCostModel;
+        pm.addNestedPass<func::FuncOp>(
+            std::make_unique<MatMulBiasReluFusionPass>(
+                std::move(passOptions)));
       });
 
   static PassPipelineRegistration<> canonicalizePipeline(

@@ -192,6 +192,19 @@ add_test(NAME CandidateLatencyDatasetTest
   COMMAND ${CANDIDATE_DATASET_PYTHON}
           ${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_candidate_latency_dataset.py
 )
+add_executable(CandidateLatencyGBDTEvaluatorTest
+  test/CandidateLatencyGBDTEvaluatorTest.cpp
+)
+target_include_directories(CandidateLatencyGBDTEvaluatorTest PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+add_test(NAME CandidateLatencyGBDTEvaluatorTest
+  COMMAND CandidateLatencyGBDTEvaluatorTest
+)
+add_test(NAME CandidateLatencyGBDTArtifactTest
+  COMMAND ${CANDIDATE_DATASET_PYTHON}
+          ${CMAKE_CURRENT_SOURCE_DIR}/../tools/test_candidate_latency_gbdt.py
+)
 
 # ---------------------------------------------------------------------------
 # CTest: ExecutionPlanBuilder collector test (Qwen 2.5-0.5B)

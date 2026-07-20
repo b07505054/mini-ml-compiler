@@ -1,0 +1,495 @@
+{
+  "interpretation": "predictive association, not causality",
+  "split_count": [
+    {
+      "feature": "total_flops",
+      "split_count": 41
+    },
+    {
+      "feature": "scalar",
+      "split_count": 23
+    },
+    {
+      "feature": "requires_full_m_tile",
+      "split_count": 14
+    },
+    {
+      "feature": "candidate_kind==whole_shape_vector_no_padding",
+      "split_count": 12
+    },
+    {
+      "feature": "output_elements",
+      "split_count": 10
+    },
+    {
+      "feature": "K",
+      "split_count": 9
+    },
+    {
+      "feature": "N",
+      "split_count": 7
+    },
+    {
+      "feature": "arithmetic_intensity",
+      "split_count": 7
+    },
+    {
+      "feature": "vectorized",
+      "split_count": 6
+    },
+    {
+      "feature": "input_bytes",
+      "split_count": 6
+    },
+    {
+      "feature": "temporary_bytes",
+      "split_count": 5
+    },
+    {
+      "feature": "zero_fill_bytes",
+      "split_count": 4
+    },
+    {
+      "feature": "M",
+      "split_count": 4
+    },
+    {
+      "feature": "full_tile_count",
+      "split_count": 3
+    },
+    {
+      "feature": "m_remainder_ratio",
+      "split_count": 3
+    },
+    {
+      "feature": "register_pressure_estimate",
+      "split_count": 2
+    },
+    {
+      "feature": "padded_k",
+      "split_count": 2
+    },
+    {
+      "feature": "copy_bytes",
+      "split_count": 1
+    },
+    {
+      "feature": "k_tile_count",
+      "split_count": 1
+    },
+    {
+      "feature": "k_remainder_ratio",
+      "split_count": 1
+    },
+    {
+      "feature": "estimated_llvm_ir_bytes",
+      "split_count": 1
+    },
+    {
+      "feature": "padded_m",
+      "split_count": 1
+    },
+    {
+      "feature": "padded_flops",
+      "split_count": 1
+    },
+    {
+      "feature": "log2_m_plus_1",
+      "split_count": 1
+    }
+  ],
+  "validation_permutation": [
+    {
+      "feature": "scalar",
+      "log_rmse_increase": 0.8080303763001501
+    },
+    {
+      "feature": "total_flops",
+      "log_rmse_increase": 0.29392059904035794
+    },
+    {
+      "feature": "vectorized",
+      "log_rmse_increase": 0.23636286843625642
+    },
+    {
+      "feature": "candidate_kind==whole_shape_vector_no_padding",
+      "log_rmse_increase": 0.12481459298456754
+    },
+    {
+      "feature": "output_elements",
+      "log_rmse_increase": 0.12065670173789289
+    },
+    {
+      "feature": "requires_full_m_tile",
+      "log_rmse_increase": 0.08866209924824653
+    },
+    {
+      "feature": "N",
+      "log_rmse_increase": 0.07044730431591728
+    },
+    {
+      "feature": "K",
+      "log_rmse_increase": 0.013801256410896245
+    },
+    {
+      "feature": "m_remainder_ratio",
+      "log_rmse_increase": 0.013716115885101576
+    },
+    {
+      "feature": "arithmetic_intensity",
+      "log_rmse_increase": 0.011588344461219702
+    },
+    {
+      "feature": "estimated_llvm_ir_bytes",
+      "log_rmse_increase": 0.008606496314897183
+    },
+    {
+      "feature": "full_tile_count",
+      "log_rmse_increase": 0.005949602155570277
+    },
+    {
+      "feature": "zero_fill_bytes",
+      "log_rmse_increase": 0.005560855753367289
+    },
+    {
+      "feature": "k_remainder_ratio",
+      "log_rmse_increase": 0.00529561279731583
+    },
+    {
+      "feature": "input_bytes",
+      "log_rmse_increase": 0.003876088386785659
+    },
+    {
+      "feature": "M",
+      "log_rmse_increase": 0.0020859130661087244
+    },
+    {
+      "feature": "padded_k",
+      "log_rmse_increase": 0.001369903898473912
+    },
+    {
+      "feature": "padded_flops",
+      "log_rmse_increase": 0.0011172851939670325
+    },
+    {
+      "feature": "log2_m_plus_1",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "log2_n_plus_1",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "log2_k_plus_1",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "reduction_elements",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "output_bytes",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "fused",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "whole_shape_vectorized",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tiled",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tile_m",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tile_n",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tile_k",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vector_width",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "requires_full_n_tile",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "requires_full_k_tile",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tile_count",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tile_count",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_remainder",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_remainder",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_remainder",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_remainder_ratio",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_invocations",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_invocations",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_invocations",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padded_m",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padded_n",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padded_elements",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padded_flop_ratio",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "estimated_intermediate_bytes",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "avoided_intermediate_bytes",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "direct_vector_ops",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "masked_lane_waste",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "estimated_object_text_bytes",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "estimated_static_instruction_count",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "register_pressure_estimate",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "spill_risk",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "branch_cost_feature",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "lowering_stage_count",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "candidate_kind==scalar_baseline",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "candidate_kind==tiled_vector_direct_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "candidate_kind==tiled_vector_full_tiles",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "candidate_kind==tiled_vector_materialized_tail",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "candidate_kind==whole_shape_vector_materialized_padding",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "schedule_kind==scalar",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "schedule_kind==tiled_vector",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "schedule_kind==whole_shape_vector",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tiling_kind==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tiling_kind==whole_shape",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "tiling_kind==tiled",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorization_kind==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorization_kind==whole_shape_vector",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorization_kind==tiled_vector",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorized_dimension==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorized_dimension==m",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorized_dimension==n",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorized_dimension==k",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "vectorized_dimension==multiple",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padding_policy==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padding_policy==tile_materialized",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "padding_policy==whole_shape_materialized",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==materialized_tail",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==direct_scalar_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==direct_vector_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==specialized_microkernel",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "m_tail_strategy==masked_transfer",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==materialized_tail",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==direct_scalar_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==direct_vector_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==specialized_microkernel",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "n_tail_strategy==masked_transfer",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==none",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==materialized_tail",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==direct_scalar_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==direct_vector_cleanup",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==specialized_microkernel",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "k_tail_strategy==masked_transfer",
+      "log_rmse_increase": 0.0
+    },
+    {
+      "feature": "temporary_bytes",
+      "log_rmse_increase": -0.002260233818052182
+    },
+    {
+      "feature": "copy_bytes",
+      "log_rmse_increase": -0.0032000734949609866
+    },
+    {
+      "feature": "k_tile_count",
+      "log_rmse_increase": -0.004761062343799138
+    }
+  ]
+}

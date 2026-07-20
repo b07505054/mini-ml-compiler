@@ -37,6 +37,11 @@ def MatMulBiasReluFusion
     a custom fused op rewrite.
   }];
   let constructor = "mlir::hir::createMatMulBiasReluFusionPass()";
+  let options = [
+    Option<"matmulCostModel", "matmul-cost-model", "std::string",
+           "\"analytical\"",
+           "Candidate cost model: analytical, gbdt, or hybrid">
+  ];
 }
 
 def RMSNormKernelSelection

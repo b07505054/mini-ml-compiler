@@ -87,6 +87,21 @@ run_filecheck() {
   fi
 }
 
+run_filecheck_prefix() {
+  local name="$1"
+  local input="$2"
+  local prefix="$3"
+  shift 3
+  echo "[MLIR test] $name"
+  if "$MLIR_OPT" "$input" "$@" \
+       --load-dialect-plugin="$DIALECT_PLUGIN" \
+       | "$FILECHECK" "$input" --check-prefix="$prefix"; then
+    record_result 0 "$input:$prefix"
+  else
+    record_result 1 "$input:$prefix"
+  fi
+}
+
 run_stablehlo_subset_filecheck() {
   local name="$1"
   local input="$2"
@@ -433,6 +448,27 @@ run_filecheck \
   "$REPO_ROOT/mlir_passes/test/native_cost_model_k_tail.mlir" \
   --load-pass-plugin="$PLUGIN" \
   --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
+
+run_filecheck_prefix \
+  "analytical candidate cost-model mode remains available" \
+  "$REPO_ROOT/mlir_passes/test/gbdt_cost_model_modes.mlir" \
+  ANALYTICAL \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion{matmul-cost-model=analytical})'
+
+run_filecheck_prefix \
+  "GBDT mode fails closed to analytical for unsupported candidate support" \
+  "$REPO_ROOT/mlir_passes/test/gbdt_cost_model_modes.mlir" \
+  GBDT \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion{matmul-cost-model=gbdt})'
+
+run_filecheck_prefix \
+  "hybrid mode exposes decomposed schedule semantics and safe fallback" \
+  "$REPO_ROOT/mlir_passes/test/gbdt_cost_model_modes.mlir" \
+  HYBRID \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(matmul-bias-relu-fusion{matmul-cost-model=hybrid})'
 
 run_filecheck \
   "K-tail transfer keeps the dynamic source dimension out of bounds" \
