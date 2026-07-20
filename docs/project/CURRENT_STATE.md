@@ -2,10 +2,10 @@
 
 Last verified: 2026-07-20.
 
-| Repository | Branch/head | State | Ownership |
+| Repository | Verified source/evidence head | State | Ownership |
 |---|---|---|---|
-| `ml-graph-compiler-runtime` | `master` `38d55e0c6c6e346d1467fce87f5d13c318f7f531` | synced with origin/master; latest commit prunes superseded intermediate reports after D6 compiler-owned TP profitability work | compiler, IR, candidates, feasibility, policy, contracts |
-| `heterogeneous-inference-runtime` | `main` `ddd205d54cd5d52adeb8c973ed694ce11dd47a1e` | synced with origin/main; D6 runtime-side evidence for compiler-owned TP profitability selection | runtime validation/dispatch and evidence |
+| `ml-graph-compiler-runtime` | `master` `38d55e0c6c6e346d1467fce87f5d13c318f7f531` | evidence head before this documentation refresh; latest substantive compiler achievement is D6 compiler-owned TP profitability selection at `b4053562049d636c46d929f2ee9bd7721a1eeba3` | compiler, IR, candidates, feasibility, policy, contracts |
+| `heterogeneous-inference-runtime` | `main` `ddd205d54cd5d52adeb8c973ed694ce11dd47a1e` | evidence head before this documentation refresh; D6 runtime-side evidence for compiler-owned TP profitability selection | runtime validation/dispatch and evidence |
 | `ml-platform-capabilities` | `main` `795e95309392b32310f9b90cd4049f1f42ebb660` | clean, synced with origin/main before documentation refresh | declared capability profiles, partial today |
 | `Inference-Validation-Platform` | `main` `c80beede31338b5f66831595f56d4dbb8f57335d` | divergent, ahead 2 / behind 2 | validation/control-plane project, unchanged in S1 |
 | Raspberry Pi 5 | `edgeaiplatform` | evidence target | real aarch64 execution only |
