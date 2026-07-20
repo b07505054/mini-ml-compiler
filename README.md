@@ -41,6 +41,7 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 - Exact measured RMSNorm GPU candidate selection path: CUDA/Triton benchmark profiles normalize candidate identity, shape, target GPU, launch config, artifact hash, and measured p50 evidence into a canonical runtime plan with runtime redecision forbidden.
   This slice carries `weighted_rmsnorm` explicitly at the profile/candidate/plan boundary. The current single-input `hir.fused_rmsnorm` semantic op remains unweighted and is not presented as equivalent; a unified weighted typed HIR op is not implemented here.
 - Measured vLLM `max_num_seqs` policy selector for one target/model/workload scope; the compiler emits the exact selected serving knob and forbids runtime redecision.
+- Distributed LLM inference planning path for TP1/TP2 selection: `DistributedStrategyPlanningPass` reads model/workload/target profiles, evaluates a versioned calibrated throughput contract, and emits the selected tensor-parallel strategy instead of relying on runtime-side selection or a boolean opt-in flag.
 - Triton shadow provider over real measured/predicted artifacts, with unresolved IR bridge, no production ExecutionPlan effect.
 - AWQ artifact and vLLM materialization path, with measured serving traces but no accuracy/perplexity calibration.
 
@@ -60,6 +61,7 @@ Runtime must not search backends, kernels, tiles, thread schedules, precision, b
 | AArch64 schedule-unroll validation | Pi 5 Cortex-A76, FP32 tiled fused MatMul + Bias + ReLU | `schedule-unroll-k=4` measured fastest in 6/6 tested shape/tile domains; all candidates bit-exact | `artifacts/backend_codegen/aarch64_schedule_final/summary.md` |
 | RMSNorm exact GPU selection | GTX 1650 Max-Q, weighted RMSNorm, exact shape/target/profile match | selected candidate is keyed by candidate id, backend, launch config, artifact hash, target GPU, p50 evidence; fallback used only when no valid exact measured candidate exists | `tools/mlir_fusion_to_runtime_json.py`, `tests/test_rmsnorm_exact_gpu_selection.py` |
 | vLLM max-num-seqs selector | GTX 1650 Max-Q, Qwen 0.5B, vLLM 0.24.0, one knob | 45 measured baseline sessions plus 9 proof sessions; every proof executed the compiler-selected value with runtime redecision count 0 | runtime `artifacts/vllm_max_num_seqs_evaluation/summary.md` |
+| D6 distributed TP profitability | 2x RTX 4090, Qwen2.5 0.5B/7B held-out workloads | `DistributedStrategyPlanningPass` matched the measured TP1/TP2 oracle in 21/21 fresh compiler invocations with 0.000% mean/P95/worst-case regret; companion runtime verification launched one compiler-selected TP1 plan and one compiler-selected TP2 plan, both 20/20 prompt-correct with zero orphan processes | compiler `b4053562`, runtime `ddd205d`, runtime `docs/DISTRIBUTED_D6_COMPILER_OWNED_TP_SELECTION.md` |
 
 These are narrow, target-scoped results. They are not cross-model, cross-device, energy, NPU, or universal superiority claims.
 
