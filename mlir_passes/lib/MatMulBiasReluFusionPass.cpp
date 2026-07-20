@@ -8,7 +8,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -39,6 +41,7 @@ namespace {
 #define GEN_PASS_DEF_HIRFUSEDOPVERIFIER
 #define GEN_PASS_DEF_HIRRMSNORMTOLINALG
 #define GEN_PASS_DEF_HIRMATMULBIASRELUTOLINALG
+#define GEN_PASS_DEF_HIRDIRECTKTAILVECTORLOWERING
 #define GEN_PASS_DEF_STABLEHLOCOMPATIBLERMSNORMIMPORT
 #include "FusionPasses.h.inc"
 
@@ -235,6 +238,15 @@ NativeCostCalibration calibrationFor(ModuleOp module) {
           module->getAttrOfType<StringAttr>("target.profile_id");
       profile && profile.getValue() == "raspberry-pi5-cortex-a76-cpu")
     calibration = raspberryPi5CortexA76F32Calibration();
+  if (auto path = module->getAttrOfType<StringAttr>(
+          "target.native_cost_v2.calibration_path")) {
+    std::string error;
+    if (!loadNativeCostCalibration(path.getValue().str(), calibration,
+                                   &error)) {
+      module.emitError() << "failed to load native cost calibration '"
+                         << path.getValue() << "': " << error;
+    }
+  }
   if (auto value = module->getAttrOfType<FloatAttr>(
           "target.native_cost_v2.effective_scalar_ops_per_ns"))
     calibration.effectiveScalarOpsPerNs = value.getValueAsDouble();
@@ -265,10 +277,15 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
   SmallVector<NamedAttribute> attrs;
   attrs.emplace_back(builder.getStringAttr("candidate_id"),
                      builder.getStringAttr(candidate.id));
+  attrs.emplace_back(builder.getStringAttr("candidate_kind"),
+                     builder.getStringAttr(candidateKindName(candidate.kind)));
   attrs.emplace_back(builder.getStringAttr("fusion_mode"),
                      builder.getStringAttr(fusionName(candidate.fusion)));
   attrs.emplace_back(builder.getStringAttr("schedule_mode"),
                      builder.getStringAttr(scheduleName(candidate.schedule)));
+  attrs.emplace_back(
+      builder.getStringAttr("padding_policy"),
+      builder.getStringAttr(paddingPolicyName(candidate.paddingPolicy)));
   attrs.emplace_back(builder.getStringAttr("m_tail_strategy"),
                      builder.getStringAttr(tailName(candidate.mTailStrategy)));
   attrs.emplace_back(builder.getStringAttr("n_tail_strategy"),
@@ -339,6 +356,10 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      f64(candidate.spillRiskPenaltyNs));
   attrs.emplace_back(builder.getStringAttr("lowering_complete"),
                      builder.getBoolAttr(candidate.loweringComplete));
+  attrs.emplace_back(builder.getStringAttr("target_legal"),
+                     builder.getBoolAttr(candidate.targetLegal));
+  attrs.emplace_back(builder.getStringAttr("requires_runtime_shape_check"),
+                     builder.getBoolAttr(candidate.requiresRuntimeShapeCheck));
   attrs.emplace_back(builder.getStringAttr("temporary_allocation_count"),
                      i64(candidate.temporaryAllocationCount));
   attrs.emplace_back(builder.getStringAttr("temporary_allocated_bytes"),
@@ -363,6 +384,18 @@ DictionaryAttr candidateEvidence(MLIRContext *context, OpBuilder &builder,
                      f64(candidate.cost.cropCopyNs));
   attrs.emplace_back(builder.getStringAttr("control_overhead_ns"),
                      f64(candidate.cost.controlOverheadNs));
+  attrs.emplace_back(builder.getStringAttr("zero_fill_ns"),
+                     f64(candidate.cost.zeroFillNs));
+  attrs.emplace_back(builder.getStringAttr("copy_ns"),
+                     f64(candidate.cost.copyNs));
+  attrs.emplace_back(builder.getStringAttr("direct_tail_ns"),
+                     f64(candidate.cost.directTailNs));
+  attrs.emplace_back(builder.getStringAttr("specialized_tail_ns"),
+                     f64(candidate.cost.specializedTailNs));
+  attrs.emplace_back(builder.getStringAttr("modeled_code_size_penalty_ns"),
+                     f64(candidate.cost.codeSizePenaltyNs));
+  attrs.emplace_back(builder.getStringAttr("register_spill_penalty_ns"),
+                     f64(candidate.cost.registerSpillPenaltyNs));
   attrs.emplace_back(builder.getStringAttr("interaction_correction_ns"),
                      f64(candidate.cost.interactionCorrectionNs));
   attrs.emplace_back(builder.getStringAttr("total_ns"),
@@ -599,6 +632,23 @@ struct MatMulBiasReluFusionPass
                 builder.getStringAttr(scheduleName(winner->schedule)));
             matmul->setAttr("native.cost_model.selected_total_ns",
                             builder.getF64FloatAttr(winner->cost.totalNs));
+            if (selection.runnerUpIndex >= 0)
+              matmul->setAttr(
+                  "native.cost_model.runner_up",
+                  builder.getStringAttr(
+                      selection.candidates[selection.runnerUpIndex].id));
+            matmul->setAttr(
+                "native.cost_model.cost_gap_fraction",
+                builder.getF64FloatAttr(selection.costGapFraction));
+            matmul->setAttr(
+                "native.cost_model.uncertainty_margin",
+                builder.getF64FloatAttr(selection.uncertaintyMargin));
+            matmul->setAttr(
+                "native.cost_model.used_calibrated_fast_rule",
+                builder.getBoolAttr(selection.usedCalibratedFastRule));
+            matmul->setAttr(
+                "native.cost_model.used_full_comparison",
+                builder.getBoolAttr(selection.usedFullComparison));
             if (winner->fusion != FusionMode::Fused)
               continue;
           }
@@ -1272,6 +1322,183 @@ struct HIRMatMulBiasReluToLinalgPass
   }
 };
 
+struct HIRDirectKTailVectorLoweringPattern
+    : OpRewritePattern<FusedMatMulBiasReluOp> {
+  using OpRewritePattern<FusedMatMulBiasReluOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FusedMatMulBiasReluOp op,
+                                PatternRewriter &rewriter) const override {
+    auto lhsType = dyn_cast<RankedTensorType>(op.getLhs().getType());
+    auto rhsType = dyn_cast<RankedTensorType>(op.getRhs().getType());
+    auto biasType = dyn_cast<RankedTensorType>(op.getBias().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getOutput().getType());
+    if (!lhsType || !rhsType || !biasType || !outputType ||
+        !lhsType.hasStaticShape() || !rhsType.hasStaticShape() ||
+        !biasType.hasStaticShape() || !outputType.hasStaticShape())
+      return rewriter.notifyMatchFailure(op, "requires static ranked tensors");
+    if (lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
+        biasType.getRank() != 2 || outputType.getRank() != 2 ||
+        !lhsType.getElementType().isF32() ||
+        rhsType.getElementType() != lhsType.getElementType() ||
+        biasType.getElementType() != lhsType.getElementType() ||
+        outputType.getElementType() != lhsType.getElementType())
+      return rewriter.notifyMatchFailure(op, "requires rank-2 f32 tensors");
+
+    const int64_t m = lhsType.getDimSize(0);
+    const int64_t k = lhsType.getDimSize(1);
+    const int64_t n = rhsType.getDimSize(1);
+    if (rhsType.getDimSize(0) != k || outputType.getShape() != ArrayRef<int64_t>({m, n}) ||
+        m % 8 != 0 || n % 8 != 0)
+      return rewriter.notifyMatchFailure(
+          op, "requires compatible shapes with M%8==0 and N%8==0");
+    if (!((biasType.getDimSize(0) == m || biasType.getDimSize(0) == 1) &&
+          biasType.getDimSize(1) == n))
+      return rewriter.notifyMatchFailure(op, "unsupported bias broadcast");
+
+    Location loc = op.getLoc();
+    Type f32 = lhsType.getElementType();
+    auto tileType = VectorType::get({8, 8}, f32);
+    auto rowType = VectorType::get({8}, f32);
+    auto zeroAttr = rewriter.getFloatAttr(f32, 0.0);
+    Value zero = arith::ConstantOp::create(rewriter, loc, zeroAttr);
+    Value zeroTile = arith::ConstantOp::create(
+        rewriter, loc, DenseElementsAttr::get(tileType, zeroAttr));
+    Value c0 =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(0));
+    Value c1 =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(1));
+    Value c8 =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(8));
+    Value cM =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(m));
+    Value cN =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(n));
+    Value cK =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(k));
+    Value cFullK = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getIndexAttr(k - k % 8));
+
+    AffineExpr d0 = rewriter.getAffineDimExpr(0);
+    AffineExpr d1 = rewriter.getAffineDimExpr(1);
+    AffineExpr d2 = rewriter.getAffineDimExpr(2);
+    ArrayAttr contractMaps = rewriter.getAffineMapArrayAttr(
+        {AffineMap::get(3, 0, {d0, d2}, rewriter.getContext()),
+         AffineMap::get(3, 0, {d2, d1}, rewriter.getContext()),
+         AffineMap::get(3, 0, {d0, d1}, rewriter.getContext())});
+    ArrayAttr contractIterators = rewriter.getArrayAttr(
+        {vector::IteratorTypeAttr::get(rewriter.getContext(),
+                                       vector::IteratorType::parallel),
+         vector::IteratorTypeAttr::get(rewriter.getContext(),
+                                       vector::IteratorType::parallel),
+         vector::IteratorTypeAttr::get(rewriter.getContext(),
+                                       vector::IteratorType::reduction)});
+    AffineMap colMap =
+        AffineMap::get(2, 0, {d0}, rewriter.getContext());
+    AffineMap rowMap =
+        AffineMap::get(2, 0, {d1}, rewriter.getContext());
+    AffineMap biasBroadcastMap = AffineMap::get(
+        2, 0, {rewriter.getAffineConstantExpr(0), d1},
+        rewriter.getContext());
+
+    Value empty = tensor::EmptyOp::create(rewriter, loc, outputType.getShape(),
+                                          f32);
+    auto mLoop = scf::ForOp::create(
+        rewriter, loc, c0, cM, c8, ValueRange{empty},
+        [&](OpBuilder &mBuilder, Location mLoc, Value mIv,
+            ValueRange mArgs) {
+          auto nLoop = scf::ForOp::create(
+              mBuilder, mLoc, c0, cN, c8, ValueRange{mArgs[0]},
+              [&](OpBuilder &nBuilder, Location nLoc, Value nIv,
+                  ValueRange nArgs) {
+                auto fullLoop = scf::ForOp::create(
+                    nBuilder, nLoc, c0, cFullK, c8,
+                    ValueRange{zeroTile},
+                    [&](OpBuilder &kBuilder, Location kLoc, Value kIv,
+                        ValueRange kArgs) {
+                      auto lhs = vector::TransferReadOp::create(
+                          kBuilder, kLoc, tileType, op.getLhs(),
+                          ValueRange{mIv, kIv}, zero,
+                          std::optional<ArrayRef<bool>>(
+                              ArrayRef<bool>({true, true})));
+                      auto rhs = vector::TransferReadOp::create(
+                          kBuilder, kLoc, tileType, op.getRhs(),
+                          ValueRange{kIv, nIv}, zero,
+                          std::optional<ArrayRef<bool>>(
+                              ArrayRef<bool>({true, true})));
+                      auto contracted = vector::ContractionOp::create(
+                          kBuilder, kLoc, lhs, rhs, kArgs[0], contractMaps,
+                          contractIterators);
+                      scf::YieldOp::create(kBuilder, kLoc,
+                                           contracted.getResult());
+                    });
+
+                auto tailLoop = scf::ForOp::create(
+                    nBuilder, nLoc, cFullK, cK, c1,
+                    ValueRange{fullLoop.getResult(0)},
+                    [&](OpBuilder &kBuilder, Location kLoc, Value kIv,
+                        ValueRange kArgs) {
+                      auto lhsColumn = vector::TransferReadOp::create(
+                          kBuilder, kLoc, rowType, op.getLhs(),
+                          ValueRange{mIv, kIv}, zero, colMap,
+                          std::optional<ArrayRef<bool>>(ArrayRef<bool>({true})));
+                      auto rhsRow = vector::TransferReadOp::create(
+                          kBuilder, kLoc, rowType, op.getRhs(),
+                          ValueRange{kIv, nIv}, zero, rowMap,
+                          std::optional<ArrayRef<bool>>(ArrayRef<bool>({true})));
+                      auto outer = vector::OuterProductOp::create(
+                          kBuilder, kLoc, lhsColumn, rhsRow, kArgs[0]);
+                      scf::YieldOp::create(kBuilder, kLoc, outer.getResult());
+                    });
+
+                Value biasRow =
+                    biasType.getDimSize(0) == 1 ? c0 : mIv;
+                auto bias = vector::TransferReadOp::create(
+                    nBuilder, nLoc, tileType, op.getBias(),
+                    ValueRange{biasRow, nIv}, zero,
+                    biasType.getDimSize(0) == 1
+                        ? biasBroadcastMap
+                        : AffineMap::getMultiDimIdentityMap(
+                              2, rewriter.getContext()),
+                    std::optional<ArrayRef<bool>>(
+                        ArrayRef<bool>({true, true})));
+                Value added = arith::AddFOp::create(
+                    nBuilder, nLoc, tailLoop.getResult(0), bias);
+                Value relu = arith::MaximumFOp::create(
+                    nBuilder, nLoc, added, zeroTile);
+                auto stored = vector::TransferWriteOp::create(
+                    nBuilder, nLoc, relu, nArgs[0], ValueRange{mIv, nIv},
+                    std::optional<ArrayRef<bool>>(
+                        ArrayRef<bool>({true, true})));
+                scf::YieldOp::create(nBuilder, nLoc, stored.getResult());
+              });
+          scf::YieldOp::create(mBuilder, mLoc, nLoop.getResult(0));
+        });
+
+    mLoop->setAttr("lowering.schedule",
+                   rewriter.getStringAttr("tiled_vector_direct_k_tail"));
+    mLoop->setAttr("lowering.tile", rewriter.getDenseI64ArrayAttr({8, 8, 8}));
+    mLoop->setAttr("lowering.k_remainder", rewriter.getI64IntegerAttr(k % 8));
+    rewriter.replaceOp(op, mLoop.getResult(0));
+    return success();
+  }
+};
+
+struct HIRDirectKTailVectorLoweringPass
+    : impl::HIRDirectKTailVectorLoweringBase<
+          HIRDirectKTailVectorLoweringPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect, HIRDialect, scf::SCFDialect,
+                    tensor::TensorDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<HIRDirectKTailVectorLoweringPattern>(&getContext());
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 bool hasRsqrtInBody(linalg::GenericOp generic) {
   bool foundRsqrt = false;
   generic.getBody()->walk([&](math::RsqrtOp) { foundRsqrt = true; });
@@ -1400,6 +1627,10 @@ std::unique_ptr<Pass> createHIRMatMulBiasReluToLinalgPass() {
   return std::make_unique<HIRMatMulBiasReluToLinalgPass>();
 }
 
+std::unique_ptr<Pass> createHIRDirectKTailVectorLoweringPass() {
+  return std::make_unique<HIRDirectKTailVectorLoweringPass>();
+}
+
 std::unique_ptr<Pass> createStableHLOCompatibleRMSNormImportPass() {
   return std::make_unique<StableHLOCompatibleRMSNormImportPass>();
 }
@@ -1409,6 +1640,7 @@ void registerFusionPasses() {
   PassRegistration<HIRFusedOpVerifierPass>();
   PassRegistration<HIRRMSNormToLinalgPass>();
   PassRegistration<HIRMatMulBiasReluToLinalgPass>();
+  PassRegistration<HIRDirectKTailVectorLoweringPass>();
   PassRegistration<StableHLOCompatibleRMSNormImportPass>();
 
   static PassPipelineRegistration<> pipeline(

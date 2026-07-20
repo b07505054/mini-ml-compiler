@@ -1,0 +1,14 @@
+RESULT K=1 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=1 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=56 p95_ns=74
+RESULT K=2 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=2 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=74 p95_ns=74
+RESULT K=3 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=3 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=74 p95_ns=93
+RESULT K=4 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=4 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=74 p95_ns=93
+RESULT K=5 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=5 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=93 p95_ns=93
+RESULT K=6 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=148
+RESULT K=6 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=93 p95_ns=111
+RESULT K=7 strategy=materialized m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=130 p95_ns=130
+RESULT K=7 strategy=direct_vector m_tiles=1 n_tiles=1 max_abs=0 max_rel=0 median_ns=111 p95_ns=112

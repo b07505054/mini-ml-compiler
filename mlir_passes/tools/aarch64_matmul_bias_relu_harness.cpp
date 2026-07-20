@@ -56,12 +56,46 @@ struct MemRef2D {
   int64_t strides[2];
 };
 
+struct UnrankedMemRef {
+  int64_t rank;
+  void* descriptor;
+};
+
+// Minimal CRunnerUtils-compatible memrefCopy used by tile-materialized
+// candidates. The generated objects pass unranked descriptors; this runner
+// supports the rank-2 f32 tensors used by the MatMul benchmark.
+void memrefCopy(int64_t elementSize, const UnrankedMemRef* source,
+                UnrankedMemRef* target) {
+  if (source->rank != 2 || target->rank != 2 || elementSize != 4)
+    std::abort();
+  const auto* src = static_cast<const MemRef2D*>(source->descriptor);
+  auto* dst = static_cast<MemRef2D*>(target->descriptor);
+  if (src->sizes[0] != dst->sizes[0] || src->sizes[1] != dst->sizes[1])
+    std::abort();
+  for (int64_t i = 0; i < src->sizes[0]; ++i)
+    for (int64_t j = 0; j < src->sizes[1]; ++j)
+      dst->aligned[dst->offset + i * dst->strides[0] +
+                   j * dst->strides[1]] =
+          src->aligned[src->offset + i * src->strides[0] +
+                       j * src->strides[1]];
+}
+
+#ifdef DIRECT_K_TAIL_ONLY
+#ifndef DIRECT_M
+#define DIRECT_M 8
+#define DIRECT_N 8
+#define DIRECT_K 15
+#endif
+void _mlir_ciface_matmul_bias_relu_direct_8x8x15(
+    MemRef2D* out, MemRef2D* lhs, MemRef2D* rhs, MemRef2D* bias);
+#else
 void _mlir_ciface_matmul_bias_relu_8x8x8(MemRef2D* out, MemRef2D* lhs,
                                           MemRef2D* rhs, MemRef2D* bias);
 void _mlir_ciface_matmul_bias_relu_16x16x16(MemRef2D* out, MemRef2D* lhs,
                                              MemRef2D* rhs, MemRef2D* bias);
 void _mlir_ciface_matmul_bias_relu_32x32x32(MemRef2D* out, MemRef2D* lhs,
                                              MemRef2D* rhs, MemRef2D* bias);
+#endif
 }
 
 using GeneratedFn = void (*)(MemRef2D*, MemRef2D*, MemRef2D*, MemRef2D*);
@@ -262,6 +296,12 @@ int main(int argc, char** argv) {
   if (argc > 3) onlyShape = argv[3];
 
   std::vector<ShapeResult> results;
+#ifdef DIRECT_K_TAIL_ONLY
+  results.push_back(runShape(
+      "direct-k-tail", DIRECT_M, DIRECT_N, DIRECT_K,
+      _mlir_ciface_matmul_bias_relu_direct_8x8x15,
+      iterations, warmup));
+#else
   if (onlyShape.empty() || onlyShape == "8x8x8") {
     results.push_back(runShape("8x8x8", 8, 8, 8,
                                 _mlir_ciface_matmul_bias_relu_8x8x8, iterations,
@@ -277,6 +317,7 @@ int main(int argc, char** argv) {
                                 _mlir_ciface_matmul_bias_relu_32x32x32,
                                 iterations, warmup));
   }
+#endif
 
   bool allCorrect = true;
   std::printf("{\n  \"shapes\": [\n");

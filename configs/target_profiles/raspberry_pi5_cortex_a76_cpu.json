@@ -11,6 +11,7 @@
     "physicalComputeUnits": 4
   },
   "nativeLoweringCostModelV2": {
+    "calibrationPath": "../calibration/cortex_a76_fp32_matmul_bias_relu_v1.json",
     "effectiveScalarOpsPerNs": 0.52,
     "effectiveVectorOpsPerNs": 14.5,
     "effectiveBandwidthBytesPerNs": 12.0,

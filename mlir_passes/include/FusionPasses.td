@@ -117,6 +117,18 @@ def HIRMatMulBiasReluToLinalg
   let constructor = "mlir::hir::createHIRMatMulBiasReluToLinalgPass()";
 }
 
+def HIRDirectKTailVectorLowering
+    : Pass<"hir-direct-k-tail-vector-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower fused f32 MatMul-Bias-ReLU with full 8x8x8 tiles and a direct K tail";
+  let description = [{
+    Lowers static rank-2 fused operations when M and N are multiples of eight.
+    Complete K tiles use vector.contract. A final K remainder reads A and B
+    directly and updates the same vector accumulator with vector.outerproduct;
+    no padded source tile, zero fill, or source copy is materialized.
+  }];
+  let constructor = "mlir::hir::createHIRDirectKTailVectorLoweringPass()";
+}
+
 def StableHLOCompatibleRMSNormImport
     : Pass<"stablehlo-compatible-rmsnorm-import", "mlir::func::FuncOp"> {
   let summary = "Import StableHLO-compatible RMSNorm decomposition into HIR";

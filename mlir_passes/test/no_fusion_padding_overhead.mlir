@@ -37,7 +37,7 @@ func.func @main(
 }
 
 // CHECK: linalg.matmul
-// CHECK-SAME: candidate_id = "fused_scalar"
+// CHECK-SAME: candidate_id = "fused_scalar_baseline"
 // CHECK-SAME: requires_padding = true
-// CHECK-SAME: native.cost_model.selected_candidate = "unfused_scalar"
+// CHECK-SAME: native.cost_model.selected_candidate = "unfused_scalar_baseline"
 // CHECK-NOT: fusion.candidate

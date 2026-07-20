@@ -199,7 +199,7 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-scheduled" ]] || {
+[[ "$VARIANT" == "generic" || "$VARIANT" == "vectorized" || "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-vectorized-direct-k-tail" || "$VARIANT" == "tiled-scheduled" ]] || {
   echo "error: unsupported --variant '$VARIANT'" >&2
   exit 1
 }
@@ -251,13 +251,18 @@ command -v "$LLC" >/dev/null 2>&1 || { echo "error: llc not found on PATH" >&2; 
 if [[ "$VARIANT" == "vectorized" ]]; then
   [[ -f "$TRANSFORM_SCRIPT" ]] || { echo "error: vectorization transform script not found at $TRANSFORM_SCRIPT" >&2; exit 1; }
 fi
-if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-scheduled" ]]; then
+if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materialized-tail" || "$VARIANT" == "tiled-vectorized-direct-k-tail" || "$VARIANT" == "tiled-scheduled" ]]; then
   [[ -f "$TILE_TRANSFORM_TEMPLATE" ]] || { echo "error: tiled transform template not found at $TILE_TRANSFORM_TEMPLATE" >&2; exit 1; }
   [[ -x "$GENERATE_TILED_TRANSFORM" ]] || { echo "error: $GENERATE_TILED_TRANSFORM not found/executable" >&2; exit 1; }
   for name_val in "TILE_M:$TILE_M" "TILE_N:$TILE_N" "TILE_K:$TILE_K"; do
     val="${name_val##*:}"
     [[ "$val" =~ ^[0-9]+$ && "$val" -ge 1 ]] || { echo "error: ${name_val%%:*} must be a positive integer (got '$val')" >&2; exit 1; }
   done
+  if [[ "$VARIANT" == "tiled-vectorized-direct-k-tail" &&
+        ( "$TILE_M" -ne 8 || "$TILE_N" -ne 8 || "$TILE_K" -ne 8 ) ]]; then
+    echo "error: --variant $VARIANT currently requires --tile-m 8 --tile-n 8 --tile-k 8" >&2
+    exit 1
+  fi
   if [[ "$VARIANT" == "tiled-scheduled" ]]; then
     [[ -f "$SCHEDULE_TRANSFORM_TEMPLATE" ]] || { echo "error: scheduled transform template not found at $SCHEDULE_TRANSFORM_TEMPLATE" >&2; exit 1; }
     [[ -x "$GENERATE_SCHEDULED_TRANSFORM" ]] || { echo "error: $GENERATE_SCHEDULED_TRANSFORM not found/executable" >&2; exit 1; }
@@ -275,7 +280,13 @@ if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materi
   SHAPE_M="${DIMS[0]%%x*}"
   SHAPE_K="${DIMS[0]##*x}"
   SHAPE_N="${DIMS[1]##*x}"
-  if [[ "$VARIANT" != "tiled-vectorized-materialized-tail" ]] &&
+  if [[ "$VARIANT" == "tiled-vectorized-direct-k-tail" ]] &&
+     (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 )); then
+    echo "error: --variant $VARIANT requires M%${TILE_M}==0 and N%${TILE_N}==0" >&2
+    echo "       got M=$SHAPE_M N=$SHAPE_N K=$SHAPE_K" >&2
+    exit 1
+  elif [[ "$VARIANT" != "tiled-vectorized-materialized-tail" &&
+          "$VARIANT" != "tiled-vectorized-direct-k-tail" ]] &&
      (( SHAPE_M % TILE_M != 0 || SHAPE_N % TILE_N != 0 || SHAPE_K % TILE_K != 0 )); then
     echo "error: --variant $VARIANT requires M%${TILE_M}==0, N%${TILE_N}==0, K%${TILE_K}==0" >&2
     echo "       got M=$SHAPE_M N=$SHAPE_N K=$SHAPE_K (from $INPUT_MLIR) -- no tail handling in this version" >&2
@@ -295,6 +306,10 @@ if [[ "$VARIANT" == "tiled-vectorized" || "$VARIANT" == "tiled-vectorized-materi
     fi
   fi
 fi
+
+# Shared bounded-vector LLVM suffix. Schedule variants provide only their
+# target-specific structured/vector middle section.
+TILED_VECTOR_LLVM_SUFFIX="one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts"
 
 # Tiled-vector tail variant: the same bounded microkernel body is reused for
 # every tile. Partial tiles are padded locally and copied back only over their
@@ -383,8 +398,10 @@ if [[ "$VARIANT" == "tiled-vectorized" ]]; then
   TEMPLATE="$TILE_TRANSFORM_TEMPLATE" bash "$GENERATE_TILED_TRANSFORM" \
     --tile-m "$TILE_M" --tile-n "$TILE_N" --tile-k "$TILE_K" \
     --output "$GENERATED_TRANSFORM_SCRIPT" >/dev/null
-  TILED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$GENERATED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,one-shot-bufferize{bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map},buffer-deallocation-pipeline,expand-strided-metadata,lower-affine,convert-vector-to-scf{full-unroll target-rank=1},lower-affine,convert-vector-to-llvm{vector-contract-lowering=outerproduct},convert-ub-to-llvm,convert-scf-to-cf,convert-index-to-llvm,convert-math-to-llvm,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
+  TILED_PIPELINE="builtin.module(hir-structured-lowering,transform-preload-library{transform-library-paths=$GENERATED_TRANSFORM_SCRIPT},transform-interpreter{entry-point=__transform_main},lower-affine,$TILED_VECTOR_LLVM_SUFFIX)"
 fi
+
+DIRECT_K_TAIL_PIPELINE="builtin.module(func.func(hir-direct-k-tail-vector-lowering),$TILED_VECTOR_LLVM_SUFFIX)"
 
 # Tiled-scheduled variant: same tile-and-fuse structure as tiled-vectorized,
 # generated from tile_schedule_matmul_bias_relu.template.mlir instead, which
@@ -414,6 +431,9 @@ elif [[ "$VARIANT" == "tiled-scheduled" ]]; then
 elif [[ "$VARIANT" == "tiled-vectorized-materialized-tail" ]]; then
   PASS_PIPELINE="$TILED_TAIL_PIPELINE"
   echo "[tile-tail] TM=$TILE_M TN=$TILE_N TK=$TILE_K (transform script: $GENERATED_TAIL_TRANSFORM_SCRIPT)"
+elif [[ "$VARIANT" == "tiled-vectorized-direct-k-tail" ]]; then
+  PASS_PIPELINE="$DIRECT_K_TAIL_PIPELINE"
+  echo "[direct-k-tail] TM=8 TN=8 TK=8"
 else
   PASS_PIPELINE="$TILED_PIPELINE"
   echo "[tile] TM=$TILE_M TN=$TILE_N TK=$TILE_K (transform script: $GENERATED_TRANSFORM_SCRIPT)"

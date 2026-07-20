@@ -1,19 +1,23 @@
 // CHECK: linalg.matmul {fusion.candidate = "matmul_bias_relu"
 // CHECK-SAME: native.cost_model.candidates = [
-// CHECK-SAME: candidate_id = "unfused_scalar"
+// CHECK-SAME: candidate_id = "unfused_scalar_baseline"
+// CHECK-SAME: candidate_kind = "scalar_baseline"
 // CHECK-SAME: intermediate_read_count = 2
-// CHECK-SAME: candidate_id = "unfused_whole_shape_vector"
+// CHECK-SAME: candidate_id = "unfused_whole_shape_vector_no_padding"
 // CHECK-SAME: schedule_mode = "whole_shape_vector"
-// CHECK-SAME: candidate_id = "fused_scalar"
+// CHECK-SAME: candidate_id = "fused_scalar_baseline"
 // CHECK-SAME: intermediate_read_count = 0
-// CHECK-SAME: candidate_id = "fused_whole_shape_vector"
+// CHECK-SAME: candidate_id = "fused_whole_shape_vector_no_padding"
 // CHECK-SAME: interaction_correction_ns
 // CHECK-SAME: selected = true
 // CHECK-SAME: total_ns
-// CHECK-SAME: candidate_id = "fused_tiled_vector"
+// CHECK-SAME: candidate_id = "fused_tiled_vector_full_tiles"
 // CHECK-SAME: edge_tile_count = 0
 // CHECK-SAME: estimated_code_size_bytes = 4096
-// CHECK-SAME: native.cost_model.selected_candidate = "fused_whole_shape_vector"
+// CHECK-SAME: native.cost_model.runner_up = "fused_tiled_vector_full_tiles"
+// CHECK-SAME: native.cost_model.selected_candidate = "fused_whole_shape_vector_no_padding"
+// CHECK-SAME: native.cost_model.uncertainty_margin
+// CHECK-SAME: native.cost_model.used_full_comparison = true
 // CHECK-SAME: native.cost_model.version = "static_cost_model_v2"
 
 module attributes {

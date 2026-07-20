@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <utility>
 #include <vector>
 
 // K-tail experiment for one 8x8 output tile.  All paths read A/B directly
@@ -146,7 +147,8 @@ static double percentile(std::vector<double> v, double p) {
   return v[static_cast<size_t>(p * (v.size() - 1))];
 }
 
-static void runOne(const char *name, Kernel fn, int kSize) {
+static void runOne(const char *name, Kernel fn, int kSize,
+                   int mTiles = 1, int nTiles = 1) {
   std::vector<float> a(8 * kSize), b(kSize * 8), bias(64), ref(64);
   fill(a, 0x1234u + kSize);
   fill(b, 0x5678u + kSize);
@@ -156,7 +158,8 @@ static void runOne(const char *name, Kernel fn, int kSize) {
   float *out = guarded.data() + 8;
   double maxAbs = 0.0, maxRel = 0.0;
   for (int q = 0; q < 1000; ++q) {
-    fn(a.data(), b.data(), bias.data(), out, kSize);
+    for (int tile = 0; tile < mTiles * nTiles; ++tile)
+      fn(a.data(), b.data(), bias.data(), out, kSize);
     for (int i = 0; i < 64; ++i) {
       double e = std::abs(double(out[i]) - ref[i]);
       maxAbs = std::max(maxAbs, e);
@@ -168,30 +171,36 @@ static void runOne(const char *name, Kernel fn, int kSize) {
     if (guarded[i] != 12345.0f || guarded[72 + i] != 12345.0f)
       std::abort();
   for (int q = 0; q < 1000; ++q)
-    fn(a.data(), b.data(), bias.data(), out, kSize);
+    for (int tile = 0; tile < mTiles * nTiles; ++tile)
+      fn(a.data(), b.data(), bias.data(), out, kSize);
   std::vector<double> samples;
   samples.reserve(20000);
   for (int q = 0; q < 20000; ++q) {
     auto begin = std::chrono::steady_clock::now();
-    fn(a.data(), b.data(), bias.data(), out, kSize);
+    for (int tile = 0; tile < mTiles * nTiles; ++tile)
+      fn(a.data(), b.data(), bias.data(), out, kSize);
     auto end = std::chrono::steady_clock::now();
     samples.push_back(
         std::chrono::duration<double, std::nano>(end - begin).count());
   }
   std::printf(
-      "RESULT K=%d strategy=%s max_abs=%.9g max_rel=%.9g median_ns=%.9g "
+      "RESULT K=%d strategy=%s m_tiles=%d n_tiles=%d "
+      "max_abs=%.9g max_rel=%.9g median_ns=%.9g "
       "p95_ns=%.9g min_ns=%.9g max_ns=%.9g\n",
-      kSize, name, maxAbs, maxRel, percentile(samples, 0.5),
+      kSize, name, mTiles, nTiles, maxAbs, maxRel, percentile(samples, 0.5),
       percentile(samples, 0.95), percentile(samples, 0.0),
       percentile(samples, 1.0));
 }
 
 int main() {
-  for (int k = 1; k <= 7; ++k) {
-    runOne("materialized", materialized_k_tail, k);
-    runOne("direct_vector", direct_vector_k_tail, k);
-    runOne("guarded_transfer", guarded_transfer_k_tail, k);
-  }
+  for (auto [mTiles, nTiles] :
+       {std::pair{1, 1}, std::pair{1, 2}, std::pair{2, 1},
+        std::pair{2, 2}, std::pair{4, 4}})
+    for (int k = 1; k <= 7; ++k) {
+      runOne("materialized", materialized_k_tail, k, mTiles, nTiles);
+      runOne("direct_vector", direct_vector_k_tail, k, mTiles, nTiles);
+      runOne("guarded_transfer", guarded_transfer_k_tail, k, mTiles, nTiles);
+    }
   for (int k : {8, 9, 15, 16, 17, 31, 32, 33, 63, 65})
     runOne("full8_plus_direct_tail", full8_main_direct_tail, k);
 }

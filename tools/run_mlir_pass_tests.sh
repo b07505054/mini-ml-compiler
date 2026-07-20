@@ -429,8 +429,20 @@ run_filecheck \
   --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
 
 run_filecheck \
+  "calibrated K-tail candidates expose materialized, direct, and specialized decisions" \
+  "$REPO_ROOT/mlir_passes/test/native_cost_model_k_tail.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(quantization-planning,matmul-bias-relu-fusion)'
+
+run_filecheck \
   "K-tail transfer keeps the dynamic source dimension out of bounds" \
   "$REPO_ROOT/mlir_passes/test/k_tail_transfer_read_bounds.mlir"
+
+run_filecheck \
+  "production direct K-tail shares one accumulator and has no padded source tile" \
+  "$REPO_ROOT/mlir_passes/test/hir_direct_k_tail_vector_lowering.mlir" \
+  --load-pass-plugin="$PLUGIN" \
+  --pass-pipeline='builtin.module(func.func(hir-direct-k-tail-vector-lowering))'
 
 echo "[MLIR test] native codegen rejects unsupported f16 at HIR legality boundary"
 if "$MLIR_OPT" "$REPO_ROOT/mlir_passes/test/hir_native_codegen_unsupported_f16.mlir" \
@@ -972,6 +984,50 @@ run_backend_codegen_tiled_tail_static_checks() {
 
 run_tracked "backend_codegen/tiled_tail_15x31x15" \
   run_backend_codegen_tiled_tail_static_checks
+
+run_backend_codegen_direct_k_tail_static_checks() {
+  local input="$REPO_ROOT/mlir_passes/test/backend_codegen/matmul_bias_relu_direct_8x8x15.mlir"
+  local out_dir
+  out_dir="$(mktemp -d)"
+  local name="matmul_bias_relu_direct_8x8x15"
+  echo "[MLIR test] production direct K-tail static checks (8x8x15)"
+  MLIR_BIN="$(dirname "$MLIR_OPT")" PLUGIN="$PLUGIN" \
+    bash "$REPO_ROOT/mlir_passes/tools/compile_hir_matmul_bias_relu_aarch64.sh" \
+      --variant tiled-vectorized-direct-k-tail \
+      --tile-m 8 --tile-n 8 --tile-k 8 "$input" "$out_dir" "$name"
+  if grep -qE '(^|[[:space:]])(hir|linalg|tensor|vector|scf|memref)\.' \
+      "$out_dir/${name}_llvm.mlir"; then
+    echo "error: direct K-tail LLVM boundary contains unsupported dialect ops" >&2
+    return 1
+  fi
+  grep -qE '^\s+fmla\s+v[0-9]+\.4s' "$out_dir/${name}.s" ||
+    { echo "error: direct K-tail object has no NEON FMLA" >&2; return 1; }
+  local text_size
+  text_size="$(llvm-size "$out_dir/${name}.o" | tail -1 | awk '{print $1}')"
+  [[ "$text_size" -lt 4096 ]] ||
+    { echo "error: direct K-tail text size $text_size exceeds 4096 bytes" >&2; return 1; }
+  rm -rf "$out_dir"
+}
+
+run_tracked "backend_codegen/direct_k_tail_8x8x15" \
+  run_backend_codegen_direct_k_tail_static_checks
+
+run_k_tail_calibration_fit_check() {
+  local out_json out_csv
+  out_json="$(mktemp)"
+  out_csv="$(mktemp)"
+  python3 "$REPO_ROOT/tools/fit_k_tail_calibration.py" \
+    --input "$REPO_ROOT/mlir_passes/test/data/k_tail_calibration_sample.txt" \
+    --base-config "$REPO_ROOT/configs/calibration/cortex_a76_fp32_matmul_bias_relu_v1.json" \
+    --output "$out_json" --csv-output "$out_csv" >/dev/null
+  python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["fit_sample_count"] == 14; assert d["direct_vector_k_tail_per_k_ns"] > 0; assert "shape" not in d' "$out_json"
+  local status=$?
+  rm -f "$out_json" "$out_csv"
+  return "$status"
+}
+
+run_tracked "calibration/k_tail_fit_deterministic" \
+  run_k_tail_calibration_fit_check
 
 # ---------------------------------------------------------------------------
 # Host-side static checks for the tiled-vectorized AArch64 backend variant

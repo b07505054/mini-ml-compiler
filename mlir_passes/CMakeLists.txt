@@ -128,6 +128,8 @@ target_link_libraries(MLGraphCompilerPasses
     MLIRLinalgDialect
     MLIRArithDialect
     MLIRMathDialect
+    MLIRSCFDialect
+    MLIRVectorDialect
     MLIRTransforms
     MLIRSupport
     LLVMSupport
