@@ -52,6 +52,15 @@ set(ML_GRAPH_COMPILER_PASS_SOURCES
   lib/CV/IR/CVOps.cpp
   lib/HIR/IR/HIRDialect.cpp
   lib/HIR/IR/HIROps.cpp
+  lib/costmodel/CandidateGeneration.cpp
+  lib/costmodel/CandidateLegality.cpp
+  lib/costmodel/CandidateCostModel.cpp
+  lib/costmodel/PlanSelection.cpp
+  lib/costmodel/SchedulePlan.cpp
+  lib/costmodel/ScratchpadAllocation.cpp
+  lib/costmodel/BufferingPolicy.cpp
+  lib/costmodel/AsyncDMASchedule.cpp
+  lib/costmodel/ScheduleDependencyGraph.cpp
   lib/MatMulBiasReluFusionPass.cpp
   lib/NativeCodegenPipeline.cpp
   lib/QuantizationCompilerPasses.cpp
@@ -372,6 +381,347 @@ target_link_libraries(ImplementationCandidateTest
 )
 add_test(NAME ImplementationCandidateTest
          COMMAND ImplementationCandidateTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 1 (Candidate Generation) unit test.
+# New, independent compiler track: enumerates KernelCandidate combinations
+# (precision x dataflow x PE array shape x tile shape) for a real HIR
+# conv2d op. No scoring, no pruning, no lowering, no simulator, no
+# execution backend, no Hailo/runtime dependency of any kind.
+# ---------------------------------------------------------------------------
+add_executable(KernelCandidateGenerationTest
+  test/costmodel/KernelCandidateGenerationTest.cpp
+)
+llvm_update_compile_flags(KernelCandidateGenerationTest)
+add_dependencies(KernelCandidateGenerationTest
+  HIRDialectIncGen
+)
+target_include_directories(KernelCandidateGenerationTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(KernelCandidateGenerationTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics for this test regardless of the build's
+# CMAKE_BUILD_TYPE (Release adds -DNDEBUG globally, which would otherwise
+# silently compile out every assert() in this test -- discovered during
+# Slice 5 development; see the Slice 5 final-evidence report).
+target_compile_options(KernelCandidateGenerationTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(KernelCandidateGenerationTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME KernelCandidateGenerationTest
+         COMMAND KernelCandidateGenerationTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 2 (Candidate Legality Checking) unit test.
+# Deterministic legality classification of Slice 1's KernelCandidate list
+# against an explicit NPUTargetConfig hardware contract. No estimated
+# cycles, ranking, scoring, sorting, winner selection, autotuning,
+# benchmarking, or execution. No Hailo/runtime/lowering/simulator
+# dependency of any kind.
+# ---------------------------------------------------------------------------
+add_executable(CandidateLegalityTest
+  test/costmodel/CandidateLegalityTest.cpp
+)
+llvm_update_compile_flags(CandidateLegalityTest)
+add_dependencies(CandidateLegalityTest
+  HIRDialectIncGen
+)
+target_include_directories(CandidateLegalityTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(CandidateLegalityTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics for this test regardless of the build's
+# CMAKE_BUILD_TYPE (Release adds -DNDEBUG globally, which would otherwise
+# silently compile out every assert() in this test -- discovered during
+# Slice 5 development; see the Slice 5 final-evidence report).
+target_compile_options(CandidateLegalityTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(CandidateLegalityTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME CandidateLegalityTest
+         COMMAND CandidateLegalityTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 3 (Analytical Cost Estimation) unit test.
+# Deterministic, explainable analytical cost breakdown for every LEGAL
+# KernelCandidate. No ranking, sorting, winner selection, `selected`
+# field, autotuning, execution, or real-hardware calibration. No
+# Hailo/runtime/lowering/simulator dependency of any kind.
+# ---------------------------------------------------------------------------
+add_executable(CandidateCostModelTest
+  test/costmodel/CandidateCostModelTest.cpp
+)
+llvm_update_compile_flags(CandidateCostModelTest)
+add_dependencies(CandidateCostModelTest
+  HIRDialectIncGen
+)
+target_include_directories(CandidateCostModelTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(CandidateCostModelTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics for this test regardless of the build's
+# CMAKE_BUILD_TYPE (Release adds -DNDEBUG globally, which would otherwise
+# silently compile out every assert() in this test -- discovered during
+# Slice 5 development; see the Slice 5 final-evidence report).
+target_compile_options(CandidateCostModelTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(CandidateCostModelTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME CandidateCostModelTest
+         COMMAND CandidateCostModelTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 4 (Deterministic Plan Selection) unit test.
+# Converts Slice 1-3's ordered outputs into one deterministic ranking and
+# selection decision. No new cost formula, no execution, no lowering, no
+# simulation, no Hailo/runtime dependency of any kind.
+# ---------------------------------------------------------------------------
+add_executable(CandidatePlanSelectionTest
+  test/costmodel/CandidatePlanSelectionTest.cpp
+)
+llvm_update_compile_flags(CandidatePlanSelectionTest)
+add_dependencies(CandidatePlanSelectionTest
+  HIRDialectIncGen
+)
+target_include_directories(CandidatePlanSelectionTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(CandidatePlanSelectionTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics for this test regardless of the build's
+# CMAKE_BUILD_TYPE (Release adds -DNDEBUG globally, which would otherwise
+# silently compile out every assert() in this test -- discovered during
+# Slice 5 development; see the Slice 5 final-evidence report).
+target_compile_options(CandidatePlanSelectionTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(CandidatePlanSelectionTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME CandidatePlanSelectionTest
+         COMMAND CandidatePlanSelectionTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 5 (Reduction Tiling Candidate Expansion) unit
+# test. Expands the candidate schedule space with an explicit K-tile
+# dimension, consistently across Slices 1-4. No lowering, executable
+# schedules, DMA commands, address allocation, or runtime dispatch.
+# ---------------------------------------------------------------------------
+add_executable(ReductionTilingCandidateTest
+  test/costmodel/ReductionTilingCandidateTest.cpp
+)
+llvm_update_compile_flags(ReductionTilingCandidateTest)
+add_dependencies(ReductionTilingCandidateTest
+  HIRDialectIncGen
+)
+target_include_directories(ReductionTilingCandidateTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ReductionTilingCandidateTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+target_compile_options(ReductionTilingCandidateTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(ReductionTilingCandidateTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME ReductionTilingCandidateTest
+         COMMAND ReductionTilingCandidateTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 6 (Selected Schedule Materialization) unit test.
+# Converts the selected candidate into an explicit, deterministic schedule
+# description (iteration space, loop order, residency, per-tile
+# operations) -- no executable code, no MLIR lowering, no real DMA
+# commands, no scratchpad addresses, no runtime dispatch, no simulation,
+# no Hailo integration.
+# ---------------------------------------------------------------------------
+add_executable(SelectedScheduleMaterializationTest
+  test/costmodel/SelectedScheduleMaterializationTest.cpp
+)
+llvm_update_compile_flags(SelectedScheduleMaterializationTest)
+add_dependencies(SelectedScheduleMaterializationTest
+  HIRDialectIncGen
+)
+target_include_directories(SelectedScheduleMaterializationTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(SelectedScheduleMaterializationTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics regardless of the build's CMAKE_BUILD_TYPE
+# (Release adds -DNDEBUG globally) -- same policy as the other five
+# cost-model test targets above.
+target_compile_options(SelectedScheduleMaterializationTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(SelectedScheduleMaterializationTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME SelectedScheduleMaterializationTest
+         COMMAND SelectedScheduleMaterializationTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 7 (Buffer Lifetime and Scratchpad Allocation)
+# unit test. Static buffer lifetime analysis and deterministic symbolic
+# scratchpad allocation only -- no double buffering, no asynchronous DMA,
+# no concrete DMA descriptors, no MLIR lowering, no execution, no Hailo
+# integration.
+# ---------------------------------------------------------------------------
+add_executable(ScratchpadAllocationTest
+  test/costmodel/ScratchpadAllocationTest.cpp
+)
+llvm_update_compile_flags(ScratchpadAllocationTest)
+add_dependencies(ScratchpadAllocationTest
+  HIRDialectIncGen
+)
+target_include_directories(ScratchpadAllocationTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ScratchpadAllocationTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics regardless of the build's CMAKE_BUILD_TYPE
+# (Release adds -DNDEBUG globally) -- same policy as the other six
+# cost-model test targets above.
+target_compile_options(ScratchpadAllocationTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(ScratchpadAllocationTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME ScratchpadAllocationTest
+         COMMAND ScratchpadAllocationTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 8 (Double Buffering and Asynchronous DMA
+# Scheduling) unit test. Static ping-pong scratchpad allocation, symbolic
+# DMA issue/wait events, dependency validation, and overlap-aware
+# analytical cycle estimation only -- no hardware DMA descriptors, no
+# runtime command queues, no real threads, no actual asynchronous
+# execution, no MLIR/SCF/Affine lowering, no code generation, no
+# simulation, no hardware execution, no empirical calibration, no
+# bank-conflict modeling, no NoC routing, no Hailo integration.
+# ---------------------------------------------------------------------------
+add_executable(AsyncDMASchedulingTest
+  test/costmodel/AsyncDMASchedulingTest.cpp
+)
+llvm_update_compile_flags(AsyncDMASchedulingTest)
+add_dependencies(AsyncDMASchedulingTest
+  HIRDialectIncGen
+)
+target_include_directories(AsyncDMASchedulingTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(AsyncDMASchedulingTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics regardless of the build's CMAKE_BUILD_TYPE
+# (Release adds -DNDEBUG globally) -- same policy as the other seven
+# cost-model test targets above.
+target_compile_options(AsyncDMASchedulingTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(AsyncDMASchedulingTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME AsyncDMASchedulingTest
+         COMMAND AsyncDMASchedulingTest)
+
+# ---------------------------------------------------------------------------
+# CTest: Cost Model Slice 9 (Explicit Dependency Graph and Critical-Path
+# Validation) unit test. Explicit DAG construction over a Slice 8
+# AsyncSchedulePlan, independent dependency/residency/partial-sum-chain
+# validation, cycle detection, stable topological ordering, and
+# resource-constrained graph timing reconciled exactly against Slice 8's
+# own two-timeline simulator. No resource-constrained rescheduling, no
+# operation movement, no multiple DMA channels, no MLIR lowering, no
+# code generation, no simulation, no hardware execution, no empirical
+# calibration, no Hailo integration.
+# ---------------------------------------------------------------------------
+add_executable(ScheduleDependencyGraphTest
+  test/costmodel/ScheduleDependencyGraphTest.cpp
+)
+llvm_update_compile_flags(ScheduleDependencyGraphTest)
+add_dependencies(ScheduleDependencyGraphTest
+  HIRDialectIncGen
+)
+target_include_directories(ScheduleDependencyGraphTest
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_compile_definitions(ScheduleDependencyGraphTest
+  PRIVATE ${LLVM_DEFINITIONS}
+)
+# Force real assert() semantics regardless of the build's CMAKE_BUILD_TYPE
+# (Release adds -DNDEBUG globally) -- same policy as the other eight
+# cost-model test targets above.
+target_compile_options(ScheduleDependencyGraphTest
+  PRIVATE -UNDEBUG
+)
+target_link_libraries(ScheduleDependencyGraphTest
+  PRIVATE
+    MLGraphCompilerPasses
+)
+add_test(NAME ScheduleDependencyGraphTest
+         COMMAND ScheduleDependencyGraphTest)
 
 # ---------------------------------------------------------------------------
 # CTest: TargetConstraints unit test
