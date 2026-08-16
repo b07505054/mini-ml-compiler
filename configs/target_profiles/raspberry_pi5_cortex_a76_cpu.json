@@ -6,6 +6,9 @@
     "fp32",
     "fp16"
   ],
+  "pagedKVCompatibleBackends": [
+    "portable_cpu"
+  ],
   "truthBoundary": "raspberry_pi5_live_hardware_evidence_cpu_only_no_verified_gpu_or_npu_kernel_library_declared_not_measured_performance",
   "hardwareExecutionProfile": {
     "physicalComputeUnits": 4
