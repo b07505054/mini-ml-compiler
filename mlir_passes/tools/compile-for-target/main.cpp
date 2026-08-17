@@ -314,6 +314,25 @@ struct TargetDeviceProfile {
   double      profitGpuMemoryUtilization = 0.0;
   std::map<std::string, double> profitTp1Coefficients;
   std::map<std::string, double> profitTp2Coefficients;
+  std::string profitCommunicationProfileId;
+  std::string profitCommunicationTopologyClass;
+  bool        profitCommunicationP2PAvailable = false;
+  std::string profitCommunicationNcclTransport;
+  std::string profitCommunicationNcclVersion;
+  std::string profitCommunicationNcclTestsVersion;
+  std::string profitCommunicationCollectiveKind;
+  std::string profitCommunicationPredictorKind;
+  std::string profitCommunicationMode;
+  double      profitCommunicationAlphaUs = 0.0;
+  double      profitCommunicationBetaUsPerByte = 0.0;
+  std::string profitCommunicationSourceArtifactHashes;
+  std::string profitCommunicationProvenanceHashes;
+  std::vector<std::pair<int64_t, double>> profitCommunicationPoints;
+  double      profitD9DecisionMarginUs = 250.0;
+  double      profitD9RuntimeResidualUs = 0.0;
+  double      profitD9ComputeReferenceWeightMb = 1454.3235168457031;
+  double      profitD9ComputeSavingsUsPerWeightMbAboveReference = 0.50;
+  std::string profitD9OverlapAssumption = "zero";
 };
 
 static std::string resolveProfileRelativePath(llvm::StringRef profilePath,
@@ -804,6 +823,41 @@ parseDeviceProfile(llvm::StringRef path) {
     };
     readCoeffs(dp->getObject("tp1Coefficients"), prof.profitTp1Coefficients);
     readCoeffs(dp->getObject("tp2Coefficients"), prof.profitTp2Coefficients);
+    if (auto *d9 = dp->getObject("d9BreakEvenCalibration")) {
+      if (auto v = d9->getNumber("decisionMarginUs")) prof.profitD9DecisionMarginUs = *v;
+      if (auto v = d9->getNumber("runtimeResidualUs")) prof.profitD9RuntimeResidualUs = *v;
+      if (auto v = d9->getString("overlapAssumption")) prof.profitD9OverlapAssumption = v->str();
+      if (auto *compute = d9->getObject("computeSavingsCalibration")) {
+        if (auto v = compute->getNumber("referenceWeightMb")) prof.profitD9ComputeReferenceWeightMb = *v;
+        if (auto v = compute->getNumber("computeSavingsUsPerWeightMbAboveReference"))
+          prof.profitD9ComputeSavingsUsPerWeightMbAboveReference = *v;
+      }
+    }
+    if (auto *comm = dp->getObject("communicationCalibration")) {
+      if (auto v = comm->getString("profileId")) prof.profitCommunicationProfileId = v->str();
+      if (auto v = comm->getString("topologyClass")) prof.profitCommunicationTopologyClass = v->str();
+      if (auto v = comm->getBoolean("p2pAvailable")) prof.profitCommunicationP2PAvailable = *v;
+      if (auto v = comm->getString("ncclTransport")) prof.profitCommunicationNcclTransport = v->str();
+      if (auto v = comm->getString("ncclVersion")) prof.profitCommunicationNcclVersion = v->str();
+      if (auto v = comm->getString("ncclTestsVersion")) prof.profitCommunicationNcclTestsVersion = v->str();
+      if (auto v = comm->getString("collectiveKind")) prof.profitCommunicationCollectiveKind = v->str();
+      if (auto v = comm->getString("predictorKind")) prof.profitCommunicationPredictorKind = v->str();
+      if (auto v = comm->getString("mode")) prof.profitCommunicationMode = v->str();
+      if (auto v = comm->getNumber("alphaUs")) prof.profitCommunicationAlphaUs = *v;
+      if (auto v = comm->getNumber("betaUsPerByte")) prof.profitCommunicationBetaUsPerByte = *v;
+      if (auto v = comm->getString("sourceArtifactHashes")) prof.profitCommunicationSourceArtifactHashes = v->str();
+      if (auto v = comm->getString("provenanceHashes")) prof.profitCommunicationProvenanceHashes = v->str();
+      if (auto *points = comm->getArray("points")) {
+        for (const auto &elem : *points) {
+          if (auto *point = elem.getAsObject()) {
+            auto bytes = point->getInteger("bytes");
+            auto timeUs = point->getNumber("timeUs");
+            if (bytes && timeUs)
+              prof.profitCommunicationPoints.push_back({static_cast<int64_t>(*bytes), *timeUs});
+          }
+        }
+      }
+    }
   }
 
   // Parse optional forcedQuantization block (Phase C minimal AWQ support).
@@ -1302,6 +1356,53 @@ int main(int argc, char **argv) {
     };
     m->setAttr("distributed.profitability.tp1_coefficients", coeffAttr(prof.profitTp1Coefficients));
     m->setAttr("distributed.profitability.tp2_coefficients", coeffAttr(prof.profitTp2Coefficients));
+    m->setAttr("distributed.profitability.d9.decision_margin_us",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitD9DecisionMarginUs));
+    m->setAttr("distributed.profitability.d9.runtime_residual_us",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitD9RuntimeResidualUs));
+    m->setAttr("distributed.profitability.d9.compute_reference_weight_mb",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitD9ComputeReferenceWeightMb));
+    m->setAttr("distributed.profitability.d9.compute_savings_us_per_weight_mb_above_reference",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitD9ComputeSavingsUsPerWeightMbAboveReference));
+    m->setAttr("distributed.profitability.d9.overlap_assumption",
+               mlir::StringAttr::get(&ctx, prof.profitD9OverlapAssumption));
+    m->setAttr("distributed.profitability.communication.profile_id",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationProfileId));
+    m->setAttr("distributed.profitability.communication.topology_class",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationTopologyClass));
+    m->setAttr("distributed.profitability.communication.p2p_available",
+               mlir::BoolAttr::get(&ctx, prof.profitCommunicationP2PAvailable));
+    m->setAttr("distributed.profitability.communication.nccl_transport",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationNcclTransport));
+    m->setAttr("distributed.profitability.communication.nccl_version",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationNcclVersion));
+    m->setAttr("distributed.profitability.communication.nccl_tests_version",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationNcclTestsVersion));
+    m->setAttr("distributed.profitability.communication.collective_kind",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationCollectiveKind));
+    m->setAttr("distributed.profitability.communication.predictor_kind",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationPredictorKind));
+    m->setAttr("distributed.profitability.communication.mode",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationMode));
+    m->setAttr("distributed.profitability.communication.alpha_us",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitCommunicationAlphaUs));
+    m->setAttr("distributed.profitability.communication.beta_us_per_byte",
+               mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), prof.profitCommunicationBetaUsPerByte));
+    m->setAttr("distributed.profitability.communication.source_artifact_hashes",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationSourceArtifactHashes));
+    m->setAttr("distributed.profitability.communication.provenance_hashes",
+               mlir::StringAttr::get(&ctx, prof.profitCommunicationProvenanceHashes));
+    llvm::SmallVector<mlir::Attribute> pointAttrs;
+    for (const auto &p : prof.profitCommunicationPoints) {
+      llvm::SmallVector<mlir::NamedAttribute> fields;
+      fields.push_back({mlir::StringAttr::get(&ctx, "bytes"),
+                        mlir::IntegerAttr::get(mlir::IntegerType::get(&ctx, 64), p.first)});
+      fields.push_back({mlir::StringAttr::get(&ctx, "time_us"),
+                        mlir::FloatAttr::get(mlir::Float64Type::get(&ctx), p.second)});
+      pointAttrs.push_back(mlir::DictionaryAttr::get(&ctx, fields));
+    }
+    m->setAttr("distributed.profitability.communication.points",
+               mlir::ArrayAttr::get(&ctx, pointAttrs));
   }
 
   // 4e. D6: attach the real per-model weight-footprint fact from

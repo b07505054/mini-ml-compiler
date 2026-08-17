@@ -223,6 +223,35 @@ struct DistributedThroughputCoefficients {
   double concurrency = 0.0;
 };
 
+struct DistributedCommunicationPoint {
+  int64_t bytes = 0;
+  double  time_us = 0.0;
+};
+
+struct DistributedCommunicationPrediction {
+  bool        valid = false;
+  double      time_us = 0.0;
+  std::string failure_reason;
+};
+
+struct DistributedCommunicationCalibration {
+  std::string profile_id;
+  std::string topology_class;
+  bool        p2p_available = false;
+  std::string nccl_transport;
+  std::string nccl_version;
+  std::string nccl_tests_version;
+  std::string collective_kind = "all_reduce";
+  std::string predictor_kind;
+  std::string mode = "out_of_place";
+  double      alpha_us = 0.0;
+  double      beta_us_per_byte = 0.0;
+  std::vector<DistributedCommunicationPoint> points;
+  std::string source_artifact_hashes;
+  std::string provenance_hashes;
+  bool        valid = false;
+};
+
 // Calibration parameters read from a target profile's declared
 // distributedProfitability block (never from a raw benchmark file -- see
 // Part D). `valid` is false (fail-closed) unless contract_version matches
@@ -238,6 +267,12 @@ struct DistributedProfitabilityCalibration {
   double      gpu_memory_utilization = 0.0;
   DistributedThroughputCoefficients tp1_coefficients;
   DistributedThroughputCoefficients tp2_coefficients;
+  DistributedCommunicationCalibration communication;
+  double      d9_decision_margin_us = 250.0;
+  double      d9_runtime_residual_us = 0.0;
+  double      d9_compute_reference_weight_mb = 1454.3235168457031;
+  double      d9_compute_savings_us_per_weight_mb_above_reference = 0.50;
+  std::string d9_overlap_assumption = "zero";
   std::string tie_break_rule;
   std::string truth_boundary;
   bool        valid = false;
@@ -245,6 +280,11 @@ struct DistributedProfitabilityCalibration {
 
 constexpr const char *kDistributedProfitabilityContractVersion =
     "distributed_profitability_contract_v1";
+constexpr const char *kD9BreakEvenPolicyId = "d9_break_even_tp_selector_v1";
+constexpr double kD9DecisionMarginUs = 250.0;
+constexpr double kD9RuntimeResidualUs = 0.0;
+constexpr double kD9ComputeReferenceWeightMb = 1454.3235168457031;
+constexpr double kD9ComputeSavingsUsPerWeightMbAboveReference = 0.50;
 
 // Real-unit, comparable-across-TP-degrees profitability estimate for one
 // candidate. `predicted_throughput_tokens_per_s` is the sole objective the
@@ -255,12 +295,39 @@ constexpr const char *kDistributedProfitabilityContractVersion =
 struct DistributedProfitabilityEstimate {
   bool        computed = false;   // false if calibration/model/workload inputs were unavailable
   bool        feasible = false;
-  double      predicted_throughput_tokens_per_s = 0.0;
+  double      predicted_throughput_tokens_per_s = 0.0;  // after D9 communication adjustment
+  double      predicted_throughput_before_communication_tokens_per_s = 0.0;
+  double      estimated_nccl_comm_time_us = 0.0;
+  int64_t     estimated_communication_bytes = 0;
+  int64_t     estimated_collective_call_count = 0;
+  int64_t     bytes_per_collective_call = 0;
+  std::string communication_collective_kind;
+  std::string communication_profile_id;
+  std::string communication_predictor_kind;
+  std::string topology_class;
+  bool        p2p_available = false;
+  std::string nccl_transport;
+  std::string overlap_assumption = "zero";
+  double      regression_compute_savings_us = 0.0;
+  double      structural_compute_savings_adjustment_us = 0.0;
+  double      compute_reference_weight_mb = 1454.3235168457031;
+  double      compute_savings_us_per_weight_mb_above_reference = 0.50;
+  std::string regression_compute_savings_status = "finite";
+  double      estimated_compute_savings_us = 0.0;
+  double      estimated_communication_penalty_us = 0.0;
+  double      estimated_runtime_residual_us = 0.0;
+  double      estimated_net_tp2_benefit_us = 0.0;
+  double      decision_margin_us = 250.0;
   double      required_memory_mb = 0.0;
   double      memory_budget_mb = 0.0;
   std::string infeasibility_reason;
   std::string truth_boundary;
 };
+
+DistributedCommunicationPrediction
+estimateNcclCommunicationTimeUs(int64_t estimated_communication_bytes,
+                                const std::string &collective_kind,
+                                const DistributedCommunicationCalibration &calibration);
 
 // Real-unit KV-cache-bytes-per-token-per-GPU, matching
 // tp_cost_model.kv_cache_bytes_per_token_per_gpu exactly: vLLM's

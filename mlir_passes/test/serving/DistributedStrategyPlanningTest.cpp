@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 
 using namespace mlir::hir;
@@ -28,6 +29,65 @@ static QwenOperatorContext realO_projLikeContext() {
   ctx.num_kv_heads = 2;
   ctx.distributed_capability_available = true;
   return ctx;
+}
+
+static DistributedModelProfile realQwen05bModelProfile() {
+  DistributedModelProfile model;
+  model.num_layers = 24;
+  model.hidden_size = 896;
+  model.num_attention_heads = 14;
+  model.num_kv_heads = 2;
+  model.weight_footprint_mb = 1454.3235168457031;
+  model.available = true;
+  return model;
+}
+
+static DistributedWorkloadProfile workloadProfile(int64_t in = 32, int64_t out = 32,
+                                                  int64_t c = 1) {
+  DistributedWorkloadProfile workload;
+  workload.input_tokens = in;
+  workload.output_tokens = out;
+  workload.concurrency = c;
+  workload.max_model_len = 2048;
+  workload.max_num_seqs = 4;
+  workload.declared = true;
+  return workload;
+}
+
+static DistributedProfitabilityCalibration calibratedProfile() {
+  DistributedProfitabilityCalibration cal;
+  cal.contract_version = kDistributedProfitabilityContractVersion;
+  cal.gpu_memory_mb_per_device = 24564.0;
+  cal.gpu_memory_utilization = 0.9;
+  cal.tp1_coefficients.intercept = 7.962344761464902;
+  cal.tp1_coefficients.per_gpu_weight_mb = -0.24772518079214728;
+  cal.tp1_coefficients.kv_cache_kb_per_token_per_gpu = 58.06762504638019;
+  cal.tp1_coefficients.gpu_count = 7.962344761464541;
+  cal.tp1_coefficients.input_length = 0.06688598116920906;
+  cal.tp1_coefficients.output_length = 0.8093129304993703;
+  cal.tp1_coefficients.concurrency = 177.66563688419586;
+  cal.tp2_coefficients.intercept = 20.38139140395511;
+  cal.tp2_coefficients.per_gpu_weight_mb = -0.33955255109345256;
+  cal.tp2_coefficients.kv_cache_kb_per_token_per_gpu = 74.31842439533375;
+  cal.tp2_coefficients.gpu_count = 40.762782807910725;
+  cal.tp2_coefficients.input_length = 0.059169929961928894;
+  cal.tp2_coefficients.output_length = 0.9658812851196273;
+  cal.tp2_coefficients.concurrency = 166.02350203699726;
+  cal.communication.profile_id = "2x_rtx4090_phb_single_numa_p2p_unavailable_nccl_shm_direct";
+  cal.communication.topology_class = "PHB";
+  cal.communication.p2p_available = false;
+  cal.communication.nccl_transport = "SHM/direct/direct";
+  cal.communication.collective_kind = "all_reduce";
+  cal.communication.predictor_kind = "log_size_piecewise_interpolation";
+  cal.communication.mode = "out_of_place";
+  cal.communication.alpha_us = 50.0;
+  cal.communication.beta_us_per_byte = 0.001;
+  cal.communication.points = {
+      {1024, 10.79}, {2048, 10.22}, {4096, 10.26}, {8192, 10.48},
+      {16384, 14.55}, {32768, 22.33}, {65536, 36.79}};
+  cal.communication.valid = true;
+  cal.valid = true;
+  return cal;
 }
 
 static void testTP1CandidateGeneration() {
@@ -167,6 +227,86 @@ static void testCostEvidenceSerializationIsExplicitAndInspectable() {
   std::puts("  [PASS] testCostEvidenceSerializationIsExplicitAndInspectable");
 }
 
+static void testNcclCommunicationExactLookupPoint() {
+  auto cal = calibratedProfile();
+  auto pred = estimateNcclCommunicationTimeUs(8192, "all_reduce", cal.communication);
+  assert(pred.valid);
+  assert(std::abs(pred.time_us - 10.48) < 1e-9);
+  std::puts("  [PASS] testNcclCommunicationExactLookupPoint");
+}
+
+static void testNcclCommunicationInterpolationBetweenMeasuredSizes() {
+  auto cal = calibratedProfile();
+  auto pred = estimateNcclCommunicationTimeUs(12 * 1024, "all_reduce", cal.communication);
+  assert(pred.valid);
+  assert(pred.time_us > 10.48 && pred.time_us < 14.55);
+  std::puts("  [PASS] testNcclCommunicationInterpolationBetweenMeasuredSizes");
+}
+
+static void testNcclCommunicationOutOfRangeFailsClosed() {
+  auto cal = calibratedProfile();
+  auto pred = estimateNcclCommunicationTimeUs(1LL << 40, "all_reduce", cal.communication);
+  assert(!pred.valid);
+  assert(pred.failure_reason.find("outside_calibrated_range") != std::string::npos);
+  std::puts("  [PASS] testNcclCommunicationOutOfRangeFailsClosed");
+}
+
+static void testNcclTopologyMismatchFailsClosed() {
+  auto cal = calibratedProfile();
+  cal.communication.topology_class = "NVLINK";
+  auto pred = estimateNcclCommunicationTimeUs(8192, "all_reduce", cal.communication);
+  assert(!pred.valid);
+  assert(pred.failure_reason.find("topology_mismatch") != std::string::npos);
+  std::puts("  [PASS] testNcclTopologyMismatchFailsClosed");
+}
+
+static void testLegacyProfileFailsClosedForProfitability() {
+  auto candidates = generateDistributedCandidates();
+  auto cal = calibratedProfile();
+  cal.communication.valid = false;
+  cal.valid = false;
+  auto est = estimateDistributedProfitability(
+      candidates[1], realQwen05bModelProfile(), workloadProfile(), cal);
+  assert(!est.computed);
+  assert(est.infeasibility_reason.find("calibration_unavailable") != std::string::npos);
+  std::puts("  [PASS] testLegacyProfileFailsClosedForProfitability");
+}
+
+static void testCommunicationCostAffectsTPDecisionMath() {
+  auto cal = calibratedProfile();
+  cal.tp1_coefficients = {};
+  cal.tp2_coefficients = {};
+  cal.tp1_coefficients.intercept = 1000.0;
+  cal.tp2_coefficients.intercept = 1001.0;
+  auto candidates = generateDistributedCandidates();
+  auto workload = workloadProfile(32, 256, 8);
+  auto tp1 = estimateDistributedProfitability(candidates[0], realQwen05bModelProfile(), workload, cal);
+  auto tp2 = estimateDistributedProfitability(candidates[1], realQwen05bModelProfile(), workload, cal);
+  assert(tp1.computed && tp2.computed);
+  assert(tp2.predicted_throughput_before_communication_tokens_per_s >
+         tp1.predicted_throughput_before_communication_tokens_per_s);
+  assert(tp2.predicted_throughput_tokens_per_s <
+         tp1.predicted_throughput_tokens_per_s);
+  assert(tp2.estimated_nccl_comm_time_us > 0.0);
+  std::puts("  [PASS] testCommunicationCostAffectsTPDecisionMath");
+}
+
+static void testCommunicationAdjustmentPreservesNonPositiveRegressionOutputs() {
+  auto cal = calibratedProfile();
+  cal.tp1_coefficients = {};
+  cal.tp2_coefficients = {};
+  cal.tp1_coefficients.intercept = -10.0;
+  cal.tp2_coefficients.intercept = -9.0;
+  auto candidates = generateDistributedCandidates();
+  auto workload = workloadProfile(32, 256, 8);
+  auto tp1 = estimateDistributedProfitability(candidates[0], realQwen05bModelProfile(), workload, cal);
+  auto tp2 = estimateDistributedProfitability(candidates[1], realQwen05bModelProfile(), workload, cal);
+  assert(tp1.computed && tp2.computed);
+  assert(tp1.predicted_throughput_tokens_per_s == -10.0);
+  assert(tp2.predicted_throughput_tokens_per_s == -9.0);
+  std::puts("  [PASS] testCommunicationAdjustmentPreservesNonPositiveRegressionOutputs");
+}
+
 // D2 Part M measurement: real in-process latency of one full
 // generate-candidates + legality + cost evaluation cycle, averaged over
 // many iterations. Printed to stdout (not an assertion) so the D2
@@ -210,6 +350,13 @@ int main() {
   testNoDistributedCapabilityRejection();
   testTP1AlwaysLegalRegardlessOfOperator();
   testCostEvidenceSerializationIsExplicitAndInspectable();
+  testNcclCommunicationExactLookupPoint();
+  testNcclCommunicationInterpolationBetweenMeasuredSizes();
+  testNcclCommunicationOutOfRangeFailsClosed();
+  testNcclTopologyMismatchFailsClosed();
+  testLegacyProfileFailsClosedForProfitability();
+  testCommunicationCostAffectsTPDecisionMath();
+  testCommunicationAdjustmentPreservesNonPositiveRegressionOutputs();
   std::puts("DistributedStrategyPlanningTest: PASS");
   reportLegalityAndCostLatency();
   return 0;

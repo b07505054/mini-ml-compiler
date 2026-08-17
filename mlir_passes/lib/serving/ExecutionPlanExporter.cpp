@@ -1172,13 +1172,12 @@ ExecutionPlanExporter::exportDistributedEvidenceReport(mlir::ModuleOp module,
   root["schema"] = "distributed_strategy_evidence_report";
   root["schema_version"] = "1.0.0";
   root["truth_boundary"] =
-      "d6_qwen_pipeline_whole_model_profitability_selection_calibrated_"
-      "from_real_d5_measured_2x_rtx4090_throughput_linear_regression_not_"
-      "nccl_calibrated_by_the_compiler_itself_not_a_runtime_measured_"
-      "guarantee_for_this_specific_compile_see_per_candidate_"
-      "profitability_field_for_the_actual_predicted_values_and_"
-      "distributed_profitability_contract_version_for_the_calibration_"
-      "in_effect";
+      "d7_qwen_pipeline_whole_model_profitability_selection_calibrated_"
+      "from_real_d5_measured_2x_rtx4090_throughput_plus_phase1_nccl_tests_"
+      "measured_communication_cost_for_2x_rtx4090_phb_p2p_unavailable_shm_"
+      "not_a_runtime_measured_guarantee_for_this_specific_compile_see_"
+      "per_candidate_profitability_field_for_predicted_values_and_"
+      "communication_fields_for_the_calibration_in_effect";
 
   if (auto a = op->getAttr("distributed.candidates"))
     root["candidates"] = attrToJSON(a);
@@ -1188,6 +1187,10 @@ ExecutionPlanExporter::exportDistributedEvidenceReport(mlir::ModuleOp module,
     root["selected_candidate_id"] = attrToJSON(a);
   if (auto a = op->getAttr("distributed.selection_reason"))
     root["selection_reason"] = attrToJSON(a);
+  if (auto a = op->getAttr("distributed.pre_communication_selected_candidate_id"))
+    root["pre_communication_selected_candidate_id"] = attrToJSON(a);
+  if (auto a = op->getAttr("distributed.communication_changed_decision"))
+    root["communication_changed_decision"] = attrToJSON(a);
   if (auto a = op->getAttr("distributed.policy_id"))
     root["policy_id"] = attrToJSON(a);
   if (auto a = op->getAttr("distributed.policy_truth_boundary"))

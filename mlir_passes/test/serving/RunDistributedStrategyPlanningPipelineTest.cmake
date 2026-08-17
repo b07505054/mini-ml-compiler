@@ -1,6 +1,6 @@
 # RunDistributedStrategyPlanningPipelineTest.cmake
 #
-# D2/D6 end-to-end integration test, real production pipeline:
+# D2/D7 end-to-end integration test, real production pipeline:
 #   qwen-onnx-to-serving-mlir (real per-layer Qwen graph)
 #   -> compile-for-target (real pipeline incl. DistributedStrategyPlanningPass)
 #   -> execution_plan.json (schema_version 2.0.0)
@@ -9,7 +9,7 @@
 #   1. Pass registration + execution in the real Qwen pipeline.
 #   2. TP1 backward compatibility: the non-opt-in profile's exported plan
 #      carries no "distributed" key at all, regardless of model/calibration.
-#   3. D6 real profitability selection: the opt-in RTX4090 profile (real
+#   3. D7 NCCL-aware real profitability selection: the opt-in RTX4090 profile (real
 #      D5-calibrated coefficients) + the 7B model/workload profile produces
 #      a genuinely profitability-selected TP2 -- world_size=2,
 #      tensor_parallel_size=2, an all_reduce collective referencing the
@@ -98,11 +98,11 @@ foreach(_needle "\"distributed\"" "\"world_size\": 2" "\"tensor_parallel_size\":
   endif()
 endforeach()
 
-# --- Evidence report: both candidates, real D6 profitability-based selection ---
+# --- Evidence report: both candidates, real D7 NCCL-aware profitability-based selection ---
 file(READ "${EVIDENCE_OUT}" evidence_content)
 foreach(_needle "\"tp1\"" "\"tp2\"" "\"selected_candidate_id\": \"tp2\""
                  "\"selection_reason\": \"profitable_tp2_selected_predicted_throughput_higher\""
-                 "\"policy_id\": \"d6_profitability_selector_v1\""
+                 "\"policy_id\": \"d7_nccl_aware_profitability_selector_v1\""
                  "\"predicted_throughput_tokens_per_s\"")
   string(FIND "${evidence_content}" "${_needle}" _pos)
   if(_pos EQUAL -1)

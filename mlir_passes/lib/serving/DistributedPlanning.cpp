@@ -1,6 +1,7 @@
 #include "serving/DistributedPlanning.h"
 
 #include <algorithm>
+#include <cmath>
 #include <set>
 
 namespace mlir::hir {
@@ -341,6 +342,113 @@ double distributedPerGpuWeightMb(const DistributedModelProfile &model,
   return model.weight_footprint_mb / static_cast<double>(tensor_parallel_size);
 }
 
+DistributedCommunicationPrediction
+estimateNcclCommunicationTimeUs(int64_t estimated_communication_bytes,
+                                const std::string &collective_kind,
+                                const DistributedCommunicationCalibration &calibration) {
+  DistributedCommunicationPrediction pred;
+  if (estimated_communication_bytes < 0) {
+    pred.failure_reason = "negative_communication_bytes";
+    return pred;
+  }
+  if (estimated_communication_bytes == 0) {
+    pred.valid = true;
+    pred.time_us = 0.0;
+    return pred;
+  }
+  if (!calibration.valid) {
+    pred.failure_reason = "communication_calibration_missing_or_invalid";
+    return pred;
+  }
+  if (collective_kind != calibration.collective_kind) {
+    pred.failure_reason = "communication_collective_kind_mismatch";
+    return pred;
+  }
+  if (calibration.topology_class != "PHB" || calibration.p2p_available ||
+      calibration.nccl_transport != "SHM/direct/direct") {
+    pred.failure_reason = "communication_topology_mismatch";
+    return pred;
+  }
+  if (calibration.predictor_kind == "alpha_beta") {
+    pred.valid = true;
+    pred.time_us = calibration.alpha_us +
+        calibration.beta_us_per_byte * static_cast<double>(estimated_communication_bytes);
+    return pred;
+  }
+  if (calibration.predictor_kind != "log_size_piecewise_interpolation") {
+    pred.failure_reason = "unknown_communication_predictor_kind";
+    return pred;
+  }
+  if (calibration.points.size() < 2) {
+    pred.failure_reason = "communication_predictor_has_insufficient_points";
+    return pred;
+  }
+  std::vector<DistributedCommunicationPoint> points = calibration.points;
+  std::sort(points.begin(), points.end(), [](const auto &a, const auto &b) {
+    return a.bytes < b.bytes;
+  });
+  for (size_t i = 1; i < points.size(); ++i) {
+    if (points[i - 1].bytes >= points[i].bytes) {
+      pred.failure_reason = "communication_predictor_points_not_strictly_increasing";
+      return pred;
+    }
+  }
+  if (estimated_communication_bytes < points.front().bytes ||
+      estimated_communication_bytes > points.back().bytes) {
+    pred.failure_reason = "communication_bytes_outside_calibrated_range";
+    return pred;
+  }
+  for (const auto &p : points) {
+    if (p.bytes == estimated_communication_bytes) {
+      pred.valid = true;
+      pred.time_us = p.time_us;
+      return pred;
+    }
+  }
+  for (size_t i = 0; i + 1 < points.size(); ++i) {
+    const auto &left = points[i];
+    const auto &right = points[i + 1];
+    if (left.bytes <= estimated_communication_bytes &&
+        estimated_communication_bytes <= right.bytes) {
+      const double x = std::log2(static_cast<double>(estimated_communication_bytes));
+      const double x0 = std::log2(static_cast<double>(left.bytes));
+      const double x1 = std::log2(static_cast<double>(right.bytes));
+      const double frac = (x - x0) / (x1 - x0);
+      pred.valid = true;
+      pred.time_us = left.time_us + frac * (right.time_us - left.time_us);
+      return pred;
+    }
+  }
+  pred.failure_reason = "communication_interpolation_failed";
+  return pred;
+}
+
+namespace {
+
+int64_t bytesPerCollectiveCall(const DistributedCandidate &candidate,
+                                  const DistributedModelProfile &model) {
+  if (candidate.world_size <= 1)
+    return 0;
+  constexpr int64_t kDtypeBytes = 2;
+  return candidate.world_size * model.hidden_size * kDtypeBytes * 2;
+}
+
+int64_t estimatedCollectiveCallCount(const DistributedCandidate &candidate,
+                                     const DistributedModelProfile &model,
+                                     const DistributedWorkloadProfile &workload) {
+  if (candidate.world_size <= 1)
+    return 0;
+  return std::max<int64_t>(1, model.num_layers) * std::max<int64_t>(1, workload.concurrency);
+}
+
+double throughputToLatencyUs(double predictedTokensPerSecond) {
+  if (predictedTokensPerSecond <= 0.0)
+    return INFINITY;
+  return 1'000'000.0 / predictedTokensPerSecond;
+}
+
+}  // namespace
+
 DistributedProfitabilityEstimate
 estimateDistributedProfitability(const DistributedCandidate &candidate,
                                  const DistributedModelProfile &model,
@@ -348,15 +456,16 @@ estimateDistributedProfitability(const DistributedCandidate &candidate,
                                  const DistributedProfitabilityCalibration &calibration) {
   DistributedProfitabilityEstimate est;
   est.truth_boundary =
-      "linear_regression_calibrated_from_real_d5_measured_throughput_on_2x_"
-      "rtx4090_pcie_no_nvlink_not_a_full_systems_simulator_not_valid_off_"
+      "linear_regression_calibrated_from_real_d5_measured_throughput_plus_"
+      "phase1_nccl_tests_measured_communication_cost_on_2x_rtx4090_phb_"
+      "p2p_unavailable_shm_not_a_full_systems_simulator_not_valid_off_"
       "calibration_hardware";
 
   if (!model.available || !calibration.valid) {
     est.computed = false;
     est.infeasibility_reason = !model.available
         ? "model_profile_unavailable"
-        : "calibration_unavailable_or_invalid_version";
+        : "calibration_unavailable_or_invalid_version_or_missing_communication_profile";
     return est;
   }
   est.computed = true;
@@ -383,13 +492,47 @@ estimateDistributedProfitability(const DistributedCandidate &candidate,
 
   const auto &c = (tp == 1) ? calibration.tp1_coefficients : calibration.tp2_coefficients;
   const double kvCacheKbPerTokenPerGpu = kvCacheBytesPerTokenPerGpu / 1024.0;
-  est.predicted_throughput_tokens_per_s =
+  est.predicted_throughput_before_communication_tokens_per_s =
       c.intercept + c.per_gpu_weight_mb * perGpuWeightMb +
       c.kv_cache_kb_per_token_per_gpu * kvCacheKbPerTokenPerGpu +
       c.gpu_count * static_cast<double>(tp) +
       c.input_length * static_cast<double>(workload.input_tokens) +
       c.output_length * static_cast<double>(workload.output_tokens) +
       c.concurrency * static_cast<double>(workload.concurrency);
+  est.bytes_per_collective_call = bytesPerCollectiveCall(candidate, model);
+  est.estimated_collective_call_count = estimatedCollectiveCallCount(candidate, model, workload);
+  est.estimated_communication_bytes =
+      est.bytes_per_collective_call * est.estimated_collective_call_count;
+  est.communication_collective_kind =
+      est.estimated_collective_call_count > 0 ? "all_reduce" : "none";
+  est.communication_profile_id = calibration.communication.profile_id;
+  est.communication_predictor_kind = calibration.communication.predictor_kind;
+  est.topology_class = calibration.communication.topology_class;
+  est.p2p_available = calibration.communication.p2p_available;
+  est.nccl_transport = calibration.communication.nccl_transport;
+  auto comm = estimateNcclCommunicationTimeUs(
+      est.bytes_per_collective_call,
+      est.estimated_collective_call_count > 0 ? "all_reduce" : calibration.communication.collective_kind,
+      calibration.communication);
+  if (!comm.valid) {
+    est.computed = false;
+    est.infeasibility_reason = comm.failure_reason;
+    return est;
+  }
+  est.estimated_nccl_comm_time_us = comm.time_us * static_cast<double>(est.estimated_collective_call_count);
+  est.estimated_communication_penalty_us = est.estimated_nccl_comm_time_us;
+  est.estimated_runtime_residual_us = calibration.d9_runtime_residual_us;
+  est.decision_margin_us = calibration.d9_decision_margin_us;
+  est.overlap_assumption = calibration.d9_overlap_assumption;
+  est.compute_reference_weight_mb = calibration.d9_compute_reference_weight_mb;
+  est.compute_savings_us_per_weight_mb_above_reference =
+      calibration.d9_compute_savings_us_per_weight_mb_above_reference;
+  const double computeLatencyUs = throughputToLatencyUs(
+      est.predicted_throughput_before_communication_tokens_per_s);
+  const double adjustedLatencyUs = computeLatencyUs + est.estimated_communication_penalty_us +
+      est.estimated_runtime_residual_us;
+  est.predicted_throughput_tokens_per_s =
+      adjustedLatencyUs > 0.0 ? 1'000'000.0 / adjustedLatencyUs : 0.0;
   return est;
 }
 

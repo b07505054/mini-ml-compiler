@@ -35,6 +35,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -135,6 +136,7 @@ static DistributedProfitabilityCalibration readCalibration(ModuleOp module) {
   auto gpuUtil = module->getAttrOfType<FloatAttr>("distributed.profitability.gpu_memory_utilization");
   auto tp1Coef = module->getAttrOfType<DictionaryAttr>("distributed.profitability.tp1_coefficients");
   auto tp2Coef = module->getAttrOfType<DictionaryAttr>("distributed.profitability.tp2_coefficients");
+  auto commPoints = module->getAttrOfType<ArrayAttr>("distributed.profitability.communication.points");
 
   if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.calibration_dataset_hash"))
     cal.calibration_dataset_hash = v.getValue().str();
@@ -150,19 +152,76 @@ static DistributedProfitabilityCalibration readCalibration(ModuleOp module) {
     cal.tie_break_rule = v.getValue().str();
   if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.truth_boundary"))
     cal.truth_boundary = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.profile_id"))
+    cal.communication.profile_id = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.topology_class"))
+    cal.communication.topology_class = v.getValue().str();
+  if (auto v = module->getAttrOfType<BoolAttr>("distributed.profitability.communication.p2p_available"))
+    cal.communication.p2p_available = v.getValue();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.nccl_transport"))
+    cal.communication.nccl_transport = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.nccl_version"))
+    cal.communication.nccl_version = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.nccl_tests_version"))
+    cal.communication.nccl_tests_version = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.collective_kind"))
+    cal.communication.collective_kind = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.predictor_kind"))
+    cal.communication.predictor_kind = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.mode"))
+    cal.communication.mode = v.getValue().str();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.communication.alpha_us"))
+    cal.communication.alpha_us = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.communication.beta_us_per_byte"))
+    cal.communication.beta_us_per_byte = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.source_artifact_hashes"))
+    cal.communication.source_artifact_hashes = v.getValue().str();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.communication.provenance_hashes"))
+    cal.communication.provenance_hashes = v.getValue().str();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.d9.decision_margin_us"))
+    cal.d9_decision_margin_us = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.d9.runtime_residual_us"))
+    cal.d9_runtime_residual_us = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.d9.compute_reference_weight_mb"))
+    cal.d9_compute_reference_weight_mb = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<FloatAttr>("distributed.profitability.d9.compute_savings_us_per_weight_mb_above_reference"))
+    cal.d9_compute_savings_us_per_weight_mb_above_reference = v.getValueAsDouble();
+  if (auto v = module->getAttrOfType<StringAttr>("distributed.profitability.d9.overlap_assumption"))
+    cal.d9_overlap_assumption = v.getValue().str();
 
   if (version) cal.contract_version = version.getValue().str();
   if (gpuMemMb) cal.gpu_memory_mb_per_device = gpuMemMb.getValueAsDouble();
   if (gpuUtil) cal.gpu_memory_utilization = gpuUtil.getValueAsDouble();
   if (tp1Coef) cal.tp1_coefficients = readCoefficients(tp1Coef);
   if (tp2Coef) cal.tp2_coefficients = readCoefficients(tp2Coef);
+  if (commPoints) {
+    for (auto attr : commPoints) {
+      auto d = dyn_cast<DictionaryAttr>(attr);
+      if (!d) continue;
+      DistributedCommunicationPoint p;
+      if (auto b = d.getAs<IntegerAttr>("bytes")) p.bytes = b.getInt();
+      if (auto t = d.getAs<FloatAttr>("time_us")) p.time_us = t.getValueAsDouble();
+      cal.communication.points.push_back(p);
+    }
+  }
+  cal.communication.valid =
+      !cal.communication.profile_id.empty() &&
+      cal.communication.topology_class == "PHB" &&
+      !cal.communication.p2p_available &&
+      cal.communication.nccl_transport == "SHM/direct/direct" &&
+      cal.communication.collective_kind == "all_reduce" &&
+      (cal.communication.predictor_kind == "log_size_piecewise_interpolation" ||
+       cal.communication.predictor_kind == "alpha_beta") &&
+      (cal.communication.predictor_kind == "alpha_beta" ||
+       cal.communication.points.size() >= 2);
 
   // Fail-closed: valid only if the contract version matches exactly and
   // every required numeric block was present. A missing block or a
   // version mismatch (e.g. a stale v0 profile) must never be silently
   // treated as valid calibration.
   cal.valid = version && gpuMemMb && gpuUtil && tp1Coef && tp2Coef &&
-      cal.contract_version == kDistributedProfitabilityContractVersion;
+      cal.contract_version == kDistributedProfitabilityContractVersion &&
+      cal.communication.valid;
   return cal;
 }
 
@@ -176,6 +235,43 @@ encodeProfitabilityEvidence(MLIRContext *ctx, const DistributedProfitabilityEsti
   add("feasible", BoolAttr::get(ctx, p.feasible));
   add("predicted_throughput_tokens_per_s",
       FloatAttr::get(Float64Type::get(ctx), p.predicted_throughput_tokens_per_s));
+  add("predicted_throughput_before_communication_tokens_per_s",
+      FloatAttr::get(Float64Type::get(ctx),
+                     p.predicted_throughput_before_communication_tokens_per_s));
+  add("estimated_communication_bytes",
+      IntegerAttr::get(IntegerType::get(ctx, 64), p.estimated_communication_bytes));
+  add("estimated_nccl_comm_time_us",
+      FloatAttr::get(Float64Type::get(ctx), p.estimated_nccl_comm_time_us));
+  add("estimated_compute_savings_us",
+      FloatAttr::get(Float64Type::get(ctx), p.estimated_compute_savings_us));
+  add("regression_compute_savings_us",
+      FloatAttr::get(Float64Type::get(ctx), p.regression_compute_savings_us));
+  add("regression_compute_savings_status",
+      StringAttr::get(ctx, p.regression_compute_savings_status));
+  add("structural_compute_savings_adjustment_us",
+      FloatAttr::get(Float64Type::get(ctx), p.structural_compute_savings_adjustment_us));
+  add("compute_reference_weight_mb",
+      FloatAttr::get(Float64Type::get(ctx), p.compute_reference_weight_mb));
+  add("compute_savings_us_per_weight_mb_above_reference",
+      FloatAttr::get(Float64Type::get(ctx), p.compute_savings_us_per_weight_mb_above_reference));
+  add("estimated_communication_penalty_us",
+      FloatAttr::get(Float64Type::get(ctx), p.estimated_communication_penalty_us));
+  add("estimated_runtime_residual_us",
+      FloatAttr::get(Float64Type::get(ctx), p.estimated_runtime_residual_us));
+  add("estimated_net_tp2_benefit_us",
+      FloatAttr::get(Float64Type::get(ctx), p.estimated_net_tp2_benefit_us));
+  add("decision_margin_us", FloatAttr::get(Float64Type::get(ctx), p.decision_margin_us));
+  add("overlap_assumption", StringAttr::get(ctx, p.overlap_assumption));
+  add("estimated_collective_call_count",
+      IntegerAttr::get(IntegerType::get(ctx, 64), p.estimated_collective_call_count));
+  add("bytes_per_collective_call",
+      IntegerAttr::get(IntegerType::get(ctx, 64), p.bytes_per_collective_call));
+  add("communication_collective_kind", StringAttr::get(ctx, p.communication_collective_kind));
+  add("communication_profile_id", StringAttr::get(ctx, p.communication_profile_id));
+  add("communication_predictor_kind", StringAttr::get(ctx, p.communication_predictor_kind));
+  add("topology_class", StringAttr::get(ctx, p.topology_class));
+  add("p2p_available", BoolAttr::get(ctx, p.p2p_available));
+  add("nccl_transport", StringAttr::get(ctx, p.nccl_transport));
   add("required_memory_mb", FloatAttr::get(Float64Type::get(ctx), p.required_memory_mb));
   add("memory_budget_mb", FloatAttr::get(Float64Type::get(ctx), p.memory_budget_mb));
   add("infeasibility_reason", StringAttr::get(ctx, p.infeasibility_reason));
@@ -189,7 +285,8 @@ encodeCandidateEvidence(MLIRContext *ctx, const DistributedCandidate &c,
                         const DistributedCostEstimate &cost,
                         const QwenOperatorContext &opCtx,
                         const DistributedProfitabilityEstimate &profitability,
-                        bool excludedFromConsideration) {
+                        bool excludedFromConsideration,
+                        bool communicationChangedDecision) {
   SmallVector<NamedAttribute> fields;
   auto add = [&](StringRef key, Attribute value) {
     fields.push_back({StringAttr::get(ctx, key), value});
@@ -216,6 +313,34 @@ encodeCandidateEvidence(MLIRContext *ctx, const DistributedCandidate &c,
   add("estimated_communication_bytes",
       IntegerAttr::get(IntegerType::get(ctx, 64),
                        cost.estimated_communication_bytes));
+  add("estimated_nccl_comm_time_us",
+      FloatAttr::get(Float64Type::get(ctx), profitability.estimated_nccl_comm_time_us));
+  add("estimated_compute_savings_us",
+      FloatAttr::get(Float64Type::get(ctx), profitability.estimated_compute_savings_us));
+  add("estimated_communication_penalty_us",
+      FloatAttr::get(Float64Type::get(ctx), profitability.estimated_communication_penalty_us));
+  add("estimated_runtime_residual_us",
+      FloatAttr::get(Float64Type::get(ctx), profitability.estimated_runtime_residual_us));
+  add("estimated_net_tp2_benefit_us",
+      FloatAttr::get(Float64Type::get(ctx), profitability.estimated_net_tp2_benefit_us));
+  add("estimated_collective_call_count",
+      IntegerAttr::get(IntegerType::get(ctx, 64), profitability.estimated_collective_call_count));
+  add("collective_kind", StringAttr::get(ctx, profitability.communication_collective_kind));
+  add("bytes_per_collective_call",
+      IntegerAttr::get(IntegerType::get(ctx, 64), profitability.bytes_per_collective_call));
+  add("overlap_assumption", StringAttr::get(ctx, profitability.overlap_assumption));
+  add("decision_margin_us", FloatAttr::get(Float64Type::get(ctx), profitability.decision_margin_us));
+  add("communication_profile_id", StringAttr::get(ctx, profitability.communication_profile_id));
+  add("communication_predictor_kind", StringAttr::get(ctx, profitability.communication_predictor_kind));
+  add("nccl_transport", StringAttr::get(ctx, profitability.nccl_transport));
+  add("p2p_available", BoolAttr::get(ctx, profitability.p2p_available));
+  add("predicted_tp_throughput_before_communication",
+      FloatAttr::get(Float64Type::get(ctx),
+                     profitability.predicted_throughput_before_communication_tokens_per_s));
+  add("predicted_tp_throughput_after_communication",
+      FloatAttr::get(Float64Type::get(ctx),
+                     profitability.predicted_throughput_tokens_per_s));
+  add("communication_changed_tp_decision", BoolAttr::get(ctx, communicationChangedDecision));
   add("estimated_rank_local_compute",
       IntegerAttr::get(IntegerType::get(ctx, 64), cost.rank_local_compute_bytes));
   add("legality_status", StringAttr::get(ctx, legality.legal ? "legal" : "illegal"));
@@ -402,14 +527,9 @@ struct DistributedStrategyPlanningPass
         profit.infeasibility_reason =
             !optIn ? "excluded_opt_in_not_set" : "excluded_illegal_candidate";
       }
-      const bool excluded = c.world_size > 1 && !optIn;
-      candidateEvidence.push_back(
-          encodeCandidateEvidence(ctx, c, legality, cost, opCtx, profit, excluded));
-
       if (c.candidate_id == "tp1") { tp1 = &c; tp1Legality = legality; tp1Cost = cost; tp1Profit = profit; }
       if (c.candidate_id == "tp2") { tp2 = &c; tp2Legality = legality; tp2Cost = cost; tp2Profit = profit; }
     }
-    module->setAttr("distributed.candidates", ArrayAttr::get(ctx, candidateEvidence));
 
     if (!tp1 || !tp2) {
       module.emitError("DistributedStrategyPlanningPass: expected exactly the "
@@ -429,8 +549,9 @@ struct DistributedStrategyPlanningPass
     // ------------------------------------------------------------------
     constexpr double kTieBreakEpsilonTokensPerSec = 1e-6;
     const DistributedCandidate *selected = tp1;
+    const DistributedCandidate *preCommunicationSelected = tp1;
     std::string selectionReason;
-    const std::string kPolicyId = "d6_profitability_selector_v1";
+    const std::string kPolicyId = kD9BreakEvenPolicyId;
 
     if (!optIn) {
       selected = tp1;
@@ -466,32 +587,80 @@ struct DistributedStrategyPlanningPass
       selected = tp1;
       selectionReason = "capacity_forced_tp2_infeasible";
     } else {
-      const double delta =
-          tp2Profit.predicted_throughput_tokens_per_s - tp1Profit.predicted_throughput_tokens_per_s;
-      if (std::abs(delta) <= kTieBreakEpsilonTokensPerSec) {
-        selected = tp1;
-        selectionReason = "tie_break_prefer_lower_tp_degree";
-      } else if (delta > 0) {
+      const double tp1ComputeLatencyUs =
+          tp1Profit.predicted_throughput_before_communication_tokens_per_s > 0.0
+              ? 1'000'000.0 / tp1Profit.predicted_throughput_before_communication_tokens_per_s
+              : INFINITY;
+      const double tp2ComputeLatencyUs =
+          tp2Profit.predicted_throughput_before_communication_tokens_per_s > 0.0
+              ? 1'000'000.0 / tp2Profit.predicted_throughput_before_communication_tokens_per_s
+              : INFINITY;
+      double regressionComputeSavingsUs = tp1ComputeLatencyUs - tp2ComputeLatencyUs;
+      std::string regressionComputeSavingsStatus = "finite";
+      if (!std::isfinite(regressionComputeSavingsUs)) {
+        regressionComputeSavingsUs = 0.0;
+        regressionComputeSavingsStatus = "non_finite_regression_latency_delta_ignored";
+      }
+      const double structuralComputeSavingsAdjustmentUs =
+          std::max(0.0, modelProfile.weight_footprint_mb -
+                         calibration.d9_compute_reference_weight_mb) *
+          calibration.d9_compute_savings_us_per_weight_mb_above_reference;
+      const double computeSavingsUs = regressionComputeSavingsUs +
+          structuralComputeSavingsAdjustmentUs;
+      for (auto *profit : {&tp1Profit, &tp2Profit}) {
+        profit->regression_compute_savings_us = regressionComputeSavingsUs;
+        profit->regression_compute_savings_status = regressionComputeSavingsStatus;
+        profit->structural_compute_savings_adjustment_us =
+            structuralComputeSavingsAdjustmentUs;
+        profit->compute_reference_weight_mb = calibration.d9_compute_reference_weight_mb;
+        profit->compute_savings_us_per_weight_mb_above_reference =
+            calibration.d9_compute_savings_us_per_weight_mb_above_reference;
+        profit->estimated_compute_savings_us = computeSavingsUs;
+      }
+      tp2Profit.estimated_net_tp2_benefit_us = computeSavingsUs -
+          tp2Profit.estimated_communication_penalty_us - tp2Profit.estimated_runtime_residual_us;
+      tp1Profit.estimated_net_tp2_benefit_us = tp2Profit.estimated_net_tp2_benefit_us;
+
+      preCommunicationSelected = computeSavingsUs > calibration.d9_decision_margin_us ? tp2 : tp1;
+      if (tp2Profit.estimated_net_tp2_benefit_us > calibration.d9_decision_margin_us) {
         selected = tp2;
-        selectionReason = "profitable_tp2_selected_predicted_throughput_higher";
+        selectionReason = "d9_profitable_tp2_selected_net_benefit_positive";
       } else {
         selected = tp1;
-        selectionReason = "profitable_tp1_selected_predicted_throughput_higher";
+        selectionReason = "d9_profitable_tp1_selected_net_benefit_below_margin";
       }
     }
 
+    const bool communicationChangedDecision =
+        preCommunicationSelected->candidate_id != selected->candidate_id;
+    candidateEvidence.clear();
+    for (const auto &c : candidates) {
+      const bool excluded = c.world_size > 1 && !optIn;
+      const auto &legality = c.candidate_id == "tp1" ? tp1Legality : tp2Legality;
+      const auto &cost = c.candidate_id == "tp1" ? tp1Cost : tp2Cost;
+      const auto &profit = c.candidate_id == "tp1" ? tp1Profit : tp2Profit;
+      candidateEvidence.push_back(
+          encodeCandidateEvidence(ctx, c, legality, cost, opCtx, profit, excluded,
+                                  communicationChangedDecision));
+    }
+    module->setAttr("distributed.candidates", ArrayAttr::get(ctx, candidateEvidence));
+
     module->setAttr("distributed.selected_candidate_id",
                     StringAttr::get(ctx, selected->candidate_id));
+    module->setAttr("distributed.pre_communication_selected_candidate_id",
+                    StringAttr::get(ctx, preCommunicationSelected->candidate_id));
+    module->setAttr("distributed.communication_changed_decision",
+                    BoolAttr::get(ctx, communicationChangedDecision));
     module->setAttr("distributed.selection_reason", StringAttr::get(ctx, selectionReason));
     module->setAttr("distributed.policy_id", StringAttr::get(ctx, kPolicyId));
     module->setAttr(
         "distributed.policy_truth_boundary",
         StringAttr::get(ctx,
-                        "d6_qwen_pipeline_whole_model_profitability_selection_"
+                        "d9_qwen_pipeline_break_even_tp_selection_"
                         "calibrated_from_real_d5_measured_2x_rtx4090_throughput_"
-                        "linear_regression_not_nccl_calibrated_by_the_compiler_"
-                        "itself_not_a_runtime_measured_guarantee_for_this_"
-                        "specific_compile"));
+                        "and_phase1_nccl_tests_measured_communication_cost_"
+                        "for_2x_rtx4090_phb_p2p_unavailable_shm_not_a_runtime_"
+                        "measured_guarantee_for_this_specific_compile"));
 
     if (selected->world_size > 1) {
       // Fail-closed consistency check: never emit a distributed plan for an

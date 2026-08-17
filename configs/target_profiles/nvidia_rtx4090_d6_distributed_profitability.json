@@ -101,7 +101,7 @@
     "gpuMemoryMbPerDevice": 24564.0,
     "gpuMemoryUtilization": 0.9,
     "tieBreakRule": "prefer_lower_tp_degree_within_epsilon",
-    "truthBoundary": "linear_regression_calibrated_from_real_d5_measured_throughput_on_2x_rtx4090_pcie_no_nvlink_54_calibration_rows_both_qwen2.5_0.5b_and_7b_not_a_full_systems_simulator_not_valid_off_this_calibration_hardware_never_encodes_held_out_labels",
+    "truthBoundary": "linear_regression_calibrated_from_real_d5_measured_throughput_on_2x_rtx4090_pcie_no_nvlink_54_calibration_rows_both_qwen2.5_0.5b_and_7b_not_a_full_systems_simulator_not_valid_off_this_calibration_hardware_never_encodes_held_out_labels_phase1_nccl_tests_communication_calibrated",
     "tp1Coefficients": {
       "intercept": 7.962344761464902,
       "per_gpu_weight_mb": -0.24772518079214728,
@@ -128,6 +128,186 @@
       "tp2": {
         "r_squared": 0.8312363752700205,
         "n_samples": 27
+      }
+    },
+    "communicationCalibration": {
+      "contractVersion": "nccl_communication_calibration.v1",
+      "profileId": "2x_rtx4090_phb_single_numa_p2p_unavailable_nccl_shm_direct",
+      "topologyIdentity": {
+        "gpuModel": "NVIDIA GeForce RTX 4090",
+        "gpuCount": 2,
+        "topologyClass": "PHB",
+        "numaCount": 1,
+        "p2pAvailable": false,
+        "ncclTransport": "SHM/direct/direct"
+      },
+      "topologyClass": "PHB",
+      "p2pAvailable": false,
+      "ncclTransport": "SHM/direct/direct",
+      "ncclVersion": "22803",
+      "ncclTestsVersion": "2.19.7",
+      "collectiveKind": "all_reduce",
+      "mode": "out_of_place",
+      "predictorKind": "log_size_piecewise_interpolation",
+      "predictorSelection": {
+        "metricPriority": [
+          "mape",
+          "mae_us"
+        ],
+        "piecewiseEvaluation": {
+          "mae_us": 5330.786666666671,
+          "mape": 0.15975587697271432,
+          "max_absolute_error_us": 15930.250000000015,
+          "max_relative_error": 0.25667787029995254
+        },
+        "alphaBetaEvaluation": {
+          "mae_us": 497.5433059684139,
+          "mape": 1.8122216512534859,
+          "max_absolute_error_us": 1354.686287364122,
+          "max_relative_error": 5.120386393616245
+        }
+      },
+      "points": [
+        {
+          "bytes": 1024,
+          "timeUs": 10.79
+        },
+        {
+          "bytes": 2048,
+          "timeUs": 10.22
+        },
+        {
+          "bytes": 4096,
+          "timeUs": 10.26
+        },
+        {
+          "bytes": 8192,
+          "timeUs": 10.48
+        },
+        {
+          "bytes": 16384,
+          "timeUs": 14.55
+        },
+        {
+          "bytes": 32768,
+          "timeUs": 22.33
+        },
+        {
+          "bytes": 65536,
+          "timeUs": 36.79
+        },
+        {
+          "bytes": 131072,
+          "timeUs": 64.2
+        },
+        {
+          "bytes": 262144,
+          "timeUs": 121.62
+        },
+        {
+          "bytes": 524288,
+          "timeUs": 155.13
+        },
+        {
+          "bytes": 1048576,
+          "timeUs": 290.06
+        },
+        {
+          "bytes": 2097152,
+          "timeUs": 549.03
+        },
+        {
+          "bytes": 4194304,
+          "timeUs": 1061.6
+        },
+        {
+          "bytes": 8388608,
+          "timeUs": 2078.45
+        },
+        {
+          "bytes": 16777216,
+          "timeUs": 4056.13
+        },
+        {
+          "bytes": 33554432,
+          "timeUs": 8050.0
+        },
+        {
+          "bytes": 67108864,
+          "timeUs": 15939.2
+        },
+        {
+          "bytes": 134217728,
+          "timeUs": 31575.9
+        },
+        {
+          "bytes": 268435456,
+          "timeUs": 62063.2
+        },
+        {
+          "bytes": 536870912,
+          "timeUs": 124411.0
+        },
+        {
+          "bytes": 1073741824,
+          "timeUs": 255033.0
+        }
+      ],
+      "alphaUs": -43.24350439166301,
+      "betaUsPerByte": 0.00023641113114266016,
+      "alphaBetaBaseline": {
+        "alphaUs": -43.24350439166301,
+        "betaUsPerByte": 0.00023641113114266016,
+        "evaluation": {
+          "mae_us": 497.5433059684139,
+          "mape": 1.8122216512534859,
+          "max_absolute_error_us": 1354.686287364122,
+          "max_relative_error": 5.120386393616245
+        }
+      },
+      "sourceArtifactHashes": "{\"all_gather.txt\": \"7c4ffd6d6d8231b702c2ba1bdf6207a7b3465483ffd4f950c6ed808d3d96334a\", \"all_reduce.txt\": \"46fca7c8c010f277095a8d38d5a80ae819e7b6d742ed8e03aa6a84c3f8514ac6\", \"broadcast.txt\": \"9296b0c16e8f399cfbdc0e93834535b79799437ff90fe285d20566ae9c20b603\", \"reduce_scatter.txt\": \"cc847de9b7b4a3c1537a22344b8d099cb19327f1e397c0afbe132944599f6088\"}",
+      "provenanceHashes": "{\"communication_cost_profile.json\": \"3ec79e1ecc3e7bd058e3aaccc73de429d84932126ee7f38e53b377ad8a88ee92\", \"fit_report.json\": \"77159abb9e1c28b25df8c238ae22d6d62e7f3d6b4b73f78744ec04c619c03ec1\"}",
+      "truthBoundary": "Phase 1 nccl-tests measured communication calibration for 2x RTX 4090 PHB, single NUMA, CUDA P2P unavailable, NCCL SHM/direct/direct; not vLLM decode instrumentation."
+    },
+    "d9BreakEvenCalibration": {
+      "policyId": "d9_break_even_tp_selector_v1",
+      "decisionRule": "select TP2 iff estimated_compute_savings_us - estimated_communication_penalty_us - estimated_runtime_residual_us > decision_margin_us",
+      "decisionMarginUs": 250.0,
+      "runtimeResidualUs": 0.0,
+      "runtimeResidualProvenance": "Phase 4D break-even artifacts did not isolate a stable independent residual; kept explicit zero instead of folding into communication.",
+      "overlapAssumption": "zero",
+      "overlapProvenance": "Phase 4C/4D showed overlap was small and overlap-aware prediction did not improve this calibration domain.",
+      "computeSavingsCalibration": {
+        "feature": "max(0, weight_footprint_mb - referenceWeightMb)",
+        "referenceWeightMb": 1454.3235168457031,
+        "computeSavingsUsPerWeightMbAboveReference": 0.5,
+        "provenance": "Derived from Phase 4D empirical boundary: Qwen2.5-0.5B TP1-favorable, Qwen2.5-7B TP2-favorable; model compute increase, represented by structural weight footprint, was the primary boundary driver. This is not a model-name rule."
+      },
+      "communicationDemand": {
+        "collectiveKind": "all_reduce",
+        "bytesPerCollectiveCallFormula": "tensor_parallel_world_size * hidden_size * fp16_bytes * 2",
+        "estimatedCallCountFormula": "num_layers * concurrency",
+        "callCountRationale": "Phase 4C/4D showed collective count carries decision signal; D9 estimates per collective class rather than only total bytes."
+      },
+      "phase1Artifacts": {
+        "communicationCostProfile": "/workspace/heterogeneous-inference-runtime/results/runtime_paths/nccl_calibration/communication_cost_profile.json",
+        "fitReport": "/workspace/heterogeneous-inference-runtime/results/runtime_paths/nccl_calibration/fit_report.json",
+        "provenanceHashes": "{\"communication_cost_profile.json\": \"3ec79e1ecc3e7bd058e3aaccc73de429d84932126ee7f38e53b377ad8a88ee92\", \"fit_report.json\": \"77159abb9e1c28b25df8c238ae22d6d62e7f3d6b4b73f78744ec04c619c03ec1\"}"
+      },
+      "phase4dArtifacts": {
+        "directory": "/workspace/heterogeneous-inference-runtime/results/runtime_paths/distributed_d8_vllm_nccl_attribution/break_even/",
+        "workloadMatrix": "workload_matrix.json",
+        "endToEndResults": "end_to_end_results.json",
+        "decisionBoundary": "decision_boundary.json",
+        "perCellCostBreakdown": "per_cell_cost_breakdown.json"
+      },
+      "validatedRegimes": {
+        "tp1Favorable": [
+          "Qwen2.5-0.5B in32_out32 c1/c4/c8"
+        ],
+        "tp2Favorable": [
+          "Qwen2.5-7B in32_out32 c1/c4/c8"
+        ]
       }
     }
   }

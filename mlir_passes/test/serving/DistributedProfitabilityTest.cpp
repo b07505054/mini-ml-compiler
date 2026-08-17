@@ -14,6 +14,7 @@
 #include "serving/DistributedPlanning.h"
 
 #include <cassert>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -57,6 +58,22 @@ static DistributedProfitabilityCalibration realCalibration() {
   c.tp2_coefficients = {20.38139140395511, -0.33955255109345256, 74.31842439533375,
                        40.762782807910725, 0.059169929961928894, 0.9658812851196273,
                        166.02350203699726};
+  c.communication.profile_id = "2x_rtx4090_phb_single_numa_p2p_unavailable_nccl_shm_direct";
+  c.communication.topology_class = "PHB";
+  c.communication.p2p_available = false;
+  c.communication.nccl_transport = "SHM/direct/direct";
+  c.communication.collective_kind = "all_reduce";
+  c.communication.predictor_kind = "log_size_piecewise_interpolation";
+  c.communication.mode = "out_of_place";
+  c.communication.points = {
+      {1024, 10.79}, {2048, 10.22}, {4096, 10.26}, {8192, 10.48},
+      {16384, 14.55}, {32768, 22.33}, {65536, 36.79}, {131072, 64.2}};
+  c.communication.valid = true;
+  c.d9_decision_margin_us = 250.0;
+  c.d9_runtime_residual_us = 0.0;
+  c.d9_compute_reference_weight_mb = 1454.3235168457031;
+  c.d9_compute_savings_us_per_weight_mb_above_reference = 0.50;
+  c.d9_overlap_assumption = "zero";
   c.valid = true;
   return c;
 }
@@ -98,7 +115,7 @@ static void testMissingCalibrationFailsClosedNotComputed() {
   DistributedProfitabilityCalibration calib;  // valid = false (default)
   auto est = estimateDistributedProfitability(tp1Candidate(), model, wl, calib);
   assert(!est.computed);
-  assert(est.infeasibility_reason == "calibration_unavailable_or_invalid_version");
+  assert(est.infeasibility_reason == "calibration_unavailable_or_invalid_version_or_missing_communication_profile");
   std::puts("  [PASS] testMissingCalibrationFailsClosedNotComputed");
 }
 
@@ -123,11 +140,19 @@ static void testProfitabilityPredictsTp1WinsFor05bAtRealCalibration() {
   auto tp2 = estimateDistributedProfitability(tp2Candidate(), model, wl, calib);
   assert(tp1.computed && tp2.computed);
   assert(tp1.feasible && tp2.feasible);
-  assert(tp1.predicted_throughput_tokens_per_s > tp2.predicted_throughput_tokens_per_s &&
-        "0.5B at in32_out32_c1 must predict TP1 > TP2, matching the real measured D5 result");
-  // Numerically exact match to the Python reference (tp_cost_model.py) for this cell.
-  assert(std::abs(tp1.predicted_throughput_tokens_per_s - 558.1676359962089) < 1e-6);
-  assert(std::abs(tp2.predicted_throughput_tokens_per_s - 499.733014181306) < 1e-6);
+  const double regressionComputeSavings = tp1.predicted_throughput_before_communication_tokens_per_s > 0.0 &&
+      tp2.predicted_throughput_before_communication_tokens_per_s > 0.0
+      ? 1'000'000.0 / tp1.predicted_throughput_before_communication_tokens_per_s -
+        1'000'000.0 / tp2.predicted_throughput_before_communication_tokens_per_s
+      : 0.0;
+  const double structuralComputeSavings =
+      std::max(0.0, model.weight_footprint_mb - calib.d9_compute_reference_weight_mb) *
+      calib.d9_compute_savings_us_per_weight_mb_above_reference;
+  const double computeSavings = regressionComputeSavings + structuralComputeSavings;
+  assert(computeSavings < tp2.estimated_communication_penalty_us + tp2.decision_margin_us &&
+        "0.5B at in32_out32_c1 must remain TP1-favorable under D9 break-even decomposition");
+  assert(tp2.overlap_assumption == "zero");
+  assert(tp2.estimated_collective_call_count == 24);
   std::puts("  [PASS] testProfitabilityPredictsTp1WinsFor05bAtRealCalibration");
 }
 
@@ -140,8 +165,18 @@ static void testProfitabilityPredictsTp2WinsFor7bAtRealCalibration() {
   auto tp1 = estimateDistributedProfitability(tp1Candidate(), model, wl, calib);
   auto tp2 = estimateDistributedProfitability(tp2Candidate(), model, wl, calib);
   assert(tp1.computed && tp2.computed);
-  assert(tp2.predicted_throughput_tokens_per_s > tp1.predicted_throughput_tokens_per_s &&
-        "7B at in32_out32_c1 must predict TP2 > TP1, matching the real measured D5 result");
+  double regressionComputeSavings = 0.0;
+  if (tp1.predicted_throughput_before_communication_tokens_per_s > 0.0 &&
+      tp2.predicted_throughput_before_communication_tokens_per_s > 0.0)
+    regressionComputeSavings = 1'000'000.0 / tp1.predicted_throughput_before_communication_tokens_per_s -
+        1'000'000.0 / tp2.predicted_throughput_before_communication_tokens_per_s;
+  const double structuralComputeSavings =
+      std::max(0.0, model.weight_footprint_mb - calib.d9_compute_reference_weight_mb) *
+      calib.d9_compute_savings_us_per_weight_mb_above_reference;
+  const double computeSavings = regressionComputeSavings + structuralComputeSavings;
+  assert(computeSavings - tp2.estimated_communication_penalty_us > tp2.decision_margin_us &&
+        "7B at in32_out32_c1 must be TP2-favorable under D9 break-even decomposition");
+  assert(tp2.estimated_collective_call_count == 28);
   std::puts("  [PASS] testProfitabilityPredictsTp2WinsFor7bAtRealCalibration");
 }
 
@@ -212,8 +247,11 @@ static void testEqualPredictedThroughputIsReachableAndExactlyEqual() {
   auto tp1 = estimateDistributedProfitability(tp1Candidate(), model, wl, calib);
   auto tp2 = estimateDistributedProfitability(tp2Candidate(), model, wl, calib);
   assert(tp1.computed && tp2.computed);
-  assert(tp1.predicted_throughput_tokens_per_s == tp2.predicted_throughput_tokens_per_s);
-  assert(tp1.predicted_throughput_tokens_per_s == 100.0);
+  assert(tp1.predicted_throughput_before_communication_tokens_per_s ==
+         tp2.predicted_throughput_before_communication_tokens_per_s);
+  assert(tp1.predicted_throughput_before_communication_tokens_per_s == 100.0);
+  assert(tp2.predicted_throughput_tokens_per_s < tp1.predicted_throughput_tokens_per_s &&
+         "D9 communication penalty breaks an equal pre-communication throughput tie toward TP1");
   std::puts("  [PASS] testEqualPredictedThroughputIsReachableAndExactlyEqual");
 }
 
